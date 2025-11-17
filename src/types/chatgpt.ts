@@ -1,0 +1,100 @@
+export type UnknownObject = Record<string, unknown>;
+
+export type Theme = 'light' | 'dark';
+
+export type SafeAreaInsets = {
+  top: number;
+  bottom: number;
+  left: number;
+  right: number;
+};
+
+export type SafeArea = {
+  insets: SafeAreaInsets;
+};
+
+export type DeviceType = 'mobile' | 'tablet' | 'desktop' | 'unknown';
+
+export type UserAgent = {
+  device: { type: DeviceType };
+  capabilities: {
+    hover: boolean;
+    touch: boolean;
+  };
+};
+
+/** Display mode */
+export type DisplayMode = 'pip' | 'inline' | 'fullscreen';
+
+export type RequestDisplayMode = (args: { mode: DisplayMode }) => Promise<{
+  /**
+   * The granted display mode. The host may reject the request.
+   * For mobile, PiP is always coerced to fullscreen.
+   */
+  mode: DisplayMode;
+}>;
+
+export type CallToolResponse = {
+  result: string;
+};
+
+/** Calling APIs */
+export type CallTool = (
+  name: string,
+  args: Record<string, unknown>
+) => Promise<CallToolResponse>;
+
+export type ChatGPTGlobals<
+  ToolInput = UnknownObject,
+  ToolOutput = UnknownObject,
+  ToolResponseMetadata = UnknownObject,
+  WidgetState = UnknownObject
+> = {
+  // visuals
+  colorScheme: Theme;
+  userAgent: UserAgent;
+  locale: string;
+
+  // layout
+  maxHeight: number;
+  displayMode: DisplayMode;
+  safeArea: SafeArea;
+
+  // state
+  toolInput: ToolInput;
+  toolOutput: ToolOutput | null;
+  toolResponseMetadata: ToolResponseMetadata | null;
+  widgetState: WidgetState | null;
+  setWidgetState: (state: WidgetState) => Promise<void>;
+};
+
+type API = {
+  callTool: CallTool;
+  sendFollowUpMessage: (args: { prompt: string }) => Promise<void>;
+  openExternal(payload: { href: string }): void;
+
+  // Layout controls
+  requestDisplayMode: RequestDisplayMode;
+};
+
+/** Extra events */
+export const SET_GLOBALS_EVENT_TYPE = 'chatgpt:set_globals';
+
+export class SetGlobalsEvent extends CustomEvent<{
+  globals: Partial<ChatGPTGlobals>;
+}> {
+  readonly type = SET_GLOBALS_EVENT_TYPE;
+}
+
+/**
+ * Global openai object injected by the web sandbox for communicating with ChatGPT host page.
+ */
+declare global {
+  interface Window {
+    openai?: API & ChatGPTGlobals;
+  }
+
+  interface WindowEventMap {
+    [SET_GLOBALS_EVENT_TYPE]: SetGlobalsEvent;
+  }
+}
