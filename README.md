@@ -13,7 +13,7 @@ React library for cross-platform genAI App UIs. Supports **OpenAI ChatGPT Apps**
 
 ## Development Quickstart
 
-Requirements: Node 18+, pnpm 8+
+Requirements: Node 18+, pnpm 10+
 
 ```bash
 pnpm run dev
