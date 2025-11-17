@@ -95,6 +95,8 @@ Sunpeak automatically detects the active platform. No configuration needed for b
 
 ## Deployment
 
+Update the version number in package.json: `pnpm version patch`
+
 Automatically publishes to npm when a new release is created on GitHub:
 1. Runs all CI checks (lint, test, build)
 2. Publishes to npm
