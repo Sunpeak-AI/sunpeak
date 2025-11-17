@@ -28,7 +28,7 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup && pnpm run build:copy-css",
-    "build:copy-css": "mkdir -p dist/design-systems && cp src/styles/design-systems/*.css dist/design-systems/ && cp src/styles/components.css dist/ && cp dist/styles/themes.css dist/index.css",
+    "build:copy-css": "node scripts/copy-css.js",
     "dev": "vite",
     "test": "vitest run",
     "lint": "eslint . --ext .ts,.tsx --fix",
