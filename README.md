@@ -92,6 +92,12 @@ Sunpeak automatically detects the active platform. No configuration needed for b
 
 **See [THEMING.md](./THEMING.md)** for creating custom design systems and complete theming documentation.
 
+## Deployment
+
+Automatically publishes to npm when a new release is created on GitHub:
+1. Runs all CI checks (lint, test, build)
+2. Publishes to npm
+
 ## Resources
 
 - [OpenAI ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
