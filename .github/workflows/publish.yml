@@ -31,7 +31,11 @@ jobs:
       - run: pnpm run lint
       - run: pnpm run build
       - run: pnpm test
-      - name: Publish
-        env:
-          NPM_CONFIG_PROVENANCE: true
-        run: pnpm publish --access public --no-git-checks
+      - run: npm install -g npm@latest
+      - name: Debug npm environment
+        run: |
+          echo "Node version: $(node -v)"
+          echo "npm version: $(npm -v)"
+          echo "Registry: $(npm config get registry)"
+          echo "Logged in as: $(npm whoami || echo 'Not authenticated')"
+      - run: pnpm publish --access public --no-git-checks --provenance
