@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import type { DisplayMode, Theme, ChatGPTGlobals } from '../../types';
 import { SET_GLOBALS_EVENT_TYPE, SetGlobalsEvent } from '../../types/chatgpt';
-import './ChatGPTSimulator.css';
 
 export interface ChatGPTSimulatorProps {
   /**

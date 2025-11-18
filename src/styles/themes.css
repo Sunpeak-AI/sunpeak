@@ -9,6 +9,7 @@
 
 /* Import component styles */
 @import './components.css';
+@import './chatgpt-simulator.css';
 
 /* Default: Import ChatGPT design system */
 @import './design-systems/chatgpt.css';

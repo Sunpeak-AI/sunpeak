@@ -33,7 +33,7 @@
     "test": "vitest run",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "pnpm run build"
+    "prepublishOnly": "pnpm build"
   },
   "keywords": [
     "react",

@@ -24,7 +24,7 @@ Requirements: Node 18+, pnpm 10+
 
 ```bash
 git clone https://github.com/Sunpeak-AI/sunpeak.git
-pnpm run dev
+pnpm dev
 ```
 
 ## Building Apps
