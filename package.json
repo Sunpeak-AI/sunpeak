@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "React library for cross-platform genAI App UIs.",
   "type": "module",
   "main": "./dist/index.cjs",
