@@ -114,7 +114,6 @@ function chatgptDevEndpoint(): Plugin {
     }
 
     body {
-      margin: 0;
       background-color: var(--bg-color);
       transition: background-color 0.3s;
     }
@@ -155,7 +154,7 @@ export default defineConfig({
   ],
   publicDir: 'assets',
   server: {
-    port: 6767,
+    port: 6742,
     strictPort: true,
   },
   resolve: {

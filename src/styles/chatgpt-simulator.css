@@ -270,7 +270,7 @@
   display: flex;
   align-items: center;
   gap: var(--sp-spacing-2);
-  margin-top: var(--sp-spacing-2);
+  margin: var(--sp-spacing-4) 0;
   font-size: var(--sp-font-size-sm);
   font-weight: var(--sp-font-weight-medium);
   opacity: 0.7;

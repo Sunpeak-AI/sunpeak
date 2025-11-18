@@ -89,7 +89,6 @@
 .sp-carousel {
   position: relative;
   width: 100%;
-  padding: var(--sp-spacing-5) 0;
 }
 
 .sp-carousel-scroll {

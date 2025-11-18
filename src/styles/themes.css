@@ -1,13 +1,14 @@
 /**
  * Sunpeak Brand Customization
  *
- * This file provides the brand accent color customization layer.
+ * Brand accent color customization layer.
  * It imports the ChatGPT design system by default, but you can swap it
  * for a different design system (like Gemini, Claude, etc.).
 
  */
 
 /* Import component styles */
+@import './global.css';
 @import './components.css';
 @import './chatgpt-simulator.css';
 
