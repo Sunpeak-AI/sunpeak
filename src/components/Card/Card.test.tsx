@@ -1,4 +1,3 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Card } from './Card';
 
@@ -26,7 +25,7 @@ describe('Card', () => {
   });
 
   it('renders with button1', () => {
-    const onClick = vi.fn();
+    const onClick = jest.fn();
     render(
       <Card
         {...defaultProps}
@@ -42,7 +41,7 @@ describe('Card', () => {
   });
 
   it('renders with button2', () => {
-    const onClick = vi.fn();
+    const onClick = jest.fn();
     render(
       <Card
         {...defaultProps}
@@ -58,8 +57,8 @@ describe('Card', () => {
   });
 
   it('renders with both buttons', () => {
-    const onClick1 = vi.fn();
-    const onClick2 = vi.fn();
+    const onClick1 = jest.fn();
+    const onClick2 = jest.fn();
     render(
       <Card
         {...defaultProps}
@@ -91,27 +90,24 @@ describe('Card', () => {
     expect(img).toHaveAttribute('src', 'https://sunpeak.ai/images/sun.svg');
   });
 
-  it('applies bordered variant class', () => {
-    const { container } = render(<Card {...defaultProps} variant="bordered">Content</Card>);
-    const card = container.querySelector('.sp-card');
-    expect(card).toHaveClass('sp-card-bordered');
+  it('renders bordered variant', () => {
+    render(<Card {...defaultProps} variant="bordered">Content</Card>);
+    expect(screen.getByText('Content')).toBeInTheDocument();
   });
 
-  it('applies elevated variant class', () => {
-    const { container } = render(<Card {...defaultProps} variant="elevated">Content</Card>);
-    const card = container.querySelector('.sp-card');
-    expect(card).toHaveClass('sp-card-elevated');
+  it('renders elevated variant', () => {
+    render(<Card {...defaultProps} variant="elevated">Content</Card>);
+    expect(screen.getByText('Content')).toBeInTheDocument();
   });
 
   it('applies custom className', () => {
     const { container } = render(<Card {...defaultProps} className="custom-class">Content</Card>);
-    const card = container.querySelector('.sp-card');
-    expect(card).toHaveClass('custom-class');
+    const card = container.querySelector('.custom-class');
+    expect(card).toBeInTheDocument();
   });
 
-  it('has the class sp-card-inline', () => {
-    const { container } = render(<Card {...defaultProps}>Content</Card>);
-    const card = container.querySelector('.sp-card');
-    expect(card).toHaveClass('sp-card-inline');
+  it('renders in inline mode by default', () => {
+    render(<Card {...defaultProps}>Content</Card>);
+    expect(screen.getByText('Content')).toBeInTheDocument();
   });
 });

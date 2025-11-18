@@ -1,6 +1,6 @@
-import { type ReactNode, type HTMLAttributes, useRef, useState, useEffect } from 'react';
-import { clsx } from 'clsx';
-import { useMaxHeight, useColorScheme } from '../../hooks';
+import { type ReactNode, type HTMLAttributes, useRef, useState, useEffect, Children } from 'react';
+import { Box, IconButton, useTheme } from '@mui/material';
+import { useMaxHeight, useDisplayMode } from '../../hooks';
 import type { GenAIProps } from '../GenAI';
 
 export interface CarouselProps extends Omit<GenAIProps, 'children'>, HTMLAttributes<HTMLDivElement> {
@@ -26,16 +26,8 @@ export interface CarouselProps extends Omit<GenAIProps, 'children'>, HTMLAttribu
 }
 
 /**
- * Carousel - A carousel component for displaying multiple cards side-by-side.
+ * Carousel - MUI-based carousel for displaying cards side-by-side.
  * Follows OpenAI ChatGPT Apps SDK design guidelines.
- *
- * Design specs:
- * - 3-8 items recommended (design guideline)
- * - 16px gap between items
- * - 32px circular navigation buttons with shadow
- * - Edge gradients with fade effect
- * - Padding: 20px vertical
- * - Draggable with mouse for smooth scrolling
  */
 export const Carousel = ({
   children,
@@ -53,7 +45,12 @@ export const Carousel = ({
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
   const maxHeight = useMaxHeight();
-  const colorScheme = useColorScheme();
+  const displayMode = useDisplayMode();
+  const theme = useTheme();
+
+  // In fullscreen mode, ensure all cards have equal width
+  const isFullscreen = displayMode === 'fullscreen';
+  const cardWidth = isFullscreen ? 340 : undefined;
 
   const checkScroll = () => {
     const el = scrollRef.current;
@@ -123,109 +120,175 @@ export const Carousel = ({
     setIsDragging(false);
   };
 
-  const containerClasses = clsx(
-    'sp-genai-app',
-    'sp-carousel',
-    'sp-antialiased',
-    colorScheme && `sp-theme-${colorScheme}`,
-    className
+  const ChevronLeftIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M15 18L9 12L15 6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 
-  const scrollClasses = clsx(
-    'sp-carousel-scroll',
-    {
-      'sp-carousel-scroll-dragging': isDragging,
-    }
+  const ChevronRightIcon = () => (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M9 18L15 12L9 6"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 
   return (
-    <div
-      className={containerClasses}
-      style={{
+    <Box
+      className={className}
+      sx={{
+        position: 'relative',
+        width: '100%',
+        maxWidth: `${maxWidth}px`,
         maxHeight: maxHeight ? `${maxHeight}px` : undefined,
-        maxWidth: `${maxWidth}px`
       }}
       {...props}
     >
-      <div className="overflow-hidden">
-        <div
+      <Box sx={{ overflow: 'hidden' }}>
+        <Box
           ref={scrollRef}
-          className={scrollClasses}
-          style={{ gap: gap !== 16 ? `${gap}px` : undefined }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}
           onMouseLeave={handleMouseUpOrLeave}
+          sx={{
+            display: 'flex',
+            gap: `${gap}px`,
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            scrollBehavior: isDragging ? 'auto' : 'smooth',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+            userSelect: 'none',
+            cursor: isDragging ? 'grabbing' : 'grab',
+            '&::-webkit-scrollbar': {
+              display: 'none',
+            },
+          }}
         >
-          {children}
-        </div>
-      </div>
+          {isFullscreen
+            ? Children.map(children, (child) => (
+                <Box
+                  sx={{
+                    flexShrink: 0,
+                    width: `${cardWidth}px`,
+                    '& > *': {
+                      width: '100%',
+                      maxWidth: '100%',
+                    },
+                  }}
+                >
+                  {child}
+                </Box>
+              ))
+            : children}
+        </Box>
+      </Box>
 
       {/* Edge gradients */}
       {showEdgeGradients && canScrollLeft && (
-        <div
-          className="sp-carousel-edge sp-carousel-edge-left"
+        <Box
           aria-hidden="true"
-          style={{ opacity: canScrollLeft ? 1 : 0 }}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            left: 0,
+            width: '80px',
+            pointerEvents: 'none',
+            background: `linear-gradient(to right, ${theme.palette.background.default} 0%, transparent 100%)`,
+            opacity: canScrollLeft ? 1 : 0,
+            transition: 'opacity 0.2s ease',
+            zIndex: 1,
+          }}
         />
       )}
 
       {showEdgeGradients && canScrollRight && (
-        <div
-          className="sp-carousel-edge sp-carousel-edge-right"
+        <Box
           aria-hidden="true"
-          style={{ opacity: canScrollRight ? 1 : 0 }}
+          sx={{
+            position: 'absolute',
+            top: 0,
+            bottom: 0,
+            right: 0,
+            width: '80px',
+            pointerEvents: 'none',
+            background: `linear-gradient(to left, ${theme.palette.background.default} 0%, transparent 100%)`,
+            opacity: canScrollRight ? 1 : 0,
+            transition: 'opacity 0.2s ease',
+            zIndex: 1,
+          }}
         />
       )}
 
       {/* Navigation buttons */}
       {showArrows && canScrollLeft && (
-        <button
+        <IconButton
           aria-label="Previous"
-          className="sp-carousel-nav-button sp-carousel-nav-button-prev"
           onClick={() => scroll('left')}
-          type="button"
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: theme.spacing(0.5),
+            transform: 'translateY(-50%)',
+            width: 32,
+            height: 32,
+            backgroundColor: theme.palette.background.default,
+            boxShadow: theme.shadows[2],
+            zIndex: 2,
+            '&:hover': {
+              boxShadow: theme.shadows[3],
+              transform: 'translateY(-50%) scale(1.05)',
+            },
+            '&:active': {
+              transform: 'translateY(-50%) scale(0.95)',
+            },
+            transition: 'all 0.2s ease',
+          }}
         >
-          <svg
-            className="sp-carousel-nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M15 18L9 12L15 6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+          <ChevronLeftIcon />
+        </IconButton>
       )}
 
       {showArrows && canScrollRight && (
-        <button
+        <IconButton
           aria-label="Next"
-          className="sp-carousel-nav-button sp-carousel-nav-button-next"
           onClick={() => scroll('right')}
-          type="button"
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            right: theme.spacing(0.5),
+            transform: 'translateY(-50%)',
+            width: 32,
+            height: 32,
+            backgroundColor: theme.palette.background.default,
+            boxShadow: theme.shadows[2],
+            zIndex: 2,
+            '&:hover': {
+              boxShadow: theme.shadows[3],
+              transform: 'translateY(-50%) scale(1.05)',
+            },
+            '&:active': {
+              transform: 'translateY(-50%) scale(0.95)',
+            },
+            transition: 'all 0.2s ease',
+          }}
         >
-          <svg
-            className="sp-carousel-nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              d="M9 18L15 12L9 6"
-              stroke="currentColor"
-              strokeWidth="1.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+          <ChevronRightIcon />
+        </IconButton>
       )}
-    </div>
+    </Box>
   );
 };

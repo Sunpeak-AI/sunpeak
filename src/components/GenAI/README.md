@@ -2,15 +2,6 @@
 
 Create platform-aware genAI Apps with automatic theming and constraints. Works across ChatGPT, Gemini, Claude, and other platforms.
 
-## Features
-
-- ✅ Automatic platform detection and integration
-- ✅ Built-in `maxHeight` constraint from platform
-- ✅ Automatic color scheme theming (light/dark)
-- ✅ Standardized `maxWidth` constraint (default: 800px)
-- ✅ Base CSS classes for consistent styling
-- ✅ Works with all supported genAI platforms
-
 ## Usage
 
 ```tsx
@@ -25,11 +16,12 @@ export const MyApp = GenAI(({ maxHeight, colorScheme }) => (
 ));
 ```
 
-That's it! Your App will automatically:
-- Receive `maxHeight` and `colorScheme` from the platform
-- Apply theme classes (`sp-theme-light` or `sp-theme-dark`)
-- Respect the 800px max width constraint
-- Include base styling classes
+That's it! GenAI automatically provides:
+- ✅ MUI theming (light/dark mode from platform)
+- ✅ Platform constraints (`maxHeight`)
+- ✅ Color scheme information
+- ✅ 800px max width constraint (configurable)
+- ✅ Base styling classes
 
 ## Customizing maxWidth
 
@@ -65,14 +57,6 @@ Your render function receives:
 - `maxHeight: number | null` - Platform's max height constraint (in pixels)
 - `colorScheme: 'light' | 'dark' | null` - Current theme
 
-### CSS Classes
-
-GenAI automatically applies:
-
-- `sp-genai-app` - Base class
-- `sp-antialiased` - Font smoothing
-- `sp-theme-${colorScheme}` - Theme class (e.g., `sp-theme-dark`)
-
 ## Examples
 
 ### Weather App
@@ -94,14 +78,17 @@ export const WeatherApp = GenAI(() => (
 ### Theme-Aware App
 
 ```tsx
+import { GenAI } from 'sunpeak';
+import { useTheme } from '@mui/material';
+
 export const AdaptiveApp = GenAI(({ maxHeight, colorScheme }) => {
-  const isDark = colorScheme === 'dark';
+  const theme = useTheme();
 
   return (
     <div style={{
       padding: '20px',
-      backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
-      color: isDark ? '#ffffff' : '#000000',
+      backgroundColor: theme.palette.background.default,
+      color: theme.palette.text.primary,
       minHeight: maxHeight ? `${maxHeight - 100}px` : '400px'
     }}>
       <h2>Adaptive Content</h2>

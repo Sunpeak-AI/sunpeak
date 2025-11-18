@@ -1,6 +1,19 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, useMemo, type ReactNode } from 'react';
+import {
+  Box,
+  Typography,
+  Select,
+  MenuItem,
+  FormControl,
+  InputLabel,
+  TextField,
+  IconButton,
+} from '@mui/material';
+import { ThemeProvider } from '@mui/material/styles';
+import CloseIcon from '@mui/icons-material/Close';
 import type { DisplayMode, Theme, ChatGPTGlobals } from '../../types';
 import { SET_GLOBALS_EVENT_TYPE, SetGlobalsEvent } from '../../types/chatgpt';
+import { getTheme } from '../../themes';
 
 export interface ChatGPTSimulatorProps {
   /**
@@ -85,6 +98,9 @@ export function ChatGPTSimulator({
 
   // Sync colorScheme with window.openai.colorScheme as source of truth
   const [colorScheme, setColorScheme] = useState<Theme>(initialColorScheme);
+
+  // Create theme based on color scheme
+  const theme = useMemo(() => getTheme(colorScheme), [colorScheme]);
 
   // Listen to changes in window.openai.colorScheme
   useEffect(() => {
@@ -200,125 +216,322 @@ export function ChatGPTSimulator({
   };
 
   return (
-    <div className={`chatgpt-simulator chatgpt-simulator--${colorScheme}`} data-display-mode={displayMode}>
+    <ThemeProvider theme={theme}>
+      <Box
+        sx={{
+          minHeight: '100vh',
+          display: 'flex',
+          fontFamily: theme.typography.fontFamily,
+          backgroundColor: theme.palette.background.default,
+          color: theme.palette.text.primary,
+        }}
+      >
       {showControls && (
-        <div className="chatgpt-simulator__sidebar">
-          <div className="chatgpt-simulator__sidebar-header">
-            <h2>Controls</h2>
-          </div>
-          <div className="chatgpt-simulator__control-group">
+        <Box
+          sx={{
+            width: '250px',
+            minWidth: '250px',
+            padding: theme.spacing(5),
+            display: 'flex',
+            flexDirection: 'column',
+            gap: theme.spacing(5),
+            overflowY: 'auto',
+            backgroundColor: theme.palette.mode === 'light'
+              ? theme.palette.background.paper
+              : theme.palette.background.default,
+            borderRight: `1px solid ${theme.palette.divider}`,
+            '@media (max-width: 768px)': {
+              width: '100%',
+              minWidth: 'unset',
+              borderRight: 'none',
+              borderBottom: `1px solid ${theme.palette.divider}`,
+              padding: theme.spacing(4),
+            },
+          }}
+        >
+          <Box>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Controls
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: theme.spacing(3) }}>
             {uiSimulations && uiSimulations.length > 0 && (
-              <label>
-                App UI
-                <select
+              <FormControl fullWidth size="small">
+                <InputLabel>App UI</InputLabel>
+                <Select
                   value={selectedUISimulation}
                   onChange={(e) => setSelectedUISimulation(e.target.value)}
+                  label="App UI"
                 >
                   {uiSimulations.map((simulation) => (
-                    <option key={simulation} value={simulation}>
+                    <MenuItem key={simulation} value={simulation}>
                       {simulation}
-                    </option>
+                    </MenuItem>
                   ))}
-                </select>
-              </label>
+                </Select>
+              </FormControl>
             )}
-            <label>
-              Color Scheme
-              <select value={colorScheme} onChange={(e) => setColorScheme(e.target.value as Theme)}>
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-              </select>
-            </label>
-            <label>
-              Display Mode
-              <select
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Color Scheme</InputLabel>
+              <Select
+                value={colorScheme}
+                onChange={(e) => setColorScheme(e.target.value as Theme)}
+                label="Color Scheme"
+              >
+                <MenuItem value="light">Light</MenuItem>
+                <MenuItem value="dark">Dark</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Display Mode</InputLabel>
+              <Select
                 value={displayMode}
                 onChange={(e) => setDisplayMode(e.target.value as DisplayMode)}
+                label="Display Mode"
               >
-                <option value="inline">Inline</option>
-                <option value="fullscreen">Fullscreen</option>
-                <option value="pip">Picture-in-Picture</option>
-              </select>
-            </label>
-            <label>
-              Body Width
-              <select value={bodyWidth} onChange={(e) => setBodyWidth(e.target.value)}>
-                <option value="100%">100% (Full)</option>
-                <option value="1024px">1024px (Laptop)</option>
-                <option value="768px">768px (Tablet)</option>
-                <option value="425px">425px (Mobile L)</option>
-                <option value="320px">320px (Mobile S)</option>
-              </select>
-            </label>
-          </div>
-        </div>
+                <MenuItem value="inline">Inline</MenuItem>
+                <MenuItem value="fullscreen">Fullscreen</MenuItem>
+                <MenuItem value="pip">Picture-in-Picture</MenuItem>
+              </Select>
+            </FormControl>
+
+            <FormControl fullWidth size="small">
+              <InputLabel>Body Width</InputLabel>
+              <Select
+                value={bodyWidth}
+                onChange={(e) => setBodyWidth(e.target.value)}
+                label="Body Width"
+              >
+                <MenuItem value="100%">100% (Full)</MenuItem>
+                <MenuItem value="1024px">1024px (Laptop)</MenuItem>
+                <MenuItem value="768px">768px (Tablet)</MenuItem>
+                <MenuItem value="425px">425px (Mobile L)</MenuItem>
+                <MenuItem value="320px">320px (Mobile S)</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+        </Box>
       )}
 
-      <div
-        className="chatgpt-simulator__main"
-        style={{
-          '--chatgpt-body-width': bodyWidth
-        } as React.CSSProperties}
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          margin: '0 auto',
+          overflowY: 'auto',
+          padding: isFullscreen ? 0 : `${theme.spacing(4)} 0 ${theme.spacing(4)} ${theme.spacing(6)}`,
+          position: 'relative',
+          width: bodyWidth,
+          maxWidth: bodyWidth,
+          height: isFullscreen ? '100vh' : 'auto',
+        }}
       >
         {isFullscreen && (
-          <button
-            className="chatgpt-simulator__close-button"
+          <IconButton
             onClick={() => setDisplayMode('inline')}
             aria-label="Exit fullscreen"
-            type="button"
+            sx={{
+              position: 'absolute',
+              top: theme.spacing(4),
+              left: theme.spacing(4),
+              width: 40,
+              height: 40,
+              backgroundColor: theme.palette.background.paper,
+              zIndex: 10,
+              '&:hover': {
+                backgroundColor: theme.palette.mode === 'light'
+                  ? theme.palette.grey[200]
+                  : theme.palette.grey[800],
+              },
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M15 5L5 15M5 5L15 15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </button>
+            <CloseIcon />
+          </IconButton>
         )}
 
         {!isFullscreen && (
-          <div className="chatgpt-simulator__header">
-            <h1>ChatGPT</h1>
-          </div>
+          <Box sx={{ mb: theme.spacing(4) }}>
+            <Typography variant="h4" sx={{ fontWeight: 600, margin: 0 }}>
+              ChatGPT
+            </Typography>
+          </Box>
         )}
 
-        <div className="[--thread-content-max-width:40rem] thread-lg:[--thread-content-max-width:48rem] mx-auto max-w-[var(--thread-content-max-width)] flex-1 relative flex w-full min-w-0 flex-col">
-          <div className="flex max-w-full flex-col grow">
+        <Box
+          sx={{
+            maxWidth: '48rem',
+            mx: 'auto',
+            flex: 1,
+            position: 'relative',
+            display: 'flex',
+            width: '100%',
+            minWidth: 0,
+            flexDirection: 'column',
+          }}
+        >
+          <Box sx={{ display: 'flex', maxWidth: '100%', flexDirection: 'column', flexGrow: 1 }}>
             {!isFullscreen && (
               <>
                 {/* User Message */}
-                <div className="chatgpt-simulator__message chatgpt-simulator__message--user">
-                  <div className="chatgpt-simulator__message-content">{userMessage}</div>
-                </div>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    justifyContent: 'flex-end',
+                    marginLeft: 'auto',
+                    marginRight: theme.spacing(6),
+                    maxWidth: '70%',
+                    '@media (max-width: 768px)': {
+                      maxWidth: '85%',
+                    },
+                  }}
+                >
+                  <Box
+                    sx={{
+                      flex: '0 1 auto',
+                      padding: `${theme.spacing(2)} ${theme.spacing(4)}`,
+                      borderRadius: theme.spacing(3),
+                      lineHeight: 1.5,
+                      fontSize: theme.typography.body1.fontSize,
+                      overflow: 'hidden',
+                      minWidth: '100px',
+                      backgroundColor: theme.palette.mode === 'light'
+                        ? theme.palette.grey[100]
+                        : theme.palette.grey[800],
+                      color: theme.palette.text.primary,
+                    }}
+                  >
+                    {userMessage}
+                  </Box>
+                </Box>
 
                 {/* Assistant Message with Component */}
-                <div className="min-h-8 relative flex w-full flex-col items-end gap-2 text-start break-words whitespace-normal">
-                  <div className="flex w-full flex-col gap-1 empty:hidden first:pt-[1px]">
-                    <div className="w-full break-words">
+                <Box
+                  sx={{
+                    minHeight: '32px',
+                    position: 'relative',
+                    display: 'flex',
+                    width: '100%',
+                    flexDirection: 'column',
+                    alignItems: 'flex-end',
+                    gap: theme.spacing(2),
+                    textAlign: 'start',
+                    wordBreak: 'break-word',
+                    whiteSpace: 'normal',
+                  }}
+                >
+                  <Box
+                    sx={{
+                      display: 'flex',
+                      width: '100%',
+                      flexDirection: 'column',
+                      gap: theme.spacing(1),
+                      '&:empty': { display: 'none' },
+                      '&:first-of-type': { pt: '1px' },
+                    }}
+                  >
+                    <Box sx={{ width: '100%', wordBreak: 'break-word' }}>
                       {/* App Title */}
-                      <div className="chatgpt-simulator__app-title">
-                        <span className="chatgpt-simulator__app-icon">✈️</span>
-                        <span className="chatgpt-simulator__app-name">Splorin</span>
-                      </div>
-                      <div className="chatgpt-simulator__component-slot">{renderChildren()}</div>
-                    </div>
-                  </div>
-                </div>
+                      <Box
+                        sx={{
+                          color: theme.palette.text.secondary,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: theme.spacing(2),
+                          margin: `${theme.spacing(4)} 0`,
+                          fontSize: theme.typography.body2.fontSize,
+                          fontWeight: 500,
+                          opacity: 0.7,
+                        }}
+                      >
+                        <Box component="span" sx={{ fontSize: theme.typography.body1.fontSize, lineHeight: 1 }}>
+                          ✈️
+                        </Box>
+                        <Box component="span" sx={{ lineHeight: 1 }}>
+                          Splorin
+                        </Box>
+                      </Box>
+                      <Box
+                        sx={{
+                          overflow: 'hidden',
+                          minWidth: '300px',
+                          maxWidth: '100%',
+                          '@media (max-width: 768px)': {
+                            minWidth: '200px',
+                          },
+                        }}
+                      >
+                        {renderChildren()}
+                      </Box>
+                    </Box>
+                  </Box>
+                </Box>
               </>
             )}
             {isFullscreen && (
-              <div className="chatgpt-simulator__fullscreen-content">
+              <Box
+                sx={{
+                  flex: 1,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: '100%',
+                  overflowY: 'auto',
+                  paddingBottom: '80px',
+                }}
+              >
                 {renderChildren()}
-              </div>
+              </Box>
             )}
-          </div>
-          <div className="chatgpt-simulator__input-container">
-            <input
-              type="text"
-              className="chatgpt-simulator__input"
+          </Box>
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              margin: `${theme.spacing(4)} 0`,
+              display: 'flex',
+              justifyContent: 'center',
+              pointerEvents: 'none',
+            }}
+          >
+            <TextField
               placeholder="Message ChatGPT"
               disabled
+              sx={{
+                pointerEvents: 'auto',
+                width: '100%',
+                maxWidth: '800px',
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: theme.spacing(8),
+                  backgroundColor: theme.palette.mode === 'light'
+                    ? theme.palette.grey[100]
+                    : theme.palette.grey[800],
+                  '& fieldset': {
+                    borderColor: theme.palette.mode === 'light'
+                      ? theme.palette.grey[300]
+                      : theme.palette.grey[700],
+                  },
+                  '&.Mui-disabled': {
+                    cursor: 'not-allowed',
+                    opacity: 0.6,
+                  },
+                },
+                '& .MuiInputBase-input::placeholder': {
+                  color: theme.palette.text.secondary,
+                  opacity: 0.7,
+                },
+              }}
             />
-          </div>
-        </div>
-      </div>
-    </div>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
+    </ThemeProvider>
   );
 }

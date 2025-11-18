@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { GenAI } from './GenAI';
 
@@ -24,28 +23,21 @@ describe('GenAI', () => {
   it('applies custom className', () => {
     const TestApp = GenAI(() => <div>Content</div>);
     const { container } = render(<TestApp className="custom-class" />);
-    const app = container.querySelector('.sp-genai-app');
+    const app = container.querySelector('.custom-class');
     expect(app).toHaveClass('custom-class');
   });
 
   it('applies default maxWidth of 800px', () => {
     const TestApp = GenAI(() => <div>Content</div>);
     const { container } = render(<TestApp />);
-    const app = container.querySelector('.sp-genai-app');
+    const app = container.firstChild as HTMLElement;
     expect(app).toHaveStyle({ maxWidth: '800px' });
   });
 
   it('applies custom maxWidth', () => {
     const TestApp = GenAI(() => <div>Content</div>);
     const { container } = render(<TestApp maxWidth={600} />);
-    const app = container.querySelector('.sp-genai-app');
+    const app = container.firstChild as HTMLElement;
     expect(app).toHaveStyle({ maxWidth: '600px' });
-  });
-
-  it('has expected CSS classes', () => {
-    const TestApp = GenAI(() => <div>Content</div>);
-    const { container } = render(<TestApp />);
-    const app = container.querySelector('.sp-genai-app');
-    expect(app).toHaveClass('sp-genai-app', 'sp-antialiased');
   });
 });

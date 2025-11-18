@@ -1,8 +1,19 @@
 import { type ReactNode, type HTMLAttributes } from 'react';
 import { clsx } from 'clsx';
-import { Button, type ButtonProps } from '../Button';
-import { useRequestDisplayMode, useDisplayMode, useMaxHeight, useColorScheme, useWidgetState } from '../../hooks';
+import { Button, type ButtonProps as MuiButtonProps, Box, useTheme } from '@mui/material';
+import { useRequestDisplayMode, useDisplayMode, useMaxHeight, useWidgetState } from '../../hooks';
 import type { GenAIProps } from '../GenAI';
+
+export interface ButtonProps extends Omit<MuiButtonProps, 'onClick'> {
+  /**
+   * Whether to use primary styling (accent color) or secondary (outlined)
+   */
+  isPrimary?: boolean;
+  /**
+   * Click handler (required)
+   */
+  onClick: () => void;
+}
 
 export interface CardProps extends Omit<GenAIProps, 'children'>, HTMLAttributes<HTMLDivElement> {
   /**
@@ -77,7 +88,6 @@ export const Card = ({
   button1,
   button2,
   variant = 'default',
-  maxWidth = 800,
   className,
   onClick,
   id,
@@ -86,52 +96,11 @@ export const Card = ({
   const requestDisplayMode = useRequestDisplayMode();
   const displayMode = useDisplayMode();
   const maxHeight = useMaxHeight();
-  const colorScheme = useColorScheme();
+  const theme = useTheme();
   const [widgetState, setWidgetState] = useWidgetState<{ selectedCardId?: string }>({});
 
   // Default to inline mode if display mode is not detected
   const isInline = displayMode !== 'fullscreen' && displayMode !== 'pip';
-
-  const cardClasses = clsx(
-    'sp-genai-app',
-    'sp-card',
-    'sp-select-none',
-    'sp-antialiased',
-    {
-      'sp-card-inline': isInline,
-      'sp-card-fullscreen': !isInline,
-      'sp-card-elevated': variant === 'elevated',
-      'sp-card-bordered': variant === 'bordered',
-    },
-    colorScheme && `sp-theme-${colorScheme}`,
-    className
-  );
-
-  const contentClasses = clsx(
-    'sp-card-content',
-    {
-      'sp-card-content-inline': isInline,
-      'sp-card-content-fullscreen': !isInline,
-      'sp-card-content-inline-with-image': isInline && image,
-      'sp-card-content-fullscreen-with-image': !isInline && image,
-    }
-  );
-
-  const innerClasses = clsx(
-    'sp-card-inner',
-    {
-      'sp-card-inner-inline': isInline,
-      'sp-card-inner-fullscreen': !isInline,
-    }
-  );
-
-  const descriptionClasses = clsx(
-    'sp-card-description',
-    {
-      'sp-card-description-inline': isInline && (metadata || header),
-      'sp-card-description-fullscreen': !isInline && (metadata || header),
-    }
-  );
 
   const hasButtons = button1 || button2;
 
@@ -153,48 +122,161 @@ export const Card = ({
     }
   };
 
+  const renderButton = (buttonProps: ButtonProps) => {
+    const { isPrimary = false, onClick: buttonOnClick, children, ...muiProps } = buttonProps;
+
+    const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      e.stopPropagation();
+      buttonOnClick();
+    };
+
+    return (
+      <Button
+        {...muiProps}
+        variant={isPrimary ? 'contained' : 'outlined'}
+        onClick={handleClick}
+        className={clsx(
+          'sp-button',
+          isPrimary ? 'sp-button-primary' : 'sp-button-secondary',
+          muiProps.className
+        )}
+      >
+        {children}
+      </Button>
+    );
+  };
+
   return (
-    <div
+    <Box
       id={id}
-      className={cardClasses}
-      style={{
-        maxWidth: !isInline ? `${maxWidth}px` : undefined,
-        maxHeight: maxHeight ? `${maxHeight}px` : undefined,
-      }}
+      className={className}
       onClick={handleCardClick}
+      sx={{
+        backgroundColor: theme.palette.background.default,
+        borderRadius: theme.spacing(3),
+        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        fontFamily: theme.typography.fontFamily,
+        width: isInline ? '220px' : '100%',
+        maxWidth: isInline ? '220px' : `${imageMaxWidth}px`,
+        maxHeight: maxHeight ? `${maxHeight}px` : undefined,
+        cursor: isInline ? 'pointer' : 'default',
+        userSelect: 'none',
+        marginLeft: isInline ? undefined : 'auto',
+        marginRight: isInline ? undefined : 'auto',
+        ...(variant === 'bordered' && {
+          border: `1px solid ${theme.palette.divider}`,
+        }),
+        ...(variant === 'elevated' && {
+          boxShadow: theme.shadows[2],
+          border: `1px solid ${theme.palette.divider}`,
+        }),
+      }}
       {...props}
     >
       {image && (
-        <div>
-          <img
+        <Box>
+          <Box
+            component="img"
             src={image}
             alt={imageAlt}
-            className="sp-card-image"
             loading="lazy"
-            style={{
+            sx={{
+              width: '100%',
+              height: 'auto',
+              aspectRatio: '1',
+              objectFit: 'cover',
+              borderRadius: theme.spacing(3),
+              display: 'block',
               maxWidth: `${imageMaxWidth}px`,
               maxHeight: `${imageMaxHeight}px`,
             }}
           />
-        </div>
+        </Box>
       )}
-      <div className={contentClasses}>
-        <div className={innerClasses}>
-          {header && <div className="sp-card-header sp-truncate">{header}</div>}
-          {metadata && <div className="sp-card-metadata">{metadata}</div>}
-          {children && (
-            <div className={descriptionClasses}>
-              {children}
-            </div>
+      <Box
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          flex: 1,
+          gap: isInline ? theme.spacing(3) : theme.spacing(4),
+          padding: isInline ? theme.spacing(4) : theme.spacing(6),
+          ...(image && {
+            paddingTop: isInline ? theme.spacing(3) : theme.spacing(4),
+          }),
+        }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            flex: 1,
+            gap: isInline ? theme.spacing(1) : theme.spacing(2),
+          }}
+        >
+          {header && (
+            <Box
+              sx={{
+                fontSize: theme.typography.body1.fontSize,
+                fontWeight: theme.typography.fontWeightMedium,
+                color: theme.palette.text.primary,
+                lineHeight: 1.25,
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {header}
+            </Box>
           )}
-        </div>
+          {metadata && (
+            <Box
+              sx={{
+                fontSize: theme.typography.caption.fontSize,
+                color: theme.palette.text.secondary,
+                lineHeight: 1.5,
+              }}
+            >
+              {metadata}
+            </Box>
+          )}
+          {children && (
+            <Box
+              sx={{
+                fontSize: theme.typography.body2.fontSize,
+                color: theme.palette.text.primary,
+                lineHeight: 1.5,
+                display: '-webkit-box',
+                WebkitBoxOrient: 'vertical',
+                overflow: 'hidden',
+                ...(isInline && (metadata || header) && {
+                  marginTop: theme.spacing(1),
+                  WebkitLineClamp: 2,
+                }),
+                ...(!isInline && (metadata || header) && {
+                  marginTop: theme.spacing(2),
+                  WebkitLineClamp: 'unset',
+                }),
+              }}
+            >
+              {children}
+            </Box>
+          )}
+        </Box>
         {hasButtons && (
-          <div className="sp-card-actions">
-            {button1 && <Button {...button1} />}
-            {button2 && <Button {...button2} />}
-          </div>
+          <Box
+            sx={{
+              display: 'flex',
+              gap: theme.spacing(2),
+              flexWrap: 'wrap',
+            }}
+          >
+            {button1 && renderButton(button1)}
+            {button2 && renderButton(button2)}
+          </Box>
         )}
-      </div>
-    </div>
+      </Box>
+    </Box>
   );
 };

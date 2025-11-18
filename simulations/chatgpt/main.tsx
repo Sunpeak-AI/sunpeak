@@ -2,7 +2,6 @@ import ReactDOM from 'react-dom/client';
 import { ChatGPTSimulator } from '../../src/components/ChatGPTSimulator';
 import { Carousel, Card } from 'sunpeak';
 import { useWidgetState } from '../../src/hooks';
-import '../../src/styles/themes.css';
 
 const places = [
   {

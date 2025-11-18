@@ -1,9 +1,6 @@
 // Components
-export { Button } from './components/Button';
-export type { ButtonProps } from './components/Button';
-
 export { Card } from './components/Card';
-export type { CardProps } from './components/Card';
+export type { CardProps, ButtonProps } from './components/Card';
 
 export { Carousel } from './components/Carousel';
 export type { CarouselProps } from './components/Carousel';
@@ -13,9 +10,6 @@ export type { GenAIProps, GenAIRenderProps } from './components/GenAI';
 
 export { ChatGPTSimulator } from './components/ChatGPTSimulator';
 export type { ChatGPTSimulatorProps } from './components/ChatGPTSimulator';
-
-export { ThemeProvider } from './components/ThemeProvider';
-export type { ThemeProviderProps } from './components/ThemeProvider';
 
 // Platform Context & Providers
 export { PlatformProvider, usePlatform } from './context/PlatformContext';

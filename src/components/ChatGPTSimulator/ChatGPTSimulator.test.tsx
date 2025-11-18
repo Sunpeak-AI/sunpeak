@@ -1,39 +1,49 @@
-import { describe, it, expect, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import { createTheme } from '@mui/material/styles';
 import { ChatGPTSimulator } from './ChatGPTSimulator';
+
+const lightTheme = createTheme({ palette: { mode: 'light' } });
+const darkTheme = createTheme({ palette: { mode: 'dark' } });
 
 describe('ChatGPTSimulator', () => {
   // Store original window.openai
-  const originalOpenai = (global.window as Window & { openai?: unknown }).openai;
+  const originalOpenai = (window as Window & { openai?: unknown }).openai;
 
   afterEach(() => {
     // Restore original window.openai
-    (global.window as Window & { openai?: unknown }).openai = originalOpenai;
+    (window as Window & { openai?: unknown }).openai = originalOpenai;
   });
 
   it('renders user message', () => {
     render(
-      <ChatGPTSimulator userMessage="Test message">
-        <div>Component content</div>
-      </ChatGPTSimulator>
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator userMessage="Test message">
+          <div>Component content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
     expect(screen.getByText('Test message')).toBeInTheDocument();
   });
 
   it('renders children in component slot', () => {
     render(
-      <ChatGPTSimulator>
-        <div data-testid="test-component">Test Component</div>
-      </ChatGPTSimulator>
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator>
+          <div data-testid="test-component">Test Component</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
     expect(screen.getByTestId('test-component')).toBeInTheDocument();
   });
 
   it('initializes window.openai with correct properties', () => {
     render(
-      <ChatGPTSimulator displayMode="inline" colorScheme="light">
-        <div>Content</div>
-      </ChatGPTSimulator>
+      <ThemeProvider theme={lightTheme}>
+        <ChatGPTSimulator displayMode="inline" colorScheme="light">
+          <div>Content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
 
     const openai = window.openai;
@@ -49,51 +59,59 @@ describe('ChatGPTSimulator', () => {
 
   it('renders controls when showControls is true', () => {
     render(
-      <ChatGPTSimulator showControls={true}>
-        <div>Content</div>
-      </ChatGPTSimulator>
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator showControls={true}>
+          <div>Content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
     expect(screen.getByText('Controls')).toBeInTheDocument();
-    expect(screen.getByText('Color Scheme')).toBeInTheDocument();
-    expect(screen.getByText('Display Mode')).toBeInTheDocument();
+    expect(screen.getAllByText('Color Scheme')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Display Mode')[0]).toBeInTheDocument();
   });
 
   it('hides controls when showControls is false', () => {
     render(
-      <ChatGPTSimulator showControls={false}>
-        <div>Content</div>
-      </ChatGPTSimulator>
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator showControls={false}>
+          <div>Content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
     expect(screen.queryByText('Controls')).not.toBeInTheDocument();
-    expect(screen.queryByText('Color Scheme')).not.toBeInTheDocument();
-    expect(screen.queryByText('Display Mode')).not.toBeInTheDocument();
+    expect(screen.queryAllByText('Color Scheme')).toHaveLength(0);
+    expect(screen.queryAllByText('Display Mode')).toHaveLength(0);
   });
 
-  it('applies correct color scheme class', () => {
-    const { container } = render(
-      <ChatGPTSimulator colorScheme="dark">
-        <div>Content</div>
-      </ChatGPTSimulator>
+  it('renders Exit fullscreen button in fullscreen mode', () => {
+    render(
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator displayMode="fullscreen">
+          <div>Content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
-    const simulator = container.querySelector('.chatgpt-simulator');
-    expect(simulator).toHaveClass('chatgpt-simulator--dark');
+    expect(screen.getByLabelText('Exit fullscreen')).toBeInTheDocument();
   });
 
-  it('sets display mode data attribute', () => {
-    const { container } = render(
-      <ChatGPTSimulator displayMode="fullscreen">
-        <div>Content</div>
-      </ChatGPTSimulator>
+  it('does not render Exit fullscreen button in inline mode', () => {
+    render(
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator displayMode="inline">
+          <div>Content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
-    const simulator = container.querySelector('.chatgpt-simulator');
-    expect(simulator).toHaveAttribute('data-display-mode', 'fullscreen');
+    expect(screen.queryByLabelText('Exit fullscreen')).not.toBeInTheDocument();
   });
 
   it('cleans up window.openai on unmount', () => {
     const { unmount } = render(
-      <ChatGPTSimulator>
-        <div>Content</div>
-      </ChatGPTSimulator>
+      <ThemeProvider theme={darkTheme}>
+        <ChatGPTSimulator>
+          <div>Content</div>
+        </ChatGPTSimulator>
+      </ThemeProvider>
     );
 
     expect(window.openai).toBeDefined();

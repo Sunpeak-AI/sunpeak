@@ -29,12 +29,12 @@ import { getChatGPTTheme, chatgptLightTheme, chatgptDarkTheme } from './chatgpt'
 export type Platform = 'chatgpt';
 
 /**
- * Get the current platform from environment variable
- * Defaults to 'chatgpt' if not specified
+ * Get the current platform
+ * Currently only supports 'chatgpt'
+ * Future: Can be extended to support multiple platforms via build-time configuration
  */
 export const getCurrentPlatform = (): Platform => {
-  const platform = process.env.SUNPEAK_PLATFORM || 'chatgpt';
-  return platform as Platform;
+  return 'chatgpt';
 };
 
 /**

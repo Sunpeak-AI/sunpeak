@@ -11,7 +11,7 @@ import { createTheme, type ThemeOptions } from '@mui/material/styles';
  * Base theme options that all platform themes extend
  */
 export const baseThemeOptions: ThemeOptions = {
-  spacing: 4, // 4px base unit (matches --sp-spacing-1)
+  spacing: 4, // 4px base unit
 
   shape: {
     borderRadius: 8, // Default border radius in pixels

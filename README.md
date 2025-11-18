@@ -29,12 +29,12 @@ pnpm dev
 
 ## Building Apps
 
-### Use a library App
+### Use library components
 
 ```tsx
-import { Carousel, Card } from 'sunpeak';
+import { GenAI, Carousel, Card } from 'sunpeak';
 
-export const MyCarousel = () => (
+export const MyCarousel = GenAI(() => (
   <Carousel>
     <Card
       image="https://sunpeak.ai/images/sun.svg"
@@ -46,23 +46,30 @@ export const MyCarousel = () => (
       Card content
     </Card>
   </Carousel>
-);
+));
 ```
 
 ### Create a custom App
 
 ```tsx
 import { GenAI } from 'sunpeak';
-import 'sunpeak/dist/index.css';
+import { Box, Typography } from '@mui/material';
 
 export const MyApp = GenAI(({ maxHeight, colorScheme }) => (
-  <div style={{ padding: '20px' }}>
-    <h2>Hello GenAI!</h2>
-    <p>Theme: {colorScheme}</p>
-    <p>Available height: {maxHeight}px</p>
-  </div>
+  <Box sx={{ p: 3 }}>
+    <Typography variant="h5" gutterBottom>
+      Hello GenAI!
+    </Typography>
+    <Typography variant="body1" color="text.secondary">
+      Theme: {colorScheme}
+    </Typography>
+    <Typography variant="body2">
+      Max height: {maxHeight}px
+    </Typography>
+  </Box>
 ));
 ```
+
 ## Supported Platforms
 
 - ✅ **OpenAI ChatGPT** - Fully supported ([design guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines))
@@ -77,12 +84,12 @@ Sunpeak automatically detects the active platform. No configuration needed for b
 ## What's Included
 
 ### Components
-- **GenAI Component** - Extensible base component
-  - Enforce requirements imposed by App platforms
-  - Provide a unified interface for App platform interactions
-- **Card** - Responsive card component that adapts to display mode
-- **Carousel** - Horizontal scrolling carousel for multiple cards
-- **Button** - Action button with required onClick and optional isPrimary styling
+- **GenAI** - Single interface for building Apps, all Apps must use this wrapper
+  - Automatic MUI theming (light/dark mode)
+  - Platform constraints (maxHeight)
+- **Card** - Responsive card component
+- **Carousel** - Horizontal scrolling carousel
+- **ChatGPTSimulator** - Local development environment
 
 ### Hooks
 - **usePlatformGlobal** - Platform-agnostic global state access
@@ -91,12 +98,11 @@ Sunpeak automatically detects the active platform. No configuration needed for b
 - **useWidgetProps** - Access tool output data
 - **useWidgetState** - Manage persistent widget state
 - **useMaxHeight** - Get height constraints
+- **useColorScheme** - Get current color scheme (light/dark)
 
 ### Design Systems
-- **ChatGPT** - Default, follows Apps SDK guidelines
-- **Gemini** - Google's design language (placeholder)
-- **Claude** - Anthropic's design language (placeholder)
-- **Custom** - Build your own via CSS variables
+- **ChatGPT** - MUI theme following OpenAI Apps SDK guidelines
+- **Custom** - Build your own MUI theme (see [THEMING.md](./THEMING.md))
 
 **See [THEMING.md](./THEMING.md)** for creating custom design systems and complete theming documentation.
 

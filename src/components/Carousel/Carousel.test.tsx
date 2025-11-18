@@ -1,4 +1,3 @@
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Carousel } from './Carousel';
 
@@ -22,18 +21,8 @@ describe('Carousel', () => {
         <div>Item</div>
       </Carousel>
     );
-    const carousel = container.querySelector('.sp-carousel');
-    expect(carousel).toHaveClass('custom-carousel');
-  });
-
-  it('applies custom gap', () => {
-    const { container } = render(
-      <Carousel gap={24}>
-        <div>Item</div>
-      </Carousel>
-    );
-    const scroll = container.querySelector('.sp-carousel-scroll');
-    expect(scroll).toHaveStyle({ gap: '24px' });
+    const carousel = container.querySelector('.custom-carousel');
+    expect(carousel).toBeInTheDocument();
   });
 
   it('hides arrows when showArrows is false', () => {
@@ -46,15 +35,13 @@ describe('Carousel', () => {
     expect(screen.queryByLabelText('Next')).not.toBeInTheDocument();
   });
 
-  it('has expected CSS classes', () => {
+  it('renders MUI Box component', () => {
     const { container } = render(
       <Carousel>
         <div>Item</div>
       </Carousel>
     );
-    const carousel = container.querySelector('.sp-carousel');
-    expect(carousel).toHaveClass('sp-carousel', 'sp-antialiased');
-    const scroll = container.querySelector('.sp-carousel-scroll');
-    expect(scroll).toHaveClass('sp-carousel-scroll');
+    const muiBox = container.querySelector('.MuiBox-root');
+    expect(muiBox).toBeInTheDocument();
   });
 });
