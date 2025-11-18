@@ -254,7 +254,12 @@ export function ChatGPTSimulator({
         </div>
       )}
 
-      <div className="chatgpt-simulator__main" style={{ width: bodyWidth, maxWidth: bodyWidth }}>
+      <div
+        className="chatgpt-simulator__main"
+        style={{
+          '--chatgpt-body-width': bodyWidth
+        } as React.CSSProperties}
+      >
         {isFullscreen && (
           <button
             className="chatgpt-simulator__close-button"
@@ -304,15 +309,15 @@ export function ChatGPTSimulator({
               </div>
             )}
           </div>
+          <div className="chatgpt-simulator__input-container">
+            <input
+              type="text"
+              className="chatgpt-simulator__input"
+              placeholder="Message ChatGPT"
+              disabled
+            />
+          </div>
         </div>
-      <div className="chatgpt-simulator__input-container">
-        <input
-          type="text"
-          className="chatgpt-simulator__input"
-          placeholder="Message ChatGPT"
-          disabled
-        />
-      </div>
       </div>
     </div>
   );

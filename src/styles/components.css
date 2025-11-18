@@ -33,10 +33,21 @@
 .sp-card {
   background-color: var(--sp-color-bg-primary);
   border-radius: var(--sp-radius-lg);
-  overflow: hidden;
+  overflow: auto;
   display: flex;
   flex-direction: column;
   font-family: var(--sp-font-family);
+}
+
+.sp-card-inline {
+  width: 220px;
+  max-width: 220px;
+  cursor: pointer;
+}
+
+.sp-card-fullscreen {
+  width: 100%;
+  cursor: default;
 }
 
 .sp-card-bordered {
@@ -57,6 +68,44 @@
   display: block;
 }
 
+.sp-card-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sp-card-content-inline {
+  gap: var(--sp-spacing-3);
+  padding: var(--sp-spacing-4);
+}
+
+.sp-card-content-fullscreen {
+  gap: var(--sp-spacing-4);
+  padding: var(--sp-spacing-6);
+}
+
+.sp-card-content-inline-with-image {
+  padding-top: var(--sp-spacing-3);
+}
+
+.sp-card-content-fullscreen-with-image {
+  padding-top: var(--sp-spacing-4);
+}
+
+.sp-card-inner {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.sp-card-inner-inline {
+  gap: var(--sp-spacing-1);
+}
+
+.sp-card-inner-fullscreen {
+  gap: var(--sp-spacing-2);
+}
+
 .sp-card-header {
   font-size: var(--sp-font-size-base);
   font-weight: var(--sp-font-weight-medium);
@@ -68,7 +117,6 @@
   font-size: var(--sp-font-size-xs);
   color: var(--sp-color-text-secondary);
   line-height: var(--sp-line-height-normal);
-  margin-top: 4px;
 }
 
 .sp-card-description {
@@ -76,9 +124,26 @@
   color: var(--sp-color-text-primary);
   line-height: var(--sp-line-height-normal);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.sp-card-description-inline {
+  margin-top: var(--sp-spacing-1);
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.sp-card-description-fullscreen {
+  margin-top: var(--sp-spacing-2);
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+}
+
+.sp-card-actions {
+  display: flex;
+  gap: var(--sp-spacing-2);
+  flex-wrap: wrap;
 }
 
 /* ===================================
@@ -100,6 +165,12 @@
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
   user-select: none;
+  gap: 1rem;
+  cursor: grab;
+}
+
+.sp-carousel-scroll-dragging {
+  cursor: grabbing;
 }
 
 .sp-carousel-scroll::-webkit-scrollbar {
@@ -112,7 +183,7 @@
 
 .sp-carousel-item {
   flex-shrink: 0;
-  width: var(--sp-card-width);
+  width: 220px;
   display: flex;
 }
 

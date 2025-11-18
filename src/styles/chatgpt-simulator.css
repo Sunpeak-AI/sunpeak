@@ -109,6 +109,8 @@
   overflow-y: auto;
   padding: var(--sp-spacing-4) 0 var(--sp-spacing-4) var(--sp-spacing-6);
   position: relative;
+  width: var(--chatgpt-body-width, 100%);
+  max-width: var(--chatgpt-body-width, 100%);
 }
 
 /* Fullscreen mode - main takes full width */
@@ -176,7 +178,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  padding: var(--sp-spacing-4) var(--sp-spacing-6);
+  margin: var(--sp-spacing-4) 0;
   display: flex;
   justify-content: center;
   pointer-events: none;

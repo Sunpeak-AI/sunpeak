@@ -109,9 +109,9 @@ describe('Card', () => {
     expect(card).toHaveClass('custom-class');
   });
 
-  it('has fixed width of 220px', () => {
+  it('has the class sp-card-inline', () => {
     const { container } = render(<Card {...defaultProps}>Content</Card>);
     const card = container.querySelector('.sp-card');
-    expect(card).toHaveStyle({ width: '220px' });
+    expect(card).toHaveClass('sp-card-inline');
   });
 });

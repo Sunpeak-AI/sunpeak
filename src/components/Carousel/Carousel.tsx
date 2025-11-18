@@ -131,6 +131,13 @@ export const Carousel = ({
     className
   );
 
+  const scrollClasses = clsx(
+    'sp-carousel-scroll',
+    {
+      'sp-carousel-scroll-dragging': isDragging,
+    }
+  );
+
   return (
     <div
       className={containerClasses}
@@ -143,8 +150,8 @@ export const Carousel = ({
       <div className="overflow-hidden">
         <div
           ref={scrollRef}
-          className="sp-carousel-scroll"
-          style={{ gap: `${gap}px`, cursor: isDragging ? 'grabbing' : 'grab' }}
+          className={scrollClasses}
+          style={{ gap: gap !== 16 ? `${gap}px` : undefined }}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUpOrLeave}

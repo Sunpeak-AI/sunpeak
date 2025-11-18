@@ -68,7 +68,6 @@ Per OpenAI guidelines:
 ❌ Spacing (4px grid: 4, 8, 12, 16, 20, 24, 32px)
 ❌ Border radius (6, 8, 12, 16, 24px)
 ❌ Shadows
-❌ Component dimensions (cards are 220px)
 
 **Why?** To ensure consistent UX, accessibility, and platform-native feel across all ChatGPT apps.
 
@@ -100,7 +99,7 @@ import './design-systems/custom.css';
 
 **Shadows:** `--sp-shadow-{sm,md,lg,xl}`
 
-**Components:** `--sp-card-width`, `--sp-card-gap`, `--sp-button-padding-{x,y,x-sm,y-sm}`
+**Components:** `--sp-button-padding-{x,y,x-sm,y-sm}`
 
 ## Resources
 

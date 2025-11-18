@@ -51,7 +51,7 @@ export interface CardProps extends Omit<GenAIProps, 'children'>, HTMLAttributes<
  * Card - A responsive card component that adapts to display mode.
  *
  * In inline mode:
- * - Width: 220px (fixed for carousel consistency)
+ * - Fixed width for carousel consistency
  * - Compact layout optimized for horizontal scrolling
  * - Clickable to request fullscreen mode
  *
@@ -98,11 +98,39 @@ export const Card = ({
     'sp-select-none',
     'sp-antialiased',
     {
+      'sp-card-inline': isInline,
+      'sp-card-fullscreen': !isInline,
       'sp-card-elevated': variant === 'elevated',
       'sp-card-bordered': variant === 'bordered',
     },
     colorScheme && `sp-theme-${colorScheme}`,
     className
+  );
+
+  const contentClasses = clsx(
+    'sp-card-content',
+    {
+      'sp-card-content-inline': isInline,
+      'sp-card-content-fullscreen': !isInline,
+      'sp-card-content-inline-with-image': isInline && image,
+      'sp-card-content-fullscreen-with-image': !isInline && image,
+    }
+  );
+
+  const innerClasses = clsx(
+    'sp-card-inner',
+    {
+      'sp-card-inner-inline': isInline,
+      'sp-card-inner-fullscreen': !isInline,
+    }
+  );
+
+  const descriptionClasses = clsx(
+    'sp-card-description',
+    {
+      'sp-card-description-inline': isInline && (metadata || header),
+      'sp-card-description-fullscreen': !isInline && (metadata || header),
+    }
   );
 
   const hasButtons = button1 || button2;
@@ -130,11 +158,8 @@ export const Card = ({
       id={id}
       className={cardClasses}
       style={{
-        width: isInline ? '220px' : '100%',
-        maxWidth: isInline ? '220px' : `${maxWidth}px`,
+        maxWidth: !isInline ? `${maxWidth}px` : undefined,
         maxHeight: maxHeight ? `${maxHeight}px` : undefined,
-        cursor: isInline ? 'pointer' : 'default',
-        overflow: 'auto',
       }}
       onClick={handleCardClick}
       {...props}
@@ -153,33 +178,18 @@ export const Card = ({
           />
         </div>
       )}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: isInline ? '12px' : '16px',
-          padding: isInline ? '16px' : '24px',
-          paddingTop: image ? (isInline ? '12px' : '16px') : isInline ? '16px' : '24px',
-          flex: 1,
-        }}
-      >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: isInline ? '4px' : '8px', flex: 1 }}>
+      <div className={contentClasses}>
+        <div className={innerClasses}>
           {header && <div className="sp-card-header sp-truncate">{header}</div>}
           {metadata && <div className="sp-card-metadata">{metadata}</div>}
           {children && (
-            <div
-              className="sp-card-description"
-              style={{
-                marginTop: metadata || header ? (isInline ? '4px' : '8px') : '0',
-                WebkitLineClamp: isInline ? 2 : 'unset',
-              }}
-            >
+            <div className={descriptionClasses}>
               {children}
             </div>
           )}
         </div>
         {hasButtons && (
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <div className="sp-card-actions">
             {button1 && <Button {...button1} />}
             {button2 && <Button {...button2} />}
           </div>

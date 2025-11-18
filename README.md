@@ -77,7 +77,7 @@ Sunpeak automatically detects the active platform. No configuration needed for b
 ## What's Included
 
 ### Components
-- **GenAI Component** - Create platform-aware Apps with automatic theming
+- **GenAI Component** - Extensible base component
   - Enforce requirements imposed by App platforms
   - Provide a unified interface for App platform interactions
 - **Card** - Responsive card component that adapts to display mode
