@@ -85,10 +85,10 @@
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/Sunpeak-AI/sunpeak"
   },
   "bugs": {
-    "url": ""
+    "url": "https://github.com/Sunpeak-AI/sunpeak/issues"
   },
-  "homepage": ""
+  "homepage": "https://sunpeak.ai/"
 }
