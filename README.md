@@ -14,8 +14,8 @@ React library for cross-platform genAI App UIs. Supports **OpenAI ChatGPT Apps**
 **Key Features:**
 - 📺 ChatGPT simulator for rapid UI component development.
 - 📱 Interface for cross-platform custom components.
-  - 🤝 Unified frontend API and design system.
-- 📚 Library of approved Apps and components.
+- 🤝 [MUI](https://mui.com/material-ui/)-based components compliant with the OpenAI design system.
+- 📚 Library of approved Apps.
 - 🧪 Testing framework that replicates advanced platform behavior locally.
 
 ## Development Quickstart

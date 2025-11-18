@@ -14,6 +14,9 @@ export type { GenAIProps, GenAIRenderProps } from './components/GenAI';
 export { ChatGPTSimulator } from './components/ChatGPTSimulator';
 export type { ChatGPTSimulatorProps } from './components/ChatGPTSimulator';
 
+export { ThemeProvider } from './components/ThemeProvider';
+export type { ThemeProviderProps } from './components/ThemeProvider';
+
 // Platform Context & Providers
 export { PlatformProvider, usePlatform } from './context/PlatformContext';
 export type { PlatformProviderProps } from './context/PlatformContext';
@@ -30,6 +33,20 @@ export { useRequestDisplayMode } from './hooks/useRequestDisplayMode';
 export { useColorScheme } from './hooks/useColorScheme';
 export { useWidgetProps } from './hooks/useWidgetProps';
 export { useWidgetState } from './hooks/useWidgetState';
+
+// Themes
+export {
+  getTheme,
+  getLightTheme,
+  getDarkTheme,
+  chatgptLightTheme,
+  chatgptDarkTheme,
+  getChatGPTTheme,
+  baseThemeOptions,
+  createBaseTheme,
+  getCurrentPlatform,
+} from './themes';
+export type { Platform, ThemeGetter } from './themes';
 
 // Types
 export type {

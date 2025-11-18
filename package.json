@@ -50,12 +50,29 @@
   "license": "MIT",
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "@mui/material": "^6.0.0 || ^7.0.0",
+    "@emotion/react": "^11.0.0",
+    "@emotion/styled": "^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@mui/material": {
+      "optional": true
+    },
+    "@emotion/react": {
+      "optional": true
+    },
+    "@emotion/styled": {
+      "optional": true
+    }
   },
   "dependencies": {
     "clsx": "^2.1.1"
   },
   "devDependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
+    "@mui/material": "^7.3.5",
     "@tailwindcss/postcss": "^4.1.17",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.0.1",
