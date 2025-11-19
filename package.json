@@ -33,15 +33,15 @@
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
+    "openai-app",
+    "chatgpt-app",
+    "chatgpt-simulator",
+    "testing",
+    "multi-platform",
     "react",
     "components",
-    "ui",
-    "openai",
-    "openai-apps-sdk",
-    "chatgpt",
-    "chatgpt-apps",
-    "apps-sdk",
-    "multi-platform"
+    "material-ui",
+    "sunpeak"
   ],
   "author": "Sunpeak AI",
   "license": "MIT",
