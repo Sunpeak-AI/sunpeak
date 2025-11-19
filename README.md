@@ -17,7 +17,7 @@
 
 React library for cross-platform genAI App UIs. Supports **OpenAI ChatGPT Apps**, with pluggable architecture for **Gemini**, **Claude**, and other platforms.
 
-![ChatGPT Simulator](./assets/chatgpt-simulator.png)
+![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
 
 **Key Features:**
 - 📺 ChatGPT simulator for rapid UI component development.
