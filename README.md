@@ -1,3 +1,11 @@
+<div align="center">
+  <a href="https://sunpeak.ai">
+    <picture>
+      <img alt="Sunpeak logo" src="https://sunpeak.ai/images/sunpeak_github.svg">
+    </picture>
+  </a>
+</div>
+
 # sunpeak
 
 [![npm version](https://img.shields.io/npm/v/sunpeak.svg?style=flat-square)](https://www.npmjs.com/package/sunpeak)
