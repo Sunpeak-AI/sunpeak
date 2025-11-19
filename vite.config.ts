@@ -116,6 +116,7 @@ function chatgptDevEndpoint(): Plugin {
     body {
       background-color: var(--bg-color);
       transition: background-color 0.3s;
+      margin: 0;
     }
   </style>
   <script type="module">

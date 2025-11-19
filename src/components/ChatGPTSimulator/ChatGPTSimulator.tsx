@@ -219,17 +219,22 @@ export function ChatGPTSimulator({
       <Box
         sx={{
           minHeight: '100vh',
+          width: '100vw',
           display: 'flex',
           fontFamily: theme.typography.fontFamily,
           backgroundColor: theme.palette.background.default,
           color: theme.palette.text.primary,
+          boxSizing: 'border-box',
+          '@media (max-width: 768px)': {
+            flexDirection: 'column',
+          },
         }}
       >
       {showControls && (
         <Box
           sx={{
             width: '250px',
-            minWidth: '250px',
+            flexShrink: 0,
             padding: theme.spacing(5),
             display: 'flex',
             flexDirection: 'column',
@@ -239,9 +244,9 @@ export function ChatGPTSimulator({
               ? theme.palette.background.paper
               : theme.palette.background.default,
             borderRight: `1px solid ${theme.palette.divider}`,
+            boxSizing: 'border-box',
             '@media (max-width: 768px)': {
               width: '100%',
-              minWidth: 'unset',
               borderRight: 'none',
               borderBottom: `1px solid ${theme.palette.divider}`,
               padding: theme.spacing(4),
@@ -318,15 +323,14 @@ export function ChatGPTSimulator({
       <Box
         sx={{
           flex: 1,
+          minWidth: 0,
           display: 'flex',
           flexDirection: 'column',
-          margin: '0 auto',
           overflowY: 'auto',
           padding: isFullscreen ? 0 : `${theme.spacing(4)} 0 ${theme.spacing(4)} ${theme.spacing(6)}`,
           position: 'relative',
-          width: bodyWidth,
-          maxWidth: bodyWidth,
           height: isFullscreen ? '100vh' : 'auto',
+          boxSizing: 'border-box',
         }}
       >
         {isFullscreen && (
@@ -362,7 +366,7 @@ export function ChatGPTSimulator({
 
         <Box
           sx={{
-            maxWidth: '48rem',
+            maxWidth: bodyWidth === '100%' ? '48rem' : bodyWidth,
             mx: 'auto',
             flex: 1,
             position: 'relative',
@@ -370,9 +374,10 @@ export function ChatGPTSimulator({
             width: '100%',
             minWidth: 0,
             flexDirection: 'column',
+            boxSizing: 'border-box',
           }}
         >
-          <Box sx={{ display: 'flex', maxWidth: '100%', flexDirection: 'column', flexGrow: 1 }}>
+          <Box sx={{ display: 'flex', maxWidth: '100%', flexDirection: 'column', flexGrow: 1, minWidth: 0, boxSizing: 'border-box' }}>
             {!isFullscreen && (
               <>
                 {/* User Message */}
@@ -396,12 +401,12 @@ export function ChatGPTSimulator({
                       borderRadius: theme.spacing(3),
                       lineHeight: 1.5,
                       fontSize: theme.typography.body1.fontSize,
-                      overflow: 'hidden',
-                      minWidth: '100px',
-                      backgroundColor: theme.palette.mode === 'light'
-                        ? theme.palette.grey[100]
-                        : theme.palette.grey[800],
+                      overflowWrap: 'break-word',
+                      wordBreak: 'break-word',
+                      minWidth: 0,
+                      backgroundColor: theme.palette.grey[100],
                       color: theme.palette.text.primary,
+                      boxSizing: 'border-box',
                     }}
                   >
                     {userMessage}
@@ -415,25 +420,29 @@ export function ChatGPTSimulator({
                     position: 'relative',
                     display: 'flex',
                     width: '100%',
+                    minWidth: 0,
                     flexDirection: 'column',
                     alignItems: 'flex-end',
                     gap: theme.spacing(2),
                     textAlign: 'start',
                     wordBreak: 'break-word',
                     whiteSpace: 'normal',
+                    boxSizing: 'border-box',
                   }}
                 >
                   <Box
                     sx={{
                       display: 'flex',
                       width: '100%',
+                      minWidth: 0,
                       flexDirection: 'column',
                       gap: theme.spacing(1),
                       '&:empty': { display: 'none' },
                       '&:first-of-type': { pt: '1px' },
+                      boxSizing: 'border-box',
                     }}
                   >
-                    <Box sx={{ width: '100%', wordBreak: 'break-word' }}>
+                    <Box sx={{ width: '100%', minWidth: 0, wordBreak: 'break-word', boxSizing: 'border-box' }}>
                       {/* App Title */}
                       <Box
                         sx={{
@@ -457,11 +466,9 @@ export function ChatGPTSimulator({
                       <Box
                         sx={{
                           overflow: 'hidden',
-                          minWidth: '300px',
-                          maxWidth: '100%',
-                          '@media (max-width: 768px)': {
-                            minWidth: '200px',
-                          },
+                          width: '100%',
+                          minWidth: 0,
+                          boxSizing: 'border-box',
                         }}
                       >
                         {renderChildren()}
@@ -478,9 +485,11 @@ export function ChatGPTSimulator({
                   display: 'flex',
                   flexDirection: 'column',
                   width: '100%',
+                  minWidth: 0,
                   height: '100%',
                   overflowY: 'auto',
                   paddingBottom: '80px',
+                  boxSizing: 'border-box',
                 }}
               >
                 {renderChildren()}
@@ -494,9 +503,11 @@ export function ChatGPTSimulator({
               left: 0,
               right: 0,
               margin: `${theme.spacing(4)} 0`,
+              padding: `0 ${theme.spacing(10)} 0 ${theme.spacing(4)}`,
               display: 'flex',
               justifyContent: 'center',
               pointerEvents: 'none',
+              boxSizing: 'border-box',
             }}
           >
             <TextField
@@ -506,11 +517,10 @@ export function ChatGPTSimulator({
                 pointerEvents: 'auto',
                 width: '100%',
                 maxWidth: '800px',
+                boxSizing: 'border-box',
                 '& .MuiOutlinedInput-root': {
                   borderRadius: theme.spacing(8),
-                  backgroundColor: theme.palette.mode === 'light'
-                    ? theme.palette.grey[100]
-                    : theme.palette.grey[800],
+                  backgroundColor: theme.palette.grey[100],
                   '& fieldset': {
                     borderColor: theme.palette.mode === 'light'
                       ? theme.palette.grey[300]

@@ -47,6 +47,11 @@ export interface CarouselProps extends Omit<GenAIProps, 'children'>, HTMLAttribu
    * @default true
    */
   showEdgeGradients?: boolean;
+  /**
+   * Card width configuration. Can be a single number or an object specifying inline and fullscreen widths.
+   * @default { inline: 220, fullscreen: 340 }
+   */
+  cardWidth?: number | { inline?: number; fullscreen?: number };
 }
 
 /**
@@ -59,6 +64,7 @@ export const Carousel = ({
   maxWidth = 800,
   showArrows = true,
   showEdgeGradients = true,
+  cardWidth: cardWidthProp,
   className,
   ...props
 }: CarouselProps) => {
@@ -72,9 +78,23 @@ export const Carousel = ({
   const displayMode = useDisplayMode();
   const theme = useTheme();
 
-  // In fullscreen mode, ensure all cards have equal width
   const isFullscreen = displayMode === 'fullscreen';
-  const cardWidth = isFullscreen ? 340 : undefined;
+
+  // Calculate card width based on display mode and configuration
+  const getCardWidth = (): number => {
+    if (typeof cardWidthProp === 'number') {
+      return cardWidthProp;
+    }
+    if (typeof cardWidthProp === 'object') {
+      return isFullscreen
+        ? (cardWidthProp.fullscreen ?? 340)
+        : (cardWidthProp.inline ?? 220);
+    }
+    // Default widths
+    return isFullscreen ? 340 : 220;
+  };
+
+  const cardWidth = getCardWidth();
 
   const checkScroll = () => {
     const el = scrollRef.current;
@@ -177,22 +197,20 @@ export const Carousel = ({
             },
           }}
         >
-          {isFullscreen
-            ? Children.map(children, (child) => (
-                <Box
-                  sx={{
-                    flexShrink: 0,
-                    width: `${cardWidth}px`,
-                    '& > *': {
-                      width: '100%',
-                      maxWidth: '100%',
-                    },
-                  }}
-                >
-                  {child}
-                </Box>
-              ))
-            : children}
+          {Children.map(children, (child) => (
+            <Box
+              sx={{
+                flexShrink: 0,
+                width: `${cardWidth}px`,
+                '& > *': {
+                  width: '100%',
+                  maxWidth: '100%',
+                },
+              }}
+            >
+              {child}
+            </Box>
+          ))}
         </Box>
       </Box>
 
