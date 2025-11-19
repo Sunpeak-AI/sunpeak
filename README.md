@@ -14,17 +14,19 @@ React library for cross-platform genAI App UIs. Supports **OpenAI ChatGPT Apps**
 **Key Features:**
 - 📺 ChatGPT simulator for rapid UI component development.
 - 📱 Interface for cross-platform custom components.
-- 🤝 [MUI](https://mui.com/material-ui/)-based components compliant with the OpenAI design system.
+- 🤝 [Material UI](https://mui.com/material-ui/)-based components compliant with the OpenAI design system.
 - 📚 Library of approved Apps.
 - 🧪 Testing framework that replicates advanced platform behavior locally.
 
-## Development Quickstart
+## Quickstart
 
-Requirements: Node 20+, pnpm 10+
+Requirements: Node (20+), pnpm (10+)
+
+Use our `create-sunpeak` utility to scaffold your own sunpeak app:
 
 ```bash
-git clone https://github.com/Sunpeak-AI/sunpeak.git
-pnpm dev
+pnpm dlx create-sunpeak my-app
+cd my-app && pnpm dev
 ```
 
 ## Building Apps
@@ -77,10 +79,6 @@ export const MyApp = GenAI(({ maxHeight, colorScheme }) => (
 - 🔄 **Anthropic Claude** - Design system available (SDK support coming soon)
 - 🔧 **Custom platforms** - Implement your own platform adapter
 
-### Platform Auto-Detection
-
-Sunpeak automatically detects the active platform. No configuration needed for basic usage!
-
 ## What's Included
 
 ### Components
@@ -89,7 +87,7 @@ Sunpeak automatically detects the active platform. No configuration needed for b
   - Platform constraints (maxHeight)
 - **Card** - Responsive card component
 - **Carousel** - Horizontal scrolling carousel
-- **ChatGPTSimulator** - Local development environment
+- **ChatGPTSimulator** - Local development & testing environment
 
 ### Hooks
 - **usePlatformGlobal** - Platform-agnostic global state access
@@ -102,20 +100,15 @@ Sunpeak automatically detects the active platform. No configuration needed for b
 
 ### Design Systems
 - **ChatGPT** - MUI theme following OpenAI Apps SDK guidelines
-- **Custom** - Build your own MUI theme (see [THEMING.md](./THEMING.md))
+- **Custom** - Build your own MUI theme
 
-**See [THEMING.md](./THEMING.md)** for creating custom design systems and complete theming documentation.
+## Contributing
 
-## Deployment
+We welcome your contributions!
 
-On pushes to `main`, Github Actions CI/CD automatically increments the version number, creates the git tag & release, and deploys to npm.
+For development quickstart on this package, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Resources
 
 - [OpenAI ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [OpenAI ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)
-- [Theming Guide](./THEMING.md)
-
-## License
-
-MIT
