@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   Box,
   Typography,
@@ -99,8 +99,7 @@ export function ChatGPTSimulator({
   // Sync colorScheme with window.openai.colorScheme as source of truth
   const [colorScheme, setColorScheme] = useState<Theme>(initialColorScheme);
 
-  // Create theme based on color scheme
-  const theme = useMemo(() => getTheme(colorScheme), [colorScheme]);
+  const theme = getTheme(colorScheme);
 
   // Listen to changes in window.openai.colorScheme
   useEffect(() => {

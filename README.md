@@ -20,7 +20,7 @@ React library for cross-platform genAI App UIs. Supports **OpenAI ChatGPT Apps**
 
 ## Development Quickstart
 
-Requirements: Node 18+, pnpm 10+
+Requirements: Node 20+, pnpm 10+
 
 ```bash
 git clone https://github.com/Sunpeak-AI/sunpeak.git

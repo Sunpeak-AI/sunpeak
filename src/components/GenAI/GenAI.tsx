@@ -1,4 +1,4 @@
-import { type ReactNode, type HTMLAttributes, useMemo } from 'react';
+import { type ReactNode, type HTMLAttributes } from 'react';
 import { Box } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -72,8 +72,7 @@ export function GenAI(
     // Determine effective color scheme
     const colorScheme = overrideMode || detectedColorScheme || 'light';
 
-    // Create theme based on current mode
-    const theme = useMemo(() => getTheme(colorScheme), [colorScheme]);
+    const theme = getTheme(colorScheme);
 
     return (
       <ThemeProvider theme={theme}>
