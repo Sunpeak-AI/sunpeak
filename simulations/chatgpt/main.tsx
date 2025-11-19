@@ -99,8 +99,8 @@ function AppContent({ selectedUI }: { selectedUI: UISimulation }) {
   return (
     <Carousel>
       {places.map((place) => (
-        <div key={place.id} className="sp-carousel-item">
-          <Card
+        <Card
+          key={place.id}
             id={place.id}
             image={place.image}
             imageAlt={place.name}
@@ -114,10 +114,9 @@ function AppContent({ selectedUI }: { selectedUI: UISimulation }) {
               onClick: () => console.log(`Learn more about ${place.name}`),
               isPrimary: true,
             }}
-          >
-            {place.description}
-          </Card>
-        </div>
+        >
+          {place.description}
+        </Card>
       ))}
     </Carousel>
   );

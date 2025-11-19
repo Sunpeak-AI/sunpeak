@@ -1,5 +1,4 @@
 import { type ReactNode, type HTMLAttributes } from 'react';
-import { clsx } from 'clsx';
 import { Button, type ButtonProps as MuiButtonProps, Box, useTheme } from '@mui/material';
 import { useRequestDisplayMode, useDisplayMode, useMaxHeight, useWidgetState } from '../../hooks';
 import type { GenAIProps } from '../GenAI';
@@ -135,11 +134,6 @@ export const Card = ({
         {...muiProps}
         variant={isPrimary ? 'contained' : 'outlined'}
         onClick={handleClick}
-        className={clsx(
-          'sp-button',
-          isPrimary ? 'sp-button-primary' : 'sp-button-secondary',
-          muiProps.className
-        )}
       >
         {children}
       </Button>
