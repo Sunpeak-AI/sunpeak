@@ -15,15 +15,15 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18%20%7C%2019-blue?style=flat-square&logo=react)](https://reactjs.org/)
 
-React library for ChatGPT Apps. Build and test ChatGPT Apps locally with approved components.
+ChatGPT App SDK. Build and test ChatGPT Apps locally with approved React components.
 
 ![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
 
 **Key Features:**
 - 📺 ChatGPT simulator for rapid UI component development.
-- 📱 Interface for cross-platform custom components.
-- 🤝 [Material UI](https://mui.com/material-ui/)-based components compliant with the OpenAI design system.
-- 📚 Library of approved Apps.
+- 📚 React component library based on [Material UI](https://mui.com/material-ui/).
+- 📱 Interface for custom components that work across genAI platforms.
+- 🤝 Themes compliant with the OpenAI design system.
 - 🧪 Testing framework that replicates advanced platform behavior locally.
 
 ## Quickstart
