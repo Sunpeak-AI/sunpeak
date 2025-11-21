@@ -1,4 +1,5 @@
 import * as React from "react"
+import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import { cn } from "@/lib/index"
 import {
   Carousel,
@@ -6,6 +7,7 @@ import {
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
+  type CarouselApi,
 } from "@/components/shadcn/carousel"
 
 export type SunpeakCarouselProps = {
@@ -32,6 +34,28 @@ export const SunpeakCarousel = React.forwardRef<
     },
     ref
   ) => {
+    const [api, setApi] = React.useState<CarouselApi>()
+    const [canScrollPrev, setCanScrollPrev] = React.useState(false)
+    const [canScrollNext, setCanScrollNext] = React.useState(false)
+
+    React.useEffect(() => {
+      if (!api) return
+
+      const onSelect = () => {
+        setCanScrollPrev(api.canScrollPrev())
+        setCanScrollNext(api.canScrollNext())
+      }
+
+      onSelect()
+      api.on("select", onSelect)
+      api.on("reInit", onSelect)
+
+      return () => {
+        api.off("select", onSelect)
+        api.off("reInit", onSelect)
+      }
+    }, [api])
+
     const childArray = React.Children.toArray(children)
 
     const getCardWidth = () => {
@@ -46,17 +70,17 @@ export const SunpeakCarousel = React.forwardRef<
 
     return (
       <div ref={ref} className={cn("relative w-full", className)}>
-        {showEdgeGradients && (
-          <>
-            <div
-              className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-background to-transparent"
-              aria-hidden="true"
-            />
-            <div
-              className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-background to-transparent"
-              aria-hidden="true"
-            />
-          </>
+        {showEdgeGradients && canScrollPrev && (
+          <div
+            className="pointer-events-none absolute left-0 top-0 z-10 h-full w-12 bg-gradient-to-r from-background to-transparent transition-opacity"
+            aria-hidden="true"
+          />
+        )}
+        {showEdgeGradients && canScrollNext && (
+          <div
+            className="pointer-events-none absolute right-0 top-0 z-10 h-full w-12 bg-gradient-to-l from-background to-transparent transition-opacity"
+            aria-hidden="true"
+          />
         )}
 
         <Carousel
@@ -64,6 +88,8 @@ export const SunpeakCarousel = React.forwardRef<
             align: "start",
             dragFree: true,
           }}
+          plugins={[WheelGesturesPlugin()]}
+          setApi={setApi}
           className="w-full"
         >
           <CarouselContent
@@ -86,11 +112,11 @@ export const SunpeakCarousel = React.forwardRef<
             ))}
           </CarouselContent>
 
-          {showArrows && (
-            <>
-              <CarouselPrevious className="left-2" />
-              <CarouselNext className="right-2" />
-            </>
+          {showArrows && canScrollPrev && (
+            <CarouselPrevious className="left-2" />
+          )}
+          {showArrows && canScrollNext && (
+            <CarouselNext className="right-2" />
           )}
         </Carousel>
       </div>

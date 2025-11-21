@@ -60,13 +60,8 @@ function App() {
           key={place.id}
           image={place.image}
           imageAlt={place.name}
-          header={
-            <div className="flex items-center justify-between w-full">
-              <span>{place.name}</span>
-              <span className="text-sm font-normal text-muted-foreground">⭐ {place.rating}</span>
-            </div>
-          }
-          metadata={`${place.category} • ${place.location}`}
+          header={place.name}
+          metadata={`⭐ ${place.rating} • ${place.category} • ${place.location}`}
           button1={{
             isPrimary: true,
             onClick: () => console.log(`Visit ${place.name}`),

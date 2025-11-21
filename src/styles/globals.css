@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.sp-theme-dark *));
+@custom-variant dark (&:is(.dark *));
 
 /* Tailwind v4 theme configuration */
 @theme {
@@ -103,7 +103,7 @@
  * Force light/dark mode on specific elements
  */
 
-.sp-theme-light {
+.light {
   --sp-color-bg-primary: var(--sp-light-color-bg-primary);
   --sp-color-bg-secondary: var(--sp-light-color-bg-secondary);
   --sp-color-bg-tertiary: var(--sp-light-color-bg-tertiary);
@@ -151,7 +151,7 @@
   --sidebar-ring: var(--sp-light-accent);
 }
 
-.sp-theme-dark {
+.dark {
   --sp-color-bg-primary: var(--sp-dark-color-bg-primary);
   --sp-color-bg-secondary: var(--sp-dark-color-bg-secondary);
   --sp-color-bg-tertiary: var(--sp-dark-color-bg-tertiary);

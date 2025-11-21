@@ -68,16 +68,16 @@ export function ChatGPTSimulator({
         <Sidebar>
           <SidebarContent>
             <SidebarGroup>
-              <SidebarGroupLabel className="text-[var(--sp-color-text-primary)]">
+              <SidebarGroupLabel className="text-md">
                 Controls
               </SidebarGroupLabel>
               <SidebarGroupContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="app-ui-select" className="text-xs text-[var(--sp-color-text-primary)]">
+                  <Label htmlFor="app-ui-select" className="text-xs">
                     App UI
                   </Label>
                   <Select value="carousel" onValueChange={() => {}}>
-                    <SelectTrigger id="app-ui-select" className="text-[var(--sp-color-text-primary)]">
+                    <SelectTrigger id="app-ui-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -87,11 +87,11 @@ export function ChatGPTSimulator({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="theme-select" className="text-xs text-[var(--sp-color-text-primary)]">
+                  <Label htmlFor="theme-select" className="text-xs">
                     Color Scheme
                   </Label>
                   <Select value={theme} onValueChange={(value) => setTheme(value as Theme)}>
-                    <SelectTrigger id="theme-select" className="text-[var(--sp-color-text-primary)]">
+                    <SelectTrigger id="theme-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -102,11 +102,11 @@ export function ChatGPTSimulator({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="display-mode-select" className="text-xs text-[var(--sp-color-text-primary)]">
+                  <Label htmlFor="display-mode-select" className="text-xs">
                     Display Mode
                   </Label>
                   <Select value={displayMode} onValueChange={(value) => setDisplayMode(value as DisplayMode)}>
-                    <SelectTrigger id="display-mode-select" className="text-[var(--sp-color-text-primary)]">
+                    <SelectTrigger id="display-mode-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -118,11 +118,11 @@ export function ChatGPTSimulator({
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="screen-width-select" className="text-xs text-[var(--sp-color-text-primary)]">
+                  <Label htmlFor="screen-width-select" className="text-xs">
                     Body Width
                   </Label>
                   <Select value={screenWidth} onValueChange={(value) => setScreenWidth(value as ScreenWidth)}>
-                    <SelectTrigger id="screen-width-select" className="text-[var(--sp-color-text-primary)]">
+                    <SelectTrigger id="screen-width-select">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -139,6 +139,7 @@ export function ChatGPTSimulator({
         </Sidebar>
         <Conversation
           screenWidth={screenWidth}
+          displayMode={displayMode}
           appName={appName}
           appIcon={appIcon}
           userMessage={userMessage}

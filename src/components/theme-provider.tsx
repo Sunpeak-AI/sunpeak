@@ -28,8 +28,8 @@ export function ThemeProvider({
 
   React.useEffect(() => {
     const root = window.document.documentElement
-    root.classList.remove("sp-theme-light", "sp-theme-dark")
-    root.classList.add(`sp-theme-${theme}`)
+    root.classList.remove("light", "dark")
+    root.classList.add(theme)
   }, [theme])
 
   const value = {
