@@ -15,69 +15,24 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18%20%7C%2019-blue?style=flat-square&logo=react)](https://reactjs.org/)
 
-ChatGPT App SDK. Build and test ChatGPT Apps locally with approved React components.
+The ChatGPT Apps UI SDK. Build and test your ChatGPT App UI locally with approved shadcn React components.
 
 ![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
 
 **Key Features:**
 - 📺 ChatGPT simulator for rapid UI component development.
-- 📚 React component library based on [Material UI](https://mui.com/material-ui/).
+- 📚 React component library built with [shadcn/ui](https://ui.shadcn.com/) and [Tailwind](https://tailwindcss.com/).
 - 📱 Interface for custom components that work across genAI platforms.
-- 🤝 Themes compliant with the OpenAI design system.
-- 🧪 Testing framework that replicates advanced platform behavior locally.
+- 🤝 Styles are compliant with the [OpenAI design system](https://developers.openai.com/apps-sdk/build/chatgpt-ui).
+- 🧪 Testing framework that replicates advanced ChatGPT behavior locally.
 
 ## Quickstart
 
 Requirements: Node (20+), pnpm (10+)
 
-Use our `create-sunpeak` utility to scaffold your own sunpeak app:
-
 ```bash
-pnpm dlx create-sunpeak my-app
+pnpm dlx sunpeak init my-app
 cd my-app && pnpm dev
-```
-
-## Building Apps
-
-### Use library components
-
-```tsx
-import { GenAI, Carousel, Card } from 'sunpeak';
-
-export const MyCarousel = GenAI(() => (
-  <Carousel>
-    <Card
-      image="https://sunpeak.ai/images/sun.svg"
-      imageAlt="Sunpeak logo"
-      imageMaxWidth={400}
-      imageMaxHeight={400}
-      header="Card Title"
-    >
-      Card content
-    </Card>
-  </Carousel>
-));
-```
-
-### Create a custom App
-
-```tsx
-import { GenAI } from 'sunpeak';
-import { Box, Typography } from '@mui/material';
-
-export const MyApp = GenAI(({ maxHeight, colorScheme }) => (
-  <Box sx={{ p: 3 }}>
-    <Typography variant="h5" gutterBottom>
-      Hello GenAI!
-    </Typography>
-    <Typography variant="body1" color="text.secondary">
-      Theme: {colorScheme}
-    </Typography>
-    <Typography variant="body2">
-      Max height: {maxHeight}px
-    </Typography>
-  </Box>
-));
 ```
 
 ## Supported Platforms
@@ -87,29 +42,6 @@ export const MyApp = GenAI(({ maxHeight, colorScheme }) => (
 - 🔄 **Anthropic Claude** - Design system available (SDK support coming soon)
 - 🔧 **Custom platforms** - Implement your own platform adapter
 
-## What's Included
-
-### Components
-- **GenAI** - Single interface for building Apps, all Apps must use this wrapper
-  - Automatic MUI theming (light/dark mode)
-  - Platform constraints (maxHeight)
-- **Card** - Responsive card component
-- **Carousel** - Horizontal scrolling carousel
-- **ChatGPTSimulator** - Local development & testing environment
-
-### Hooks
-- **usePlatformGlobal** - Platform-agnostic global state access
-- **useDisplayMode** - Get current display mode
-- **useRequestDisplayMode** - Request a specific display mode (e.g., fullscreen)
-- **useWidgetProps** - Access tool output data
-- **useWidgetState** - Manage persistent widget state
-- **useMaxHeight** - Get height constraints
-- **useColorScheme** - Get current color scheme (light/dark)
-
-### Design Systems
-- **ChatGPT** - MUI theme following OpenAI Apps SDK guidelines
-- **Custom** - Build your own MUI theme
-
 ## Contributing
 
 We welcome your contributions!
@@ -118,5 +50,6 @@ For development quickstart on this package, see [DEVELOPMENT.md](./DEVELOPMENT.m
 
 ## Resources
 
-- [OpenAI ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
-- [OpenAI ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)
+- [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
+- [ChatGPT Apps SDK UI Documentation](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
+- [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)

@@ -1,14 +1,5 @@
-// Platform hooks
-export { usePlatformGlobal } from './usePlatformGlobal';
-
-// Display mode hooks
-export { useDisplayMode } from './useDisplayMode';
-export { useMaxHeight } from './useMaxHeight';
-export { useRequestDisplayMode } from './useRequestDisplayMode';
-
-// Color scheme hooks
-export { useColorScheme } from './useColorScheme';
-
-// Widget hooks
-export { useWidgetProps } from './useWidgetProps';
-export { useWidgetState } from './useWidgetState';
+export { useOpenAiGlobal } from './use-openai-global';
+export { useDisplayMode } from './use-display-mode';
+export { useTheme } from './use-theme';
+export { useMaxHeight } from './use-max-height';
+export { useWidgetState } from './use-widget-state';

@@ -18,10 +18,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
 
-    "declaration": true,
-    "declarationMap": true,
-    "sourceMap": true,
-
     "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
