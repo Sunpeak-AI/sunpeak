@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatGPTSimulator } from '../src/simulator';
-import { Card, Carousel } from '../src/components';
-import '../src/styles/chatgpt/index.css';
+import { SunpeakCarousel, SunpeakCard } from '../src/components';
+import '../src/styles/globals.css';
 
 const places = [
   {
@@ -54,13 +54,34 @@ const places = [
 
 function App() {
   return (
-    <Carousel>
+    <SunpeakCarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={280}>
       {places.map((place) => (
-        <Card 
+        <SunpeakCard
           key={place.id}
-        />
+          image={place.image}
+          imageAlt={place.name}
+          header={
+            <div className="flex items-center justify-between w-full">
+              <span>{place.name}</span>
+              <span className="text-sm font-normal text-muted-foreground">⭐ {place.rating}</span>
+            </div>
+          }
+          metadata={`${place.category} • ${place.location}`}
+          button1={{
+            isPrimary: true,
+            onClick: () => console.log(`Visit ${place.name}`),
+            children: 'Visit',
+          }}
+          button2={{
+            isPrimary: false,
+            onClick: () => console.log(`Learn more about ${place.name}`),
+            children: 'Learn More',
+          }}
+        >
+          {place.description}
+        </SunpeakCard>
       ))}
-    </Carousel>
+    </SunpeakCarousel>
   );
 }
 

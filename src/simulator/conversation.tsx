@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { SCREEN_WIDTHS, type ScreenWidth } from '../types/simulator';
+import type { ScreenWidth } from '../types/simulator';
 
 interface ConversationProps {
   children: React.ReactNode;
@@ -11,13 +11,11 @@ interface ConversationProps {
 
 export function Conversation({
   children,
-  screenWidth,
+  screenWidth: _screenWidth,
   appName = 'ChatGPT',
   appIcon,
   userMessage = 'Show me some interesting places to visit.'
 }: ConversationProps) {
-  const width = SCREEN_WIDTHS[screenWidth];
-
   return (
     <div className="flex-1 flex flex-col bg-[var(--sp-color-bg-primary)]">
       <div className="flex-1 overflow-auto">
