@@ -18,8 +18,9 @@ Ensure the following scripts work/pass:
 - `pnpm test`
 - `pnpm dev`
 - `pnpm build`
+- `./sunpeak.js init my-app && cd my-app`
 
-Ensure the following `./template/` scripts work/pass:
+Ensure the following scripts work/pass in `my-app`:
 - `pnpm lint`
 - `pnpm typecheck`
 - `pnpm test`

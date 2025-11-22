@@ -1,0 +1,5 @@
+/* Dev styles - imports globals.css */
+@import "@/styles/globals.css";
+
+/* Scan sunpeak source for Tailwind classes (only works in workspace, ignored otherwise) */
+@source "../../src/**/*.{ts,tsx}";

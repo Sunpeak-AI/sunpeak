@@ -120,7 +120,7 @@ export function Conversation({
         </main>
 
         {/* Input area */}
-        <footer className="border-t border-border bg-background">
+        <footer className="bg-background">
           <div className="max-w-[48rem] mx-auto px-4 py-4">
             <div className="relative">
               <input

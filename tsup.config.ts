@@ -15,15 +15,21 @@ export default defineConfig({
   outDir: 'dist',
   esbuildOptions(options) {
     options.alias = {
-      '@': './src',
+      '~': './src',
     };
   },
   onSuccess: async () => {
-    const stylesDir = path.join('dist', 'styles', 'chatgpt');
-    fs.mkdirSync(stylesDir, { recursive: true });
+    // Copy chatgpt styles
+    const chatgptDir = path.join('dist', 'styles', 'chatgpt');
+    fs.mkdirSync(chatgptDir, { recursive: true });
     fs.copyFileSync(
       path.join('src', 'styles', 'chatgpt', 'index.css'),
-      path.join(stylesDir, 'index.css')
+      path.join(chatgptDir, 'index.css')
+    );
+    // Copy globals.css
+    fs.copyFileSync(
+      path.join('src', 'styles', 'globals.css'),
+      path.join('dist', 'styles', 'globals.css')
     );
   },
 });

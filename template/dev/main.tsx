@@ -1,8 +1,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatGPTSimulator } from 'sunpeak';
-import { App } from '../src/App';
-import '../src/styles/globals.css';
+import { App } from '@/App';
+import './styles.css';
 
 const places = [
   {

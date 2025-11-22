@@ -17,6 +17,7 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./styles/globals.css": "./dist/styles/globals.css",
     "./styles/chatgpt": "./dist/styles/chatgpt/index.css",
     "./package.json": "./package.json"
   },

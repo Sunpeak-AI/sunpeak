@@ -21,7 +21,6 @@ import { initMockOpenAI } from './mock-openai';
 import { ThemeProvider } from '../components/theme-provider';
 import type { Theme, DisplayMode } from '../types';
 import type { ScreenWidth } from '../types/simulator';
-import '../styles/globals.css';
 
 interface ChatGPTSimulatorProps {
   children: React.ReactNode;

@@ -1,5 +1,6 @@
 import { SunpeakCarousel, SunpeakCard } from './components';
-import './styles/chatgpt/index.css';
+import '@/styles/globals.css';
+import '@/styles/chatgpt.css';
 
 export interface Place {
   id: string;
