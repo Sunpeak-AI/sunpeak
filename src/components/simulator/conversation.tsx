@@ -1,13 +1,12 @@
 import * as React from 'react';
 import { cn } from '~/lib/index';
 import { SidebarInset } from '../shadcn/sidebar';
+import { useDisplayMode } from '../../hooks';
 import { SCREEN_WIDTHS, type ScreenWidth } from '../../types/simulator';
-import type { DisplayMode } from '../../types';
 
 interface ConversationProps {
   children: React.ReactNode;
   screenWidth: ScreenWidth;
-  displayMode: DisplayMode;
   appName?: string;
   appIcon?: string;
   userMessage?: string;
@@ -16,11 +15,12 @@ interface ConversationProps {
 export function Conversation({
   children,
   screenWidth,
-  displayMode,
   appName = 'ChatGPT',
   appIcon,
   userMessage = 'Show me some interesting places to visit.',
 }: ConversationProps) {
+  // Read displayMode from window.openai (same source the App uses)
+  const displayMode = useDisplayMode() ?? 'inline';
   const containerWidth =
     screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
 

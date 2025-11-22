@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useLayoutEffect, useMemo } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -19,27 +19,59 @@ import { Label } from '../shadcn/label';
 import { Conversation } from './conversation';
 import { initMockOpenAI } from './mock-openai';
 import { ThemeProvider } from '../theme-provider';
+import { useTheme, useDisplayMode } from '../../hooks';
 import type { Theme, DisplayMode } from '../../types';
 import type { ScreenWidth } from '../../types/simulator';
+
+const DEFAULT_THEME: Theme = 'dark';
+const DEFAULT_DISPLAY_MODE: DisplayMode = 'inline';
 
 interface ChatGPTSimulatorProps {
   children: React.ReactNode;
   appName?: string;
   appIcon?: string;
   userMessage?: string;
+  toolOutput?: Record<string, unknown> | null;
+  widgetState?: Record<string, unknown> | null;
 }
 
 export function ChatGPTSimulator({
   children,
   appName,
   appIcon,
-  userMessage
+  userMessage,
+  toolOutput = null,
+  widgetState = null,
 }: ChatGPTSimulatorProps) {
-  const [theme, setTheme] = useState<Theme>('dark');
-  const [displayMode, setDisplayMode] = useState<DisplayMode>('inline');
-  const [screenWidth, setScreenWidth] = useState<ScreenWidth>('full');
+  const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
 
-  const mock = useMemo(() => initMockOpenAI(), []);
+  const mock = useMemo(
+    () =>
+      initMockOpenAI({
+        theme: DEFAULT_THEME,
+        displayMode: DEFAULT_DISPLAY_MODE,
+      }),
+    []
+  );
+
+  // Read theme and displayMode from window.openai (same as widget code would)
+  const theme = useTheme() ?? DEFAULT_THEME;
+  const displayMode = useDisplayMode() ?? DEFAULT_DISPLAY_MODE;
+
+  // Re-register mock on window.openai after each mount (handles Strict Mode remounts)
+  // Also set initial toolOutput and widgetState values synchronously
+  useLayoutEffect(() => {
+    if (mock && typeof window !== 'undefined') {
+      (window as unknown as { openai: typeof mock }).openai = mock;
+      // Set initial values synchronously before first paint
+      if (toolOutput !== undefined) {
+        mock.setToolOutput(toolOutput);
+      }
+      if (widgetState !== undefined) {
+        mock.setWidgetStateExternal(widgetState);
+      }
+    }
+  }, [mock, toolOutput, widgetState]);
 
   useEffect(() => {
     return () => {
@@ -48,18 +80,6 @@ export function ChatGPTSimulator({
       }
     };
   }, []);
-
-  useEffect(() => {
-    if (mock) {
-      mock.setTheme(theme);
-    }
-  }, [mock, theme]);
-
-  useEffect(() => {
-    if (mock) {
-      mock.setDisplayMode(displayMode);
-    }
-  }, [mock, displayMode]);
 
   return (
     <ThemeProvider theme={theme}>
@@ -89,7 +109,7 @@ export function ChatGPTSimulator({
                   <Label htmlFor="theme-select" className="text-xs">
                     Color Scheme
                   </Label>
-                  <Select value={theme} onValueChange={(value) => setTheme(value as Theme)}>
+                  <Select value={theme} onValueChange={(value) => mock.setTheme(value as Theme)}>
                     <SelectTrigger id="theme-select">
                       <SelectValue />
                     </SelectTrigger>
@@ -104,7 +124,7 @@ export function ChatGPTSimulator({
                   <Label htmlFor="display-mode-select" className="text-xs">
                     Display Mode
                   </Label>
-                  <Select value={displayMode} onValueChange={(value) => setDisplayMode(value as DisplayMode)}>
+                  <Select value={displayMode} onValueChange={(value) => mock.setDisplayMode(value as DisplayMode)}>
                     <SelectTrigger id="display-mode-select">
                       <SelectValue />
                     </SelectTrigger>
@@ -138,7 +158,6 @@ export function ChatGPTSimulator({
         </Sidebar>
         <Conversation
           screenWidth={screenWidth}
-          displayMode={displayMode}
           appName={appName}
           appIcon={appIcon}
           userMessage={userMessage}

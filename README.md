@@ -59,6 +59,15 @@ export default function App() {
 - 🔄 **Anthropic Claude** - Design system available (SDK support coming soon)
 - 🔧 **Custom platforms** - Implement your own platform adapter
 
+## What is sunpeak exactly?
+
+sunpeak is an npm package consisting of:
+
+1. **A CLI utility** for working with sunpeak (`./bin`).
+2. **A `sunpeak` library** (`./src`). This library contains common runtime APIs and testing utilities—including a ChatGPT simulator—to be used as a dependency by sunpeak projects.
+3. **A templated npm package** (`./template`) that is initialized by the CLI to help developers set up sunpeak projects. These projects have the `sunpeak` dependency already wired up alongside a collection of pre-built shadcn UI components (`./template/src/components`) to copy, modify, or use as an example.
+    1. Developers build their final UI in the `App` component, which is then built against CSS files that codify the design systems of each of the genAI platforms (of which ChatGPT is the only one today).
+
 ## Contributing
 
 We welcome your contributions!
@@ -69,4 +78,5 @@ For development quickstart on this package, see [DEVELOPMENT.md](./DEVELOPMENT.m
 
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK UI Documentation](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
+- [ChatGPT Apps SDK window.openai Reference](https://developers.openai.com/apps-sdk/build/mcp-server#understand-the-windowopenai-widget-runtime)
 - [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)

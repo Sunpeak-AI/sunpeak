@@ -1,5 +1,6 @@
 import * as React from "react"
 import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
+import { useWidgetState, useDisplayMode } from "sunpeak"
 import { cn } from "@/lib/index"
 import {
   Carousel,
@@ -9,6 +10,18 @@ import {
   CarouselPrevious,
   type CarouselApi,
 } from "@/components/shadcn/carousel"
+
+export interface SunpeakCarouselData extends Record<string, unknown> {
+  children?: React.ReactNode
+  gap?: number
+  showArrows?: boolean
+  showEdgeGradients?: boolean
+  cardWidth?: number | { inline?: number; fullscreen?: number }
+}
+
+export interface SunpeakCarouselState extends Record<string, unknown> {
+  currentIndex?: number
+}
 
 export type SunpeakCarouselProps = {
   children?: React.ReactNode
@@ -25,15 +38,26 @@ export const SunpeakCarousel = React.forwardRef<
 >(
   (
     {
-      children,
-      gap = 16,
-      showArrows = true,
-      showEdgeGradients = true,
-      cardWidth,
+      children: childrenProp,
+      gap: gapProp = 16,
+      showArrows: showArrowsProp = true,
+      showEdgeGradients: showEdgeGradientsProp = true,
+      cardWidth: cardWidthProp,
       className,
     },
     ref
   ) => {
+    const [widgetState, setWidgetState] = useWidgetState<SunpeakCarouselState>(() => ({
+      currentIndex: 0,
+    }))
+    const displayMode = useDisplayMode()
+
+    const children = childrenProp
+    const gap = gapProp
+    const showArrows = showArrowsProp
+    const showEdgeGradients = showEdgeGradientsProp
+    const cardWidth = cardWidthProp
+
     const [api, setApi] = React.useState<CarouselApi>()
     const [canScrollPrev, setCanScrollPrev] = React.useState(false)
     const [canScrollNext, setCanScrollNext] = React.useState(false)
@@ -44,6 +68,11 @@ export const SunpeakCarousel = React.forwardRef<
       const onSelect = () => {
         setCanScrollPrev(api.canScrollPrev())
         setCanScrollNext(api.canScrollNext())
+
+        const currentIndex = api.selectedScrollSnap()
+        if (widgetState?.currentIndex !== currentIndex) {
+          setWidgetState({ currentIndex })
+        }
       }
 
       onSelect()
@@ -54,7 +83,7 @@ export const SunpeakCarousel = React.forwardRef<
         api.off("select", onSelect)
         api.off("reInit", onSelect)
       }
-    }, [api])
+    }, [api, widgetState?.currentIndex, setWidgetState])
 
     const childArray = React.Children.toArray(children)
 
@@ -62,8 +91,13 @@ export const SunpeakCarousel = React.forwardRef<
       if (typeof cardWidth === "number") {
         return `${cardWidth}px`
       }
-      if (cardWidth?.inline) {
-        return `${cardWidth.inline}px`
+      if (cardWidth && typeof cardWidth === "object") {
+        if (displayMode === "fullscreen" && cardWidth.fullscreen) {
+          return `${cardWidth.fullscreen}px`
+        }
+        if (cardWidth.inline) {
+          return `${cardWidth.inline}px`
+        }
       }
       return "220px"
     }

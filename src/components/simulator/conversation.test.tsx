@@ -1,13 +1,23 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { Conversation } from './conversation';
+import { initMockOpenAI, type MockOpenAI } from './mock-openai';
 
 const defaultProps = {
   screenWidth: 'full' as const,
-  displayMode: 'inline' as const,
 };
 
 describe('Conversation', () => {
+  let mock: MockOpenAI;
+
+  beforeEach(() => {
+    mock = initMockOpenAI({ displayMode: 'inline' });
+  });
+
+  afterEach(() => {
+    delete (window as unknown as { openai?: unknown }).openai;
+  });
+
   it('renders user message and children in assistant area', () => {
     render(
       <Conversation {...defaultProps} userMessage="Hello, show me places">
@@ -33,8 +43,11 @@ describe('Conversation', () => {
   });
 
   it('renders simplified layout in fullscreen mode without header', () => {
+    // Set displayMode to fullscreen via window.openai
+    mock.displayMode = 'fullscreen';
+
     const { container } = render(
-      <Conversation {...defaultProps} displayMode="fullscreen">
+      <Conversation {...defaultProps}>
         <div data-testid="fullscreen-content">Fullscreen App</div>
       </Conversation>
     );

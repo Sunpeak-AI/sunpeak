@@ -1,3 +1,4 @@
+import { useWidgetProps } from 'sunpeak';
 import { SunpeakCarousel, SunpeakCard } from './components';
 import '@/styles/globals.css';
 import '@/styles/chatgpt.css';
@@ -12,14 +13,16 @@ export interface Place {
   description: string;
 }
 
-export interface AppProps {
-  data: Place[];
+export interface AppData extends Record<string, unknown> {
+  places: Place[];
 }
 
-export function App({ data }: AppProps) {
+export function App() {
+  const data = useWidgetProps<AppData>(() => ({ places: [] }));
+
   return (
     <SunpeakCarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
-      {data.map((place) => (
+      {data.places.map((place) => (
         <SunpeakCard
           key={place.id}
           image={place.image}

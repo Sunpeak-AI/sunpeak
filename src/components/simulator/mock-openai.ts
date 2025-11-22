@@ -3,6 +3,9 @@ import {
   type OpenAiAPI,
   type Theme,
   type DisplayMode,
+  type View,
+  type ViewMode,
+  type UnknownObject,
   SET_GLOBALS_EVENT_TYPE,
 } from '../../types';
 
@@ -27,9 +30,10 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
       right: 0,
     },
   };
-  toolInput = {};
-  toolOutput = null;
-  toolResponseMetadata = null;
+  view: View | null = null;
+  toolInput: Record<string, unknown> = {};
+  toolOutput: Record<string, unknown> | null = null;
+  toolResponseMetadata: Record<string, unknown> | null = null;
   widgetState: Record<string, unknown> | null = null;
 
   async callTool(name: string, args: Record<string, unknown>) {
@@ -51,6 +55,16 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
     return { mode: args.mode };
   }
 
+  async requestModal(args: { mode: ViewMode; params?: UnknownObject }) {
+    console.log('Mock requestModal:', args);
+    this.view = { mode: args.mode, params: args.params };
+    this.emitUpdate({ view: this.view });
+  }
+
+  notifyIntrinsicHeight(height: number) {
+    console.log('Mock notifyIntrinsicHeight:', height);
+  }
+
   async setWidgetState(state: Record<string, unknown>) {
     this.widgetState = state;
     this.emitUpdate({ widgetState: state });
@@ -66,20 +80,55 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
     this.emitUpdate({ displayMode });
   }
 
-  private emitUpdate(globals: Partial<OpenAiGlobals>) {
+  setToolOutput(toolOutput: Record<string, unknown> | null) {
+    this.toolOutput = toolOutput;
+    this.emitUpdate({ toolOutput });
+  }
+
+  setWidgetStateExternal(widgetState: Record<string, unknown> | null) {
+    this.widgetState = widgetState;
+    this.emitUpdate({ widgetState });
+  }
+
+  emitUpdate(globals: Partial<OpenAiGlobals>) {
     if (typeof window !== 'undefined') {
-      const event = new CustomEvent(SET_GLOBALS_EVENT_TYPE, {
-        detail: { globals },
+      // Defer event dispatch to avoid setState during render warnings
+      queueMicrotask(() => {
+        const event = new CustomEvent(SET_GLOBALS_EVENT_TYPE, {
+          detail: { globals },
+        });
+        window.dispatchEvent(event);
       });
-      window.dispatchEvent(event);
     }
   }
 }
 
-export function initMockOpenAI(): MockOpenAI {
+export function initMockOpenAI(initialData?: {
+  theme?: Theme;
+  displayMode?: DisplayMode;
+  toolOutput?: Record<string, unknown> | null;
+  widgetState?: Record<string, unknown> | null;
+}): MockOpenAI {
   if (typeof window !== 'undefined') {
     const mock = new MockOpenAI();
+
+    // Set initial data on the mock object before registering
+    if (initialData?.theme !== undefined) {
+      mock.theme = initialData.theme;
+    }
+    if (initialData?.displayMode !== undefined) {
+      mock.displayMode = initialData.displayMode;
+    }
+    if (initialData?.toolOutput !== undefined) {
+      mock.toolOutput = initialData.toolOutput;
+    }
+    if (initialData?.widgetState !== undefined) {
+      mock.widgetState = initialData.widgetState;
+    }
+
+    // Register mock on window - data is already set
     (window as unknown as { openai: MockOpenAI }).openai = mock;
+
     return mock;
   }
   return new MockOpenAI();

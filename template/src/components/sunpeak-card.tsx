@@ -1,4 +1,5 @@
 import * as React from "react"
+import { useWidgetState } from "sunpeak"
 import { cn } from "@/lib/index"
 import {
   Card,
@@ -15,10 +16,27 @@ export interface SunpeakButtonProps extends Omit<React.ComponentProps<typeof But
   onClick: () => void
 }
 
+export interface SunpeakCardData extends Record<string, unknown> {
+  image?: string
+  imageAlt?: string
+  imageMaxWidth?: number
+  imageMaxHeight?: number
+  header?: React.ReactNode
+  metadata?: React.ReactNode
+  children?: React.ReactNode
+  button1?: SunpeakButtonProps
+  button2?: SunpeakButtonProps
+  variant?: "default" | "bordered" | "elevated"
+}
+
+export interface SunpeakCardState extends Record<string, unknown> {
+  selectedVariant?: "default" | "bordered" | "elevated"
+}
+
 export interface SunpeakCardProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode
-  image: string
-  imageAlt: string
+  image?: string
+  imageAlt?: string
   imageMaxWidth?: number
   imageMaxHeight?: number
   header?: React.ReactNode
@@ -31,22 +49,35 @@ export interface SunpeakCardProps extends React.HTMLAttributes<HTMLDivElement> {
 export const SunpeakCard = React.forwardRef<HTMLDivElement, SunpeakCardProps>(
   (
     {
-      children,
-      image,
-      imageAlt,
-      imageMaxWidth = 400,
-      imageMaxHeight = 400,
-      header,
-      metadata,
-      button1,
-      button2,
-      variant = "default",
+      children: childrenProp,
+      image: imageProp,
+      imageAlt: imageAltProp,
+      imageMaxWidth: imageMaxWidthProp = 400,
+      imageMaxHeight: imageMaxHeightProp = 400,
+      header: headerProp,
+      metadata: metadataProp,
+      button1: button1Prop,
+      button2: button2Prop,
+      variant: variantProp = "default",
       className,
       onClick,
       ...props
     },
     ref
   ) => {
+    const [widgetState] = useWidgetState<SunpeakCardState>(() => ({}))
+
+    const children = childrenProp
+    const image = imageProp
+    const imageAlt = imageAltProp
+    const imageMaxWidth = imageMaxWidthProp
+    const imageMaxHeight = imageMaxHeightProp
+    const header = headerProp
+    const metadata = metadataProp
+    const button1 = button1Prop
+    const button2 = button2Prop
+    const variant = widgetState?.selectedVariant ?? variantProp
+
     const hasButtons = button1 || button2
 
     const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {

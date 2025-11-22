@@ -48,7 +48,7 @@ To deploy to npm, create a release in Github and Github Actions will automatical
 Assuming `pwd` is this root sunpeak repo folder, run:
 
 ```bash
-cd .. && rm -rf tmp && mkdir tmp && cd tmp
+rm -rf ../tmp && mkdir ../tmp && cd ../tmp
 pnpm dlx sunpeak init my-app && cd my-app
 pnpm install
 pnpm lint
@@ -57,3 +57,15 @@ pnpm test
 pnpm build
 pnpm dev
 ```
+
+## Coding Guidance
+
+### Documentation
+
+Only comment and add documentation if the added context or explanation significantly enhances understanding beyond a quick look at the source material itself.
+
+Avoid updating the root README except to correct things that have changed or add context on a major new feature.
+
+### The most important rule
+
+Have fun.

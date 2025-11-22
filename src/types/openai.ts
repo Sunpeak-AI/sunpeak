@@ -29,6 +29,13 @@ export type RequestDisplayMode = (args: { mode: DisplayMode }) => Promise<{
   mode: DisplayMode;
 }>;
 
+export type ViewMode = 'modal' | 'default';
+
+export type View = {
+  mode: ViewMode;
+  params?: UnknownObject;
+};
+
 export type CallToolResponse = {
   result: string;
 };
@@ -50,6 +57,7 @@ export type OpenAiGlobals<
   maxHeight: number;
   displayMode: DisplayMode;
   safeArea: SafeArea;
+  view: View | null;
   toolInput: ToolInput;
   toolOutput: ToolOutput | null;
   toolResponseMetadata: ToolResponseMetadata | null;
@@ -57,11 +65,20 @@ export type OpenAiGlobals<
   setWidgetState: (state: WidgetState) => Promise<void>;
 };
 
+export type RequestModal = (args: {
+  mode: ViewMode;
+  params?: UnknownObject;
+}) => Promise<void>;
+
+export type NotifyIntrinsicHeight = (height: number) => void;
+
 export type OpenAiAPI = {
   callTool: CallTool;
   sendFollowUpMessage: (args: { prompt: string }) => Promise<void>;
   openExternal(payload: { href: string }): void;
   requestDisplayMode: RequestDisplayMode;
+  requestModal: RequestModal;
+  notifyIntrinsicHeight: NotifyIntrinsicHeight;
 };
 
 export const SET_GLOBALS_EVENT_TYPE = 'openai:set_globals';
