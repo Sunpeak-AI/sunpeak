@@ -18,7 +18,7 @@ export interface AppProps {
 
 export function App({ data }: AppProps) {
   return (
-    <SunpeakCarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={280}>
+    <SunpeakCarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
       {data.map((place) => (
         <SunpeakCard
           key={place.id}

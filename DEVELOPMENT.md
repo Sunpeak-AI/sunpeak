@@ -45,8 +45,10 @@ To deploy to npm, create a release in Github and Github Actions will automatical
 
 ### Deployment Testing
 
+Assuming `pwd` is this root sunpeak repo folder, run:
+
 ```bash
-rm -rf tmp && mkdir tmp && cd tmp
+cd .. && rm -rf tmp && mkdir tmp && cd tmp
 pnpm dlx sunpeak init my-app && cd my-app
 pnpm install
 pnpm lint

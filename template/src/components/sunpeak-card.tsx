@@ -105,9 +105,9 @@ export const SunpeakCard = React.forwardRef<HTMLDivElement, SunpeakCardProps>(
         )}
         <div className="flex flex-col flex-1">
           {(header || metadata) && (
-            <CardHeader className={cn(image && "pt-3")}>
+            <CardHeader className={cn("p-3", image && "pt-2")}>
               {header && (
-                <CardTitle className="text-base font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
+                <CardTitle className="text-sm font-medium leading-tight overflow-hidden text-ellipsis whitespace-nowrap">
                   {header}
                 </CardTitle>
               )}
@@ -120,14 +120,14 @@ export const SunpeakCard = React.forwardRef<HTMLDivElement, SunpeakCardProps>(
           )}
           {children && (
             <CardContent className={cn(
-              "text-sm leading-normal",
-              (header || metadata) && "pt-1"
+              "px-3 pb-3 text-sm leading-normal",
+              (header || metadata) ? "pt-0" : "pt-3"
             )}>
               <div className="line-clamp-2">{children}</div>
             </CardContent>
           )}
           {hasButtons && (
-            <CardFooter className="flex gap-2 flex-wrap">
+            <CardFooter className="flex gap-2 flex-wrap px-3 pb-3 pt-0">
               {button1 && renderButton(button1)}
               {button2 && renderButton(button2)}
             </CardFooter>

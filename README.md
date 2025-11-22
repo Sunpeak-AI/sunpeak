@@ -15,24 +15,41 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18%20%7C%2019-blue?style=flat-square&logo=react)](https://reactjs.org/)
 
-The ChatGPT Apps UI SDK. Build and test your ChatGPT App UI locally with approved shadcn React components.
+The ChatGPT Apps UI SDK.
+
+Build and test your ChatGPT App UI locally with approved React components.
 
 ![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
-
-**Key Features:**
-- 📺 ChatGPT simulator for rapid UI component development.
-- 📚 React component library built with [shadcn/ui](https://ui.shadcn.com/) and [Tailwind](https://tailwindcss.com/).
-- 📱 Interface for custom components that work across genAI platforms.
-- 🤝 Styles that fit the [OpenAI design system](https://developers.openai.com/apps-sdk/build/chatgpt-ui).
-- 🧪 Testing framework that replicates advanced ChatGPT behavior locally.
 
 ## Quickstart
 
 Requirements: Node (20+), pnpm (10+)
 
 ```bash
-pnpm dlx sunpeak init my-app
-cd my-app && pnpm dev
+pnpm dlx sunpeak init
+```
+
+## Key Features
+- 📺 ChatGPT simulator for rapid UI component development.
+- 📚 React component library built on [shadcn](https://ui.shadcn.com/).
+- 📱 Interface for custom components that work across genAI platforms.
+- 🤝 Styles that fit the [OpenAI design system](https://developers.openai.com/apps-sdk/build/chatgpt-ui).
+- 🧪 Testing framework that replicates advanced ChatGPT behavior locally.
+
+## Example Component
+```tsx
+import { SunpeakCard } from "sunpeak";
+
+export default function App() {
+  return (
+    <SunpeakCard
+      image="/photo.jpg"
+      imageAlt="Product"
+      header="Summer Collection"
+      button1={{ children: "Shop Now", onClick: () => console.log("Howdy!") }}
+    />
+  );
+}
 ```
 
 ## Supported Platforms
