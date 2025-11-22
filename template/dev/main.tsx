@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatGPTSimulator } from '../src/simulator';
-import { SunpeakCarousel, SunpeakCard } from '../src/components';
+import { App } from '../src/App';
 import '../src/styles/globals.css';
 
 const places = [
@@ -52,34 +52,6 @@ const places = [
   },
 ];
 
-function App() {
-  return (
-    <SunpeakCarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={280}>
-      {places.map((place) => (
-        <SunpeakCard
-          key={place.id}
-          image={place.image}
-          imageAlt={place.name}
-          header={place.name}
-          metadata={`⭐ ${place.rating} • ${place.category} • ${place.location}`}
-          button1={{
-            isPrimary: true,
-            onClick: () => console.log(`Visit ${place.name}`),
-            children: 'Visit',
-          }}
-          button2={{
-            isPrimary: false,
-            onClick: () => console.log(`Learn more about ${place.name}`),
-            children: 'Learn More',
-          }}
-        >
-          {place.description}
-        </SunpeakCard>
-      ))}
-    </SunpeakCarousel>
-  );
-}
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ChatGPTSimulator
@@ -87,7 +59,7 @@ createRoot(document.getElementById('root')!).render(
       appIcon="✈️"
       userMessage="Show me popular places to visit in Austin Texas"
     >
-      <App />
+      <App data={places} />
     </ChatGPTSimulator>
   </StrictMode>
 );

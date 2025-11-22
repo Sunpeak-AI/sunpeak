@@ -1,60 +1,14 @@
 {
-  "name": "sunpeak",
-  "version": "0.2.1",
-  "description": "The ChatGPT Apps UI SDK. Build and test your ChatGPT App UI locally with approved shadcn React components.",
+  "name": "my-chatgpt-app",
+  "version": "0.1.0",
+  "private": true,
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    },
-    "./styles/chatgpt": "./dist/styles/chatgpt/index.css",
-    "./package.json": "./package.json"
-  },
-  "bin": {
-    "sunpeak": "./bin/sunpeak.js"
-  },
-  "files": [
-    "dist",
-    "bin",
-    "template",
-    "README.md"
-  ],
-  "sideEffects": false,
   "scripts": {
     "build": "tsup",
     "dev": "vite",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "prepublishOnly": "pnpm build"
-  },
-  "keywords": [
-    "openai-app",
-    "chatgpt-app",
-    "chatgpt-simulator",
-    "testing",
-    "multi-platform",
-    "react",
-    "components",
-    "shadcn-ui",
-    "tailwindcss",
-    "sunpeak"
-  ],
-  "author": "Sunpeak AI",
-  "license": "MIT",
-  "peerDependencies": {
-    "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "test": "vitest run"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.15",
@@ -97,13 +51,5 @@
     "typescript": "^5.6.3",
     "vite": "^5.4.21",
     "vitest": "^4.0.12"
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Sunpeak-AI/sunpeak"
-  },
-  "bugs": {
-    "url": "https://github.com/Sunpeak-AI/sunpeak/issues"
-  },
-  "homepage": "https://sunpeak.ai/"
+  }
 }

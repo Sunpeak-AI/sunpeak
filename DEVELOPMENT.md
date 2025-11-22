@@ -10,6 +10,22 @@ cd sunpeak && pnpm install
 pnpm dev
 ```
 
+## Testing
+
+Ensure the following scripts work/pass:
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm dev`
+- `pnpm build`
+
+Ensure the following `./template/` scripts work/pass:
+- `pnpm lint`
+- `pnpm typecheck`
+- `pnpm test`
+- `pnpm dev`
+- `pnpm build`
+
 ## Deployment
 
 On pushes to `main`, Github Actions automatically increments the version number and creates the git tag.
