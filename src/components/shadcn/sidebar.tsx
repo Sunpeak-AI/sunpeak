@@ -596,7 +596,7 @@ function SidebarMenuSkeleton({
   showIcon?: boolean
 }) {
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`
+    return `${Math.floor(Math.random() * 40) + 50}%` // eslint-disable-line
   }, [])
 
   return (

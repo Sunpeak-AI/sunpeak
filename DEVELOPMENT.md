@@ -13,22 +13,44 @@ pnpm dev
 ## Testing
 
 Ensure the following scripts work/pass:
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm dev`
-- `pnpm build`
-- `./sunpeak.js init my-app && cd my-app`
 
-Ensure the following scripts work/pass in `my-app`:
-- `pnpm lint`
-- `pnpm typecheck`
-- `pnpm test`
-- `pnpm dev`
-- `pnpm build`
+```bash
+pnpm install
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm dev
+```
+
+Ensure the following scripts work/pass in `template`:
+
+```bash
+cd template
+pnpm install
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm dev
+```
+
+Confirm that there is a single built `./dist/chatgpt/index.js` file.
 
 ## Deployment
 
 On pushes to `main`, Github Actions automatically increments the version number and creates the git tag.
 
 To deploy to npm, create a release in Github and Github Actions will automatically deploy to npm.
+
+### Deployment Testing
+
+```bash
+rm -rf tmp && mkdir tmp && cd tmp
+pnpm dlx sunpeak init my-app && cd my-app
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm dev
+```

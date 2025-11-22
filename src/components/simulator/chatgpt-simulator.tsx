@@ -7,20 +7,20 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarProvider,
-} from '../components/shadcn/sidebar';
+} from '../shadcn/sidebar';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../components/shadcn/select';
-import { Label } from '../components/shadcn/label';
+} from '../shadcn/select';
+import { Label } from '../shadcn/label';
 import { Conversation } from './conversation';
 import { initMockOpenAI } from './mock-openai';
-import { ThemeProvider } from '../components/theme-provider';
-import type { Theme, DisplayMode } from '../types';
-import type { ScreenWidth } from '../types/simulator';
+import { ThemeProvider } from '../theme-provider';
+import type { Theme, DisplayMode } from '../../types';
+import type { ScreenWidth } from '../../types/simulator';
 
 interface ChatGPTSimulatorProps {
   children: React.ReactNode;

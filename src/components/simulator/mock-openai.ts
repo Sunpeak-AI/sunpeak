@@ -4,7 +4,7 @@ import {
   type Theme,
   type DisplayMode,
   SET_GLOBALS_EVENT_TYPE,
-} from '../types';
+} from '../../types';
 
 class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
 

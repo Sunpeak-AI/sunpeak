@@ -23,7 +23,7 @@ The ChatGPT Apps UI SDK. Build and test your ChatGPT App UI locally with approve
 - 📺 ChatGPT simulator for rapid UI component development.
 - 📚 React component library built with [shadcn/ui](https://ui.shadcn.com/) and [Tailwind](https://tailwindcss.com/).
 - 📱 Interface for custom components that work across genAI platforms.
-- 🤝 Styles are compliant with the [OpenAI design system](https://developers.openai.com/apps-sdk/build/chatgpt-ui).
+- 🤝 Styles that fit the [OpenAI design system](https://developers.openai.com/apps-sdk/build/chatgpt-ui).
 - 🧪 Testing framework that replicates advanced ChatGPT behavior locally.
 
 ## Quickstart
