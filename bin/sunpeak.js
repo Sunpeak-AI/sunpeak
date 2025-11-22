@@ -46,9 +46,21 @@ async function init(projectName) {
     }
   });
 
+  // Read sunpeak version from root package.json
+  const rootPkgPath = join(__dirname, '..', 'package.json');
+  const rootPkg = JSON.parse(readFileSync(rootPkgPath, 'utf-8'));
+  const sunpeakVersion = `^${rootPkg.version}`;
+
+  // Update project package.json
   const pkgPath = join(targetDir, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
   pkg.name = projectName;
+
+  // Replace workspace:* with actual version
+  if (pkg.dependencies?.sunpeak === 'workspace:*') {
+    pkg.dependencies.sunpeak = sunpeakVersion;
+  }
+
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
   console.log(`
