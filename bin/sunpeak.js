@@ -25,6 +25,11 @@ async function init(projectName) {
     }
   }
 
+  if (projectName === 'template') {
+    console.error('Error: "template" is a reserved name. Please choose another name.');
+    process.exit(1);
+  }
+
   const targetDir = join(process.cwd(), projectName);
 
   if (existsSync(targetDir)) {

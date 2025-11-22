@@ -3,3 +3,4 @@
 
 /* Scan sunpeak source for Tailwind classes (only works in workspace, ignored otherwise) */
 @source "../../src/**/*.{ts,tsx}";
+@source "../node_modules/sunpeak/**/*.{ts,tsx}"
