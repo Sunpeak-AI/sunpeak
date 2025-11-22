@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '@/lib/index';
+import { cn } from '~/lib/index';
 import { SidebarInset } from '../components/shadcn/sidebar';
 import { SCREEN_WIDTHS, type ScreenWidth } from '../types/simulator';
 import type { DisplayMode } from '../types';

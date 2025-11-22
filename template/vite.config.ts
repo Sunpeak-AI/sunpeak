@@ -22,7 +22,10 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       // In workspace dev mode, use local sunpeak source
-      ...(isSunpeakWorkspace && { 'sunpeak': parentSrc }),
+      ...(isSunpeakWorkspace && {
+        'sunpeak': parentSrc,
+        '~': parentSrc,
+      }),
     },
   },
   server: {
