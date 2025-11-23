@@ -61,13 +61,13 @@ export type WidgetGlobals<
  * This is a provider-agnostic alias for OpenAiAPI.
  */
 export type WidgetAPI = {
-  callTool: (name: string, args: Record<string, unknown>) => Promise<CallToolResponse>;
-  sendFollowUpMessage: (args: { prompt: string }) => Promise<void>;
-  openExternal: (payload: { href: string }) => void;
-  requestDisplayMode: (args: { mode: DisplayMode }) => Promise<{ mode: DisplayMode }>;
-  requestModal: (args: { mode: ViewMode; params?: UnknownObject }) => Promise<void>;
-  notifyIntrinsicHeight: (height: number) => void;
-  setWidgetState: (state: UnknownObject) => Promise<void>;
+  callTool?: (name: string, args: Record<string, unknown>) => Promise<CallToolResponse>;
+  sendFollowUpMessage?: (args: { prompt: string }) => Promise<void>;
+  openExternal?: (payload: { href: string }) => void;
+  requestDisplayMode?: (args: { mode: DisplayMode }) => Promise<{ mode: DisplayMode }>;
+  requestModal?: (args: { mode: ViewMode; params?: UnknownObject }) => Promise<void>;
+  notifyIntrinsicHeight?: (height: number) => void;
+  setWidgetState?: (state: UnknownObject) => Promise<void>;
 };
 
 /**

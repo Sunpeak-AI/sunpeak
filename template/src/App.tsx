@@ -1,5 +1,6 @@
 import { useWidgetProps } from 'sunpeak';
 import { SunpeakCarousel, SunpeakCard } from './components';
+import 'tw-animate-css';
 import '@/styles/globals.css';
 import '@/styles/chatgpt.css';
 

@@ -3,7 +3,10 @@ import fs from 'fs';
 import path from 'path';
 
 export default defineConfig({
-  entry: ['src/index.ts'],
+  entry: {
+    index: 'src/index.ts',
+    'mcp/index': 'src/mcp/index.ts',
+  },
   format: ['cjs', 'esm'],
   dts: true,
   sourcemap: true,

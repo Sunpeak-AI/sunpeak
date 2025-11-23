@@ -19,11 +19,47 @@ Edit [src/App.tsx](./src/App.tsx) to build your app UI.
 ```
 src/
 ├── App.tsx          # Your main app component
-└── components       # Your shadcn/ui React components
+└── components/      # Your shadcn/ui React components
+
+mcp/
+└── server.ts        # MCP server for testing in ChatGPT
 
 dist/                # Build output (generated)
 └── chatgpt/         # ChatGPT builds
 ```
+
+## Testing
+
+### Testing Locally
+
+Run the following scripts, and manually QA the UI from the dev server:
+
+```bash
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm dev
+```
+
+### Testing in ChatGPT
+
+Test your app directly in ChatGPT using the built-in MCP server:
+
+```bash
+# 1. Build your app. You must rebuild your app for changes to take effect.
+pnpm build
+
+# 2. Start the MCP server.
+pnpm mcp
+
+# 3. In another terminal, run a tunnel. For example:
+ngrok http 6766
+```
+
+The server will run on `http://localhost:6766` and serve your App component with dummy data from `mcp/server.ts`.
+
+You can then connect to the tunnel `/mcp` path from ChatGPT in developer mode to see your UI in action.
 
 ## Build & Deploy
 
@@ -36,7 +72,7 @@ pnpm build
 This creates optimized builds in the `dist/` directory:
 
 - `dist/chatgpt/index.js` - ChatGPT iframe component
-  - Host this file somewhere and reference it as a resource in your MCP server.
+  - Host this file somewhere and reference it as a resource in your production MCP server.
 
 ## Resources
 

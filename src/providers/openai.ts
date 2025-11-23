@@ -55,14 +55,15 @@ class OpenAiProvider implements WidgetProvider {
       return null;
     }
 
+    const api = window.openai;
     return {
-      callTool: window.openai.callTool.bind(window.openai),
-      sendFollowUpMessage: window.openai.sendFollowUpMessage.bind(window.openai),
-      openExternal: window.openai.openExternal.bind(window.openai),
-      requestDisplayMode: window.openai.requestDisplayMode.bind(window.openai),
-      requestModal: window.openai.requestModal.bind(window.openai),
-      notifyIntrinsicHeight: window.openai.notifyIntrinsicHeight.bind(window.openai),
-      setWidgetState: window.openai.setWidgetState.bind(window.openai),
+      callTool: api.callTool?.bind(api),
+      sendFollowUpMessage: api.sendFollowUpMessage?.bind(api),
+      openExternal: api.openExternal?.bind(api),
+      requestDisplayMode: api.requestDisplayMode?.bind(api),
+      requestModal: api.requestModal?.bind(api),
+      notifyIntrinsicHeight: api.notifyIntrinsicHeight?.bind(api),
+      setWidgetState: api.setWidgetState?.bind(api),
     };
   }
 }
