@@ -4,8 +4,6 @@ A ChatGPT App UI built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
 
 ## Quickstart
 
-Requirements: Node (20+), pnpm (10+)
-
 ```bash
 pnpm dev
 ```
@@ -19,7 +17,7 @@ Edit [src/App.tsx](./src/App.tsx) to build your app UI.
 ```
 src/
 ├── App.tsx          # Your main app component
-└── components/      # Your shadcn/ui React components
+└── components/      # Your React components
 
 mcp/
 └── server.ts        # MCP server for testing in ChatGPT
@@ -57,9 +55,9 @@ pnpm mcp
 ngrok http 6766
 ```
 
-The server will run on `http://localhost:6766` and serve your App component with dummy data from `mcp/server.ts`.
+You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps & Connectors > Create`
 
-You can then connect to the tunnel `/mcp` path from ChatGPT in developer mode to see your UI in action.
+Once your app is connected, send `show app` to ChatGPT. Many changes require you to Refresh your app on the same settings modal.
 
 ## Build & Deploy
 
@@ -80,4 +78,3 @@ This creates optimized builds in the `dist/` directory:
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK UI Documentation](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
 - [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)
-- [shadcn/ui](https://ui.shadcn.com/)

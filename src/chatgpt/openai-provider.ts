@@ -3,11 +3,11 @@
  * Bridges the OpenAI-specific window.openai API to the provider-agnostic interface.
  */
 
-import type { WidgetProvider, WidgetGlobals, WidgetAPI } from './types';
+import type { WidgetProvider, WidgetGlobals, WidgetAPI } from '../providers/types';
 import {
   SET_GLOBALS_EVENT_TYPE,
   type SetGlobalsEvent,
-} from '../types/openai';
+} from './openai-types';
 
 /**
  * Check if the OpenAI provider is available.

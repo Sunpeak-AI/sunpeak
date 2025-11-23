@@ -17,11 +17,13 @@
 
 The ChatGPT Apps UI SDK.
 
-Build and test your ChatGPT App UI locally with approved React components.
+Build and test your ChatGPT App UI locally with apps-sdk-ui React components.
 
 ![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
 
-## Quickstart
+## Quickstart 
+
+### New Projects
 
 Requirements: Node (20+), pnpm (10+)
 
@@ -29,25 +31,38 @@ Requirements: Node (20+), pnpm (10+)
 pnpm dlx sunpeak init
 ```
 
+### Existing Projects
+
+Requirements: React (18+), Tailwind 4
+
+```bash
+pnpm add sunpeak
+```
+
 ## Key Features
-- 📺 ChatGPT simulator for rapid UI component development.
-- 📚 React component library built on [shadcn](https://ui.shadcn.com/).
-- 📱 Interface for custom components that work across genAI platforms.
-- 🤝 Styles that fit the [OpenAI design system](https://developers.openai.com/apps-sdk/build/chatgpt-ui).
+- 📺 ChatGPT simulator for local UI component development.
+- 📚 Pre-built component library built on [openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui).
+- 📱 Interface for cross-platforms MCP UI App development.
+- 🛜 Basic MCP server to serve your UI to ChatGPT prod out-of-the-box.
 - 🧪 Testing framework that replicates advanced ChatGPT behavior locally.
 
 ## Example Component
 ```tsx
-import { SunpeakCard } from "sunpeak";
+import '@/styles/globals.css';
+import { OpenAICard } from "@/components";
 
 export default function App() {
   return (
-    <SunpeakCard
-      image="/photo.jpg"
-      imageAlt="Product"
-      header="Summer Collection"
-      button1={{ children: "Shop Now", onClick: () => console.log("Howdy!") }}
-    />
+    <OpenAICard
+      image="https://example.com/photo.jpg"
+      imageAlt="Lady Bird Lake"
+      header="Lady Bird Lake"
+      metadata="⭐ 4.5 • Austin, TX"
+      button1={{ children: "Visit", isPrimary: true, onClick: () => {} }}
+      button2={{ children: "Learn More", onClick: () => {} }}
+    >
+      Scenic lake perfect for kayaking, paddleboarding, and trails.
+    </OpenAICard>
   );
 }
 ```
@@ -64,9 +79,9 @@ export default function App() {
 sunpeak is an npm package consisting of:
 
 1. **A CLI utility** for working with sunpeak (`./bin`).
-2. **A `sunpeak` library** (`./src`). This library contains common runtime APIs and testing utilities—including a ChatGPT simulator—to be used as a dependency by sunpeak projects.
-3. **A templated npm package** (`./template`) that is initialized by the CLI to help developers set up sunpeak projects. These projects have the `sunpeak` dependency already wired up alongside a collection of pre-built shadcn UI components (`./template/src/components`) to copy, modify, or use as an example.
-    1. Developers build their final UI in the `App` component, which is then built against CSS files that codify the design systems of each of the genAI platforms (of which ChatGPT is the only one today).
+2. **A `sunpeak` library** (`./src`). This library contains common runtime APIs and testing utilities, including a ChatGPT simulator, to be used as a dependency by sunpeak projects.
+3. **A templated npm package** (`./template`) that is initialized by the CLI to help developers set up sunpeak projects. These projects have the `sunpeak` dependency already wired up alongside a collection of pre-built UI components (`./template/src/components`) to copy, modify, or use as an example.
+    1. Developers build their UI in the `App` component.
 
 ## Contributing
 

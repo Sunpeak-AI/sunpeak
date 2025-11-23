@@ -1,4 +1,4 @@
-import { DisplayMode, Theme } from './openai';
+import { DisplayMode, Theme } from './openai-types';
 
 export type ScreenWidth = 'mobile-s' | 'mobile-l' | 'tablet' | 'full';
 

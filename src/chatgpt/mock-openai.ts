@@ -7,7 +7,7 @@ import {
   type ViewMode,
   type UnknownObject,
   SET_GLOBALS_EVENT_TYPE,
-} from '../../types';
+} from '../types';
 
 class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
 

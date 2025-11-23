@@ -1,8 +1,7 @@
-import { useWidgetProps } from 'sunpeak';
-import { SunpeakCarousel, SunpeakCard } from './components';
-import 'tw-animate-css';
 import '@/styles/globals.css';
-import '@/styles/chatgpt.css';
+
+import { useWidgetProps } from 'sunpeak';
+import { OpenAICarousel, OpenAICard } from './components';
 
 export interface Place {
   id: string;
@@ -22,9 +21,9 @@ export function App() {
   const data = useWidgetProps<AppData>(() => ({ places: [] }));
 
   return (
-    <SunpeakCarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
+    <OpenAICarousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
       {data.places.map((place) => (
-        <SunpeakCard
+        <OpenAICard
           key={place.id}
           image={place.image}
           imageAlt={place.name}
@@ -42,8 +41,8 @@ export function App() {
           }}
         >
           {place.description}
-        </SunpeakCard>
+        </OpenAICard>
       ))}
-    </SunpeakCarousel>
+    </OpenAICarousel>
   );
 }

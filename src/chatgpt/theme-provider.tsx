@@ -1,4 +1,5 @@
 import * as React from "react"
+import { applyDocumentTheme } from "@openai/apps-sdk-ui/theme"
 
 type Theme = "light" | "dark"
 
@@ -26,10 +27,16 @@ export function ThemeProvider({
 
   const theme = controlledTheme ?? internalTheme
 
-  React.useEffect(() => {
-    const root = window.document.documentElement
-    root.classList.remove("light", "dark")
-    root.classList.add(theme)
+  // Apply theme synchronously before paint to avoid FOUC
+  React.useLayoutEffect(() => {
+    // Only apply if we're in a browser environment
+    if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+      try {
+        applyDocumentTheme(theme)
+      } catch (error) {
+        console.warn('Failed to apply document theme:', error)
+      }
+    }
   }, [theme])
 
   const value = {

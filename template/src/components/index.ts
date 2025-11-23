@@ -1,2 +1,2 @@
-export * from './sunpeak-carousel';
-export * from './sunpeak-card';
+export * from './openai-carousel';
+export * from './openai-card';

@@ -1,1 +1,1 @@
-export { runMCPServer, type MCPServerConfig } from "./server.js";
+export { runMCPServer, MCPProvider, type MCPServerConfig } from "./server.js";

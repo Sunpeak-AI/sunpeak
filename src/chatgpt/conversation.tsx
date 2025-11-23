@@ -1,8 +1,7 @@
 import * as React from 'react';
 import { cn } from '~/lib/index';
-import { SidebarInset } from '../shadcn/sidebar';
-import { useDisplayMode } from '../../hooks';
-import { SCREEN_WIDTHS, type ScreenWidth } from '../../types/simulator';
+import { useDisplayMode } from '../hooks';
+import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
 
 interface ConversationProps {
   children: React.ReactNode;
@@ -27,16 +26,16 @@ export function Conversation({
   // Fullscreen mode: children take over the entire conversation area
   if (displayMode === 'fullscreen') {
     return (
-      <SidebarInset className="flex flex-col bg-background">
+      <div className="flex flex-col bg-surface w-full flex-1">
         <div className="flex-1 overflow-auto">{children}</div>
-      </SidebarInset>
+      </div>
     );
   }
 
   return (
-    <SidebarInset className="flex flex-col bg-background">
+    <div className="flex flex-col bg-surface w-full h-full flex-1">
       {/* Header bar */}
-      <header className="h-12 border-b border-border bg-background flex items-center px-4 text-lg">
+      <header className="h-12 border-b border-subtle bg-surface flex items-center px-4 text-lg">
         <span className="text-foreground">ChatGPT</span>
       </header>
 
@@ -61,7 +60,7 @@ export function Conversation({
                     className="min-h-8 relative flex w-full flex-col items-end gap-2 text-start break-words whitespace-normal"
                   >
                     <div className="flex w-full flex-col gap-1 empty:hidden items-end">
-                      <div className="bg-secondary text-secondary-foreground relative rounded-[18px] px-4 py-3 max-w-[70%]">
+                      <div className="bg-[var(--color-background-primary-soft)] relative rounded-[18px] px-4 py-3 max-w-[70%]">
                         <div className="whitespace-pre-wrap">{userMessage}</div>
                       </div>
                     </div>
@@ -120,19 +119,20 @@ export function Conversation({
         </main>
 
         {/* Input area */}
-        <footer className="bg-background">
+        <footer className="bg-surface">
           <div className="max-w-[48rem] mx-auto px-4 py-4">
             <div className="relative">
               <input
                 type="text"
+                name="userInput"
                 disabled
                 placeholder="Message ChatGPT"
-                className="w-full bg-secondary text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 outline-none"
+                className="w-full bg-[var(--color-background-primary)] dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
               />
             </div>
           </div>
         </footer>
       </div>
-    </SidebarInset>
+    </div>
   );
 }

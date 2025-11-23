@@ -16,7 +16,7 @@ export type {
   ViewMode,
   View,
   CallToolResponse,
-} from '../types/openai';
+} from '../chatgpt/openai-types';
 
 // Import for use in this module
 import type {
@@ -28,7 +28,7 @@ import type {
   View,
   ViewMode,
   CallToolResponse,
-} from '../types/openai';
+} from '../chatgpt/openai-types';
 
 /**
  * Global state available from the widget runtime environment.

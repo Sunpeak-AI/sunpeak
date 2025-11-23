@@ -3,8 +3,6 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import fs from "node:fs";
-import path from "node:path";
 import { URL } from "node:url";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -18,67 +16,37 @@ import {
   type ListResourcesRequest,
   type ListToolsRequest,
   type ReadResourceRequest,
-  type Resource,
-  type Tool,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export interface MCPServerConfig {
-  name?: string;
-  version?: string;
-  port?: number;
-  distPath: string;
-  toolName?: string;
-  toolDescription?: string;
-  dummyData?: Record<string, unknown>;
-}
+import {
+  MCPProvider,
+  type MCPServerConfig,
+  type MCPProviderImplementation,
+} from "./types.js";
+import { getChatGPTMCPProvider } from "../chatgpt/mcp-provider.js";
 
-function widgetDescriptorMeta() {
-  return {
-    "openai/outputTemplate": "ui://widget/app.html",
-    "openai/toolInvocation/invoking": "Loading your app",
-    "openai/toolInvocation/invoked": "App loaded",
-    "openai/widgetAccessible": true,
-    "openai/resultCanProduceWidget": true,
-  } as const;
-}
+export type { MCPServerConfig } from "./types.js";
+export { MCPProvider } from "./types.js";
 
-function widgetInvocationMeta() {
-  return {
-    "openai/toolInvocation/invoking": "Loading your app",
-    "openai/toolInvocation/invoked": "App loaded",
-  } as const;
-}
-
-function readWidgetHtml(distPath: string): string {
-  const htmlPath = path.resolve(distPath);
-
-  if (!fs.existsSync(htmlPath)) {
-    throw new Error(
-      `Widget HTML not found at ${htmlPath}. Run "pnpm build" to generate the built app.`
-    );
+/**
+ * Get the provider implementation for the specified provider type.
+ */
+function getProviderImplementation(
+  provider: MCPProvider
+): MCPProviderImplementation {
+  switch (provider) {
+    case MCPProvider.ChatGPT:
+      return getChatGPTMCPProvider();
+    default:
+      throw new Error(`Unknown provider: ${provider}`);
   }
-
-  const jsContents = fs.readFileSync(htmlPath, "utf8");
-
-  // Wrap the JS in a minimal HTML shell suitable for ChatGPT
-  // Styles should already be bundled in the JS by the template's build process
-  return `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-  <div id="root"></div>
-  <script>
-${jsContents}
-  </script>
-</body>
-</html>`;
 }
 
-function createAppServer(config: MCPServerConfig): Server {
+function createAppServer(
+  config: MCPServerConfig,
+  providerImpl: MCPProviderImplementation
+): Server {
   const {
     name = "sunpeak-app",
     version = "0.1.0",
@@ -87,7 +55,7 @@ function createAppServer(config: MCPServerConfig): Server {
     dummyData = {},
   } = config;
 
-  const widgetHtml = readWidgetHtml(config.distPath);
+  const widgetContent = providerImpl.readWidgetContent(config.distPath);
 
   const toolInputSchema = {
     type: "object",
@@ -97,26 +65,16 @@ function createAppServer(config: MCPServerConfig): Server {
 
   const toolInputParser = z.object({});
 
-  const tool: Tool = {
+  const tool = providerImpl.createTool({
     name: toolName,
     description: toolDescription,
     inputSchema: toolInputSchema,
-    title: toolDescription,
-    _meta: widgetDescriptorMeta(),
-    annotations: {
-      destructiveHint: false,
-      openWorldHint: false,
-      readOnlyHint: true,
-    },
-  };
+  });
 
-  const resource: Resource = {
-    uri: "ui://widget/app.html",
+  const resource = providerImpl.createResource({
     name: toolDescription,
-    description: `${toolDescription} widget markup`,
-    mimeType: "text/html+skybridge",
-    _meta: widgetDescriptorMeta(),
-  };
+    description: toolDescription,
+  });
 
   const server = new Server(
     {
@@ -151,9 +109,9 @@ function createAppServer(config: MCPServerConfig): Server {
         contents: [
           {
             uri: resource.uri,
-            mimeType: "text/html+skybridge",
-            text: widgetHtml,
-            _meta: widgetDescriptorMeta(),
+            mimeType: providerImpl.getWidgetMimeType(),
+            text: widgetContent,
+            _meta: providerImpl.getWidgetDescriptorMeta(),
           },
         ],
       };
@@ -171,7 +129,11 @@ function createAppServer(config: MCPServerConfig): Server {
   server.setRequestHandler(
     CallToolRequestSchema,
     async (request: CallToolRequest) => {
-      console.log("[MCP] CallTool:", request.params.name, request.params.arguments);
+      console.log(
+        "[MCP] CallTool:",
+        request.params.name,
+        request.params.arguments
+      );
       if (request.params.name !== toolName) {
         throw new Error(`Unknown tool: ${request.params.name}`);
       }
@@ -186,7 +148,7 @@ function createAppServer(config: MCPServerConfig): Server {
           },
         ],
         structuredContent: dummyData,
-        _meta: widgetInvocationMeta(),
+        _meta: providerImpl.getWidgetInvocationMeta(),
       };
     }
   );
@@ -206,10 +168,11 @@ const postPath = "/mcp/messages";
 
 async function handleSseRequest(
   res: ServerResponse,
-  config: MCPServerConfig
+  config: MCPServerConfig,
+  providerImpl: MCPProviderImplementation
 ) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  const server = createAppServer(config);
+  const server = createAppServer(config, providerImpl);
   const transport = new SSEServerTransport(postPath, res);
   const sessionId = transport.sessionId;
 
@@ -266,7 +229,16 @@ async function handlePostMessage(
   }
 }
 
+/**
+ * Run the MCP server with the specified configuration.
+ *
+ * @param config - Server configuration including the provider type.
+ *                 Defaults to ChatGPT provider if not specified.
+ */
 export function runMCPServer(config: MCPServerConfig): void {
+  const provider = config.provider ?? MCPProvider.ChatGPT;
+  const providerImpl = getProviderImplementation(provider);
+
   const portEnv = Number(process.env.PORT ?? 6766);
   const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 6766);
 
@@ -294,7 +266,7 @@ export function runMCPServer(config: MCPServerConfig): void {
       }
 
       if (req.method === "GET" && url.pathname === ssePath) {
-        await handleSseRequest(res, config);
+        await handleSseRequest(res, config, providerImpl);
         return;
       }
 
@@ -313,7 +285,9 @@ export function runMCPServer(config: MCPServerConfig): void {
   });
 
   httpServer.listen(port, () => {
-    console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
+    console.log(
+      `Sunpeak MCP server (${provider}) listening on http://localhost:${port}`
+    );
     console.log(`  SSE stream: GET http://localhost:${port}${ssePath}`);
     console.log(
       `  Message post endpoint: POST http://localhost:${port}${postPath}?sessionId=...`

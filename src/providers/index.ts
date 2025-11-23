@@ -7,11 +7,11 @@
  */
 
 import type { WidgetProvider, WidgetGlobals, WidgetAPI } from './types';
-import { isOpenAiAvailable, getOpenAiProvider } from './openai';
+import { isOpenAiAvailable, getOpenAiProvider } from '../chatgpt/openai-provider';
 
 // Re-export only provider-specific types (not the shared types already in ./types)
 export type { WidgetGlobals, WidgetAPI, WidgetProvider } from './types';
-export { isOpenAiAvailable, getOpenAiProvider } from './openai';
+export { isOpenAiAvailable, getOpenAiProvider } from '../chatgpt/openai-provider';
 
 // Cached provider instance - detection happens only once
 let cachedProvider: WidgetProvider | null = null;

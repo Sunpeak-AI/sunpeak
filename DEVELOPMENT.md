@@ -10,7 +10,7 @@ cd sunpeak && pnpm install
 pnpm dev
 ```
 
-## Testing
+## Local Testing
 
 Ensure the following scripts work/pass:
 
@@ -32,10 +32,22 @@ pnpm lint
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm dev
+pnpm mcp
 ```
 
 Confirm that there is a single built `./dist/chatgpt/index.js` file.
+
+### ChatGPT Prod - Local Package
+
+With the mcp server still running from the previous step, make sure to have a tunnel like ngrok running in another terminal using the mcp port:
+
+```
+ngrok http 6766
+```
+
+You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see the template UI in action: `User > Settings > Apps & Connectors > Create`
+
+Once the app is connected, send `show app` to ChatGPT. Many changes require you to Refresh the app on the same settings modal.
 
 ## Deployment
 
@@ -56,6 +68,7 @@ pnpm typecheck
 pnpm test
 pnpm build
 pnpm dev
+pnpm mcp
 ```
 
 ## Coding Guidance

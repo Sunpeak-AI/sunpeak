@@ -58,7 +58,7 @@ const toolOutput = {
 runMCPServer({
   name: 'my-sunpeak-app',
   version: '0.1.0',
-  distPath: path.resolve(__dirname, '../dist/chatgpt/index.global.js'),
+  distPath: path.resolve(__dirname, '../dist/chatgpt/index.js'),
   toolName: 'show-places',
   toolDescription: 'Show popular places in Austin',
   dummyData: toolOutput,
