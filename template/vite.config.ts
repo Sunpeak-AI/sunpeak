@@ -18,6 +18,8 @@ export default defineConfig({
         '~': parentSrc,
       }),
     },
+    // Enable "style" condition for CSS-only packages like tw-animate-css
+    conditions: ['style'],
   },
   server: {
     port: 6767,
