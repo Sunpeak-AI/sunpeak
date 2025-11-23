@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "The ChatGPT Apps UI SDK. Build and test your ChatGPT App UI locally with approved shadcn React components.",
   "type": "module",
   "main": "./dist/index.cjs",
