@@ -45,14 +45,16 @@
   },
   "keywords": [
     "openai-apps-sdk-ui",
+    "openai-app",
     "chatgpt-apps-sdk",
+    "chatgpt-app",
     "mcp-ui",
     "mcp",
     "chatgpt-simulator",
     "testing",
     "multi-platform",
     "react",
-    "tailwindcss",
+    "tailwind",
     "sunpeak"
   ],
   "author": "Sunpeak AI",

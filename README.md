@@ -15,9 +15,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18%20%7C%2019-blue?style=flat-square&logo=react)](https://reactjs.org/)
 
-The ChatGPT Apps UI SDK.
+The ChatGPT Apps SDK.
 
-Build and test your ChatGPT App UI locally with apps-sdk-ui React components.
+Build and test your ChatGPT App UI locally with OpenAI apps-sdk-ui React components.
 
 ![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
 
