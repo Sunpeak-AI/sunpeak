@@ -92,22 +92,8 @@ export function ChatGPTSimulator({
               </SidebarGroupLabel>
               <SidebarGroupContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="app-ui-select" className="text-xs">
-                    App UI
-                  </Label>
-                  <Select value="carousel" onValueChange={() => {}}>
-                    <SelectTrigger id="app-ui-select">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="carousel">Carousel</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
                   <Label htmlFor="theme-select" className="text-xs">
-                    Color Scheme
+                    Theme
                   </Label>
                   <Select value={theme} onValueChange={(value) => mock.setTheme(value as Theme)}>
                     <SelectTrigger id="theme-select">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState, type SetStateAction } from 'react';
-import { useOpenAiGlobal } from './use-openai-global';
+import { useWidgetGlobal } from './use-widget-global';
+import { useWidgetAPI } from './use-widget-api';
 import type { UnknownObject } from '../types';
 
 export function useWidgetState<T extends UnknownObject>(
@@ -11,11 +12,12 @@ export function useWidgetState<T extends UnknownObject>(
 export function useWidgetState<T extends UnknownObject>(
   defaultState?: T | (() => T | null) | null
 ): readonly [T | null, (state: SetStateAction<T | null>) => void] {
-  const widgetStateFromWindow = useOpenAiGlobal('widgetState') as T;
+  const widgetStateFromProvider = useWidgetGlobal('widgetState') as T;
+  const api = useWidgetAPI();
 
   const [widgetState, _setWidgetState] = useState<T | null>(() => {
-    if (widgetStateFromWindow != null) {
-      return widgetStateFromWindow;
+    if (widgetStateFromProvider != null) {
+      return widgetStateFromProvider;
     }
 
     return typeof defaultState === 'function'
@@ -24,22 +26,22 @@ export function useWidgetState<T extends UnknownObject>(
   });
 
   useEffect(() => {
-    _setWidgetState(widgetStateFromWindow);
-  }, [widgetStateFromWindow]);
+    _setWidgetState(widgetStateFromProvider);
+  }, [widgetStateFromProvider]);
 
   const setWidgetState = useCallback(
     (state: SetStateAction<T | null>) => {
       _setWidgetState((prevState) => {
         const newState = typeof state === 'function' ? state(prevState) : state;
 
-        if (newState != null && typeof window !== 'undefined' && window.openai?.setWidgetState) {
-          window.openai.setWidgetState(newState);
+        if (newState != null && api?.setWidgetState) {
+          api.setWidgetState(newState);
         }
 
         return newState;
       });
     },
-    []
+    [api]
   );
 
   return [widgetState, setWidgetState] as const;

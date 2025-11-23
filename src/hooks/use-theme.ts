@@ -1,6 +1,6 @@
-import { type Theme } from '../types';
-import { useOpenAiGlobal } from './use-openai-global';
+import { useWidgetGlobal } from './use-widget-global';
+import type { Theme } from '../types';
 
 export const useTheme = (): Theme | null => {
-  return useOpenAiGlobal('theme');
+  return useWidgetGlobal('theme');
 };

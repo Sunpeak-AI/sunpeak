@@ -1,5 +1,5 @@
-import { useOpenAiGlobal } from './use-openai-global';
+import { useWidgetGlobal } from './use-widget-global';
 
 export const useLocale = (): string | null => {
-  return useOpenAiGlobal('locale');
+  return useWidgetGlobal('locale');
 };

@@ -1,9 +1,12 @@
+// Core provider-agnostic hooks
+export { useWidgetGlobal } from './use-widget-global';
+export { useWidgetAPI } from './use-widget-api';
+
+// Convenience hooks
 export { useDisplayMode } from './use-display-mode';
 export { useLocale } from './use-locale';
 export { useMaxHeight } from './use-max-height';
 export { useIsMobile } from './use-mobile';
-export { useOpenAiAPI } from './use-openai-api';
-export { useOpenAiGlobal } from './use-openai-global';
 export { useSafeArea } from './use-safe-area';
 export { useTheme } from './use-theme';
 export { useToolInput } from './use-tool-input';

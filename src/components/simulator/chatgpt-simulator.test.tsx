@@ -26,8 +26,7 @@ describe('ChatGPTSimulator', () => {
     );
 
     expect(screen.getByText('Controls')).toBeInTheDocument();
-    expect(screen.getByText('App UI')).toBeInTheDocument();
-    expect(screen.getByText('Color Scheme')).toBeInTheDocument();
+    expect(screen.getByText('Theme')).toBeInTheDocument();
     expect(screen.getByText('Display Mode')).toBeInTheDocument();
     expect(screen.getByText('Body Width')).toBeInTheDocument();
   });

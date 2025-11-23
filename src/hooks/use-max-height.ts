@@ -1,5 +1,5 @@
-import { useOpenAiGlobal } from './use-openai-global';
+import { useWidgetGlobal } from './use-widget-global';
 
 export const useMaxHeight = (): number | null => {
-  return useOpenAiGlobal('maxHeight');
+  return useWidgetGlobal('maxHeight');
 };

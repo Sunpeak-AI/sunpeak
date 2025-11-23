@@ -1,6 +1,6 @@
-import { useOpenAiGlobal } from './use-openai-global';
+import { useWidgetGlobal } from './use-widget-global';
 import type { UnknownObject } from '../types';
 
 export function useToolInput<T extends UnknownObject = UnknownObject>(): T | null {
-  return useOpenAiGlobal('toolInput') as T | null;
+  return useWidgetGlobal('toolInput') as T | null;
 }

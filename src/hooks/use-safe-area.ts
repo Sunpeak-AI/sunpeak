@@ -1,6 +1,6 @@
-import { useOpenAiGlobal } from './use-openai-global';
+import { useWidgetGlobal } from './use-widget-global';
 import type { SafeArea } from '../types';
 
 export const useSafeArea = (): SafeArea | null => {
-  return useOpenAiGlobal('safeArea');
+  return useWidgetGlobal('safeArea');
 };
