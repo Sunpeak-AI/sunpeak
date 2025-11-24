@@ -39,6 +39,13 @@ Requirements: React (18+), Tailwind 4
 pnpm add sunpeak
 ```
 
+When using `ChatGPTSimulator`, import the styles in your entry file:
+
+```tsx
+import 'sunpeak/style.css';
+import { ChatGPTSimulator } from 'sunpeak';
+```
+
 ## Key Features
 - 📺 ChatGPT simulator for local UI component development.
 - 📚 Pre-built component library built on [openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui).

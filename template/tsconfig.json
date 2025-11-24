@@ -24,7 +24,9 @@
 
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "sunpeak": ["../src/index.ts"],
+      "sunpeak/*": ["../src/*"],
+      "~/*": ["../src/*"]
     }
   },
   "include": ["src", "dev"],

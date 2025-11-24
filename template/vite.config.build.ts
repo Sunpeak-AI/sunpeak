@@ -35,7 +35,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
+      'sunpeak': path.resolve(__dirname, '../src'),
+      '~': path.resolve(__dirname, '../src'),
     },
     conditions: ['style', 'import', 'module', 'browser', 'default'],
   },

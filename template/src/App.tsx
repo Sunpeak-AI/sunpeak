@@ -1,4 +1,4 @@
-import '@/styles/globals.css';
+import './styles/globals.css';
 
 import { useWidgetProps } from 'sunpeak';
 import { OpenAICarousel, OpenAICard } from './components';

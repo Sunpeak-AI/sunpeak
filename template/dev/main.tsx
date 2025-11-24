@@ -1,7 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatGPTSimulator } from 'sunpeak';
-import { App } from '@/App';
+import { App } from '../src/App';
 
 const toolOutput = {
   places: [
