@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "@openai/apps-sdk-ui/css";
 
 /* Scan simulator source files for Tailwind classes */
 @source "./**/*.{ts,tsx}";
