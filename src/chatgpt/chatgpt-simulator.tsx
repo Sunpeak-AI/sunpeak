@@ -1,3 +1,4 @@
+import '@openai/apps-sdk-ui/css';
 import './globals.css';
 
 import * as React from 'react';

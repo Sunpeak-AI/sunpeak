@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import dts from 'vite-plugin-dts';
+import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { builtinModules } from 'module';
 
@@ -10,6 +11,7 @@ const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     dts({
       include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
@@ -37,6 +39,7 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: true,
     minify: false,
+    cssCodeSplit: false,
     rollupOptions: {
       external: [
         'react',
@@ -52,6 +55,7 @@ export default defineConfig({
       ],
       output: {
         preserveModules: false,
+        assetFileNames: '[name][extname]',
       },
     },
   },

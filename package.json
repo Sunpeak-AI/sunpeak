@@ -17,6 +17,7 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./style.css": "./dist/style.css",
     "./mcp": {
       "import": {
         "types": "./dist/mcp/index.d.ts",
@@ -34,7 +35,9 @@
     "template",
     "README.md"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "build": "vite build",
     "dev": "pnpm --filter my-sunpeak-app dev",
