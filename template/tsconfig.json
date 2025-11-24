@@ -22,12 +22,7 @@
     "declarationMap": true,
     "sourceMap": true,
 
-    "baseUrl": ".",
-    "paths": {
-      "sunpeak": ["../src/index.ts"],
-      "sunpeak/*": ["../src/*"],
-      "~/*": ["../src/*"]
-    }
+    "baseUrl": "."
   },
   "include": ["src", "dev"],
   "references": [{ "path": "./tsconfig.node.json" }]
