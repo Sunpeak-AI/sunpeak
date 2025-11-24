@@ -12,30 +12,20 @@ pnpm dev
 
 ## Local Testing
 
-Ensure the following scripts work/pass:
+Run all the checks with the following:
 
 ```bash
-pnpm install
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm dev
+pnpm validate
 ```
 
-Ensure the following scripts work/pass in `template`:
+This will:
+- Run linting, typechecking, and unit tests at the root and template levels
+- Build both packages
+- Start the dev server and run E2E tests with Playwright
 
-```bash
-cd template
-pnpm install
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm mcp
-```
-
-Confirm that there is a single built `./dist/chatgpt/index.js` file.
+For manual testing with live servers, you can also run:
+- `pnpm dev`
+- `pnpm mcp` (in template directory)
 
 ### ChatGPT Prod - Local Package
 
@@ -61,14 +51,8 @@ Assuming `pwd` is this root sunpeak repo folder, run:
 
 ```bash
 rm -rf ../tmp && mkdir ../tmp && cd ../tmp
-pnpm dlx sunpeak init my-app && cd my-app
-pnpm install
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm dev
-pnpm mcp
+pnpm dlx sunpeak new my-app && cd my-app
+pnpm validate
 ```
 
 ## Coding Guidance

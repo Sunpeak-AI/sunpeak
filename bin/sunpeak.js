@@ -80,13 +80,13 @@ See README.md for more details.
 
 const [,, command, ...args] = process.argv;
 
-if (command === 'init') {
+if (command === 'new') {
   init(args[0]);
 } else {
   console.log(`
 sunpeak - ChatGPT Apps UI SDK
 
 Commands:
-  init [name]  Create a new project from template
+  new [name]  Create a new project from template
 `);
 }

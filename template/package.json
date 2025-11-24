@@ -5,11 +5,12 @@
   "type": "module",
   "scripts": {
     "build": "vite build --config vite.config.build.ts",
-    "dev": "vite",
+    "dev": "vite --port ${PORT:-6767}",
     "mcp": "tsx mcp/server.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "validate": "node scripts/validate.mjs"
   },
   "dependencies": {
     "@openai/apps-sdk-ui": "^0.2.0",

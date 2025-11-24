@@ -30,13 +30,20 @@ dist/                # Build output (generated)
 
 ### Testing Locally
 
-Run the following scripts, and manually QA the UI from the dev server:
+Run all the checks with the following:
 
 ```bash
-pnpm lint
-pnpm typecheck
-pnpm test
-pnpm build
+pnpm validate
+```
+
+This will:
+- Run linting, typechecking, and unit tests
+- Build your app
+- Verify that build outputs are created correctly
+
+For manual QA of the UI, run:
+
+```bash
 pnpm dev
 ```
 

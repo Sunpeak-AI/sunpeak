@@ -11,6 +11,9 @@ template/pnpm-lock.yaml
 
 # Testing
 coverage
+test-results
+playwright-report
+playwright/.cache
 
 # Environment variables
 .env

@@ -28,7 +28,7 @@ Build and test your ChatGPT App UI locally with OpenAI apps-sdk-ui React compone
 Requirements: Node (20+), pnpm (10+)
 
 ```bash
-pnpm dlx sunpeak init
+pnpm dlx sunpeak new
 ```
 
 ### Existing Projects
@@ -99,6 +99,7 @@ For development quickstart on this package, see [DEVELOPMENT.md](./DEVELOPMENT.m
 ## Resources
 
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
-- [ChatGPT Apps SDK UI Documentation](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
+- [ChatGPT Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
 - [ChatGPT Apps SDK window.openai Reference](https://developers.openai.com/apps-sdk/build/mcp-server#understand-the-windowopenai-widget-runtime)
 - [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)
+- [ChatGPT Apps SDK UI Documentation](https://openai.github.io/apps-sdk-ui/)

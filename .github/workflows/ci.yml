@@ -28,17 +28,10 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run linter
-        run: pnpm lint
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Build
-        run: pnpm build
+      - name: Run validation
+        run: pnpm validate
+        env:
+          CI: true
 
       - name: Bump version and tag
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
