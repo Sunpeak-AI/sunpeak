@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "The ChatGPT Apps UI SDK. Build and test your ChatGPT App UI locally with OpenAI apps-sdk-ui components.",
   "type": "module",
   "main": "./dist/index.cjs",
