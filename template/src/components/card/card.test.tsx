@@ -1,29 +1,29 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { OpenAICard } from './openai-card';
+import { Card } from './card';
 
-describe('OpenAICard', () => {
+describe('Card', () => {
   it('renders correct variant classes', () => {
     const { container, rerender } = render(
-      <OpenAICard variant="default" data-testid="card">
+      <Card variant="default" data-testid="card">
         Content
-      </OpenAICard>
+      </Card>
     );
 
     const card = container.firstChild as HTMLElement;
     expect(card.className).toContain('border border-subtle bg-surface');
 
     rerender(
-      <OpenAICard variant="bordered" data-testid="card">
+      <Card variant="bordered" data-testid="card">
         Content
-      </OpenAICard>
+      </Card>
     );
     expect(card.className).toContain('border-2 border-default bg-surface');
 
     rerender(
-      <OpenAICard variant="elevated" data-testid="card">
+      <Card variant="elevated" data-testid="card">
         Content
-      </OpenAICard>
+      </Card>
     );
     expect(card.className).toContain('shadow-lg');
   });
@@ -33,12 +33,12 @@ describe('OpenAICard', () => {
     const button1OnClick = vi.fn();
 
     render(
-      <OpenAICard
+      <Card
         onClick={cardOnClick}
         button1={{ onClick: button1OnClick, children: 'Click Me' }}
       >
         Content
-      </OpenAICard>
+      </Card>
     );
 
     const button = screen.getByText('Click Me');
@@ -53,12 +53,12 @@ describe('OpenAICard', () => {
     const button2OnClick = vi.fn();
 
     render(
-      <OpenAICard
+      <Card
         button1={{ onClick: button1OnClick, children: 'Button 1', isPrimary: true }}
         button2={{ onClick: button2OnClick, children: 'Button 2' }}
       >
         Content
-      </OpenAICard>
+      </Card>
     );
 
     const button1 = screen.getByText('Button 1');

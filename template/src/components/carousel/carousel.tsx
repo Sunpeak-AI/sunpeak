@@ -4,13 +4,13 @@ import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
 import { ArrowLeft, ArrowRight } from "@openai/apps-sdk-ui/components/Icon"
 import { useWidgetState, useDisplayMode } from "sunpeak"
 import { Button } from "@openai/apps-sdk-ui/components/Button"
-import { cn } from "../lib/index"
+import { cn } from "../../lib/index"
 
-export interface OpenAICarouselState extends Record<string, unknown> {
+export interface CarouselState extends Record<string, unknown> {
   currentIndex?: number
 }
 
-export type OpenAICarouselProps = {
+export type CarouselProps = {
   children?: React.ReactNode
   gap?: number
   showArrows?: boolean
@@ -19,9 +19,9 @@ export type OpenAICarouselProps = {
   className?: string
 }
 
-export const OpenAICarousel = React.forwardRef<
+export const Carousel = React.forwardRef<
   HTMLDivElement,
-  OpenAICarouselProps
+  CarouselProps
 >(
   (
     {
@@ -34,7 +34,7 @@ export const OpenAICarousel = React.forwardRef<
     },
     ref
   ) => {
-    const [widgetState, setWidgetState] = useWidgetState<OpenAICarouselState>(() => ({
+    const [widgetState, setWidgetState] = useWidgetState<CarouselState>(() => ({
       currentIndex: 0,
     }))
     const displayMode = useDisplayMode()
@@ -175,4 +175,4 @@ export const OpenAICarousel = React.forwardRef<
     )
   }
 )
-OpenAICarousel.displayName = "OpenAICarousel"
+Carousel.displayName = "Carousel"

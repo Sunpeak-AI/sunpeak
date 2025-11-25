@@ -1,14 +1,14 @@
 import * as React from "react"
 import { Button } from "@openai/apps-sdk-ui/components/Button"
-import { cn } from "../lib/index"
+import { cn } from "../../lib/index"
 
-export interface OpenAIButtonProps {
+export interface CardButtonProps {
   isPrimary?: boolean
   onClick: () => void
   children: React.ReactNode
 }
 
-export interface OpenAICardProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   children?: React.ReactNode
   image?: string
   imageAlt?: string
@@ -16,12 +16,12 @@ export interface OpenAICardProps extends React.HTMLAttributes<HTMLDivElement> {
   imageMaxHeight?: number
   header?: React.ReactNode
   metadata?: React.ReactNode
-  button1?: OpenAIButtonProps
-  button2?: OpenAIButtonProps
+  button1?: CardButtonProps
+  button2?: CardButtonProps
   variant?: "default" | "bordered" | "elevated"
 }
 
-export const OpenAICard = React.forwardRef<HTMLDivElement, OpenAICardProps>(
+export const Card = React.forwardRef<HTMLDivElement, CardProps>(
   (
     {
       children,
@@ -50,7 +50,7 @@ export const OpenAICard = React.forwardRef<HTMLDivElement, OpenAICardProps>(
       onClick?.(e)
     }
 
-    const renderButton = (buttonProps: OpenAIButtonProps) => {
+    const renderButton = (buttonProps: CardButtonProps) => {
       const { isPrimary = false, onClick: buttonOnClick, children } = buttonProps
 
       const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -123,4 +123,4 @@ export const OpenAICard = React.forwardRef<HTMLDivElement, OpenAICardProps>(
     )
   }
 )
-OpenAICard.displayName = "OpenAICard"
+Card.displayName = "Card"

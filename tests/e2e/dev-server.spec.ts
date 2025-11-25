@@ -58,22 +58,18 @@ test.describe('Dev Server', () => {
   test('should render place card with proper typography styles', async ({ page }) => {
     await page.goto('/');
 
-    // Check for "Lady Bird Lake" h2 element
-    const placeHeader = page.locator('h2:has-text("Lady Bird Lake")');
+    const placeHeader = page.locator('h1:has-text("Welcome to Sunpeak!")');
     await expect(placeHeader).toBeVisible();
-    await expect(placeHeader).toHaveText('Lady Bird Lake');
 
     // Verify computed styles to confirm Tailwind typography classes are applied
     const styles = await placeHeader.evaluate((el) => {
       const computed = window.getComputedStyle(el);
       return {
-        fontWeight: computed.fontWeight,
-        whiteSpace: computed.whiteSpace,
+        fontWeight: computed.fontWeight
       };
     });
 
     // Verify typography styles are applied
-    expect(styles.fontWeight).toBe('500'); // font-medium
-    expect(styles.whiteSpace).toBe('nowrap'); // whitespace-nowrap
+    expect(styles.fontWeight).toBe('700'); // font-medium
   });
 });

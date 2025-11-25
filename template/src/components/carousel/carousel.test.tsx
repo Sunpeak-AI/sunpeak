@@ -1,6 +1,6 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { OpenAICarousel } from './openai-carousel';
+import { Carousel } from './carousel';
 
 const mockUseDisplayMode = vi.fn(() => 'inline');
 
@@ -20,18 +20,18 @@ vi.mock('embla-carousel-wheel-gestures', () => ({
   WheelGesturesPlugin: vi.fn(() => ({})),
 }));
 
-describe('OpenAICarousel', () => {
+describe('Carousel', () => {
   beforeEach(() => {
     mockUseDisplayMode.mockReturnValue('inline');
   });
 
   it('renders all children with correct card width', () => {
     const { container } = render(
-      <OpenAICarousel cardWidth={300}>
+      <Carousel cardWidth={300}>
         <div>Card 1</div>
         <div>Card 2</div>
         <div>Card 3</div>
-      </OpenAICarousel>
+      </Carousel>
     );
 
     const cardContainers = container.querySelectorAll('.flex-none');
@@ -48,9 +48,9 @@ describe('OpenAICarousel', () => {
     // Test inline mode
     mockUseDisplayMode.mockReturnValue('inline');
     const { container: inlineContainer } = render(
-      <OpenAICarousel cardWidth={{ inline: 250, fullscreen: 400 }}>
+      <Carousel cardWidth={{ inline: 250, fullscreen: 400 }}>
         <div>Card 1</div>
-      </OpenAICarousel>
+      </Carousel>
     );
 
     let cardContainer = inlineContainer.querySelector('.flex-none') as HTMLElement;
@@ -59,9 +59,9 @@ describe('OpenAICarousel', () => {
     // Test fullscreen mode
     mockUseDisplayMode.mockReturnValue('fullscreen');
     const { container: fullscreenContainer } = render(
-      <OpenAICarousel cardWidth={{ inline: 250, fullscreen: 400 }}>
+      <Carousel cardWidth={{ inline: 250, fullscreen: 400 }}>
         <div>Card 1</div>
-      </OpenAICarousel>
+      </Carousel>
     );
 
     cardContainer = fullscreenContainer.querySelector('.flex-none') as HTMLElement;
@@ -70,10 +70,10 @@ describe('OpenAICarousel', () => {
 
   it('applies custom gap between cards', () => {
     const { container } = render(
-      <OpenAICarousel gap={24}>
+      <Carousel gap={24}>
         <div>Card 1</div>
         <div>Card 2</div>
-      </OpenAICarousel>
+      </Carousel>
     );
 
     const carouselTrack = container.querySelector('.flex.touch-pan-y') as HTMLElement;

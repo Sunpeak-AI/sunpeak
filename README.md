@@ -50,13 +50,13 @@ To add sunpeak to an existing project, refer to the [documentation](https://docs
 
 ## Example Component
 ```tsx
-import '@/styles/globals.css';
-import { OpenAICard } from "@/components";
+import "./styles/globals.css";
+import { Card } from "./components/card";
 
 export default function App() {
   return (
-    <OpenAICard
-      image="https://example.com/photo.jpg"
+    <Card
+      image="https://images.unsplash.com/photo-1520950237264-dfe336995c34?w=400&h=400&fit=crop"
       imageAlt="Lady Bird Lake"
       header="Lady Bird Lake"
       metadata="⭐ 4.5 • Austin, TX"
@@ -64,7 +64,7 @@ export default function App() {
       button2={{ children: "Learn More", onClick: () => {} }}
     >
       Scenic lake perfect for kayaking, paddleboarding, and trails.
-    </OpenAICard>
+    </Card>
   );
 }
 ```
