@@ -2,6 +2,8 @@
 
 A ChatGPT App UI built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
 
+For an initial overview of your new app and the sunpeak API, refer to the [documentation](https://docs.sunpeak.ai/template/project-structure).
+
 ## Quickstart
 
 ```bash
@@ -11,20 +13,6 @@ pnpm dev
 Edit [src/App.tsx](./src/App.tsx) to build your app UI.
 
 ## Development
-
-### Initial Project Structure
-
-```
-src/
-├── App.tsx          # Your main app component
-└── components/      # Your React components
-
-mcp/
-└── server.ts        # MCP server for testing in ChatGPT
-
-dist/                # Build output (generated)
-└── chatgpt/         # ChatGPT builds
-```
 
 ## Testing
 

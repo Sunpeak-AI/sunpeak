@@ -1,5 +1,7 @@
 # Development Guide
 
+Refer to the [documentation](https://docs.sunpeak.ai/) to ramp up on sunpeak.
+
 ## Quickstart
 
 Requirements: Node (20+), pnpm (10+), git

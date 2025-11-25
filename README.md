@@ -17,9 +17,17 @@
 
 The ChatGPT Apps SDK.
 
-Build and test your ChatGPT App UI locally with OpenAI apps-sdk-ui React components.
+Build and test your MCP App UI locally with OpenAI apps-sdk-ui React components.
 
-![ChatGPT Simulator](https://sunpeak.ai/images/chatgpt-simulator.png)
+[Documentation](https://docs.sunpeak.ai/)
+
+<div align="center">
+  <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
+    <picture>
+      <img alt="ChatGPT Simulator" src="https://sunpeak.ai/images/chatgpt-simulator.png">
+    </picture>
+  </a>
+</div>
 
 ## Quickstart 
 
@@ -31,27 +39,14 @@ Requirements: Node (20+), pnpm (10+)
 pnpm dlx sunpeak new
 ```
 
-### Existing Projects
-
-Requirements: React (18+), Tailwind 4
-
-```bash
-pnpm add sunpeak
-```
-
-When using `ChatGPTSimulator`, import the styles in your entry file:
-
-```tsx
-import 'sunpeak/style.css';
-import { ChatGPTSimulator } from 'sunpeak';
-```
+To add sunpeak to an existing project, refer to the [documentation](https://docs.sunpeak.ai/add-to-existing-project).
 
 ## Key Features
-- 📺 ChatGPT simulator for local UI component development.
-- 📚 Pre-built component library built on [openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui).
-- 📱 Interface for cross-platforms MCP UI App development.
-- 🛜 Basic MCP server to serve your UI to ChatGPT prod out-of-the-box.
-- 🧪 Testing framework that replicates advanced ChatGPT behavior locally.
+- 📺 [ChatGPT simulator](https://docs.sunpeak.ai/library/chatgpt-simulator) for local UI component development.
+- 📚 [Pre-built component library](https://docs.sunpeak.ai/template/ui-components) built on [openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui).
+- 📱 [Multi-platform interface](https://docs.sunpeak.ai/library/multi-platform-apis) for portable MCP UI App development.
+- 🛜 [Basic MCP server](https://docs.sunpeak.ai/library/mcp-server) to serve your UI to ChatGPT prod out-of-the-box.
+- 🧪 [Testing framework](https://docs.sunpeak.ai/guides/testing) that replicates advanced ChatGPT behavior locally.
 
 ## Example Component
 ```tsx
@@ -74,21 +69,18 @@ export default function App() {
 }
 ```
 
-## Supported Platforms
-
-- ✅ **OpenAI ChatGPT** - Fully supported ([design guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines))
-- 🔄 **Google Gemini** - Design system available (SDK support coming soon)
-- 🔄 **Anthropic Claude** - Design system available (SDK support coming soon)
-- 🔧 **Custom platforms** - Implement your own platform adapter
-
 ## What is sunpeak exactly?
 
 sunpeak is an npm package consisting of:
 
 1. **A CLI utility** for working with sunpeak (`./bin`).
-2. **A `sunpeak` library** (`./src`). This library contains common runtime APIs and testing utilities, including a ChatGPT simulator, to be used as a dependency by sunpeak projects.
-3. **A templated npm package** (`./template`) that is initialized by the CLI to help developers set up sunpeak projects. These projects have the `sunpeak` dependency already wired up alongside a collection of pre-built UI components (`./template/src/components`) to copy, modify, or use as an example.
-    1. Developers build their UI in the `App` component.
+2. **A templated npm package** (`./template`). This template includes:
+    1. Project scaffold - Complete development setup with build, test, and dev tooling.
+    2. Pre-built UI components - Production-ready components following ChatGPT design guidelines.
+3. **The `sunpeak` library** (`./src`). This library contains:
+    1. Multi-platform APIs - Abstraction layer for future platform support (Gemini, Claude).
+    2. ChatGPT simulator - Local development environment replicating ChatGPT's widget runtime.
+    3. MCP server - View local widgets in the real ChatGPT.
 
 ## Contributing
 
