@@ -15,9 +15,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-18%20%7C%2019-blue?style=flat-square&logo=react)](https://reactjs.org/)
 
-The ChatGPT Apps SDK.
+The MCP App SDK.
 
-Build and test your MCP App UI locally with OpenAI apps-sdk-ui React components.
+Quickstart, build, and test your ChatGPT App locally with OpenAI apps-sdk-ui React components.
 
 [Documentation](https://docs.sunpeak.ai/)
 
