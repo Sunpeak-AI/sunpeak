@@ -1,5 +1,4 @@
 import './styles/globals.css';
-import 'sunpeak/style.css';
 
 import { useWidgetState } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';

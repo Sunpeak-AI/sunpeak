@@ -6,3 +6,5 @@
 
 /* Configure dark mode to use data-theme attribute (OpenAI SDK standard) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@import 'sunpeak/style.css';

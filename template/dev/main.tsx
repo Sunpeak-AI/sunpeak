@@ -1,3 +1,5 @@
+import '../src/styles/globals.css';
+
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatGPTSimulator } from 'sunpeak';
