@@ -37,9 +37,8 @@ test.describe('Dev Server', () => {
     await page.goto('/');
 
     // Check for ChatGPT header element
-    const header = page.locator('header:has-text("ChatGPT")');
+    const header = page.locator('header:has-text("SimGPT")');
     await expect(header).toBeVisible();
-    await expect(header).toHaveText('ChatGPT');
 
     // Verify computed styles to confirm CSS is properly bundled
     const styles = await header.evaluate((el) => {

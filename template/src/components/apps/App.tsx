@@ -1,4 +1,4 @@
-import './styles/globals.css';
+import '../../styles/globals.css';
 
 import { useWidgetState } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
@@ -18,7 +18,7 @@ interface CounterState extends Record<string, unknown> {
  * - Check out the components folder for reusable components
  * - Use sunpeak hooks for state management and display modes
  * - Edit this file and see your changes live
- * - Edit ./components/simulations/app-simulation.tsx to customize your simulation
+ * - Edit ../../simulations/app-simulation.tsx to customize your simulation
  */
 export function App() {
   const [widgetState, setWidgetState] = useWidgetState<CounterState>(() => ({

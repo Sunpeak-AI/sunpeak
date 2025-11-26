@@ -53,7 +53,7 @@ describe('Conversation', () => {
     );
 
     expect(screen.getByTestId('fullscreen-content')).toBeInTheDocument();
-    expect(screen.queryByText('ChatGPT')).not.toBeInTheDocument();
+    expect(screen.queryByText('SimGPT')).not.toBeInTheDocument();
     expect(container.querySelector('header')).not.toBeInTheDocument();
     expect(container.querySelector('footer')).not.toBeInTheDocument();
   });

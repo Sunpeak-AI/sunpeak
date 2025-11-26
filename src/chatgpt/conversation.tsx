@@ -14,9 +14,9 @@ interface ConversationProps {
 export function Conversation({
   children,
   screenWidth,
-  appName = 'ChatGPT',
+  appName = 'sunpeak',
   appIcon,
-  userMessage = 'Show me some interesting places to visit.',
+  userMessage = 'What have you got for me today?',
 }: ConversationProps) {
   // Read displayMode from window.openai (same source the App uses)
   const displayMode = useDisplayMode() ?? 'inline';
@@ -36,7 +36,7 @@ export function Conversation({
     <div className="flex flex-col bg-surface w-full h-full flex-1">
       {/* Header bar */}
       <header className="h-12 border-b border-subtle bg-surface flex items-center px-4 text-lg">
-        <span className="text-foreground">ChatGPT</span>
+        <span className="text-foreground">SimGPT</span>
       </header>
 
       {/* Conversation container with configurable width */}
@@ -126,7 +126,7 @@ export function Conversation({
                 type="text"
                 name="userInput"
                 disabled
-                placeholder="Message ChatGPT"
+                placeholder="Message SimGPT"
                 className="w-full bg-[var(--color-background-primary)] dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
               />
             </div>

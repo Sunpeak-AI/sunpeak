@@ -15,22 +15,22 @@ export interface Album {
   }>
 }
 
-export interface OpenAIAlbumsData extends Record<string, unknown> {
+export interface AlbumsData extends Record<string, unknown> {
   albums: Album[]
 }
 
-export interface OpenAIAlbumsState extends Record<string, unknown> {
+export interface AlbumsState extends Record<string, unknown> {
   selectedAlbumId?: string | null
 }
 
-export type OpenAIAlbumsProps = {
+export type AlbumsProps = {
   className?: string
 }
 
-export const OpenAIAlbums = React.forwardRef<HTMLDivElement, OpenAIAlbumsProps>(
+export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(
   ({ className }, ref) => {
-    const data = useWidgetProps<OpenAIAlbumsData>(() => ({ albums: [] }))
-    const [widgetState, setWidgetState] = useWidgetState<OpenAIAlbumsState>(() => ({
+    const data = useWidgetProps<AlbumsData>(() => ({ albums: [] }))
+    const [widgetState, setWidgetState] = useWidgetState<AlbumsState>(() => ({
       selectedAlbumId: null,
     }))
     const displayMode = useDisplayMode()
@@ -74,4 +74,4 @@ export const OpenAIAlbums = React.forwardRef<HTMLDivElement, OpenAIAlbumsProps>(
     )
   }
 )
-OpenAIAlbums.displayName = "OpenAIAlbums"
+Albums.displayName = "Albums"

@@ -1,4 +1,4 @@
 export * from './card';
 export * from './carousel';
 export * from './album';
-export * from './simulations';
+export * from './apps';

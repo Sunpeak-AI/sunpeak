@@ -79,6 +79,10 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           variantClasses[variant],
           className
         )}
+        style={{
+          maxWidth: image ? `${imageMaxWidth}px` : undefined,
+          ...props.style,
+        }}
         onClick={handleCardClick}
         {...props}
       >

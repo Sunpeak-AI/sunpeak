@@ -1,8 +1,13 @@
 import * as React from "react"
-import type { Simulation } from "sunpeak"
 import { useWidgetProps } from "sunpeak"
 import { Carousel, Card } from ".."
-import placesData from "../../../data/places.json"
+
+/**
+ * Production-ready Places App
+ *
+ * This app displays places in a carousel layout with cards.
+ * Can be dropped into any production environment without changes.
+ */
 
 export interface Place {
   id: string
@@ -14,12 +19,12 @@ export interface Place {
   description: string
 }
 
-export interface CarouselSimulationData extends Record<string, unknown> {
+export interface PlacesData extends Record<string, unknown> {
   places: Place[]
 }
 
-const CarouselComponent = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const data = useWidgetProps<CarouselSimulationData>(() => ({ places: [] }))
+export const PlacesApp = React.forwardRef<HTMLDivElement>((_props, ref) => {
+  const data = useWidgetProps<PlacesData>(() => ({ places: [] }))
 
   return (
     <div ref={ref}>
@@ -49,15 +54,4 @@ const CarouselComponent = React.forwardRef<HTMLDivElement>((_props, ref) => {
     </div>
   )
 })
-CarouselComponent.displayName = "CarouselComponent"
-
-export const carouselSimulation: Simulation = {
-  value: 'carousel',
-  label: 'Carousel',
-  component: CarouselComponent,
-  appName: 'Splorin',
-  appIcon: '✈️',
-  userMessage: 'Show me popular places to visit in Austin Texas',
-  toolOutput: placesData,
-  widgetState: null,
-}
+PlacesApp.displayName = "PlacesApp"

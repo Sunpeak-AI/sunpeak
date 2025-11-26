@@ -84,7 +84,7 @@ if (command === 'new') {
   init(args[0]);
 } else {
   console.log(`
-sunpeak - ChatGPT Apps UI SDK
+sunpeak - The MCP App SDK
 
 Commands:
   new [name]  Create a new project from template
