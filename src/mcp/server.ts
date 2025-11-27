@@ -26,7 +26,7 @@ import {
 } from "./types.js";
 import { getChatGPTMCPProvider } from "../chatgpt/mcp-provider.js";
 
-export type { MCPServerConfig, MCPTool } from "./types.js";
+export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult, MCPTool } from "./types.js";
 export { MCPProvider } from "./types.js";
 
 /**
@@ -50,56 +50,34 @@ function createAppServer(
   const {
     name = "sunpeak-app",
     version = "0.1.0",
-    tools: toolConfigs,
+    simulations,
   } = config;
-
-  const toolInputSchema = {
-    type: "object",
-    properties: {},
-    additionalProperties: false,
-  } as const;
 
   const toolInputParser = z.object({});
 
-  // Read tool content for each tool
-  const toolContentMap = new Map(
-    toolConfigs.map((toolConfig) => [
-      toolConfig.name,
-      providerImpl.readToolContent(toolConfig.distPath),
+  // Read widget content for each simulation
+  const widgetContentMap = new Map(
+    simulations.map((simulation) => [
+      simulation.tool.name,
+      providerImpl.readToolContent(simulation.distPath),
     ])
   );
 
-  // Create tools and resources from config
-  const tools = toolConfigs.map((toolConfig) =>
-    providerImpl.createTool({
-      name: toolConfig.name,
-      description: toolConfig.description,
-      inputSchema: toolInputSchema,
-      metadata: toolConfig.listMetadata ?? null,
-    })
-  );
+  // Use tools and resources directly from simulations (official MCP SDK types)
+  const tools = simulations.map((simulation) => simulation.tool);
+  const resources = simulations.map((simulation) => simulation.resource);
 
-  const resources = toolConfigs.map((toolConfig) =>
-    providerImpl.createResource({
-      name: toolConfig.name,
-      description: toolConfig.description,
-      uri: toolConfig.resourceUri,
-      metadata: toolConfig.listMetadata ?? null,
-    })
-  );
-
-  // Create maps for quick lookup of tool structured content and call metadata
-  const toolStructuredContentMap = new Map(
-    toolConfigs.map((toolConfig) => [toolConfig.name, toolConfig.structuredContent ?? null])
-  );
-
-  const toolCallMetadataMap = new Map(
-    toolConfigs.map((toolConfig) => [toolConfig.name, toolConfig.callMetadata ?? null])
+  // Create maps for quick lookup of tool call data
+  const toolCallDataMap = new Map(
+    simulations.map((simulation) => [
+      simulation.tool.name,
+      simulation.toolCall ?? { structuredContent: null, _meta: {} }
+    ])
   );
 
   const resourceMap = new Map(
     resources.map((resource, index) => [resource.uri, {
-      content: toolContentMap.get(toolConfigs[index].name)!,
+      content: widgetContentMap.get(simulations[index].tool.name)!,
       resource,
     }])
   );
@@ -165,28 +143,24 @@ function createAppServer(
         request.params.arguments
       );
 
-      const toolConfig = toolConfigs.find((t) => t.name === request.params.name);
-      if (!toolConfig) {
-        throw new Error(`Tool config not found: ${request.params.name}`);
+      const simulation = simulations.find((s) => s.tool.name === request.params.name);
+      if (!simulation) {
+        throw new Error(`Simulation not found: ${request.params.name}`);
       }
 
-      const structuredContent = toolStructuredContentMap.get(request.params.name);
-      const callMetadata = toolCallMetadataMap.get(request.params.name);
+      const toolCallData = toolCallDataMap.get(request.params.name);
 
       toolInputParser.parse(request.params.arguments ?? {});
-
-      // Use tool-specific call metadata
-      const _meta = callMetadata ?? {};
 
       return {
         content: [
           {
             type: "text",
-            text: `Rendered ${toolConfig.description}!`,
+            text: `Rendered ${simulation.tool.description}!`,
           },
         ],
-        structuredContent: structuredContent ?? undefined,
-        _meta,
+        structuredContent: toolCallData?.structuredContent ?? undefined,
+        _meta: toolCallData?._meta ?? {},
       };
     }
   );

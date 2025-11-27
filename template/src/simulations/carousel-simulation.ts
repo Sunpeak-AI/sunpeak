@@ -1,4 +1,4 @@
-import type { ToolConfig } from './types';
+import type { SimulationConfig } from './types';
 
 /**
  * Server-safe configuration for the carousel simulation.
@@ -55,19 +55,39 @@ const placesData = {
   ]
 };
 
-export const carouselSimulationConfig: ToolConfig = {
-  value: 'carousel',
-  label: 'Carousel',
+export const carouselSimulation: SimulationConfig = {
   userMessage: 'Show me popular places to visit in Austin Texas',
-  mcpToolOutput: placesData,
-  mcpToolListMetadata: {
-    'openai/outputTemplate': 'ui://widget/carousel.html',
-    'openai/toolInvocation/invoking': 'Loading carousel',
-    'openai/toolInvocation/invoked': 'Carousel loaded',
-    'openai/widgetAccessible': true,
-    'openai/resultCanProduceWidget': true,
+
+  // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
+  tool: {
+    name: 'carousel',
+    description: 'Show popular places to visit',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
+    title: 'Show',
+    _meta: {
+      'openai/outputTemplate': 'ui://widget/carousel.html',
+      'openai/toolInvocation/invoking': 'Loading carousel',
+      'openai/toolInvocation/invoked': 'Carousel loaded',
+      'openai/widgetAccessible': true,
+      'openai/resultCanProduceWidget': true,
+    },
   },
-  mcpToolCallMetadata: {},
-  mcpResourceURI: 'ui://widget/carousel.html',
-  toolDescription: 'Show popular places to visit',
+
+  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
+  // resource.name is used as the simulation identifier
+  // resource.title is used as the simulation display label
+  resource: {
+    uri: 'ui://widget/carousel.html',
+    name: 'carousel',
+    title: 'Carousel',
+    description: 'Show popular places to visit widget markup',
+    mimeType: 'text/html+skybridge',
+    _meta: {},
+  },
+
+  // MCP CallTool protocol - data for CallTool response
+  toolCall: {
+    structuredContent: placesData,
+    _meta: {},
+  },
 };

@@ -1,9 +1,9 @@
 import './styles/globals.css';
 import { createRoot } from 'react-dom/client';
-import { CounterTool } from './components/tools/CounterTool';
+import { CounterResource } from './components/resources/CounterResource';
 
-// Mount the CounterTool
+// Mount the CounterResource
 const root = document.getElementById('root');
 if (root) {
-  createRoot(root).render(<CounterTool />);
+  createRoot(root).render(<CounterResource />);
 }

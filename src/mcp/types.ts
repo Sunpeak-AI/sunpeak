@@ -8,29 +8,46 @@ export enum MCPProvider {
 }
 
 /**
- * Tool configuration for MCP server.
+ * MCP CallTool response data (subset used in simulations)
  */
-export interface MCPTool {
-  name: string;
-  description: string;
-  distPath: string;
+export interface SimulationCallToolResult {
   structuredContent?: Record<string, unknown> | null;
-  listMetadata?: Record<string, unknown> | null;
-  callMetadata?: Record<string, unknown> | null;
-  resourceUri: string;
+  _meta?: Record<string, unknown>;
+}
+
+/**
+ * Simulation configuration for MCP server.
+ * Must include distPath for the built widget file.
+ */
+export interface SimulationWithDist {
+  distPath: string;
+
+  // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
+  tool: Tool;
+
+  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
+  resource: Resource;
+
+  // MCP CallTool protocol - data for CallTool response
+  toolCall?: SimulationCallToolResult;
 }
 
 /**
  * Configuration for the MCP server.
+ * Takes an array of simulations with distPath for each built widget.
  */
 export interface MCPServerConfig {
   name?: string;
   version?: string;
   port?: number;
-  distPath?: string;
-  tools: MCPTool[];
+  simulations: SimulationWithDist[];
   provider?: MCPProvider;
 }
+
+/**
+ * @deprecated Use SimulationWithDist instead
+ */
+export type MCPTool = SimulationWithDist;
 
 /**
  * Provider-specific metadata for MCP tools.

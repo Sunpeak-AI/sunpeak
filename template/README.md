@@ -10,7 +10,7 @@ For an initial overview of your new app and the sunpeak API, refer to the [docum
 pnpm dev
 ```
 
-Edit the tool files in [./src/components/tools/](./src/components/tools/) to build your tool UI.
+Edit the resource files in [./src/components/resources/](./src/components/resources/) to build your resource UI.
 
 ## Development
 

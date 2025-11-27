@@ -1,4 +1,4 @@
-import type { ToolConfig } from './types';
+import type { SimulationConfig } from './types';
 
 /**
  * Server-safe configuration for the albums simulation.
@@ -118,19 +118,39 @@ const albumsData = {
   ]
 };
 
-export const albumsSimulationConfig: ToolConfig = {
-  value: 'albums',
-  label: 'Albums',
+export const albumsSimulation: SimulationConfig = {
   userMessage: 'Pizza time',
-  mcpToolOutput: albumsData,
-  mcpToolListMetadata: {
-    'openai/outputTemplate': 'ui://widget/album.html',
-    'openai/toolInvocation/invoking': 'Loading albums',
-    'openai/toolInvocation/invoked': 'Album loaded',
-    'openai/widgetAccessible': true,
-    'openai/resultCanProduceWidget': true,
+
+  // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
+  tool: {
+    name: 'albums',
+    description: 'Show photo albums',
+    inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
+    title: 'Show',
+    _meta: {
+      'openai/outputTemplate': 'ui://widget/album.html',
+      'openai/toolInvocation/invoking': 'Loading albums',
+      'openai/toolInvocation/invoked': 'Album loaded',
+      'openai/widgetAccessible': true,
+      'openai/resultCanProduceWidget': true,
+    },
   },
-  mcpToolCallMetadata: {},
-  mcpResourceURI: 'ui://widget/album.html',
-  toolDescription: 'Show photo albums',
+
+  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
+  // resource.name is used as the simulation identifier
+  // resource.title is used as the simulation display label
+  resource: {
+    uri: 'ui://widget/album.html',
+    name: 'albums',
+    title: 'Albums',
+    description: 'Show photo albums widget markup',
+    mimeType: 'text/html+skybridge',
+    _meta: {},
+  },
+
+  // MCP CallTool protocol - data for CallTool response
+  toolCall: {
+    structuredContent: albumsData,
+    _meta: {},
+  },
 };

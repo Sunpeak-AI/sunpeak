@@ -1,8 +1,8 @@
 /**
- * Server-safe tool configurations
+ * Server-safe simulation configurations
  * Safe to import in Node.js/MCP server contexts.
  */
-export { TOOL_CONFIGS, type ToolConfig, type ToolName } from './tool-configs';
+export { SIMULATIONS, type SimulationConfig, type SimulationName } from './simulation-configs';
 
 /**
  * Simulations - DO NOT import in Node.js/MCP server contexts!

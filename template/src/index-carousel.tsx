@@ -1,9 +1,9 @@
 import './styles/globals.css';
 import { createRoot } from 'react-dom/client';
-import { PlacesTool } from './components/tools/PlacesTool';
+import { PlacesResource } from './components/resources/PlacesResource';
 
-// Mount the PlacesTool
+// Mount the PlacesResource
 const root = document.getElementById('root');
 if (root) {
-  createRoot(root).render(<PlacesTool />);
+  createRoot(root).render(<PlacesResource />);
 }

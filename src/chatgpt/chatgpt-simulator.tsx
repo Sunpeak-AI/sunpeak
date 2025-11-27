@@ -9,32 +9,10 @@ import { ThemeProvider } from './theme-provider';
 import { useTheme, useDisplayMode } from '../hooks';
 import type { Theme, DisplayMode } from '../types';
 import type { ScreenWidth } from './chatgpt-simulator-types';
+import type { Simulation } from '../types/simulation';
 
 const DEFAULT_THEME: Theme = 'dark';
 const DEFAULT_DISPLAY_MODE: DisplayMode = 'inline';
-
-/**
- * A simulation packages a component with its example data and metadata.
- * Each simulation represents a complete tool experience in the simulator.
- */
-export interface Simulation {
-  value: string;
-  label: string;
-  component: React.ComponentType;
-  userMessage?: string;
-
-  // Optional simulation globals (from ToolConfig sim* fields)
-  simTheme?: Theme;
-  simUserAgent?: import('../types').UserAgent;
-  simLocale?: string;
-  simMaxHeight?: number;
-  simDisplayMode?: DisplayMode;
-  simSafeArea?: import('../types').SafeArea;
-  simView?: import('../types').View | null;
-  simToolInput?: Record<string, unknown>;
-  simWidgetState?: Record<string, unknown> | null;
-  mcpToolOutput?: Record<string, unknown> | null;
-}
 
 interface ChatGPTSimulatorProps {
   children?: React.ReactNode;
@@ -50,12 +28,17 @@ export function ChatGPTSimulator({
   appIcon,
 }: ChatGPTSimulatorProps) {
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
+
+  // Helper to create simulation key from resource-tool pair
+  const getSimulationKey = (sim: Simulation) =>
+    `${sim.resource.name}-${sim.tool.name}`;
+
   const [selectedKey, setSelectedKey] = React.useState<string>(
-    simulations.length > 0 ? simulations[0].value : ''
+    simulations.length > 0 ? getSimulationKey(simulations[0]) : ''
   );
 
   // Get the selected simulation
-  const selectedSim = simulations.find((sim) => sim.value === selectedKey);
+  const selectedSim = simulations.find((sim) => getSimulationKey(sim) === selectedKey);
 
   // Extract metadata from the selected simulation
   const userMessage = selectedSim?.userMessage;
@@ -63,16 +46,16 @@ export function ChatGPTSimulator({
   const mock = useMemo(
     () =>
       initMockOpenAI({
-        theme: selectedSim?.simTheme ?? DEFAULT_THEME,
-        userAgent: selectedSim?.simUserAgent,
-        locale: selectedSim?.simLocale,
-        maxHeight: selectedSim?.simMaxHeight,
-        displayMode: selectedSim?.simDisplayMode ?? DEFAULT_DISPLAY_MODE,
-        safeArea: selectedSim?.simSafeArea,
-        view: selectedSim?.simView,
-        toolInput: selectedSim?.simToolInput,
-        widgetState: selectedSim?.simWidgetState ?? null,
-        toolOutput: selectedSim?.mcpToolOutput ?? null,
+        theme: selectedSim?.simulationGlobals?.theme ?? DEFAULT_THEME,
+        userAgent: selectedSim?.simulationGlobals?.userAgent,
+        locale: selectedSim?.simulationGlobals?.locale,
+        maxHeight: selectedSim?.simulationGlobals?.maxHeight,
+        displayMode: selectedSim?.simulationGlobals?.displayMode ?? DEFAULT_DISPLAY_MODE,
+        safeArea: selectedSim?.simulationGlobals?.safeArea,
+        view: selectedSim?.simulationGlobals?.view,
+        toolInput: selectedSim?.simulationGlobals?.toolInput,
+        widgetState: selectedSim?.simulationGlobals?.widgetState ?? null,
+        toolOutput: selectedSim?.toolCall?.structuredContent ?? null,
       }),
     [selectedSim]
   );
@@ -97,7 +80,7 @@ export function ChatGPTSimulator({
   }, []);
 
   // Determine what to render
-  const SelectedComponent = selectedSim?.component;
+  const SelectedComponent = selectedSim?.resourceComponent;
   const content = SelectedComponent ? <SelectedComponent /> : children;
 
   return (
@@ -110,10 +93,14 @@ export function ChatGPTSimulator({
                 <SidebarSelect
                   value={selectedKey}
                   onChange={(value) => setSelectedKey(value)}
-                  options={simulations.map((sim) => ({
-                    value: sim.value,
-                    label: sim.label,
-                  }))}
+                  options={simulations.map((sim) => {
+                    const resourceTitle = (sim.resource.title as string | undefined) || sim.resource.name;
+                    const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
+                    return {
+                      value: getSimulationKey(sim),
+                      label: `${resourceTitle} ${toolTitle}`,
+                    };
+                  })}
                 />
               </SidebarControl>
             )}

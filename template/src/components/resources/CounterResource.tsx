@@ -6,19 +6,12 @@ interface CounterState extends Record<string, unknown> {
 }
 
 /**
- * Welcome to your Sunpeak Tool!
+ * Production-ready Counter Resource
  *
- * This is a simple counter tool to get you started.
- * Try building your own tool here!
- *
- * Tips:
- * - Use the Component dropdown in the sidebar to see example tools
- * - Check out the components folder for reusable components
- * - Use sunpeak hooks for state management and display modes
- * - Edit this file and see your changes live
- * - Edit ../../simulations/counter-simulation.ts to customize your simulation
+ * This resource displays a counter to demonstrate useWidgetState.
+ * Can be dropped into any production environment without changes.
  */
-export function CounterTool() {
+export function CounterResource() {
   const [widgetState, setWidgetState] = useWidgetState<CounterState>(() => ({
     count: 0,
   }));
