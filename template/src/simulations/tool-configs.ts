@@ -1,30 +1,23 @@
 /**
- * Server-safe app configurations
+ * Server-safe tool configurations
  *
  * This file contains only metadata and can be safely imported in Node.js contexts
  * (like MCP servers) without causing issues with CSS imports or React components.
- *
- * To switch apps, change ACTIVE_APP in components/apps/active-app.ts
  */
 
-import { ACTIVE_APP } from '../components/apps/active-app';
-import { appSimulationConfig } from './app-simulation';
+import { counterSimulationConfig } from './counter-simulation';
 import { albumsSimulationConfig } from './albums-simulation';
 import { carouselSimulationConfig } from './carousel-simulation';
+
+export type { ToolConfig } from './types';
 
 /**
  * Server-safe config map - contains only metadata, no React components
  */
-export const CONFIG_MAP = {
-  app: appSimulationConfig,
+export const TOOL_CONFIGS = {
+  counter: counterSimulationConfig,
   albums: albumsSimulationConfig,
   carousel: carouselSimulationConfig,
 } as const;
 
-export type AppName = keyof typeof CONFIG_MAP;
-
-// Re-export for convenience
-export { ACTIVE_APP };
-
-// Active config for server use
-export const activeConfig = CONFIG_MAP[ACTIVE_APP];
+export type ToolName = keyof typeof TOOL_CONFIGS;

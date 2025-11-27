@@ -30,7 +30,7 @@ describe('Conversation', () => {
     expect(screen.getByText('App UI Content')).toBeInTheDocument();
   });
 
-  it('renders custom app name and emoji icon', () => {
+  it('renders app name and emoji icon', () => {
     render(
       <Conversation {...defaultProps} appName="TravelBot" appIcon="✈️">
         <div>Content</div>

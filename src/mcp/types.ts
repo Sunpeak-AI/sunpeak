@@ -8,30 +8,35 @@ export enum MCPProvider {
 }
 
 /**
+ * Tool configuration for MCP server.
+ */
+export interface MCPTool {
+  name: string;
+  description: string;
+  distPath: string;
+  structuredContent?: Record<string, unknown> | null;
+  listMetadata?: Record<string, unknown> | null;
+  callMetadata?: Record<string, unknown> | null;
+  resourceUri: string;
+}
+
+/**
  * Configuration for the MCP server.
  */
 export interface MCPServerConfig {
   name?: string;
   version?: string;
   port?: number;
-  distPath: string;
-  toolName?: string;
-  toolDescription?: string;
-  dummyData?: Record<string, unknown>;
+  distPath?: string;
+  tools: MCPTool[];
   provider?: MCPProvider;
 }
 
 /**
- * Provider-specific metadata for widget descriptors.
+ * Provider-specific metadata for MCP tools.
+ * Maps to the _meta attribute in MCP protocol.
  */
-export interface WidgetDescriptorMeta {
-  [key: string]: unknown;
-}
-
-/**
- * Provider-specific metadata for tool invocations.
- */
-export interface WidgetInvocationMeta {
+export interface ToolMeta {
   [key: string]: unknown;
 }
 
@@ -40,31 +45,22 @@ export interface WidgetInvocationMeta {
  */
 export interface MCPProviderImplementation {
   /**
-   * Get metadata for widget descriptors (tools and resources).
+   * Get default metadata for MCP tools.
+   * Maps to the _meta attribute in MCP protocol.
    */
-  getWidgetDescriptorMeta(): WidgetDescriptorMeta;
+  getDefaultToolMeta(): ToolMeta;
 
   /**
-   * Get metadata for tool invocation responses.
-   */
-  getWidgetInvocationMeta(): WidgetInvocationMeta;
-
-  /**
-   * Read and wrap the widget content for the platform.
-   * @param distPath - Path to the built widget JS file.
+   * Read and wrap the tool content for the platform.
+   * @param distPath - Path to the built tool JS file.
    * @returns The wrapped HTML content ready for the platform.
    */
-  readWidgetContent(distPath: string): string;
+  readToolContent(distPath: string): string;
 
   /**
-   * Get the MIME type for widget resources.
+   * Get the MIME type for tool resources.
    */
-  getWidgetMimeType(): string;
-
-  /**
-   * Get the resource URI for the widget.
-   */
-  getWidgetResourceUri(): string;
+  getToolMimeType(): string;
 
   /**
    * Create the tool definition for the provider.
@@ -73,10 +69,16 @@ export interface MCPProviderImplementation {
     name: string;
     description: string;
     inputSchema: Tool["inputSchema"];
+    metadata?: Record<string, unknown> | null;
   }): Tool;
 
   /**
    * Create the resource definition for the provider.
    */
-  createResource(config: { name: string; description: string }): Resource;
+  createResource(config: {
+    name: string;
+    description: string;
+    uri: string;
+    metadata?: Record<string, unknown> | null;
+  }): Resource;
 }

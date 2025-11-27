@@ -51,9 +51,6 @@ export type WidgetGlobals<
   toolOutput: ToolOutput | null;
   toolResponseMetadata: ToolResponseMetadata | null;
   widgetState: WidgetState | null;
-  // Note: setWidgetState is included here for OpenAI compatibility
-  // but is also available via the API
-  setWidgetState: (state: WidgetState) => Promise<void>;
 };
 
 /**

@@ -15,27 +15,39 @@ const DEFAULT_DISPLAY_MODE: DisplayMode = 'inline';
 
 /**
  * A simulation packages a component with its example data and metadata.
- * Each simulation represents a complete app experience in the simulator.
+ * Each simulation represents a complete tool experience in the simulator.
  */
 export interface Simulation {
   value: string;
   label: string;
   component: React.ComponentType;
-  appName?: string;
-  appIcon?: string;
   userMessage?: string;
-  toolOutput?: Record<string, unknown> | null;
-  widgetState?: Record<string, unknown> | null;
+
+  // Optional simulation globals (from ToolConfig sim* fields)
+  simTheme?: Theme;
+  simUserAgent?: import('../types').UserAgent;
+  simLocale?: string;
+  simMaxHeight?: number;
+  simDisplayMode?: DisplayMode;
+  simSafeArea?: import('../types').SafeArea;
+  simView?: import('../types').View | null;
+  simToolInput?: Record<string, unknown>;
+  simWidgetState?: Record<string, unknown> | null;
+  mcpToolOutput?: Record<string, unknown> | null;
 }
 
 interface ChatGPTSimulatorProps {
   children?: React.ReactNode;
   simulations?: Simulation[];
+  appName?: string;
+  appIcon?: string;
 }
 
 export function ChatGPTSimulator({
   children,
   simulations = [],
+  appName = 'Sunpeak App',
+  appIcon,
 }: ChatGPTSimulatorProps) {
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
   const [selectedKey, setSelectedKey] = React.useState<string>(
@@ -46,19 +58,23 @@ export function ChatGPTSimulator({
   const selectedSim = simulations.find((sim) => sim.value === selectedKey);
 
   // Extract metadata from the selected simulation
-  const appName = selectedSim?.appName;
-  const appIcon = selectedSim?.appIcon;
   const userMessage = selectedSim?.userMessage;
-  const toolOutput = selectedSim?.toolOutput ?? null;
-  const widgetState = selectedSim?.widgetState ?? null;
 
   const mock = useMemo(
     () =>
       initMockOpenAI({
-        theme: DEFAULT_THEME,
-        displayMode: DEFAULT_DISPLAY_MODE,
+        theme: selectedSim?.simTheme ?? DEFAULT_THEME,
+        userAgent: selectedSim?.simUserAgent,
+        locale: selectedSim?.simLocale,
+        maxHeight: selectedSim?.simMaxHeight,
+        displayMode: selectedSim?.simDisplayMode ?? DEFAULT_DISPLAY_MODE,
+        safeArea: selectedSim?.simSafeArea,
+        view: selectedSim?.simView,
+        toolInput: selectedSim?.simToolInput,
+        widgetState: selectedSim?.simWidgetState ?? null,
+        toolOutput: selectedSim?.mcpToolOutput ?? null,
       }),
-    []
+    [selectedSim]
   );
 
   // Read theme and displayMode from window.openai (same as widget code would)
@@ -66,19 +82,11 @@ export function ChatGPTSimulator({
   const displayMode = useDisplayMode() ?? DEFAULT_DISPLAY_MODE;
 
   // Re-register mock on window.openai after each mount (handles Strict Mode remounts)
-  // Also set initial toolOutput and widgetState values synchronously
   useLayoutEffect(() => {
     if (mock && typeof window !== 'undefined') {
       (window as unknown as { openai: typeof mock }).openai = mock;
-      // Set initial values synchronously before first paint
-      if (toolOutput !== undefined) {
-        mock.setToolOutput(toolOutput);
-      }
-      if (widgetState !== undefined) {
-        mock.setWidgetStateExternal(widgetState);
-      }
     }
-  }, [mock, toolOutput, widgetState]);
+  }, [mock]);
 
   useEffect(() => {
     return () => {

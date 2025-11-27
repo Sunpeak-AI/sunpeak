@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "vite build --config vite.config.build.ts",
+    "build": "node scripts/build-all.mjs",
     "dev": "vite --port ${PORT:-6767}",
     "mcp": "tsx mcp/server.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",

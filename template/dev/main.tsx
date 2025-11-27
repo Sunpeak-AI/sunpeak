@@ -7,6 +7,10 @@ import { simulations } from '../src/simulations';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ChatGPTSimulator simulations={simulations} />
+    <ChatGPTSimulator
+      simulations={simulations}
+      appName="Sunpeak App"
+      appIcon="🌄"
+    />
   </StrictMode>
 );

@@ -1,3 +1,5 @@
+import type { ToolConfig } from './types';
+
 /**
  * Server-safe configuration for the carousel simulation.
  * This file contains only metadata and doesn't import React components or CSS.
@@ -53,14 +55,19 @@ const placesData = {
   ]
 };
 
-export const carouselSimulationConfig = {
-  appName: 'Splorin',
+export const carouselSimulationConfig: ToolConfig = {
   value: 'carousel',
   label: 'Carousel',
-  appIcon: '✈️',
   userMessage: 'Show me popular places to visit in Austin Texas',
-  toolOutput: placesData,
-  widgetState: null,
-  toolName: 'show-app',
-  toolDescription: 'Show popular places to visit in Austin, Texas',
-} as const;
+  mcpToolOutput: placesData,
+  mcpToolListMetadata: {
+    'openai/outputTemplate': 'ui://widget/carousel.html',
+    'openai/toolInvocation/invoking': 'Loading carousel',
+    'openai/toolInvocation/invoked': 'Carousel loaded',
+    'openai/widgetAccessible': true,
+    'openai/resultCanProduceWidget': true,
+  },
+  mcpToolCallMetadata: {},
+  mcpResourceURI: 'ui://widget/carousel.html',
+  toolDescription: 'Show popular places to visit',
+};

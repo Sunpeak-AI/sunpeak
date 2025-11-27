@@ -14,7 +14,7 @@ interface ConversationProps {
 export function Conversation({
   children,
   screenWidth,
-  appName = 'sunpeak',
+  appName = 'Sunpeak App',
   appIcon,
   userMessage = 'What have you got for me today?',
 }: ConversationProps) {

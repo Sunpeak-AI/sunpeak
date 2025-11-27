@@ -1,74 +1,36 @@
 /**
- * Simulations - combines apps with their simulation configs
+ * Simulations - combines tools with their simulation configs
  *
- * This file creates simulations by pairing production-ready apps with their
+ * This file creates simulations by pairing production-ready tools with their
  * server-safe configs. Each simulation is used for development and testing.
  *
  * IMPORTANT: This file imports React components and CSS. Do not import this
- * in Node.js/MCP server contexts. Use app-configs.ts instead.
- *
- * To switch apps, change ACTIVE_APP in components/apps/active-app.ts
+ * in Node.js/MCP server contexts. Use tool-configs.ts instead.
  */
 
 import type { Simulation } from "sunpeak"
-import type { ComponentType } from "react"
-import { App } from "../components/apps/App"
-import { AlbumsApp } from "../components/apps/AlbumsApp"
-import { PlacesApp } from "../components/apps/PlacesApp"
-import { CONFIG_MAP, ACTIVE_APP } from "./app-configs"
+import { CounterTool } from "../components/tools/CounterTool"
+import { AlbumsTool } from "../components/tools/AlbumsTool"
+import { PlacesTool } from "../components/tools/PlacesTool"
+import { TOOL_CONFIGS } from "./tool-configs"
 
-export const appSimulation: Simulation = {
-  ...CONFIG_MAP.app,
-  component: App,
+export const counterSimulation: Simulation = {
+  ...TOOL_CONFIGS.counter,
+  component: CounterTool,
 }
 
 export const albumsSimulation: Simulation = {
-  ...CONFIG_MAP.albums,
-  component: AlbumsApp,
+  ...TOOL_CONFIGS.albums,
+  component: AlbumsTool,
 }
 
 export const carouselSimulation: Simulation = {
-  ...CONFIG_MAP.carousel,
-  component: PlacesApp,
+  ...TOOL_CONFIGS.carousel,
+  component: PlacesTool,
 }
 
-export const simulations = [
-  appSimulation,
+export const simulations: Simulation[] = [
+  counterSimulation,
   carouselSimulation,
   albumsSimulation,
 ]
-
-/**
- * Static map from simulation name to simulation config and component
- */
-export const APP_MAP = {
-  app: {
-    config: CONFIG_MAP.app,
-    component: App,
-    simulation: appSimulation,
-  },
-  albums: {
-    config: CONFIG_MAP.albums,
-    component: AlbumsApp,
-    simulation: albumsSimulation,
-  },
-  carousel: {
-    config: CONFIG_MAP.carousel,
-    component: PlacesApp,
-    simulation: carouselSimulation,
-  },
-} as const satisfies Record<string, {
-  config: typeof CONFIG_MAP[keyof typeof CONFIG_MAP];
-  component: ComponentType;
-  simulation: Simulation;
-}>;
-
-export type AppName = keyof typeof APP_MAP;
-
-// Re-export for convenience
-export { ACTIVE_APP, CONFIG_MAP };
-
-// Derived exports for convenience
-export const activeSimulation = APP_MAP[ACTIVE_APP].simulation;
-export const activeConfig = APP_MAP[ACTIVE_APP].config;
-export const ActiveComponent = APP_MAP[ACTIVE_APP].component;

@@ -1,5 +1,3 @@
-import '../../styles/globals.css';
-
 import { useWidgetState } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 
@@ -8,19 +6,19 @@ interface CounterState extends Record<string, unknown> {
 }
 
 /**
- * Welcome to your Sunpeak App!
+ * Welcome to your Sunpeak Tool!
  *
- * This is a simple counter app to get you started.
- * Try building your own app here!
+ * This is a simple counter tool to get you started.
+ * Try building your own tool here!
  *
  * Tips:
- * - Use the Component dropdown in the sidebar to see example apps
+ * - Use the Component dropdown in the sidebar to see example tools
  * - Check out the components folder for reusable components
  * - Use sunpeak hooks for state management and display modes
  * - Edit this file and see your changes live
- * - Edit ../../simulations/app-simulation.tsx to customize your simulation
+ * - Edit ../../simulations/counter-simulation.ts to customize your simulation
  */
-export function App() {
+export function CounterTool() {
   const [widgetState, setWidgetState] = useWidgetState<CounterState>(() => ({
     count: 0,
   }));
@@ -46,7 +44,7 @@ export function App() {
           Welcome to Sunpeak!
         </h1>
         <p className="text-secondary">
-          Build your ChatGPT app here
+          Build your ChatGPT tool here
         </p>
       </div>
 

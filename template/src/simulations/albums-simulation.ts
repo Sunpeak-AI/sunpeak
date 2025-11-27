@@ -1,3 +1,5 @@
+import type { ToolConfig } from './types';
+
 /**
  * Server-safe configuration for the albums simulation.
  * This file contains only metadata and doesn't import React components or CSS.
@@ -116,14 +118,19 @@ const albumsData = {
   ]
 };
 
-export const albumsSimulationConfig = {
-  appName: 'Pizzaz',
+export const albumsSimulationConfig: ToolConfig = {
   value: 'albums',
   label: 'Albums',
-  appIcon: '🍕',
   userMessage: 'Pizza time',
-  toolOutput: albumsData,
-  widgetState: null,
-  toolName: 'show-app',
+  mcpToolOutput: albumsData,
+  mcpToolListMetadata: {
+    'openai/outputTemplate': 'ui://widget/album.html',
+    'openai/toolInvocation/invoking': 'Loading albums',
+    'openai/toolInvocation/invoked': 'Album loaded',
+    'openai/widgetAccessible': true,
+    'openai/resultCanProduceWidget': true,
+  },
+  mcpToolCallMetadata: {},
+  mcpResourceURI: 'ui://widget/album.html',
   toolDescription: 'Show photo albums',
-} as const;
+};

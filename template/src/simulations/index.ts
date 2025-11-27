@@ -1,16 +1,11 @@
 /**
- * Simulation configurations
- *
- * These configs contain only metadata and can be safely imported in Node.js contexts
- * (like MCP servers) without causing issues with CSS imports or React components.
+ * Server-safe tool configurations
+ * Safe to import in Node.js/MCP server contexts.
  */
-
-export { appSimulationConfig } from './app-simulation';
-export { carouselSimulationConfig } from './carousel-simulation';
-export { albumsSimulationConfig } from './albums-simulation';
+export { TOOL_CONFIGS, type ToolConfig, type ToolName } from './tool-configs';
 
 /**
  * Simulations - DO NOT import in Node.js/MCP server contexts!
  * These include React components and CSS imports.
  */
-export { appSimulation, albumsSimulation, carouselSimulation, simulations } from './simulations';
+export { counterSimulation, albumsSimulation, carouselSimulation, simulations } from './simulations';

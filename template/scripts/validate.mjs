@@ -100,17 +100,26 @@ try {
     throw new Error('pnpm build failed');
   }
   const chatgptDir = join(PROJECT_ROOT, 'dist', 'chatgpt');
-  const builtFile = join(chatgptDir, 'index.js');
-  if (!existsSync(builtFile)) {
-    printError('Missing expected file: ./dist/chatgpt/index.js');
-    process.exit(1);
+  const expectedFiles = ['counter.js', 'albums.js', 'carousel.js'];
+
+  // Check all expected files exist
+  for (const file of expectedFiles) {
+    const filePath = join(chatgptDir, file);
+    if (!existsSync(filePath)) {
+      printError(`Missing expected file: ./dist/chatgpt/${file}`);
+      process.exit(1);
+    }
   }
+
+  // Verify only expected files are present
   const files = readdirSync(chatgptDir);
-  if (files.length !== 1 || files[0] !== 'index.js') {
-    printError(`Unexpected files in ./dist/chatgpt/: ${files.join(', ')}`);
-    printError('Expected only: index.js');
+  const unexpectedFiles = files.filter(f => !expectedFiles.includes(f));
+  if (unexpectedFiles.length > 0) {
+    printError(`Unexpected files in ./dist/chatgpt/: ${unexpectedFiles.join(', ')}`);
+    printError(`Expected only: ${expectedFiles.join(', ')}`);
     process.exit(1);
   }
+
   console.log()
   printSuccess('pnpm build');
 

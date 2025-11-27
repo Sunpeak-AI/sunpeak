@@ -3,9 +3,9 @@ import { useWidgetProps } from "sunpeak"
 import { Carousel, Card } from ".."
 
 /**
- * Production-ready Places App
+ * Production-ready Places Tool
  *
- * This app displays places in a carousel layout with cards.
+ * This tool displays places in a carousel layout with cards.
  * Can be dropped into any production environment without changes.
  */
 
@@ -23,7 +23,7 @@ export interface PlacesData extends Record<string, unknown> {
   places: Place[]
 }
 
-export const PlacesApp = React.forwardRef<HTMLDivElement>((_props, ref) => {
+export const PlacesTool = React.forwardRef<HTMLDivElement>((_props, ref) => {
   const data = useWidgetProps<PlacesData>(() => ({ places: [] }))
 
   return (
@@ -54,4 +54,4 @@ export const PlacesApp = React.forwardRef<HTMLDivElement>((_props, ref) => {
     </div>
   )
 })
-PlacesApp.displayName = "PlacesApp"
+PlacesTool.displayName = "PlacesTool"

@@ -12,8 +12,8 @@ import {
 class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
 
   theme: Theme = 'light';
-  userAgent = {
-    device: { type: 'desktop' as const },
+  userAgent: OpenAiGlobals['userAgent'] = {
+    device: { type: 'desktop' },
     capabilities: {
       hover: true,
       touch: false,
@@ -103,12 +103,7 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
   }
 }
 
-export function initMockOpenAI(initialData?: {
-  theme?: Theme;
-  displayMode?: DisplayMode;
-  toolOutput?: Record<string, unknown> | null;
-  widgetState?: Record<string, unknown> | null;
-}): MockOpenAI {
+export function initMockOpenAI(initialData?: Partial<OpenAiGlobals>): MockOpenAI {
   if (typeof window !== 'undefined') {
     const mock = new MockOpenAI();
 
@@ -116,11 +111,32 @@ export function initMockOpenAI(initialData?: {
     if (initialData?.theme !== undefined) {
       mock.theme = initialData.theme;
     }
+    if (initialData?.userAgent !== undefined) {
+      mock.userAgent = initialData.userAgent;
+    }
+    if (initialData?.locale !== undefined) {
+      mock.locale = initialData.locale;
+    }
+    if (initialData?.maxHeight !== undefined) {
+      mock.maxHeight = initialData.maxHeight;
+    }
     if (initialData?.displayMode !== undefined) {
       mock.displayMode = initialData.displayMode;
     }
+    if (initialData?.safeArea !== undefined) {
+      mock.safeArea = initialData.safeArea;
+    }
+    if (initialData?.view !== undefined) {
+      mock.view = initialData.view;
+    }
+    if (initialData?.toolInput !== undefined) {
+      mock.toolInput = initialData.toolInput;
+    }
     if (initialData?.toolOutput !== undefined) {
       mock.toolOutput = initialData.toolOutput;
+    }
+    if (initialData?.toolResponseMetadata !== undefined) {
+      mock.toolResponseMetadata = initialData.toolResponseMetadata;
     }
     if (initialData?.widgetState !== undefined) {
       mock.widgetState = initialData.widgetState;

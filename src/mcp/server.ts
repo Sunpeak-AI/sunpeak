@@ -26,7 +26,7 @@ import {
 } from "./types.js";
 import { getChatGPTMCPProvider } from "../chatgpt/mcp-provider.js";
 
-export type { MCPServerConfig } from "./types.js";
+export type { MCPServerConfig, MCPTool } from "./types.js";
 export { MCPProvider } from "./types.js";
 
 /**
@@ -50,12 +50,8 @@ function createAppServer(
   const {
     name = "sunpeak-app",
     version = "0.1.0",
-    toolName = "show-app",
-    toolDescription = "Show the app",
-    dummyData = {},
+    tools: toolConfigs,
   } = config;
-
-  const widgetContent = providerImpl.readWidgetContent(config.distPath);
 
   const toolInputSchema = {
     type: "object",
@@ -65,16 +61,48 @@ function createAppServer(
 
   const toolInputParser = z.object({});
 
-  const tool = providerImpl.createTool({
-    name: toolName,
-    description: toolDescription,
-    inputSchema: toolInputSchema,
-  });
+  // Read tool content for each tool
+  const toolContentMap = new Map(
+    toolConfigs.map((toolConfig) => [
+      toolConfig.name,
+      providerImpl.readToolContent(toolConfig.distPath),
+    ])
+  );
 
-  const resource = providerImpl.createResource({
-    name: toolDescription,
-    description: toolDescription,
-  });
+  // Create tools and resources from config
+  const tools = toolConfigs.map((toolConfig) =>
+    providerImpl.createTool({
+      name: toolConfig.name,
+      description: toolConfig.description,
+      inputSchema: toolInputSchema,
+      metadata: toolConfig.listMetadata ?? null,
+    })
+  );
+
+  const resources = toolConfigs.map((toolConfig) =>
+    providerImpl.createResource({
+      name: toolConfig.name,
+      description: toolConfig.description,
+      uri: toolConfig.resourceUri,
+      metadata: toolConfig.listMetadata ?? null,
+    })
+  );
+
+  // Create maps for quick lookup of tool structured content and call metadata
+  const toolStructuredContentMap = new Map(
+    toolConfigs.map((toolConfig) => [toolConfig.name, toolConfig.structuredContent ?? null])
+  );
+
+  const toolCallMetadataMap = new Map(
+    toolConfigs.map((toolConfig) => [toolConfig.name, toolConfig.callMetadata ?? null])
+  );
+
+  const resourceMap = new Map(
+    resources.map((resource, index) => [resource.uri, {
+      content: toolContentMap.get(toolConfigs[index].name)!,
+      resource,
+    }])
+  );
 
   const server = new Server(
     {
@@ -93,7 +121,7 @@ function createAppServer(
     ListResourcesRequestSchema,
     async (_request: ListResourcesRequest) => {
       console.log("[MCP] ListResources");
-      return { resources: [resource] };
+      return { resources };
     }
   );
 
@@ -101,17 +129,19 @@ function createAppServer(
     ReadResourceRequestSchema,
     async (request: ReadResourceRequest) => {
       console.log("[MCP] ReadResource:", request.params.uri);
-      if (request.params.uri !== resource.uri) {
+
+      const resourceData = resourceMap.get(request.params.uri);
+      if (!resourceData) {
         throw new Error(`Unknown resource: ${request.params.uri}`);
       }
 
       return {
         contents: [
           {
-            uri: resource.uri,
-            mimeType: providerImpl.getWidgetMimeType(),
-            text: widgetContent,
-            _meta: providerImpl.getWidgetDescriptorMeta(),
+            uri: resourceData.resource.uri,
+            mimeType: providerImpl.getToolMimeType(),
+            text: resourceData.content,
+            _meta: resourceData.resource._meta,
           },
         ],
       };
@@ -122,7 +152,7 @@ function createAppServer(
     ListToolsRequestSchema,
     async (_request: ListToolsRequest) => {
       console.log("[MCP] ListTools");
-      return { tools: [tool] };
+      return { tools };
     }
   );
 
@@ -134,21 +164,29 @@ function createAppServer(
         request.params.name,
         request.params.arguments
       );
-      if (request.params.name !== toolName) {
-        throw new Error(`Unknown tool: ${request.params.name}`);
+
+      const toolConfig = toolConfigs.find((t) => t.name === request.params.name);
+      if (!toolConfig) {
+        throw new Error(`Tool config not found: ${request.params.name}`);
       }
 
+      const structuredContent = toolStructuredContentMap.get(request.params.name);
+      const callMetadata = toolCallMetadataMap.get(request.params.name);
+
       toolInputParser.parse(request.params.arguments ?? {});
+
+      // Use tool-specific call metadata
+      const _meta = callMetadata ?? {};
 
       return {
         content: [
           {
             type: "text",
-            text: `Rendered ${toolDescription}!`,
+            text: `Rendered ${toolConfig.description}!`,
           },
         ],
-        structuredContent: dummyData,
-        _meta: providerImpl.getWidgetInvocationMeta(),
+        structuredContent: structuredContent ?? undefined,
+        _meta,
       };
     }
   );

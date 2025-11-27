@@ -2,30 +2,35 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import tailwindcss from '@tailwindcss/vite';
-import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, unlinkSync, existsSync, readdirSync } from 'fs';
 
 // Check if we're in the sunpeak workspace (directory is named "template")
 const isTemplate = path.basename(__dirname) === 'template';
 const parentSrc = path.resolve(__dirname, '../src');
 
-// Plugin to inline CSS into the JS bundle
+// Plugin to inline CSS into the JS bundle for all output files
 function inlineCssPlugin() {
   return {
     name: 'inline-css',
     closeBundle() {
       const distDir = path.resolve(__dirname, 'dist/chatgpt');
-      const jsFile = path.join(distDir, 'index.js');
       const cssFile = path.join(distDir, 'style.css');
 
-      if (existsSync(cssFile) && existsSync(jsFile)) {
+      if (existsSync(cssFile)) {
         const css = readFileSync(cssFile, 'utf-8');
-        const js = readFileSync(jsFile, 'utf-8');
-
-        // Inject CSS at the start of the JS file
         const injectCss = `(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);})();`;
-        writeFileSync(jsFile, injectCss + js);
 
-        // Remove the separate CSS file
+        // Find all .js files in the dist directory and inject CSS
+        const files = readdirSync(distDir);
+        files.forEach(file => {
+          if (file.endsWith('.js')) {
+            const jsFile = path.join(distDir, file);
+            const js = readFileSync(jsFile, 'utf-8');
+            writeFileSync(jsFile, injectCss + js);
+          }
+        });
+
+        // Remove the separate CSS file after injecting into all bundles
         unlinkSync(cssFile);
       }
     },
@@ -49,18 +54,19 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
+    outDir: 'dist/chatgpt',
+    emptyOutDir: false,
+    cssCodeSplit: false,
     lib: {
-      entry: path.resolve(__dirname, 'src/index.chatgpt.tsx'),
+      entry: path.resolve(__dirname, process.env.ENTRY_FILE || 'src/index-app.tsx'),
       name: 'SunpeakApp',
       formats: ['iife'],
-      fileName: () => 'index.js',
+      fileName: () => process.env.OUTPUT_FILE || 'app.js',
     },
-    outDir: 'dist/chatgpt',
-    cssCodeSplit: false,
     rollupOptions: {
       output: {
         inlineDynamicImports: true,
-        assetFileNames: '[name][extname]',
+        assetFileNames: 'style.css',
       },
     },
     minify: true,

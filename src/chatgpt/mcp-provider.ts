@@ -7,37 +7,13 @@ import path from "node:path";
 import type { Resource, Tool } from "@modelcontextprotocol/sdk/types.js";
 import type {
   MCPProviderImplementation,
-  WidgetDescriptorMeta,
-  WidgetInvocationMeta,
+  ToolMeta,
 } from "../mcp/types.js";
 
 /**
- * OpenAI-specific metadata for widget descriptors.
+ * Read and wrap tool JS in HTML shell suitable for ChatGPT.
  */
-function widgetDescriptorMeta(): WidgetDescriptorMeta {
-  return {
-    "openai/outputTemplate": "ui://widget/app.html",
-    "openai/toolInvocation/invoking": "Loading your app",
-    "openai/toolInvocation/invoked": "App loaded",
-    "openai/widgetAccessible": true,
-    "openai/resultCanProduceWidget": true,
-  };
-}
-
-/**
- * OpenAI-specific metadata for tool invocations.
- */
-function widgetInvocationMeta(): WidgetInvocationMeta {
-  return {
-    "openai/toolInvocation/invoking": "Loading your app",
-    "openai/toolInvocation/invoked": "App loaded",
-  };
-}
-
-/**
- * Read and wrap widget JS in HTML shell suitable for ChatGPT.
- */
-function readWidgetHtml(distPath: string): string {
+function readToolHtml(distPath: string): string {
   const htmlPath = path.resolve(distPath);
 
   if (!fs.existsSync(htmlPath)) {
@@ -69,37 +45,30 @@ ${jsContents}
  * ChatGPT MCP provider implementation.
  */
 export class ChatGPTMCPProvider implements MCPProviderImplementation {
-  getWidgetDescriptorMeta(): WidgetDescriptorMeta {
-    return widgetDescriptorMeta();
+  getDefaultToolMeta(): ToolMeta {
+    return {};
   }
 
-  getWidgetInvocationMeta(): WidgetInvocationMeta {
-    return widgetInvocationMeta();
+  readToolContent(distPath: string): string {
+    return readToolHtml(distPath);
   }
 
-  readWidgetContent(distPath: string): string {
-    return readWidgetHtml(distPath);
-  }
-
-  getWidgetMimeType(): string {
+  getToolMimeType(): string {
     return "text/html+skybridge";
-  }
-
-  getWidgetResourceUri(): string {
-    return "ui://widget/app.html";
   }
 
   createTool(config: {
     name: string;
     description: string;
     inputSchema: Tool["inputSchema"];
+    metadata?: Record<string, unknown> | null;
   }): Tool {
     return {
       name: config.name,
       description: config.description,
       inputSchema: config.inputSchema,
       title: config.description,
-      _meta: widgetDescriptorMeta(),
+      _meta: config.metadata ?? {},
       annotations: {
         destructiveHint: false,
         openWorldHint: false,
@@ -108,13 +77,18 @@ export class ChatGPTMCPProvider implements MCPProviderImplementation {
     };
   }
 
-  createResource(config: { name: string; description: string }): Resource {
+  createResource(config: {
+    name: string;
+    description: string;
+    uri: string;
+    metadata?: Record<string, unknown> | null;
+  }): Resource {
     return {
-      uri: this.getWidgetResourceUri(),
+      uri: config.uri,
       name: config.name,
       description: `${config.description} widget markup`,
-      mimeType: this.getWidgetMimeType(),
-      _meta: widgetDescriptorMeta(),
+      mimeType: this.getToolMimeType(),
+      _meta: config.metadata ?? {},
     };
   }
 }
