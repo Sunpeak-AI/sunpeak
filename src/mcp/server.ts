@@ -74,8 +74,33 @@ function createAppServer(config: MCPServerConfig): Server {
     ])
   );
 
+  // Generate base-36 timestamp once for this server instance
+  const timestamp = Date.now().toString(36);
+
   // Use tools and resources directly from simulations (official MCP SDK types)
-  const tools = simulations.map((simulation) => simulation.tool);
+  // Add timestamped URI to each tool's resource's URI to cache-bust
+  const tools = simulations.map((simulation) => {
+    const tool = simulation.tool;
+    const meta = tool._meta as Record<string, unknown> | undefined;
+    const outputTemplate = meta?.['openai/outputTemplate'];
+
+    if (outputTemplate && typeof outputTemplate === 'string') {
+      const timestampedUri = outputTemplate.includes('.')
+        ? outputTemplate.replace(/(\.[^.]+)$/, `-${timestamp}$1`)
+        : `${outputTemplate}-${timestamp}`;
+
+      return {
+        ...tool,
+        _meta: {
+          ...(meta ?? {}),
+          'openai/outputTemplate': timestampedUri,
+        },
+      };
+    }
+
+    return tool;
+  });
+
   const resources = simulations.map((simulation) => simulation.resource);
 
   // Create maps for quick lookup of tool call data
@@ -119,9 +144,15 @@ function createAppServer(config: MCPServerConfig): Server {
     async (request: ReadResourceRequest) => {
       console.log("[MCP] ReadResource:", request.params.uri);
 
-      const resourceData = resourceMap.get(request.params.uri);
+      // Strip timestamp suffix from URI (e.g., "carousel-m8k3j5.html" -> "carousel.html")
+      const requestedUri = request.params.uri;
+      const cleanedUri = requestedUri.includes('.')
+        ? requestedUri.replace(/-[a-z0-9]+(\.[^.]+)$/, '$1')
+        : requestedUri.replace(/-[a-z0-9]+$/, '');
+
+      const resourceData = resourceMap.get(cleanedUri);
       if (!resourceData) {
-        throw new Error(`Unknown resource: ${request.params.uri}`);
+        throw new Error(`Unknown resource: ${request.params.uri} (cleaned: ${cleanedUri})`);
       }
 
       return {

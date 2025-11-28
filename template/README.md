@@ -49,7 +49,9 @@ ngrok http 6766
 
 You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps & Connectors > Create`
 
-Once your app is connected, send the name of a tool, like `show counter`, to ChatGPT. For some changes, you may need to Refresh your app on the settings modal.
+Once your app is connected, send the name of a tool, like `show counter`, to ChatGPT.
+
+When you make changes to the UI, refresh your app in ChatGPT after the MCP server has finished rebuilding your app: `User > Settings > Apps & Connectors > My App > Refresh`
 
 ## Build & Deploy
 
