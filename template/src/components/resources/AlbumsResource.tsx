@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Albums } from "../album"
+import { Albums } from "../album/albums"
 
 /**
  * Production-ready Albums Resource

@@ -1,6 +1,7 @@
 import * as React from "react"
 import { useWidgetProps } from "sunpeak"
-import { Carousel, Card } from ".."
+import { Carousel } from "../carousel/carousel"
+import { Card } from "../card/card"
 
 /**
  * Production-ready Places Resource
@@ -29,7 +30,7 @@ export const PlacesResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
   return (
     <div ref={ref}>
       <Carousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
-        {(data.places || []).map((place) => (
+        {(data.places || []).map((place: Place) => (
           <Card
             key={place.id}
             image={place.image}

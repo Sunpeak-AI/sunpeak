@@ -1,5 +1,3 @@
-import './globals.css';
-
 import * as React from 'react';
 import { useEffect, useLayoutEffect, useMemo } from 'react';
 import { SimpleSidebar, SidebarControl, SidebarSelect } from './simple-sidebar';
@@ -148,6 +146,7 @@ export function ChatGPTSimulator({
           appName={appName}
           appIcon={appIcon}
           userMessage={userMessage}
+          key={selectedKey}
         >
           {content}
         </Conversation>
