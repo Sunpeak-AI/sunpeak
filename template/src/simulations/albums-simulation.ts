@@ -127,6 +127,7 @@ export const albumsSimulation: SimulationConfig = {
     description: 'Show photo albums',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
     title: 'Show',
+    annotations: { readOnlyHint: true },
     _meta: {
       'openai/outputTemplate': 'ui://widget/album.html',
       'openai/toolInvocation/invoking': 'Loading albums',

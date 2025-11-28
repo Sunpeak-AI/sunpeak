@@ -1,51 +1,39 @@
 /**
- * Provider detection and routing.
+ * Provider abstraction for widget runtime environments.
  *
- * This module automatically detects which widget runtime environment is available
- * and provides the appropriate provider. The detection happens once on first access,
- * and subsequent calls return the cached provider directly.
+ * This module provides a clean, provider-agnostic API for accessing widget
+ * runtime functionality. It delegates to the runtime detection module to find
+ * the appropriate provider implementation.
+ *
+ * The abstraction layer is designed to be completely independent of any specific
+ * provider (like OpenAI/ChatGPT), allowing new providers to be plugged in by
+ * implementing the WidgetProvider interface.
  */
 
 import type { WidgetProvider, WidgetGlobals, WidgetAPI } from './types';
-import { isOpenAiAvailable, getOpenAiProvider } from '../chatgpt/openai-provider';
+import {
+  detectProvider,
+  isProviderAvailable as checkProviderAvailable,
+  resetProviderCache as resetCache,
+} from '../runtime/provider-detection';
 
-// Re-export only provider-specific types (not the shared types already in ./types)
+// Re-export provider-agnostic types
 export type { WidgetGlobals, WidgetAPI, WidgetProvider } from './types';
-export { isOpenAiAvailable, getOpenAiProvider } from '../chatgpt/openai-provider';
-
-// Cached provider instance - detection happens only once
-let cachedProvider: WidgetProvider | null = null;
-let detectionComplete = false;
 
 /**
- * Detect and return the appropriate provider for the current environment.
- * This function caches the result, so detection only happens once.
+ * Get the detected provider for the current environment.
  *
  * @returns The detected provider, or null if no provider is available.
  */
 export function getProvider(): WidgetProvider | null {
-  if (detectionComplete) {
-    return cachedProvider;
-  }
-
-  // Detect available provider (order matters for priority)
-  if (isOpenAiAvailable()) {
-    cachedProvider = getOpenAiProvider();
-  }
-  // Future providers can be added here:
-  // else if (isSomeOtherProviderAvailable()) {
-  //   cachedProvider = getSomeOtherProvider();
-  // }
-
-  detectionComplete = true;
-  return cachedProvider;
+  return detectProvider();
 }
 
 /**
  * Check if any provider is available.
  */
 export function isProviderAvailable(): boolean {
-  return getProvider() !== null;
+  return checkProviderAvailable();
 }
 
 /**
@@ -91,6 +79,5 @@ export function getAPI(): WidgetAPI | null {
  * Useful for testing or when the environment changes.
  */
 export function resetProviderCache(): void {
-  cachedProvider = null;
-  detectionComplete = false;
+  resetCache();
 }

@@ -1,13 +1,15 @@
 import {
   type OpenAiGlobals,
   type OpenAiAPI,
+  SET_GLOBALS_EVENT_TYPE,
+} from '../providers/openai';
+import {
   type Theme,
   type DisplayMode,
   type View,
   type ViewMode,
   type UnknownObject,
-  SET_GLOBALS_EVENT_TYPE,
-} from '../types';
+} from '../types/runtime';
 
 class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
 

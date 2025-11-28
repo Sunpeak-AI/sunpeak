@@ -1,1 +1,2 @@
-export { runMCPServer, MCPProvider, type MCPServerConfig, type MCPTool } from "./server.js";
+export { runMCPServer, type MCPServerConfig } from "./server.js";
+export type { SimulationWithDist, SimulationCallToolResult } from "./types.js";

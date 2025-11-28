@@ -1,44 +1,22 @@
-export type UnknownObject = Record<string, unknown>;
+/**
+ * OpenAI-specific types for the ChatGPT widget runtime.
+ */
 
-export type Theme = 'light' | 'dark';
+import type {
+  UnknownObject,
+  Theme,
+  UserAgent,
+  DisplayMode,
+  ViewMode,
+  View,
+  SafeArea,
+  CallToolResponse,
+} from '../../types/runtime';
 
-export type SafeAreaInsets = {
-  top: number;
-  bottom: number;
-  left: number;
-  right: number;
-};
-
-export type SafeArea = {
-  insets: SafeAreaInsets;
-};
-
-export type DeviceType = 'mobile' | 'tablet' | 'desktop' | 'unknown';
-
-export type UserAgent = {
-  device: { type: DeviceType };
-  capabilities: {
-    hover: boolean;
-    touch: boolean;
-  };
-};
-
-export type DisplayMode = 'pip' | 'inline' | 'fullscreen';
-
+// OpenAI-specific type extensions
 export type RequestDisplayMode = (args: { mode: DisplayMode }) => Promise<{
   mode: DisplayMode;
 }>;
-
-export type ViewMode = 'modal' | 'default';
-
-export type View = {
-  mode: ViewMode;
-  params?: UnknownObject;
-};
-
-export type CallToolResponse = {
-  result: string;
-};
 
 export type CallTool = (
   name: string,

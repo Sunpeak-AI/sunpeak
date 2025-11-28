@@ -13,6 +13,7 @@ export const counterSimulation: SimulationConfig = {
     description: 'Show a simple counter tool',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
     title: 'Show',
+    annotations: { readOnlyHint: true },
     _meta: {
       'openai/outputTemplate': 'ui://widget/counter.html',
       'openai/toolInvocation/invoking': 'Counting beans',

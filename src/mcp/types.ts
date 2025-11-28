@@ -1,13 +1,6 @@
 import type { Resource, Tool } from "@modelcontextprotocol/sdk/types.js";
 
 /**
- * Supported MCP provider platforms.
- */
-export enum MCPProvider {
-  ChatGPT = "chatgpt",
-}
-
-/**
  * MCP CallTool response data (subset used in simulations)
  */
 export interface SimulationCallToolResult {
@@ -41,61 +34,4 @@ export interface MCPServerConfig {
   version?: string;
   port?: number;
   simulations: SimulationWithDist[];
-  provider?: MCPProvider;
-}
-
-/**
- * @deprecated Use SimulationWithDist instead
- */
-export type MCPTool = SimulationWithDist;
-
-/**
- * Provider-specific metadata for MCP tools.
- * Maps to the _meta attribute in MCP protocol.
- */
-export interface ToolMeta {
-  [key: string]: unknown;
-}
-
-/**
- * Interface for platform-specific MCP provider implementations.
- */
-export interface MCPProviderImplementation {
-  /**
-   * Get default metadata for MCP tools.
-   * Maps to the _meta attribute in MCP protocol.
-   */
-  getDefaultToolMeta(): ToolMeta;
-
-  /**
-   * Read and wrap the tool content for the platform.
-   * @param distPath - Path to the built tool JS file.
-   * @returns The wrapped HTML content ready for the platform.
-   */
-  readToolContent(distPath: string): string;
-
-  /**
-   * Get the MIME type for tool resources.
-   */
-  getToolMimeType(): string;
-
-  /**
-   * Create the tool definition for the provider.
-   */
-  createTool(config: {
-    name: string;
-    description: string;
-    inputSchema: Tool["inputSchema"];
-    metadata?: Record<string, unknown> | null;
-  }): Tool;
-
-  /**
-   * Create the resource definition for the provider.
-   */
-  createResource(config: {
-    name: string;
-    description: string;
-    uri: string;
-    metadata?: Record<string, unknown> | null;
-  }): Resource;
 }

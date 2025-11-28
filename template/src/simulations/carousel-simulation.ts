@@ -64,6 +64,7 @@ export const carouselSimulation: SimulationConfig = {
     description: 'Show popular places to visit',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
     title: 'Show',
+    annotations: { readOnlyHint: true },
     _meta: {
       'openai/outputTemplate': 'ui://widget/carousel.html',
       'openai/toolInvocation/invoking': 'Loading carousel',

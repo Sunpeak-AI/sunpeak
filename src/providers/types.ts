@@ -3,8 +3,7 @@
  * These types abstract away the specific host (OpenAI/ChatGPT, etc.)
  */
 
-// Re-export shared types from the main types module
-// These are the canonical definitions used across the codebase
+// Re-export generic runtime types
 export type {
   UnknownObject,
   Theme,
@@ -16,7 +15,7 @@ export type {
   ViewMode,
   View,
   CallToolResponse,
-} from '../chatgpt/openai-types';
+} from '../types/runtime';
 
 // Import for use in this module
 import type {
@@ -28,11 +27,11 @@ import type {
   View,
   ViewMode,
   CallToolResponse,
-} from '../chatgpt/openai-types';
+} from '../types/runtime';
 
 /**
  * Global state available from the widget runtime environment.
- * This is a provider-agnostic alias for OpenAiGlobals.
+ * Provider-agnostic interface that abstracts widget globals.
  */
 export type WidgetGlobals<
   ToolInput = UnknownObject,
@@ -55,7 +54,7 @@ export type WidgetGlobals<
 
 /**
  * API methods available from the widget runtime environment.
- * This is a provider-agnostic alias for OpenAiAPI.
+ * Provider-agnostic interface that abstracts widget API methods.
  */
 export type WidgetAPI = {
   callTool?: (name: string, args: Record<string, unknown>) => Promise<CallToolResponse>;

@@ -4,6 +4,8 @@ import {
   type ServerResponse,
 } from "node:http";
 import { URL } from "node:url";
+import fs from "node:fs";
+import path from "node:path";
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
@@ -20,33 +22,42 @@ import {
 import { z } from "zod";
 
 import {
-  MCPProvider,
   type MCPServerConfig,
-  type MCPProviderImplementation,
 } from "./types.js";
-import { getChatGPTMCPProvider } from "../chatgpt/mcp-provider.js";
 
-export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult, MCPTool } from "./types.js";
-export { MCPProvider } from "./types.js";
+export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult } from "./types.js";
 
 /**
- * Get the provider implementation for the specified provider type.
+ * Read and wrap tool JS in HTML shell.
+ * Assumes styles are already bundled in the JS by the build process.
  */
-function getProviderImplementation(
-  provider: MCPProvider
-): MCPProviderImplementation {
-  switch (provider) {
-    case MCPProvider.ChatGPT:
-      return getChatGPTMCPProvider();
-    default:
-      throw new Error(`Unknown provider: ${provider}`);
+function readToolHtml(distPath: string): string {
+  const htmlPath = path.resolve(distPath);
+
+  if (!fs.existsSync(htmlPath)) {
+    throw new Error(
+      `Widget file not found at ${htmlPath}. Run "pnpm build" to generate the built app.`
+    );
   }
+
+  const jsContents = fs.readFileSync(htmlPath, "utf8");
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+${jsContents}
+  </script>
+</body>
+</html>`;
 }
 
-function createAppServer(
-  config: MCPServerConfig,
-  providerImpl: MCPProviderImplementation
-): Server {
+function createAppServer(config: MCPServerConfig): Server {
   const {
     name = "sunpeak-app",
     version = "0.1.0",
@@ -59,7 +70,7 @@ function createAppServer(
   const widgetContentMap = new Map(
     simulations.map((simulation) => [
       simulation.tool.name,
-      providerImpl.readToolContent(simulation.distPath),
+      readToolHtml(simulation.distPath),
     ])
   );
 
@@ -117,7 +128,7 @@ function createAppServer(
         contents: [
           {
             uri: resourceData.resource.uri,
-            mimeType: providerImpl.getToolMimeType(),
+            mimeType: resourceData.resource.mimeType,
             text: resourceData.content,
             _meta: resourceData.resource._meta,
           },
@@ -180,11 +191,10 @@ const postPath = "/mcp/messages";
 
 async function handleSseRequest(
   res: ServerResponse,
-  config: MCPServerConfig,
-  providerImpl: MCPProviderImplementation
+  config: MCPServerConfig
 ) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  const server = createAppServer(config, providerImpl);
+  const server = createAppServer(config);
   const transport = new SSEServerTransport(postPath, res);
   const sessionId = transport.sessionId;
 
@@ -244,13 +254,9 @@ async function handlePostMessage(
 /**
  * Run the MCP server with the specified configuration.
  *
- * @param config - Server configuration including the provider type.
- *                 Defaults to ChatGPT provider if not specified.
+ * @param config - Server configuration with simulations.
  */
 export function runMCPServer(config: MCPServerConfig): void {
-  const provider = config.provider ?? MCPProvider.ChatGPT;
-  const providerImpl = getProviderImplementation(provider);
-
   const portEnv = Number(process.env.PORT ?? 6766);
   const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 6766);
 
@@ -278,7 +284,7 @@ export function runMCPServer(config: MCPServerConfig): void {
       }
 
       if (req.method === "GET" && url.pathname === ssePath) {
-        await handleSseRequest(res, config, providerImpl);
+        await handleSseRequest(res, config);
         return;
       }
 
@@ -298,7 +304,7 @@ export function runMCPServer(config: MCPServerConfig): void {
 
   httpServer.listen(port, () => {
     console.log(
-      `Sunpeak MCP server (${provider}) listening on http://localhost:${port}`
+      `Sunpeak MCP server listening on http://localhost:${port}`
     );
     console.log(`  SSE stream: GET http://localhost:${port}${ssePath}`);
     console.log(
