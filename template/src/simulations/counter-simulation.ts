@@ -9,10 +9,10 @@ export const counterSimulation: SimulationConfig = {
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
   tool: {
-    name: 'counter',
+    name: 'show-counter',
     description: 'Show a simple counter tool',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
-    title: 'Show',
+    title: 'Show Counter',
     annotations: { readOnlyHint: true },
     _meta: {
       'openai/outputTemplate': 'ui://widget/counter.html',

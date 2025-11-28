@@ -311,4 +311,22 @@ export function runMCPServer(config: MCPServerConfig): void {
       `  Message post endpoint: POST http://localhost:${port}${postPath}?sessionId=...`
     );
   });
+
+  // Graceful shutdown handler
+  const shutdown = () => {
+    console.log('\nShutting down MCP server...');
+    httpServer.close(() => {
+      console.log('MCP server closed');
+      process.exit(0);
+    });
+
+    // Force close after 5 seconds if graceful shutdown fails
+    setTimeout(() => {
+      console.error('Force closing MCP server');
+      process.exit(1);
+    }, 5000);
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }

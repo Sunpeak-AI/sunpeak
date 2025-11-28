@@ -98,7 +98,7 @@ export function ChatGPTSimulator({
                     const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
                     return {
                       value: getSimulationKey(sim),
-                      label: `${resourceTitle} ${toolTitle}`,
+                      label: `${resourceTitle}: ${toolTitle}`,
                     };
                   })}
                 />

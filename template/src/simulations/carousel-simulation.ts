@@ -60,10 +60,10 @@ export const carouselSimulation: SimulationConfig = {
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
   tool: {
-    name: 'carousel',
+    name: 'show-carousel',
     description: 'Show popular places to visit',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
-    title: 'Show',
+    title: 'Show Carousel',
     annotations: { readOnlyHint: true },
     _meta: {
       'openai/outputTemplate': 'ui://widget/carousel.html',

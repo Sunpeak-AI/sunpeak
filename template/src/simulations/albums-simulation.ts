@@ -123,10 +123,10 @@ export const albumsSimulation: SimulationConfig = {
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
   tool: {
-    name: 'albums',
+    name: 'show-albums',
     description: 'Show photo albums',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
-    title: 'Show',
+    title: 'Show Albums',
     annotations: { readOnlyHint: true },
     _meta: {
       'openai/outputTemplate': 'ui://widget/album.html',

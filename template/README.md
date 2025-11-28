@@ -40,19 +40,16 @@ pnpm dev
 Test your app directly in ChatGPT using the built-in MCP server:
 
 ```bash
-# 1. Build your app. You must rebuild your app for changes to take effect.
-pnpm build
-
-# 2. Start the MCP server.
+# Start the MCP server (rebuilds and restarts on file changes).
 pnpm mcp
 
-# 3. In another terminal, run a tunnel. For example:
+# In another terminal, run a tunnel. For example:
 ngrok http 6766
 ```
 
 You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps & Connectors > Create`
 
-Once your app is connected, send `show app` to ChatGPT. Many changes require you to Refresh your app on the same settings modal.
+Once your app is connected, send the name of a tool, like `show counter`, to ChatGPT. For some changes, you may need to Refresh your app on the settings modal.
 
 ## Build & Deploy
 
