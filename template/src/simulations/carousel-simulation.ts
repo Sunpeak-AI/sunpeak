@@ -1,5 +1,3 @@
-import type { SimulationConfig } from './types';
-
 /**
  * Server-safe configuration for the carousel simulation.
  * This file contains only metadata and doesn't import React components or CSS.
@@ -55,7 +53,7 @@ const placesData = {
   ]
 };
 
-export const carouselSimulation: SimulationConfig = {
+export const carouselSimulation = {
   userMessage: 'Show me popular places to visit in Austin Texas',
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
@@ -91,4 +89,4 @@ export const carouselSimulation: SimulationConfig = {
     structuredContent: placesData,
     _meta: {},
   },
-};
+} as const;

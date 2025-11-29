@@ -1,10 +1,8 @@
-import type { SimulationConfig } from './types';
-
 /**
  * Server-safe configuration for the counter simulation.
  * This file contains only metadata and doesn't import React components or CSS.
  */
-export const counterSimulation: SimulationConfig = {
+export const counterSimulation = {
   userMessage: 'Help me count something',
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
@@ -40,4 +38,4 @@ export const counterSimulation: SimulationConfig = {
     structuredContent: null,
     _meta: {},
   },
-};
+} as const;

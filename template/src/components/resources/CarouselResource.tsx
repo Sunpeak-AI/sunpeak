@@ -4,13 +4,13 @@ import { Carousel } from "../carousel/carousel"
 import { Card } from "../card/card"
 
 /**
- * Production-ready Places Resource
+ * Production-ready Carousel Resource
  *
  * This resource displays places in a carousel layout with cards.
  * Can be dropped into any production environment without changes.
  */
 
-export interface Place {
+interface CarouselCard {
   id: string
   name: string
   rating: number
@@ -20,17 +20,17 @@ export interface Place {
   description: string
 }
 
-export interface PlacesData extends Record<string, unknown> {
-  places: Place[]
+interface CarouselData extends Record<string, unknown> {
+  places: CarouselCard[]
 }
 
-export const PlacesResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const data = useWidgetProps<PlacesData>(() => ({ places: [] }))
+export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
+  const data = useWidgetProps<CarouselData>(() => ({ places: [] }))
 
   return (
     <div ref={ref}>
       <Carousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
-        {(data.places || []).map((place: Place) => (
+        {(data.places || []).map((place: CarouselCard) => (
           <Card
             key={place.id}
             image={place.image}
@@ -55,4 +55,4 @@ export const PlacesResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
     </div>
   )
 })
-PlacesResource.displayName = "PlacesResource"
+CarouselResource.displayName = "CarouselResource"

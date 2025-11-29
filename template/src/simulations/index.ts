@@ -1,11 +1,16 @@
 /**
  * Server-safe simulation configurations
- * Safe to import in Node.js/MCP server contexts.
+ *
+ * This file contains only metadata and can be safely imported in Node.js contexts
+ * (like MCP servers) without causing issues with CSS imports or React components.
  */
-export { SIMULATIONS, type SimulationConfig, type SimulationName } from './simulation-configs';
 
-/**
- * Simulations - DO NOT import in Node.js/MCP server contexts!
- * These include React components and CSS imports.
- */
-export { counterSimulation, albumsSimulation, carouselSimulation, simulations } from './simulations';
+import { counterSimulation } from './counter-simulation';
+import { albumsSimulation } from './albums-simulation';
+import { carouselSimulation } from './carousel-simulation';
+
+export const SIMULATIONS = {
+  counter: counterSimulation,
+  albums: albumsSimulation,
+  carousel: carouselSimulation,
+} as const;

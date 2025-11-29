@@ -1,7 +1,7 @@
 import { runMCPServer } from 'sunpeak/mcp';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { SIMULATIONS } from '../src/simulations/simulation-configs.js';
+import { SIMULATIONS } from '../src/simulations';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

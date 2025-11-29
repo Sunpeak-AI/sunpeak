@@ -1,5 +1,3 @@
-import type { SimulationConfig } from './types';
-
 /**
  * Server-safe configuration for the albums simulation.
  * This file contains only metadata and doesn't import React components or CSS.
@@ -118,7 +116,7 @@ const albumsData = {
   ]
 };
 
-export const albumsSimulation: SimulationConfig = {
+export const albumsSimulation = {
   userMessage: 'Pizza time',
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
@@ -154,4 +152,4 @@ export const albumsSimulation: SimulationConfig = {
     structuredContent: albumsData,
     _meta: {},
   },
-};
+} as const;
