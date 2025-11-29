@@ -15,7 +15,7 @@ import {
   detectProvider,
   isProviderAvailable as checkProviderAvailable,
   resetProviderCache as resetCache,
-} from '../runtime/provider-detection';
+} from './provider-detection';
 
 // Re-export provider-agnostic types
 export type { WidgetGlobals, WidgetAPI, WidgetProvider } from './types';
