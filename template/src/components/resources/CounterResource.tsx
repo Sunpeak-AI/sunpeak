@@ -37,7 +37,7 @@ export function CounterResource() {
           Welcome to Sunpeak!
         </h1>
         <p className="text-secondary">
-          Build your ChatGPT tool here
+          Build your MCP resource here
         </p>
       </div>
 

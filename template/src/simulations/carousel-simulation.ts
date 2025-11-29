@@ -64,7 +64,7 @@ export const carouselSimulation = {
     title: 'Show Carousel',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://widget/carousel.html',
+      'openai/outputTemplate': 'ui://CarouselResource.tsx',
       'openai/toolInvocation/invoking': 'Loading carousel',
       'openai/toolInvocation/invoked': 'Carousel loaded',
       'openai/widgetAccessible': true,
@@ -76,7 +76,7 @@ export const carouselSimulation = {
   // resource.name is used as the simulation identifier
   // resource.title is used as the simulation display label
   resource: {
-    uri: 'ui://widget/carousel.html',
+    uri: 'ui://CarouselResource.tsx',
     name: 'carousel',
     title: 'Carousel',
     description: 'Show popular places to visit widget markup',

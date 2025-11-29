@@ -127,7 +127,7 @@ export const albumsSimulation = {
     title: 'Show Albums',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://widget/album.html',
+      'openai/outputTemplate': 'ui://AlbumsResource.tsx',
       'openai/toolInvocation/invoking': 'Loading albums',
       'openai/toolInvocation/invoked': 'Album loaded',
       'openai/widgetAccessible': true,
@@ -139,7 +139,7 @@ export const albumsSimulation = {
   // resource.name is used as the simulation identifier
   // resource.title is used as the simulation display label
   resource: {
-    uri: 'ui://widget/album.html',
+    uri: 'ui://AlbumsResource.tsx',
     name: 'albums',
     title: 'Albums',
     description: 'Show photo albums widget markup',

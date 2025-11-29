@@ -13,7 +13,7 @@ export const counterSimulation = {
     title: 'Show Counter',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://widget/counter.html',
+      'openai/outputTemplate': 'ui://CounterResource.tsx',
       'openai/toolInvocation/invoking': 'Counting beans',
       'openai/toolInvocation/invoked': 'Beans counted',
       'openai/widgetAccessible': true,
@@ -25,7 +25,7 @@ export const counterSimulation = {
   // resource.name is used as the simulation identifier
   // resource.title is used as the simulation display label
   resource: {
-    uri: 'ui://widget/counter.html',
+    uri: 'ui://CounterResource.tsx',
     name: 'counter',
     title: 'Counter',
     description: 'Show a simple counter tool widget markup',

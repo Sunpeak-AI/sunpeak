@@ -1,28 +1,63 @@
 #!/usr/bin/env node
 import { execSync } from 'child_process';
-import { existsSync, rmSync } from 'fs';
+import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const distDir = path.join(__dirname, '../dist/chatgpt');
+const buildDir = path.join(__dirname, '../dist/build-output');
+const tempDir = path.join(__dirname, '../.tmp');
+const resourcesDir = path.join(__dirname, '../src/components/resources');
+const templateFile = path.join(__dirname, '../src/index-resource.tsx');
 
-// Clean dist directory
+// Clean dist and temp directories
 if (existsSync(distDir)) {
   rmSync(distDir, { recursive: true });
 }
+if (existsSync(tempDir)) {
+  rmSync(tempDir, { recursive: true });
+}
+mkdirSync(distDir, { recursive: true });
+mkdirSync(tempDir, { recursive: true });
 
-const tools = [
-  { entry: 'src/index-counter.tsx', output: 'counter.js' },
-  { entry: 'src/index-albums.tsx', output: 'albums.js' },
-  { entry: 'src/index-carousel.tsx', output: 'carousel.js' },
-];
+// Auto-discover all resources
+const resourceFiles = readdirSync(resourcesDir)
+  .filter(file => file.endsWith('Resource.tsx'))
+  .map(file => {
+    const resourceName = file.replace('Resource.tsx', '');
+    return {
+      componentName: `${resourceName}Resource`,
+      entry: `.tmp/index-${resourceName.toLowerCase()}.tsx`,
+      output: `${resourceName.toLowerCase()}.js`,
+      buildOutDir: path.join(buildDir, resourceName.toLowerCase()),
+    };
+  });
 
 console.log('Building all tools...\n');
 
-tools.forEach(({ entry, output }, index) => {
-  console.log(`[${index + 1}/${tools.length}] Building ${output}...`);
+// Read the template
+const template = readFileSync(templateFile, 'utf-8');
+
+// Build all resources (but don't copy yet)
+resourceFiles.forEach(({ componentName, entry, output, buildOutDir }, index) => {
+  console.log(`[${index + 1}/${resourceFiles.length}] Building ${output}...`);
+
   try {
+    // Create build directory if it doesn't exist
+    if (!existsSync(buildOutDir)) {
+      mkdirSync(buildOutDir, { recursive: true });
+    }
+
+    // Create entry file from template in temp directory
+    const entryContent = template
+      .replace('// RESOURCE_IMPORT', `import { ${componentName} } from '../src/components/resources/${componentName}';`)
+      .replace('// RESOURCE_MOUNT', `createRoot(root).render(<${componentName} />);`);
+
+    const entryPath = path.join(__dirname, '..', entry);
+    writeFileSync(entryPath, entryContent);
+
+    // Build with vite to build directory
     execSync(
       `vite build --config vite.config.build.ts`,
       {
@@ -31,6 +66,7 @@ tools.forEach(({ entry, output }, index) => {
           ...process.env,
           ENTRY_FILE: entry,
           OUTPUT_FILE: output,
+          OUT_DIR: buildOutDir,
         },
       }
     );
@@ -40,4 +76,33 @@ tools.forEach(({ entry, output }, index) => {
   }
 });
 
+// Now copy all files from build-output to dist/chatgpt
+console.log('\nCopying built files to dist/chatgpt...');
+resourceFiles.forEach(({ output, buildOutDir }) => {
+  const builtFile = path.join(buildOutDir, output);
+  const destFile = path.join(distDir, output);
+
+  if (existsSync(builtFile)) {
+    copyFileSync(builtFile, destFile);
+    console.log(`✓ Copied ${output}`);
+  } else {
+    console.error(`Built file not found: ${builtFile}`);
+    if (existsSync(buildOutDir)) {
+      console.log(`  Files in ${buildOutDir}:`, readdirSync(buildOutDir));
+    } else {
+      console.log(`  Build directory doesn't exist: ${buildOutDir}`);
+    }
+    process.exit(1);
+  }
+});
+
+// Clean up temp and build directories
+if (existsSync(tempDir)) {
+  rmSync(tempDir, { recursive: true });
+}
+if (existsSync(buildDir)) {
+  rmSync(buildDir, { recursive: true });
+}
+
 console.log('\n✓ All tools built successfully!');
+console.log(`\nBuilt files:`, readdirSync(distDir));

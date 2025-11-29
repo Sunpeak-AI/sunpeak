@@ -1,7 +1,7 @@
 {
   "watch": ["src"],
   "ext": "ts,tsx,js,jsx,css",
-  "ignore": ["dist", "node_modules"],
+  "ignore": ["dist", "node_modules", ".tmp"],
   "exec": "pnpm build && pnpm mcp:serve",
   "delay": 500
 }

@@ -13,7 +13,7 @@ function inlineCssPlugin() {
   return {
     name: 'inline-css',
     closeBundle() {
-      const distDir = path.resolve(__dirname, 'dist/chatgpt');
+      const distDir = path.resolve(__dirname, process.env.OUT_DIR || 'dist/chatgpt');
       const cssFile = path.join(distDir, 'style.css');
 
       if (existsSync(cssFile)) {
@@ -54,8 +54,8 @@ export default defineConfig({
   },
   build: {
     target: 'es2020',
-    outDir: 'dist/chatgpt',
-    emptyOutDir: false,
+    outDir: process.env.OUT_DIR || 'dist/chatgpt',
+    emptyOutDir: process.env.OUT_DIR ? true : false,
     cssCodeSplit: false,
     lib: {
       entry: path.resolve(__dirname, process.env.ENTRY_FILE || 'src/index-app.tsx'),
