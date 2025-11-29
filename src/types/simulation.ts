@@ -42,21 +42,19 @@ export interface SimulationCallToolResult {
  * Each simulation represents a complete tool experience in the simulator.
  */
 export interface Simulation {
-  // Core simulation fields
+  // Core simulation fields.
   resourceComponent: React.ComponentType;
   userMessage?: string; // Decoration for the simulator, no functional purpose.
 
-  // Simulation globals for simulator environment (optional)
+  // Simulation globals for simulator environment (optional).
   simulationGlobals?: SimulationGlobals;
 
-  // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
+  // Official Tool type from the MCP SDK, used in ListTools response.
   tool: Tool;
 
-  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
-  // resource.name is used as the simulation identifier
-  // resource.title is used as the simulation display label
+  // Official Resource type from the MCP SDK, used in ListResources response.
   resource: Resource;
 
-  // MCP CallTool protocol - data for CallTool response
+  // Official CallToolResultSchema from the MCP SDK, mock data for the CallTool response.
   toolCall?: SimulationCallToolResult;
 }

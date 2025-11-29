@@ -1,3 +1,3 @@
-export { CounterResource } from './CounterResource';
-export { AlbumsResource } from './AlbumsResource';
-export { CarouselResource } from './CarouselResource';
+export { CounterResource } from './counter-resource';
+export { AlbumsResource } from './albums-resource';
+export { CarouselResource } from './carousel-resource';

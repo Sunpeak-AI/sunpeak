@@ -8,13 +8,13 @@ import * as Resources from '../src/components/resources';
 
 /**
  * Extract the resource component name from a URI
- * Example: 'ui://CounterResource.tsx' -> 'CounterResource'
+ * Example: 'ui://CounterResource' -> 'CounterResource'
  */
 function getResourceComponentFromURI(uri: string): React.ComponentType {
-  // Extract component name from URI pattern: ui://ComponentName.tsx
-  const match = uri.match(/^ui:\/\/(.+)\.tsx$/);
+  // Extract component name from URI pattern: ui://ComponentName
+  const match = uri.match(/^ui:\/\/(.+)$/);
   if (!match) {
-    throw new Error(`Invalid resource URI format: ${uri}. Expected format: ui://ComponentName.tsx`);
+    throw new Error(`Invalid resource URI format: ${uri}. Expected format: ui://ComponentName`);
   }
 
   const componentName = match[1];
