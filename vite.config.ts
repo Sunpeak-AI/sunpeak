@@ -4,6 +4,7 @@ import dts from 'vite-plugin-dts';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { builtinModules } from 'module';
+import { copyFileSync, mkdirSync } from 'fs';
 
 // Node.js built-in modules to externalize
 const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
@@ -18,6 +19,23 @@ export default defineConfig({
       outDir: 'dist',
       rollupTypes: false,
     }),
+    // Copy CSS files to dist after build
+    {
+      name: 'copy-css',
+      closeBundle() {
+        // Copy style.css to dist
+        copyFileSync(
+          resolve(__dirname, 'src/style.css'),
+          resolve(__dirname, 'dist/style.css')
+        );
+        // Copy chatgpt/globals.css to dist/chatgpt
+        mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
+        copyFileSync(
+          resolve(__dirname, 'src/chatgpt/globals.css'),
+          resolve(__dirname, 'dist/chatgpt/globals.css')
+        );
+      },
+    },
   ],
   resolve: {
     alias: {
