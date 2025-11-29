@@ -1,10 +1,14 @@
 @import "tailwindcss";
 @import "@openai/apps-sdk-ui/css";
 
+/* Import simulator styles from sunpeak package */
+@import "sunpeak/chatgpt/globals.css";
+
+/* Scan app-specific source files for Tailwind classes */
+@source "../src/**/*.{ts,tsx}";
+
 /* Required for Tailwind to find class references in Apps SDK UI components. */
 @source "../node_modules/@openai/apps-sdk-ui";
 
 /* Configure dark mode to use data-theme attribute (OpenAI SDK standard) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
-
-@import 'sunpeak/style.css';

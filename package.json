@@ -18,6 +18,7 @@
       }
     },
     "./style.css": "./dist/style.css",
+    "./chatgpt/globals.css": "./dist/chatgpt/globals.css",
     "./mcp": {
       "import": {
         "types": "./dist/mcp/index.d.ts",

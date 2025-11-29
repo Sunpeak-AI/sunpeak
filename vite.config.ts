@@ -19,16 +19,10 @@ export default defineConfig({
       outDir: 'dist',
       rollupTypes: false,
     }),
-    // Copy CSS files to dist after build
+    // Copy chatgpt CSS to dist for separate import
     {
-      name: 'copy-css',
+      name: 'copy-chatgpt-css',
       closeBundle() {
-        // Copy style.css to dist
-        copyFileSync(
-          resolve(__dirname, 'src/style.css'),
-          resolve(__dirname, 'dist/style.css')
-        );
-        // Copy chatgpt/globals.css to dist/chatgpt
         mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
         copyFileSync(
           resolve(__dirname, 'src/chatgpt/globals.css'),
