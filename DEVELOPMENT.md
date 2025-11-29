@@ -21,11 +21,13 @@ pnpm validate
 ```
 
 This will:
+
 - Run linting, typechecking, and unit tests at the root and template levels
 - Build both packages
 - Start the dev server and run E2E tests with Playwright
 
 For manual testing with live servers, you can also run:
+
 - `pnpm dev`
 - `pnpm mcp` (in template directory)
 

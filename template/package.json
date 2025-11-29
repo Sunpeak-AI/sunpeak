@@ -6,6 +6,7 @@
   "scripts": {
     "build": "node scripts/build-all.mjs",
     "dev": "vite --port ${PORT:-6767}",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "mcp": "nodemon",
     "mcp:serve": "tsx mcp/server.ts",
     "lint": "eslint . --ext .ts,.tsx --fix",

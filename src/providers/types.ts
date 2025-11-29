@@ -37,7 +37,7 @@ export type WidgetGlobals<
   ToolInput = UnknownObject,
   ToolOutput = UnknownObject,
   ToolResponseMetadata = UnknownObject,
-  WidgetState = UnknownObject
+  WidgetState = UnknownObject,
 > = {
   theme: Theme;
   userAgent: UserAgent;

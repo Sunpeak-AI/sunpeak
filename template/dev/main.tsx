@@ -23,7 +23,7 @@ function getResourceComponentFromURI(uri: string): React.ComponentType {
   if (!component) {
     throw new Error(
       `Resource component "${componentName}" not found. ` +
-      `Make sure it's exported from src/components/resources/index.ts`
+        `Make sure it's exported from src/components/resources/index.ts`
     );
   }
 
@@ -38,10 +38,6 @@ const simulations: Simulation[] = Object.values(SIMULATIONS).map((simulation) =>
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ChatGPTSimulator
-      simulations={simulations}
-      appName="Sunpeak App"
-      appIcon="🌄"
-    />
+    <ChatGPTSimulator simulations={simulations} appName="Sunpeak App" appIcon="🌄" />
   </StrictMode>
 );

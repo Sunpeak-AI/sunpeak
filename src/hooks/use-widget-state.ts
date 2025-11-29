@@ -20,9 +20,7 @@ export function useWidgetState<T extends UnknownObject>(
       return widgetStateFromProvider;
     }
 
-    return typeof defaultState === 'function'
-      ? defaultState()
-      : defaultState ?? null;
+    return typeof defaultState === 'function' ? defaultState() : (defaultState ?? null);
   });
 
   useEffect(() => {

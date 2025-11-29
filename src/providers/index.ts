@@ -42,9 +42,7 @@ export function isProviderAvailable(): boolean {
  * @param key - The global property key to retrieve.
  * @returns The value, or null if not available.
  */
-export function getGlobal<K extends keyof WidgetGlobals>(
-  key: K
-): WidgetGlobals[K] | null {
+export function getGlobal<K extends keyof WidgetGlobals>(key: K): WidgetGlobals[K] | null {
   const provider = getProvider();
   return provider?.getGlobal(key) ?? null;
 }
@@ -56,10 +54,7 @@ export function getGlobal<K extends keyof WidgetGlobals>(
  * @param onChange - Callback to invoke when the value changes.
  * @returns An unsubscribe function.
  */
-export function subscribeToGlobal(
-  key: keyof WidgetGlobals,
-  onChange: () => void
-): () => void {
+export function subscribeToGlobal(key: keyof WidgetGlobals, onChange: () => void): () => void {
   const provider = getProvider();
   return provider?.subscribe(key, onChange) ?? (() => {});
 }

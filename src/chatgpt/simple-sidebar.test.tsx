@@ -5,9 +5,7 @@ import { SimpleSidebar, SidebarControl, SidebarSelect } from './simple-sidebar';
 describe('SimpleSidebar', () => {
   it('renders children and controls in correct structure', () => {
     render(
-      <SimpleSidebar
-        controls={<div data-testid="controls-content">Control Panel</div>}
-      >
+      <SimpleSidebar controls={<div data-testid="controls-content">Control Panel</div>}>
         <div data-testid="main-content">Main Content</div>
       </SimpleSidebar>
     );
@@ -45,13 +43,7 @@ describe('SidebarSelect', () => {
 
   it('calls onChange when an option is clicked', () => {
     const handleChange = vi.fn();
-    render(
-      <SidebarSelect
-        value="option1"
-        onChange={handleChange}
-        options={options}
-      />
-    );
+    render(<SidebarSelect value="option1" onChange={handleChange} options={options} />);
 
     // Open the dropdown
     const button = screen.getByRole('button');
@@ -68,13 +60,7 @@ describe('SidebarSelect', () => {
 
   it('navigates with keyboard (ArrowDown and Enter)', () => {
     const handleChange = vi.fn();
-    render(
-      <SidebarSelect
-        value="option1"
-        onChange={handleChange}
-        options={options}
-      />
-    );
+    render(<SidebarSelect value="option1" onChange={handleChange} options={options} />);
 
     // Open the dropdown
     const button = screen.getByRole('button');

@@ -18,16 +18,13 @@ export type RequestDisplayMode = (args: { mode: DisplayMode }) => Promise<{
   mode: DisplayMode;
 }>;
 
-export type CallTool = (
-  name: string,
-  args: Record<string, unknown>
-) => Promise<CallToolResponse>;
+export type CallTool = (name: string, args: Record<string, unknown>) => Promise<CallToolResponse>;
 
 export type OpenAiGlobals<
   ToolInput = UnknownObject,
   ToolOutput = UnknownObject,
   ToolResponseMetadata = UnknownObject,
-  WidgetState = UnknownObject
+  WidgetState = UnknownObject,
 > = {
   theme: Theme;
   userAgent: UserAgent;
@@ -42,10 +39,7 @@ export type OpenAiGlobals<
   widgetState: WidgetState | null;
 };
 
-export type RequestModal = (args: {
-  mode: ViewMode;
-  params?: UnknownObject;
-}) => Promise<void>;
+export type RequestModal = (args: { mode: ViewMode; params?: UnknownObject }) => Promise<void>;
 
 export type NotifyIntrinsicHeight = (height: number) => void;
 

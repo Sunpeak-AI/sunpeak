@@ -1,8 +1,4 @@
-import {
-  type OpenAiGlobals,
-  type OpenAiAPI,
-  SET_GLOBALS_EVENT_TYPE,
-} from '../providers/openai';
+import { type OpenAiGlobals, type OpenAiAPI, SET_GLOBALS_EVENT_TYPE } from '../providers/openai';
 import {
   type Theme,
   type DisplayMode,
@@ -12,7 +8,6 @@ import {
 } from '../types/runtime';
 
 class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
-
   theme: Theme = 'light';
   userAgent: OpenAiGlobals['userAgent'] = {
     device: { type: 'desktop' },

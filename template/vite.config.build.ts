@@ -22,7 +22,7 @@ function inlineCssPlugin() {
 
         // Find all .js files in the dist directory and inject CSS
         const files = readdirSync(distDir);
-        files.forEach(file => {
+        files.forEach((file) => {
           if (file.endsWith('.js')) {
             const jsFile = path.join(distDir, file);
             const js = readFileSync(jsFile, 'utf-8');
@@ -46,7 +46,7 @@ export default defineConfig({
     alias: {
       // In workspace dev mode, use local sunpeak source
       ...(isTemplate && {
-        'sunpeak': parentSrc,
+        sunpeak: parentSrc,
         '~': parentSrc,
       }),
     },

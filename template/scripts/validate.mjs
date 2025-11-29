@@ -77,6 +77,12 @@ try {
   console.log()
   printSuccess('pnpm install');
 
+  console.log('\nRunning: pnpm format');
+  if (!runCommand('pnpm format', PROJECT_ROOT)) {
+    throw new Error('pnpm format failed');
+  }
+  printSuccess('pnpm format');
+
   console.log('\nRunning: pnpm lint');
   if (!runCommand('pnpm lint', PROJECT_ROOT)) {
     throw new Error('pnpm lint failed');

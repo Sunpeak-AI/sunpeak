@@ -64,7 +64,7 @@ test.describe('Dev Server', () => {
     const styles = await placeHeader.evaluate((el) => {
       const computed = window.getComputedStyle(el);
       return {
-        fontWeight: computed.fontWeight
+        fontWeight: computed.fontWeight,
       };
     });
 

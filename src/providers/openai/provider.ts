@@ -4,10 +4,7 @@
  */
 
 import type { WidgetProvider, WidgetGlobals, WidgetAPI } from '../types';
-import {
-  SET_GLOBALS_EVENT_TYPE,
-  type SetGlobalsEvent,
-} from './types';
+import { SET_GLOBALS_EVENT_TYPE, type SetGlobalsEvent } from './types';
 
 /**
  * Check if the OpenAI provider is available.

@@ -1,7 +1,7 @@
-import * as React from "react"
-import { useWidgetProps } from "sunpeak"
-import { Carousel } from "../carousel/carousel"
-import { Card } from "../card/card"
+import * as React from 'react';
+import { useWidgetProps } from 'sunpeak';
+import { Carousel } from '../carousel/carousel';
+import { Card } from '../card/card';
 
 /**
  * Production-ready Carousel Resource
@@ -11,21 +11,21 @@ import { Card } from "../card/card"
  */
 
 interface CarouselCard {
-  id: string
-  name: string
-  rating: number
-  category: string
-  location: string
-  image: string
-  description: string
+  id: string;
+  name: string;
+  rating: number;
+  category: string;
+  location: string;
+  image: string;
+  description: string;
 }
 
 interface CarouselData extends Record<string, unknown> {
-  places: CarouselCard[]
+  places: CarouselCard[];
 }
 
 export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const data = useWidgetProps<CarouselData>(() => ({ places: [] }))
+  const data = useWidgetProps<CarouselData>(() => ({ places: [] }));
 
   return (
     <div ref={ref}>
@@ -40,12 +40,12 @@ export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) =
             button1={{
               isPrimary: true,
               onClick: () => console.log(`Visit ${place.name}`),
-              children: "Visit",
+              children: 'Visit',
             }}
             button2={{
               isPrimary: false,
               onClick: () => console.log(`Learn more about ${place.name}`),
-              children: "Learn More",
+              children: 'Learn More',
             }}
           >
             {place.description}
@@ -53,6 +53,6 @@ export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) =
         ))}
       </Carousel>
     </div>
-  )
-})
-CarouselResource.displayName = "CarouselResource"
+  );
+});
+CarouselResource.displayName = 'CarouselResource';

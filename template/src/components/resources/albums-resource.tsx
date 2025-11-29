@@ -1,5 +1,5 @@
-import * as React from "react"
-import { Albums } from "../album/albums"
+import * as React from 'react';
+import { Albums } from '../album/albums';
 
 /**
  * Production-ready Albums Resource
@@ -8,6 +8,6 @@ import { Albums } from "../album/albums"
  * Can be dropped into any production environment without changes.
  */
 export const AlbumsResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  return <Albums ref={ref} />
-})
-AlbumsResource.displayName = "AlbumsResource"
+  return <Albums ref={ref} />;
+});
+AlbumsResource.displayName = 'AlbumsResource';

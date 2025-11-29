@@ -33,17 +33,13 @@ describe('Albums', () => {
       id: 'album-1',
       title: 'Summer Vacation',
       cover: 'https://example.com/1.jpg',
-      photos: [
-        { id: 'p1', title: 'Beach', url: 'https://example.com/p1.jpg' },
-      ],
+      photos: [{ id: 'p1', title: 'Beach', url: 'https://example.com/p1.jpg' }],
     },
     {
       id: 'album-2',
       title: 'City Trip',
       cover: 'https://example.com/2.jpg',
-      photos: [
-        { id: 'p2', title: 'Downtown', url: 'https://example.com/p2.jpg' },
-      ],
+      photos: [{ id: 'p2', title: 'Downtown', url: 'https://example.com/p2.jpg' }],
     },
   ];
 

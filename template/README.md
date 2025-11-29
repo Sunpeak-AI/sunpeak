@@ -25,6 +25,7 @@ pnpm validate
 ```
 
 This will:
+
 - Run linting, typechecking, and unit tests
 - Build your app
 - Verify that build outputs are created correctly

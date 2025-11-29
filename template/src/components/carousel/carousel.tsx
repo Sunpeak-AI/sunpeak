@@ -1,110 +1,100 @@
-import * as React from "react"
-import useEmblaCarousel from "embla-carousel-react"
-import { WheelGesturesPlugin } from "embla-carousel-wheel-gestures"
-import { ArrowLeft, ArrowRight } from "@openai/apps-sdk-ui/components/Icon"
-import { useWidgetState, useDisplayMode } from "sunpeak"
-import { Button } from "@openai/apps-sdk-ui/components/Button"
-import { cn } from "../../lib/index"
+import * as React from 'react';
+import useEmblaCarousel from 'embla-carousel-react';
+import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
+import { ArrowLeft, ArrowRight } from '@openai/apps-sdk-ui/components/Icon';
+import { useWidgetState, useDisplayMode } from 'sunpeak';
+import { Button } from '@openai/apps-sdk-ui/components/Button';
+import { cn } from '../../lib/index';
 
 export interface CarouselState extends Record<string, unknown> {
-  currentIndex?: number
+  currentIndex?: number;
 }
 
 export type CarouselProps = {
-  children?: React.ReactNode
-  gap?: number
-  showArrows?: boolean
-  showEdgeGradients?: boolean
-  cardWidth?: number | { inline?: number; fullscreen?: number }
-  className?: string
-}
+  children?: React.ReactNode;
+  gap?: number;
+  showArrows?: boolean;
+  showEdgeGradients?: boolean;
+  cardWidth?: number | { inline?: number; fullscreen?: number };
+  className?: string;
+};
 
-export const Carousel = React.forwardRef<
-  HTMLDivElement,
-  CarouselProps
->(
+export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
   (
-    {
-      children,
-      gap = 16,
-      showArrows = true,
-      showEdgeGradients = true,
-      cardWidth,
-      className,
-    },
+    { children, gap = 16, showArrows = true, showEdgeGradients = true, cardWidth, className },
     ref
   ) => {
     const [widgetState, setWidgetState] = useWidgetState<CarouselState>(() => ({
       currentIndex: 0,
-    }))
-    const displayMode = useDisplayMode()
+    }));
+    const displayMode = useDisplayMode();
 
     const [emblaRef, emblaApi] = useEmblaCarousel(
       {
-        align: "start",
+        align: 'start',
         dragFree: true,
-        containScroll: "trimSnaps",
+        containScroll: 'trimSnaps',
       },
       [WheelGesturesPlugin()]
-    )
+    );
 
-    const [canScrollPrev, setCanScrollPrev] = React.useState(false)
-    const [canScrollNext, setCanScrollNext] = React.useState(false)
+    const [canScrollPrev, setCanScrollPrev] = React.useState(false);
+    const [canScrollNext, setCanScrollNext] = React.useState(false);
 
     const scrollPrev = React.useCallback(() => {
-      if (emblaApi) emblaApi.scrollPrev()
-    }, [emblaApi])
+      if (emblaApi) emblaApi.scrollPrev();
+    }, [emblaApi]);
 
     const scrollNext = React.useCallback(() => {
-      if (emblaApi) emblaApi.scrollNext()
-    }, [emblaApi])
+      if (emblaApi) emblaApi.scrollNext();
+    }, [emblaApi]);
 
     const onSelect = React.useCallback(() => {
-      if (!emblaApi) return
+      if (!emblaApi) return;
 
-      setCanScrollPrev(emblaApi.canScrollPrev())
-      setCanScrollNext(emblaApi.canScrollNext())
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
 
-      const currentIndex = emblaApi.selectedScrollSnap()
+      const currentIndex = emblaApi.selectedScrollSnap();
       if (widgetState?.currentIndex !== currentIndex) {
-        setWidgetState({ currentIndex })
+        setWidgetState({ currentIndex });
       }
-    }, [emblaApi, widgetState?.currentIndex, setWidgetState])
+    }, [emblaApi, widgetState?.currentIndex, setWidgetState]);
 
     React.useEffect(() => {
-      if (!emblaApi) return
+      if (!emblaApi) return;
 
-      onSelect()
-      emblaApi.on("select", onSelect)
-      emblaApi.on("reInit", onSelect)
+      onSelect();
+      emblaApi.on('select', onSelect);
+      emblaApi.on('reInit', onSelect);
 
       return () => {
-        emblaApi.off("select", onSelect)
-        emblaApi.off("reInit", onSelect)
-      }
-    }, [emblaApi, onSelect])
+        emblaApi.off('select', onSelect);
+        emblaApi.off('reInit', onSelect);
+      };
+    }, [emblaApi, onSelect]);
 
-    const childArray = React.Children.toArray(children)
+    const childArray = React.Children.toArray(children);
 
     const getCardWidth = () => {
-      if (typeof cardWidth === "number") {
-        return cardWidth
+      if (typeof cardWidth === 'number') {
+        return cardWidth;
       }
-      if (cardWidth && typeof cardWidth === "object") {
-        if (displayMode === "fullscreen" && cardWidth.fullscreen) {
-          return cardWidth.fullscreen
+      if (cardWidth && typeof cardWidth === 'object') {
+        if (displayMode === 'fullscreen' && cardWidth.fullscreen) {
+          return cardWidth.fullscreen;
         }
         if (cardWidth.inline) {
-          return cardWidth.inline
+          return cardWidth.inline;
         }
       }
-      return 220
-    }
+      return 220;
+    };
 
-    const cardWidthPx = getCardWidth()
+    const cardWidthPx = getCardWidth();
 
     return (
-      <div ref={ref} className={cn("relative w-full", className)}>
+      <div ref={ref} className={cn('relative w-full', className)}>
         {/* Left edge gradient */}
         {showEdgeGradients && canScrollPrev && (
           <div
@@ -172,7 +162,7 @@ export const Carousel = React.forwardRef<
           </Button>
         )}
       </div>
-    )
+    );
   }
-)
-Carousel.displayName = "Carousel"
+);
+Carousel.displayName = 'Carousel';

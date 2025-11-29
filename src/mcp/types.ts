@@ -1,4 +1,4 @@
-import type { Resource, Tool } from "@modelcontextprotocol/sdk/types.js";
+import type { Resource, Tool } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * MCP CallTool response data (subset used in simulations)

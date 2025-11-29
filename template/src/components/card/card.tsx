@@ -1,24 +1,24 @@
-import * as React from "react"
-import { Button } from "@openai/apps-sdk-ui/components/Button"
-import { cn } from "../../lib/index"
+import * as React from 'react';
+import { Button } from '@openai/apps-sdk-ui/components/Button';
+import { cn } from '../../lib/index';
 
 export interface CardButtonProps {
-  isPrimary?: boolean
-  onClick: () => void
-  children: React.ReactNode
+  isPrimary?: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
 }
 
 export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
-  children?: React.ReactNode
-  image?: string
-  imageAlt?: string
-  imageMaxWidth?: number
-  imageMaxHeight?: number
-  header?: React.ReactNode
-  metadata?: React.ReactNode
-  button1?: CardButtonProps
-  button2?: CardButtonProps
-  variant?: "default" | "bordered" | "elevated"
+  children?: React.ReactNode;
+  image?: string;
+  imageAlt?: string;
+  imageMaxWidth?: number;
+  imageMaxHeight?: number;
+  header?: React.ReactNode;
+  metadata?: React.ReactNode;
+  button1?: CardButtonProps;
+  button2?: CardButtonProps;
+  variant?: 'default' | 'bordered' | 'elevated';
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -33,7 +33,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       metadata,
       button1,
       button2,
-      variant = "default",
+      variant = 'default',
       className,
       onClick,
       ...props
@@ -41,41 +41,41 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
     ref
   ) => {
     const variantClasses = {
-      default: "border border-subtle bg-surface",
-      bordered: "border-2 border-default bg-surface",
-      elevated: "border border-subtle bg-surface shadow-lg",
-    }
+      default: 'border border-subtle bg-surface',
+      bordered: 'border-2 border-default bg-surface',
+      elevated: 'border border-subtle bg-surface shadow-lg',
+    };
 
     const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-      onClick?.(e)
-    }
+      onClick?.(e);
+    };
 
     const renderButton = (buttonProps: CardButtonProps) => {
-      const { isPrimary = false, onClick: buttonOnClick, children } = buttonProps
+      const { isPrimary = false, onClick: buttonOnClick, children } = buttonProps;
 
       const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-        e.stopPropagation()
-        buttonOnClick()
-      }
+        e.stopPropagation();
+        buttonOnClick();
+      };
 
       return (
         <Button
-          color={isPrimary ? "primary" : "secondary"}
-          variant={isPrimary ? "solid" : "soft"}
+          color={isPrimary ? 'primary' : 'secondary'}
+          variant={isPrimary ? 'solid' : 'soft'}
           onClick={handleClick}
         >
           {children}
         </Button>
-      )
-    }
+      );
+    };
 
-    const hasButtons = button1 || button2
+    const hasButtons = button1 || button2;
 
     return (
       <div
         ref={ref}
         className={cn(
-          "overflow-hidden rounded-2xl cursor-pointer select-none",
+          'overflow-hidden rounded-2xl cursor-pointer select-none',
           variantClasses[variant],
           className
         )}
@@ -106,16 +106,8 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
               {header}
             </h2>
           )}
-          {metadata && (
-            <p className="text-secondary text-xs mb-1">
-              {metadata}
-            </p>
-          )}
-          {children && (
-            <div className="text-sm leading-normal line-clamp-2 mb-3">
-              {children}
-            </div>
-          )}
+          {metadata && <p className="text-secondary text-xs mb-1">{metadata}</p>}
+          {children && <div className="text-sm leading-normal line-clamp-2 mb-3">{children}</div>}
           {hasButtons && (
             <div className="flex gap-2 flex-wrap mt-auto">
               {button1 && renderButton(button1)}
@@ -124,7 +116,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           )}
         </div>
       </div>
-    )
+    );
   }
-)
-Card.displayName = "Card"
+);
+Card.displayName = 'Card';

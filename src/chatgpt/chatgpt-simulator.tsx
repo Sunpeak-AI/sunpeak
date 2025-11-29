@@ -28,8 +28,7 @@ export function ChatGPTSimulator({
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
 
   // Helper to create simulation key from resource-tool pair
-  const getSimulationKey = (sim: Simulation) =>
-    `${sim.resource.name}-${sim.tool.name}`;
+  const getSimulationKey = (sim: Simulation) => `${sim.resource.name}-${sim.tool.name}`;
 
   const [selectedKey, setSelectedKey] = React.useState<string>(
     simulations.length > 0 ? getSimulationKey(simulations[0]) : ''
@@ -92,7 +91,8 @@ export function ChatGPTSimulator({
                   value={selectedKey}
                   onChange={(value) => setSelectedKey(value)}
                   options={simulations.map((sim) => {
-                    const resourceTitle = (sim.resource.title as string | undefined) || sim.resource.name;
+                    const resourceTitle =
+                      (sim.resource.title as string | undefined) || sim.resource.name;
                     const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
                     return {
                       value: getSimulationKey(sim),

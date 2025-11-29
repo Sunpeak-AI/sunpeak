@@ -20,8 +20,7 @@ export function Conversation({
 }: ConversationProps) {
   // Read displayMode from window.openai (same source the App uses)
   const displayMode = useDisplayMode() ?? 'inline';
-  const containerWidth =
-    screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
+  const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
 
   // Fullscreen mode: children take over the entire conversation area
   if (displayMode === 'fullscreen') {

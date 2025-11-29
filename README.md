@@ -29,7 +29,7 @@ Quickstart, build, and test your ChatGPT App locally with OpenAI apps-sdk-ui Rea
   </a>
 </div>
 
-## Quickstart 
+## Quickstart
 
 ### New Projects
 
@@ -42,6 +42,7 @@ pnpm dlx sunpeak new
 To add sunpeak to an existing project, refer to the [documentation](https://docs.sunpeak.ai/add-to-existing-project).
 
 ## Key Features
+
 - 📺 [ChatGPT simulator](https://docs.sunpeak.ai/library/chatgpt-simulator) for local UI component development.
 - 📚 [Pre-built component library](https://docs.sunpeak.ai/template/ui-components) built on [openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui).
 - 📱 [Multi-platform interface](https://docs.sunpeak.ai/library/multi-platform-apis) for portable MCP UI App development.
@@ -49,9 +50,10 @@ To add sunpeak to an existing project, refer to the [documentation](https://docs
 - 🧪 [Testing framework](https://docs.sunpeak.ai/guides/testing) that replicates advanced ChatGPT behavior locally.
 
 ## Example Component
+
 ```tsx
-import "./styles/globals.css";
-import { Card } from "./components/card";
+import './styles/globals.css';
+import { Card } from './components/card';
 
 export default function App() {
   return (
@@ -60,8 +62,8 @@ export default function App() {
       imageAlt="Lady Bird Lake"
       header="Lady Bird Lake"
       metadata="⭐ 4.5 • Austin, TX"
-      button1={{ children: "Visit", isPrimary: true, onClick: () => {} }}
-      button2={{ children: "Learn More", onClick: () => {} }}
+      button1={{ children: 'Visit', isPrimary: true, onClick: () => {} }}
+      button2={{ children: 'Learn More', onClick: () => {} }}
     >
       Scenic lake perfect for kayaking, paddleboarding, and trails.
     </Card>
@@ -75,12 +77,12 @@ sunpeak is an npm package consisting of:
 
 1. **A CLI utility** for working with sunpeak (`./bin`).
 2. **A templated npm package** (`./template`). This template includes:
-    1. Project scaffold - Complete development setup with build, test, and dev tooling.
-    2. Pre-built UI components - Production-ready components following ChatGPT design guidelines.
+   1. Project scaffold - Complete development setup with build, test, and dev tooling.
+   2. Pre-built UI components - Production-ready components following ChatGPT design guidelines.
 3. **The `sunpeak` library** (`./src`). This library contains:
-    1. Multi-platform APIs - Abstraction layer for future platform support (Gemini, Claude).
-    2. ChatGPT simulator - Local development environment replicating ChatGPT's widget runtime.
-    3. MCP server - View local widgets in the real ChatGPT.
+   1. Multi-platform APIs - Abstraction layer for future platform support (Gemini, Claude).
+   2. ChatGPT simulator - Local development environment replicating ChatGPT's widget runtime.
+   3. MCP server - View local widgets in the real ChatGPT.
 
 ## Contributing
 

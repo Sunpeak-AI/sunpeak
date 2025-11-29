@@ -1,14 +1,10 @@
-import {
-  createServer,
-  type IncomingMessage,
-  type ServerResponse,
-} from "node:http";
-import { URL } from "node:url";
-import fs from "node:fs";
-import path from "node:path";
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { URL } from 'node:url';
+import fs from 'node:fs';
+import path from 'node:path';
 
-import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import {
   CallToolRequestSchema,
   ListResourcesRequestSchema,
@@ -18,14 +14,12 @@ import {
   type ListResourcesRequest,
   type ListToolsRequest,
   type ReadResourceRequest,
-} from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+} from '@modelcontextprotocol/sdk/types.js';
+import { z } from 'zod';
 
-import {
-  type MCPServerConfig,
-} from "./types.js";
+import { type MCPServerConfig } from './types.js';
 
-export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult } from "./types.js";
+export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult } from './types.js';
 
 /**
  * Read and wrap tool JS in HTML shell.
@@ -40,7 +34,7 @@ function readToolHtml(distPath: string): string {
     );
   }
 
-  const jsContents = fs.readFileSync(htmlPath, "utf8");
+  const jsContents = fs.readFileSync(htmlPath, 'utf8');
 
   return `<!DOCTYPE html>
 <html>
@@ -58,20 +52,13 @@ ${jsContents}
 }
 
 function createAppServer(config: MCPServerConfig): Server {
-  const {
-    name = "sunpeak-app",
-    version = "0.1.0",
-    simulations,
-  } = config;
+  const { name = 'sunpeak-app', version = '0.1.0', simulations } = config;
 
   const toolInputParser = z.object({});
 
   // Read widget content for each simulation
   const widgetContentMap = new Map(
-    simulations.map((simulation) => [
-      simulation.tool.name,
-      readToolHtml(simulation.distPath),
-    ])
+    simulations.map((simulation) => [simulation.tool.name, readToolHtml(simulation.distPath)])
   );
 
   // Generate base-36 timestamp once for this server instance
@@ -107,15 +94,18 @@ function createAppServer(config: MCPServerConfig): Server {
   const toolCallDataMap = new Map(
     simulations.map((simulation) => [
       simulation.tool.name,
-      simulation.toolCall ?? { structuredContent: null, _meta: {} }
+      simulation.toolCall ?? { structuredContent: null, _meta: {} },
     ])
   );
 
   const resourceMap = new Map(
-    resources.map((resource, index) => [resource.uri, {
-      content: widgetContentMap.get(simulations[index].tool.name)!,
-      resource,
-    }])
+    resources.map((resource, index) => [
+      resource.uri,
+      {
+        content: widgetContentMap.get(simulations[index].tool.name)!,
+        resource,
+      },
+    ])
   );
 
   const server = new Server(
@@ -131,81 +121,65 @@ function createAppServer(config: MCPServerConfig): Server {
     }
   );
 
-  server.setRequestHandler(
-    ListResourcesRequestSchema,
-    async (_request: ListResourcesRequest) => {
-      console.log("[MCP] ListResources");
-      return { resources };
+  server.setRequestHandler(ListResourcesRequestSchema, async (_request: ListResourcesRequest) => {
+    console.log('[MCP] ListResources');
+    return { resources };
+  });
+
+  server.setRequestHandler(ReadResourceRequestSchema, async (request: ReadResourceRequest) => {
+    console.log('[MCP] ReadResource:', request.params.uri);
+
+    // Strip timestamp suffix from URI (e.g., "carousel-m8k3j5.html" -> "carousel.html")
+    const requestedUri = request.params.uri;
+    const cleanedUri = requestedUri.includes('.')
+      ? requestedUri.replace(/-[a-z0-9]+(\.[^.]+)$/, '$1')
+      : requestedUri.replace(/-[a-z0-9]+$/, '');
+
+    const resourceData = resourceMap.get(cleanedUri);
+    if (!resourceData) {
+      throw new Error(`Unknown resource: ${request.params.uri} (cleaned: ${cleanedUri})`);
     }
-  );
 
-  server.setRequestHandler(
-    ReadResourceRequestSchema,
-    async (request: ReadResourceRequest) => {
-      console.log("[MCP] ReadResource:", request.params.uri);
+    return {
+      contents: [
+        {
+          uri: resourceData.resource.uri,
+          mimeType: resourceData.resource.mimeType,
+          text: resourceData.content,
+          _meta: resourceData.resource._meta,
+        },
+      ],
+    };
+  });
 
-      // Strip timestamp suffix from URI (e.g., "carousel-m8k3j5.html" -> "carousel.html")
-      const requestedUri = request.params.uri;
-      const cleanedUri = requestedUri.includes('.')
-        ? requestedUri.replace(/-[a-z0-9]+(\.[^.]+)$/, '$1')
-        : requestedUri.replace(/-[a-z0-9]+$/, '');
+  server.setRequestHandler(ListToolsRequestSchema, async (_request: ListToolsRequest) => {
+    console.log('[MCP] ListTools');
+    return { tools };
+  });
 
-      const resourceData = resourceMap.get(cleanedUri);
-      if (!resourceData) {
-        throw new Error(`Unknown resource: ${request.params.uri} (cleaned: ${cleanedUri})`);
-      }
+  server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
+    console.log('[MCP] CallTool:', request.params.name, request.params.arguments);
 
-      return {
-        contents: [
-          {
-            uri: resourceData.resource.uri,
-            mimeType: resourceData.resource.mimeType,
-            text: resourceData.content,
-            _meta: resourceData.resource._meta,
-          },
-        ],
-      };
+    const simulation = simulations.find((s) => s.tool.name === request.params.name);
+    if (!simulation) {
+      throw new Error(`Simulation not found: ${request.params.name}`);
     }
-  );
 
-  server.setRequestHandler(
-    ListToolsRequestSchema,
-    async (_request: ListToolsRequest) => {
-      console.log("[MCP] ListTools");
-      return { tools };
-    }
-  );
+    const toolCallData = toolCallDataMap.get(request.params.name);
 
-  server.setRequestHandler(
-    CallToolRequestSchema,
-    async (request: CallToolRequest) => {
-      console.log(
-        "[MCP] CallTool:",
-        request.params.name,
-        request.params.arguments
-      );
+    toolInputParser.parse(request.params.arguments ?? {});
 
-      const simulation = simulations.find((s) => s.tool.name === request.params.name);
-      if (!simulation) {
-        throw new Error(`Simulation not found: ${request.params.name}`);
-      }
-
-      const toolCallData = toolCallDataMap.get(request.params.name);
-
-      toolInputParser.parse(request.params.arguments ?? {});
-
-      return {
-        content: [
-          {
-            type: "text",
-            text: `Rendered ${simulation.tool.description}!`,
-          },
-        ],
-        structuredContent: toolCallData?.structuredContent ?? undefined,
-        _meta: toolCallData?._meta ?? {},
-      };
-    }
-  );
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Rendered ${simulation.tool.description}!`,
+        },
+      ],
+      structuredContent: toolCallData?.structuredContent ?? undefined,
+      _meta: toolCallData?._meta ?? {},
+    };
+  });
 
   return server;
 }
@@ -217,14 +191,11 @@ type SessionRecord = {
 
 const sessions = new Map<string, SessionRecord>();
 
-const ssePath = "/mcp";
-const postPath = "/mcp/messages";
+const ssePath = '/mcp';
+const postPath = '/mcp/messages';
 
-async function handleSseRequest(
-  res: ServerResponse,
-  config: MCPServerConfig
-) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+async function handleSseRequest(res: ServerResponse, config: MCPServerConfig) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
   const server = createAppServer(config);
   const transport = new SSEServerTransport(postPath, res);
   const sessionId = transport.sessionId;
@@ -237,47 +208,43 @@ async function handleSseRequest(
   };
 
   transport.onerror = (error) => {
-    console.error("SSE transport error", error);
+    console.error('SSE transport error', error);
   };
 
   try {
     await server.connect(transport);
   } catch (error) {
     sessions.delete(sessionId);
-    console.error("Failed to start SSE session", error);
+    console.error('Failed to start SSE session', error);
     if (!res.headersSent) {
-      res.writeHead(500).end("Failed to establish SSE connection");
+      res.writeHead(500).end('Failed to establish SSE connection');
     }
   }
 }
 
-async function handlePostMessage(
-  req: IncomingMessage,
-  res: ServerResponse,
-  url: URL
-) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Headers", "content-type");
-  const sessionId = url.searchParams.get("sessionId");
+async function handlePostMessage(req: IncomingMessage, res: ServerResponse, url: URL) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', 'content-type');
+  const sessionId = url.searchParams.get('sessionId');
 
   if (!sessionId) {
-    res.writeHead(400).end("Missing sessionId query parameter");
+    res.writeHead(400).end('Missing sessionId query parameter');
     return;
   }
 
   const session = sessions.get(sessionId);
 
   if (!session) {
-    res.writeHead(404).end("Unknown session");
+    res.writeHead(404).end('Unknown session');
     return;
   }
 
   try {
     await session.transport.handlePostMessage(req, res);
   } catch (error) {
-    console.error("Failed to process message", error);
+    console.error('Failed to process message', error);
     if (!res.headersSent) {
-      res.writeHead(500).end("Failed to process message");
+      res.writeHead(500).end('Failed to process message');
     }
   }
 }
@@ -291,56 +258,47 @@ export function runMCPServer(config: MCPServerConfig): void {
   const portEnv = Number(process.env.PORT ?? 6766);
   const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 6766);
 
-  const httpServer = createServer(
-    async (req: IncomingMessage, res: ServerResponse) => {
-      if (!req.url) {
-        res.writeHead(400).end("Missing URL");
-        return;
-      }
-
-      const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
-      console.log(`[HTTP] ${req.method} ${url.pathname}`);
-
-      if (
-        req.method === "OPTIONS" &&
-        (url.pathname === ssePath || url.pathname === postPath)
-      ) {
-        res.writeHead(204, {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-          "Access-Control-Allow-Headers": "content-type",
-        });
-        res.end();
-        return;
-      }
-
-      if (req.method === "GET" && url.pathname === ssePath) {
-        await handleSseRequest(res, config);
-        return;
-      }
-
-      if (req.method === "POST" && url.pathname === postPath) {
-        await handlePostMessage(req, res, url);
-        return;
-      }
-
-      res.writeHead(404).end("Not Found");
+  const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (!req.url) {
+      res.writeHead(400).end('Missing URL');
+      return;
     }
-  );
 
-  httpServer.on("clientError", (err: Error, socket) => {
-    console.error("HTTP client error", err);
-    socket.end("HTTP/1.1 400 Bad Request\r\n\r\n");
+    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+    console.log(`[HTTP] ${req.method} ${url.pathname}`);
+
+    if (req.method === 'OPTIONS' && (url.pathname === ssePath || url.pathname === postPath)) {
+      res.writeHead(204, {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'content-type',
+      });
+      res.end();
+      return;
+    }
+
+    if (req.method === 'GET' && url.pathname === ssePath) {
+      await handleSseRequest(res, config);
+      return;
+    }
+
+    if (req.method === 'POST' && url.pathname === postPath) {
+      await handlePostMessage(req, res, url);
+      return;
+    }
+
+    res.writeHead(404).end('Not Found');
+  });
+
+  httpServer.on('clientError', (err: Error, socket) => {
+    console.error('HTTP client error', err);
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
   });
 
   httpServer.listen(port, () => {
-    console.log(
-      `Sunpeak MCP server listening on http://localhost:${port}`
-    );
+    console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
     console.log(`  SSE stream: GET http://localhost:${port}${ssePath}`);
-    console.log(
-      `  Message post endpoint: POST http://localhost:${port}${postPath}?sessionId=...`
-    );
+    console.log(`  Message post endpoint: POST http://localhost:${port}${postPath}?sessionId=...`);
   });
 
   // Graceful shutdown handler

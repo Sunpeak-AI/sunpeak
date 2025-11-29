@@ -33,10 +33,7 @@ describe('Card', () => {
     const button1OnClick = vi.fn();
 
     render(
-      <Card
-        onClick={cardOnClick}
-        button1={{ onClick: button1OnClick, children: 'Click Me' }}
-      >
+      <Card onClick={cardOnClick} button1={{ onClick: button1OnClick, children: 'Click Me' }}>
         Content
       </Card>
     );

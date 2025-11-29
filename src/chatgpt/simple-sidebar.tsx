@@ -23,9 +23,7 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        {children}
-      </main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }
@@ -38,9 +36,7 @@ interface SidebarControlProps {
 export function SidebarControl({ label, children }: SidebarControlProps) {
   return (
     <div className="space-y-2">
-      <label className="text-xs font-medium text-secondary">
-        {label}
-      </label>
+      <label className="text-xs font-medium text-secondary">{label}</label>
       {children}
     </div>
   );
@@ -59,7 +55,7 @@ export function SidebarSelect({ value, onChange, options, placeholder }: Sidebar
   const containerRef = useRef<HTMLDivElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const selectedOption = options.find((opt) => opt.value === value);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -77,15 +73,11 @@ export function SidebarSelect({ value, onChange, options, placeholder }: Sidebar
           break;
         case 'ArrowDown':
           event.preventDefault();
-          setHighlightedIndex(prev =>
-            prev < options.length - 1 ? prev + 1 : 0
-          );
+          setHighlightedIndex((prev) => (prev < options.length - 1 ? prev + 1 : 0));
           break;
         case 'ArrowUp':
           event.preventDefault();
-          setHighlightedIndex(prev =>
-            prev > 0 ? prev - 1 : options.length - 1
-          );
+          setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : options.length - 1));
           break;
         case 'Enter':
           event.preventDefault();
@@ -108,7 +100,7 @@ export function SidebarSelect({ value, onChange, options, placeholder }: Sidebar
   const handleToggle = () => {
     if (!isOpen) {
       // Initialize highlighted index when opening
-      const selectedIndex = options.findIndex(opt => opt.value === value);
+      const selectedIndex = options.findIndex((opt) => opt.value === value);
       setHighlightedIndex(selectedIndex >= 0 ? selectedIndex : 0);
     }
     setIsOpen(!isOpen);

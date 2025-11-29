@@ -16,9 +16,7 @@ describe('FilmStrip', () => {
   };
 
   it('applies correct styling to selected photo', () => {
-    const { container } = render(
-      <FilmStrip album={mockAlbum} selectedIndex={1} />
-    );
+    const { container } = render(<FilmStrip album={mockAlbum} selectedIndex={1} />);
 
     const buttons = container.querySelectorAll('button');
 

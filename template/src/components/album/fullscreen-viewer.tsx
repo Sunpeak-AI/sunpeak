@@ -1,60 +1,55 @@
-import * as React from "react"
-import { useMaxHeight } from "sunpeak"
-import { cn } from "../../lib/index"
-import { FilmStrip } from "./film-strip"
-import type { Album } from "./albums"
+import * as React from 'react';
+import { useMaxHeight } from 'sunpeak';
+import { cn } from '../../lib/index';
+import { FilmStrip } from './film-strip';
+import type { Album } from './albums';
 
 export type FullscreenViewerProps = {
-  album: Album
-  className?: string
-}
+  album: Album;
+  className?: string;
+};
 
-export const FullscreenViewer = React.forwardRef<
-  HTMLDivElement,
-  FullscreenViewerProps
->(({ album, className }, ref) => {
-  const maxHeight = useMaxHeight()
-  const [selectedIndex, setSelectedIndex] = React.useState(0)
+export const FullscreenViewer = React.forwardRef<HTMLDivElement, FullscreenViewerProps>(
+  ({ album, className }, ref) => {
+    const maxHeight = useMaxHeight();
+    const [selectedIndex, setSelectedIndex] = React.useState(0);
 
-  React.useEffect(() => {
-    setSelectedIndex(0)
-  }, [album?.id])
+    React.useEffect(() => {
+      setSelectedIndex(0);
+    }, [album?.id]);
 
-  const selectedPhoto = album?.photos?.[selectedIndex]
+    const selectedPhoto = album?.photos?.[selectedIndex];
 
-  return (
-    <div
-      ref={ref}
-      className={cn("relative w-full h-full bg-surface", className)}
-      style={{
-        maxHeight: maxHeight ?? undefined,
-        height: maxHeight ?? undefined,
-      }}
-    >
-      <div className="absolute inset-0 flex flex-row overflow-hidden">
-        {/* Film strip */}
-        <div className="hidden md:block absolute pointer-events-none z-10 left-0 top-0 bottom-0 w-40">
-          <FilmStrip
-            album={album}
-            selectedIndex={selectedIndex}
-            onSelect={setSelectedIndex}
-          />
-        </div>
+    return (
+      <div
+        ref={ref}
+        className={cn('relative w-full h-full bg-surface', className)}
+        style={{
+          maxHeight: maxHeight ?? undefined,
+          height: maxHeight ?? undefined,
+        }}
+      >
+        <div className="absolute inset-0 flex flex-row overflow-hidden">
+          {/* Film strip */}
+          <div className="hidden md:block absolute pointer-events-none z-10 left-0 top-0 bottom-0 w-40">
+            <FilmStrip album={album} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
+          </div>
 
-        {/* Main photo */}
-        <div className="flex-1 min-w-0 px-40 py-10 relative flex items-center justify-center">
-          <div className="relative w-full h-full">
-            {selectedPhoto ? (
-              <img
-                src={selectedPhoto.url}
-                alt={selectedPhoto.title || album.title}
-                className="absolute inset-0 m-auto rounded-3xl shadow-sm border border-primary/10 max-w-full max-h-full object-contain"
-              />
-            ) : null}
+          {/* Main photo */}
+          <div className="flex-1 min-w-0 px-40 py-10 relative flex items-center justify-center">
+            <div className="relative w-full h-full">
+              {selectedPhoto ? (
+                <img
+                  src={selectedPhoto.url}
+                  alt={selectedPhoto.title || album.title}
+                  className="absolute inset-0 m-auto rounded-3xl shadow-sm border border-primary/10 max-w-full max-h-full object-contain"
+                />
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
-})
-FullscreenViewer.displayName = "FullscreenViewer"
+    );
+  }
+);
+FullscreenViewer.displayName = 'FullscreenViewer';

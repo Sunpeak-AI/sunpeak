@@ -21,7 +21,7 @@ async function init(projectName) {
   if (!projectName) {
     projectName = await prompt('☀️ 🏔️ Project name [my-app]: ');
     if (!projectName) {
-      projectName = 'my-app'
+      projectName = 'my-app';
     }
   }
 
@@ -48,7 +48,7 @@ async function init(projectName) {
     filter: (src) => {
       const name = basename(src);
       return name !== 'node_modules' && name !== 'pnpm-lock.yaml';
-    }
+    },
   });
 
   // Read sunpeak version from root package.json
@@ -78,7 +78,7 @@ See README.md for more details.
 `);
 }
 
-const [,, command, ...args] = process.argv;
+const [, , command, ...args] = process.argv;
 
 if (command === 'new') {
   init(args[0]);

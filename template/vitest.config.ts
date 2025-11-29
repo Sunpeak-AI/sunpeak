@@ -15,7 +15,7 @@ export default defineConfig({
     alias: {
       // In workspace dev mode, use local sunpeak source
       ...(isTemplate && {
-        'sunpeak': parentSrc,
+        sunpeak: parentSrc,
         '~': parentSrc,
       }),
     },
