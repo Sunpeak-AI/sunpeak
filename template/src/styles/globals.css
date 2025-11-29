@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "@openai/apps-sdk-ui/css";
 
-/* Import simulator styles from sunpeak package */
+/* Import simulator source scanning from sunpeak */
 @import "sunpeak/chatgpt/globals.css";
 
 /* Scan app-specific source files for Tailwind classes */
