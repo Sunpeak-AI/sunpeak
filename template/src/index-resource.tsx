@@ -1,4 +1,6 @@
 import '../src/styles/globals.css';
+// Import sunpeak to ensure simulator styles are included via side-effect
+import 'sunpeak';
 // @ts-expect-error - Template file with placeholders
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { createRoot } from 'react-dom/client';
