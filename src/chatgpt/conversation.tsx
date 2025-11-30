@@ -52,9 +52,7 @@ export function Conversation({
               </svg>
             </button>
           </div>
-          <div className="text-secondary flex items-center justify-center text-base">
-            {appName}
-          </div>
+          <div className="text-secondary flex items-center justify-center text-base">{appName}</div>
           <div className="flex items-center justify-end"></div>
         </div>
         <div className="relative overflow-hidden flex-1">

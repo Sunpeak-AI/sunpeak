@@ -63,10 +63,14 @@ export function ChatGPTSimulator({
   const userMessage = selectedSim?.userMessage;
 
   // Create mock once and keep it stable - never recreate it
-  const mock = useMemo(() => initMockOpenAI({
-    theme: DEFAULT_THEME,
-    displayMode: DEFAULT_DISPLAY_MODE,
-  }), []);
+  const mock = useMemo(
+    () =>
+      initMockOpenAI({
+        theme: DEFAULT_THEME,
+        displayMode: DEFAULT_DISPLAY_MODE,
+      }),
+    []
+  );
 
   // Update mock properties when simulation changes
   useEffect(() => {
@@ -176,7 +180,7 @@ export function ChatGPTSimulator({
   // This syncs external state (from mock) into local editing state, which is a valid use of effects
   useEffect(() => {
     if (editingField !== 'toolInput') {
-      setToolInputJson(JSON.stringify(toolInput ?? {}, null, 2)); // eslint-disable-line react-hooks/set-state-in-effect
+      setToolInputJson(JSON.stringify(toolInput ?? {}, null, 2));
       setToolInputError('');
     }
     if (editingField !== 'toolOutput') {
@@ -195,7 +199,15 @@ export function ChatGPTSimulator({
       setViewParamsJson(JSON.stringify(view?.params ?? {}, null, 2));
       setViewParamsError('');
     }
-  }, [selectedKey, toolInput, toolOutput, toolResponseMetadata, widgetState, view?.params, editingField]);
+  }, [
+    selectedKey,
+    toolInput,
+    toolOutput,
+    toolResponseMetadata,
+    widgetState,
+    view?.params,
+    editingField,
+  ]);
 
   // Helper to validate JSON while typing (doesn't update mock)
   const validateJSON = (
@@ -466,20 +478,14 @@ export function ChatGPTSimulator({
               <SidebarControl label="View Params (JSON)">
                 <SidebarTextarea
                   value={viewParamsJson}
-                  onChange={(json) =>
-                    validateJSON(json, setViewParamsJson, setViewParamsError)
-                  }
+                  onChange={(json) => validateJSON(json, setViewParamsJson, setViewParamsError)}
                   onFocus={() => setEditingField('viewParams')}
                   onBlur={() =>
-                    commitJSON(
-                      viewParamsJson,
-                      setViewParamsError,
-                      (parsed) => {
-                        if (view) {
-                          mock.setView({ ...view, params: parsed ?? undefined });
-                        }
+                    commitJSON(viewParamsJson, setViewParamsError, (parsed) => {
+                      if (view) {
+                        mock.setView({ ...view, params: parsed ?? undefined });
                       }
-                    )
+                    })
                   }
                   error={viewParamsError}
                   rows={2}
@@ -490,15 +496,11 @@ export function ChatGPTSimulator({
             <SidebarCollapsibleControl label="Tool Input (JSON)">
               <SidebarTextarea
                 value={toolInputJson}
-                onChange={(json) =>
-                  validateJSON(json, setToolInputJson, setToolInputError)
-                }
+                onChange={(json) => validateJSON(json, setToolInputJson, setToolInputError)}
                 onFocus={() => setEditingField('toolInput')}
                 onBlur={() =>
-                  commitJSON(
-                    toolInputJson,
-                    setToolInputError,
-                    (parsed) => mock.setToolInput(parsed ?? {})
+                  commitJSON(toolInputJson, setToolInputError, (parsed) =>
+                    mock.setToolInput(parsed ?? {})
                   )
                 }
                 error={toolInputError}
@@ -509,15 +511,11 @@ export function ChatGPTSimulator({
             <SidebarCollapsibleControl label="Tool Output (JSON)">
               <SidebarTextarea
                 value={toolOutputJson}
-                onChange={(json) =>
-                  validateJSON(json, setToolOutputJson, setToolOutputError)
-                }
+                onChange={(json) => validateJSON(json, setToolOutputJson, setToolOutputError)}
                 onFocus={() => setEditingField('toolOutput')}
                 onBlur={() =>
-                  commitJSON(
-                    toolOutputJson,
-                    setToolOutputError,
-                    (parsed) => mock.setToolOutput(parsed)
+                  commitJSON(toolOutputJson, setToolOutputError, (parsed) =>
+                    mock.setToolOutput(parsed)
                   )
                 }
                 error={toolOutputError}
@@ -529,18 +527,12 @@ export function ChatGPTSimulator({
               <SidebarTextarea
                 value={toolResponseMetadataJson}
                 onChange={(json) =>
-                  validateJSON(
-                    json,
-                    setToolResponseMetadataJson,
-                    setToolResponseMetadataError
-                  )
+                  validateJSON(json, setToolResponseMetadataJson, setToolResponseMetadataError)
                 }
                 onFocus={() => setEditingField('toolResponseMetadata')}
                 onBlur={() =>
-                  commitJSON(
-                    toolResponseMetadataJson,
-                    setToolResponseMetadataError,
-                    (parsed) => mock.setToolResponseMetadata(parsed)
+                  commitJSON(toolResponseMetadataJson, setToolResponseMetadataError, (parsed) =>
+                    mock.setToolResponseMetadata(parsed)
                   )
                 }
                 error={toolResponseMetadataError}
@@ -551,15 +543,11 @@ export function ChatGPTSimulator({
             <SidebarCollapsibleControl label="Widget State (JSON)">
               <SidebarTextarea
                 value={widgetStateJson}
-                onChange={(json) =>
-                  validateJSON(json, setWidgetStateJson, setWidgetStateError)
-                }
+                onChange={(json) => validateJSON(json, setWidgetStateJson, setWidgetStateError)}
                 onFocus={() => setEditingField('widgetState')}
                 onBlur={() =>
-                  commitJSON(
-                    widgetStateJson,
-                    setWidgetStateError,
-                    (parsed) => mock.setWidgetStateExternal(parsed)
+                  commitJSON(widgetStateJson, setWidgetStateError, (parsed) =>
+                    mock.setWidgetStateExternal(parsed)
                   )
                 }
                 error={widgetStateError}

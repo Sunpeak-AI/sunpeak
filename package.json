@@ -42,7 +42,7 @@
   "scripts": {
     "build": "vite build",
     "dev": "pnpm --filter my-sunpeak-app dev",
-    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format": "prettier --write --list-different \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
