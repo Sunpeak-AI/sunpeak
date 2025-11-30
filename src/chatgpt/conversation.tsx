@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { cn } from '~/lib/index';
-import { useDisplayMode } from '../hooks';
+import { useDisplayMode, useWidgetAPI } from '../hooks';
 import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
 
 interface ConversationProps {
@@ -20,13 +20,59 @@ export function Conversation({
 }: ConversationProps) {
   // Read displayMode from window.openai (same source the App uses)
   const displayMode = useDisplayMode() ?? 'inline';
+  const api = useWidgetAPI();
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
 
   // Fullscreen mode: children take over the entire conversation area
   if (displayMode === 'fullscreen') {
+    const handleClose = () => {
+      if (api?.requestDisplayMode) {
+        api.requestDisplayMode({ mode: 'inline' });
+      }
+    };
+
     return (
-      <div className="flex flex-col bg-surface w-full flex-1">
-        <div className="flex-1 overflow-auto">{children}</div>
+      <div className="flex flex-col bg-surface w-full h-full flex-1">
+        <div className="border-subtle bg-surface z-10 grid h-12 grid-cols-[1fr_auto_1fr] border-b px-2">
+          <div className="flex items-center justify-start gap-3">
+            <button
+              onClick={handleClose}
+              aria-label="Close"
+              className="h-7 w-7 flex items-center justify-center hover:bg-subtle rounded-md transition-colors"
+              type="button"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M14.2548 4.75488C14.5282 4.48152 14.9717 4.48152 15.2451 4.75488C15.5184 5.02825 15.5184 5.47175 15.2451 5.74512L10.9902 10L15.2451 14.2549L15.3349 14.3652C15.514 14.6369 15.4841 15.006 15.2451 15.2451C15.006 15.4842 14.6368 15.5141 14.3652 15.335L14.2548 15.2451L9.99995 10.9902L5.74506 15.2451C5.4717 15.5185 5.0282 15.5185 4.75483 15.2451C4.48146 14.9718 4.48146 14.5282 4.75483 14.2549L9.00971 10L4.75483 5.74512L4.66499 5.63477C4.48589 5.3631 4.51575 4.99396 4.75483 4.75488C4.99391 4.51581 5.36305 4.48594 5.63471 4.66504L5.74506 4.75488L9.99995 9.00977L14.2548 4.75488Z" />
+              </svg>
+            </button>
+          </div>
+          <div className="text-secondary flex items-center justify-center text-base">
+            {appName}
+          </div>
+          <div className="flex items-center justify-end"></div>
+        </div>
+        <div className="relative overflow-hidden flex-1">
+          <div className="h-full w-full max-w-full overflow-auto">{children}</div>
+        </div>
+        <footer className="bg-surface">
+          <div className="max-w-[48rem] mx-auto px-4 py-4">
+            <div className="relative">
+              <input
+                type="text"
+                name="userInput"
+                disabled
+                placeholder="Message SimGPT"
+                className="w-full bg-[var(--color-background-primary)] dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
+              />
+            </div>
+          </div>
+        </footer>
       </div>
     );
   }

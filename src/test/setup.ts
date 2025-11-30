@@ -35,3 +35,6 @@ Object.defineProperty(window, 'ResizeObserver', {
   writable: true,
   value: MockResizeObserver,
 });
+
+// Mock scrollIntoView for Select component
+Element.prototype.scrollIntoView = () => {};

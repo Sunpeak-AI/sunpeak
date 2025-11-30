@@ -72,14 +72,49 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
     this.emitUpdate({ theme });
   }
 
+  setUserAgent(userAgent: OpenAiGlobals['userAgent']) {
+    this.userAgent = userAgent;
+    this.emitUpdate({ userAgent });
+  }
+
+  setLocale(locale: string) {
+    this.locale = locale;
+    this.emitUpdate({ locale });
+  }
+
+  setMaxHeight(maxHeight: number) {
+    this.maxHeight = maxHeight;
+    this.emitUpdate({ maxHeight });
+  }
+
   setDisplayMode(displayMode: DisplayMode) {
     this.displayMode = displayMode;
     this.emitUpdate({ displayMode });
   }
 
+  setSafeArea(safeArea: OpenAiGlobals['safeArea']) {
+    this.safeArea = safeArea;
+    this.emitUpdate({ safeArea });
+  }
+
+  setView(view: View | null) {
+    this.view = view;
+    this.emitUpdate({ view });
+  }
+
+  setToolInput(toolInput: Record<string, unknown>) {
+    this.toolInput = toolInput;
+    this.emitUpdate({ toolInput });
+  }
+
   setToolOutput(toolOutput: Record<string, unknown> | null) {
     this.toolOutput = toolOutput;
     this.emitUpdate({ toolOutput });
+  }
+
+  setToolResponseMetadata(toolResponseMetadata: Record<string, unknown> | null) {
+    this.toolResponseMetadata = toolResponseMetadata;
+    this.emitUpdate({ toolResponseMetadata });
   }
 
   setWidgetStateExternal(widgetState: Record<string, unknown> | null) {

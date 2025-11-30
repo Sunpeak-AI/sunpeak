@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { getAPI, type WidgetAPI } from '../providers';
 
 /**
@@ -8,5 +7,5 @@ import { getAPI, type WidgetAPI } from '../providers';
  * @returns The API object, or null if not available.
  */
 export function useWidgetAPI(): WidgetAPI | null {
-  return useMemo(() => getAPI(), []);
+  return getAPI();
 }

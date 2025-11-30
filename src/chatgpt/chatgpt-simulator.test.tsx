@@ -28,7 +28,7 @@ describe('ChatGPTSimulator', () => {
     expect(screen.getByText('Controls')).toBeInTheDocument();
     expect(screen.getByText('Theme')).toBeInTheDocument();
     expect(screen.getByText('Display Mode')).toBeInTheDocument();
-    expect(screen.getByText('Body Width')).toBeInTheDocument();
+    expect(screen.getByText('Simulation Width')).toBeInTheDocument();
   });
 
   it('initializes mock OpenAI on window object', () => {

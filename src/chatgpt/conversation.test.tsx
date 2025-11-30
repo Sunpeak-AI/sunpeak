@@ -42,7 +42,7 @@ describe('Conversation', () => {
     expect(screen.getByText('TravelBot said:', { selector: '.sr-only' })).toBeInTheDocument();
   });
 
-  it('renders simplified layout in fullscreen mode without header', () => {
+  it('renders simplified layout in fullscreen mode with footer', () => {
     // Set displayMode to fullscreen via window.openai
     mock.displayMode = 'fullscreen';
 
@@ -55,6 +55,7 @@ describe('Conversation', () => {
     expect(screen.getByTestId('fullscreen-content')).toBeInTheDocument();
     expect(screen.queryByText('SimGPT')).not.toBeInTheDocument();
     expect(container.querySelector('header')).not.toBeInTheDocument();
-    expect(container.querySelector('footer')).not.toBeInTheDocument();
+    expect(container.querySelector('footer')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Message SimGPT')).toBeInTheDocument();
   });
 });
