@@ -130,8 +130,8 @@ try {
   printSuccess('pnpm build');
 
   // MCP Server Check
-  console.log('\nRunning: pnpm mcp');
-  const mcpProcess = spawn('pnpm', ['mcp'], {
+  console.log('\nRunning: pnpm mcp:serve');
+  const mcpProcess = spawn('pnpm', ['mcp:serve'], {
     cwd: PROJECT_ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, FORCE_COLOR: '1' },
