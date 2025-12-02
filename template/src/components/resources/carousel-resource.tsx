@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useWidgetProps } from 'sunpeak';
+import { useWidgetProps, useSafeArea, useMaxHeight, useUserAgent } from 'sunpeak';
 import { Carousel } from '../carousel/carousel';
 import { Card } from '../card/card';
 
@@ -26,9 +26,23 @@ interface CarouselData extends Record<string, unknown> {
 
 export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
   const data = useWidgetProps<CarouselData>(() => ({ places: [] }));
+  const safeArea = useSafeArea();
+  const maxHeight = useMaxHeight();
+  const userAgent = useUserAgent();
+
+  const hasTouch = userAgent?.capabilities.touch ?? false;
 
   return (
-    <div ref={ref}>
+    <div
+      ref={ref}
+      style={{
+        paddingTop: `${safeArea?.insets.top ?? 0}px`,
+        paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,
+        paddingLeft: `${safeArea?.insets.left ?? 0}px`,
+        paddingRight: `${safeArea?.insets.right ?? 0}px`,
+        maxHeight: maxHeight ?? undefined,
+      }}
+    >
       <Carousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
         {(data.places || []).map((place: CarouselCard) => (
           <Card
@@ -37,6 +51,7 @@ export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) =
             imageAlt={place.name}
             header={place.name}
             metadata={`⭐ ${place.rating} • ${place.category} • ${place.location}`}
+            buttonSize={hasTouch ? 'md' : 'sm'}
             button1={{
               isPrimary: true,
               onClick: () => console.log(`Visit ${place.name}`),

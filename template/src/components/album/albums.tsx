@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { useWidgetState, useDisplayMode, useWidgetAPI, useWidgetProps } from 'sunpeak';
+import {
+  useWidgetState,
+  useDisplayMode,
+  useWidgetAPI,
+  useWidgetProps,
+  useUserAgent,
+} from 'sunpeak';
 import { Carousel } from '../carousel';
 import { AlbumCard } from './album-card';
 import { FullscreenViewer } from './fullscreen-viewer';
@@ -34,9 +40,11 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
   }));
   const displayMode = useDisplayMode();
   const api = useWidgetAPI();
+  const userAgent = useUserAgent();
 
   const albums = data.albums || [];
   const selectedAlbum = albums.find((album) => album.id === widgetState?.selectedAlbumId);
+  const hasTouch = userAgent?.capabilities.touch ?? false;
 
   const handleSelectAlbum = React.useCallback(
     (album: Album) => {
@@ -54,7 +62,12 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
     <div ref={ref} className={className}>
       <Carousel gap={20} showArrows={false} showEdgeGradients={false} cardWidth={272}>
         {albums.map((album) => (
-          <AlbumCard key={album.id} album={album} onSelect={handleSelectAlbum} />
+          <AlbumCard
+            key={album.id}
+            album={album}
+            onSelect={handleSelectAlbum}
+            buttonSize={hasTouch ? 'lg' : 'md'}
+          />
         ))}
       </Carousel>
     </div>

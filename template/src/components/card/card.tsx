@@ -19,6 +19,7 @@ export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   button1?: CardButtonProps;
   button2?: CardButtonProps;
   variant?: 'default' | 'bordered' | 'elevated';
+  buttonSize?: 'xs' | 'sm' | 'md' | 'lg';
 }
 
 export const Card = React.forwardRef<HTMLDivElement, CardProps>(
@@ -34,6 +35,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
       button1,
       button2,
       variant = 'default',
+      buttonSize = 'sm',
       className,
       onClick,
       ...props
@@ -63,6 +65,7 @@ export const Card = React.forwardRef<HTMLDivElement, CardProps>(
           color={isPrimary ? 'primary' : 'secondary'}
           variant={isPrimary ? 'solid' : 'soft'}
           onClick={handleClick}
+          size={buttonSize}
         >
           {children}
         </Button>

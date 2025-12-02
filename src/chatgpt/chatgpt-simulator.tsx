@@ -328,13 +328,31 @@ export function ChatGPTSimulator({
             <SidebarControl label="User Agent - Device">
               <SidebarSelect
                 value={userAgent?.device.type ?? 'desktop'}
-                onChange={(value) =>
+                onChange={(value) => {
+                  const deviceType = value as DeviceType;
+                  // Set appropriate default capabilities based on device type
+                  let capabilities;
+                  switch (deviceType) {
+                    case 'mobile':
+                      capabilities = { hover: false, touch: true };
+                      break;
+                    case 'tablet':
+                      capabilities = { hover: false, touch: true };
+                      break;
+                    case 'desktop':
+                      capabilities = { hover: true, touch: false };
+                      break;
+                    case 'unknown':
+                    default:
+                      capabilities = { hover: true, touch: false };
+                      break;
+                  }
                   mock.setUserAgent({
                     ...userAgent,
-                    device: { type: value as DeviceType },
-                    capabilities: userAgent?.capabilities ?? { hover: true, touch: false },
-                  })
-                }
+                    device: { type: deviceType },
+                    capabilities,
+                  });
+                }}
                 options={[
                   { value: 'mobile', label: 'Mobile' },
                   { value: 'tablet', label: 'Tablet' },
@@ -344,38 +362,40 @@ export function ChatGPTSimulator({
               />
             </SidebarControl>
 
-            <SidebarControl label="Capabilities">
-              <div className="flex gap-2">
-                <SidebarCheckbox
-                  checked={userAgent?.capabilities.hover ?? true}
-                  onChange={(checked) =>
-                    mock.setUserAgent({
-                      ...userAgent,
-                      device: userAgent?.device ?? { type: 'desktop' },
-                      capabilities: {
-                        hover: checked,
-                        touch: userAgent?.capabilities.touch ?? false,
-                      },
-                    })
-                  }
-                  label="Hover"
-                />
-                <SidebarCheckbox
-                  checked={userAgent?.capabilities.touch ?? false}
-                  onChange={(checked) =>
-                    mock.setUserAgent({
-                      ...userAgent,
-                      device: userAgent?.device ?? { type: 'desktop' },
-                      capabilities: {
-                        hover: userAgent?.capabilities.hover ?? true,
-                        touch: checked,
-                      },
-                    })
-                  }
-                  label="Touch"
-                />
-              </div>
-            </SidebarControl>
+            <div className="pl-4">
+              <SidebarControl label="Capabilities">
+                <div className="flex gap-2">
+                  <SidebarCheckbox
+                    checked={userAgent?.capabilities.hover ?? true}
+                    onChange={(checked) =>
+                      mock.setUserAgent({
+                        ...userAgent,
+                        device: userAgent?.device ?? { type: 'desktop' },
+                        capabilities: {
+                          hover: checked,
+                          touch: userAgent?.capabilities.touch ?? false,
+                        },
+                      })
+                    }
+                    label="Hover"
+                  />
+                  <SidebarCheckbox
+                    checked={userAgent?.capabilities.touch ?? false}
+                    onChange={(checked) =>
+                      mock.setUserAgent({
+                        ...userAgent,
+                        device: userAgent?.device ?? { type: 'desktop' },
+                        capabilities: {
+                          hover: userAgent?.capabilities.hover ?? true,
+                          touch: checked,
+                        },
+                      })
+                    }
+                    label="Touch"
+                  />
+                </div>
+              </SidebarControl>
+            </div>
 
             <SidebarControl label="Safe Area Insets">
               <div className="grid grid-cols-2 gap-1">

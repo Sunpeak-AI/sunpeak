@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useMaxHeight } from 'sunpeak';
+import { useMaxHeight, useSafeArea } from 'sunpeak';
 import { cn } from '../../lib/index';
 import { FilmStrip } from './film-strip';
 import type { Album } from './albums';
@@ -12,6 +12,7 @@ export type FullscreenViewerProps = {
 export const FullscreenViewer = React.forwardRef<HTMLDivElement, FullscreenViewerProps>(
   ({ album, className }, ref) => {
     const maxHeight = useMaxHeight();
+    const safeArea = useSafeArea();
     const [selectedIndex, setSelectedIndex] = React.useState(0);
 
     React.useEffect(() => {
@@ -31,12 +32,25 @@ export const FullscreenViewer = React.forwardRef<HTMLDivElement, FullscreenViewe
       >
         <div className="absolute inset-0 flex flex-row overflow-hidden">
           {/* Film strip */}
-          <div className="hidden md:block absolute pointer-events-none z-10 left-0 top-0 bottom-0 w-40">
+          <div
+            className="hidden md:block absolute pointer-events-none z-10 left-0 top-0 bottom-0 w-40"
+            style={{
+              paddingLeft: `${safeArea?.insets.left ?? 0}px`,
+            }}
+          >
             <FilmStrip album={album} selectedIndex={selectedIndex} onSelect={setSelectedIndex} />
           </div>
 
           {/* Main photo */}
-          <div className="flex-1 min-w-0 px-40 py-10 relative flex items-center justify-center">
+          <div
+            className="flex-1 min-w-0 px-40 py-10 relative flex items-center justify-center"
+            style={{
+              paddingTop: `calc(2.5rem + ${safeArea?.insets.top ?? 0}px)`,
+              paddingBottom: `calc(2.5rem + ${safeArea?.insets.bottom ?? 0}px)`,
+              paddingLeft: `calc(10rem + ${safeArea?.insets.left ?? 0}px)`,
+              paddingRight: `calc(10rem + ${safeArea?.insets.right ?? 0}px)`,
+            }}
+          >
             <div className="relative w-full h-full">
               {selectedPhoto ? (
                 <img

@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useSafeArea, useMaxHeight } from 'sunpeak';
 import { Albums } from '../album/albums';
 
 /**
@@ -8,6 +9,22 @@ import { Albums } from '../album/albums';
  * Can be dropped into any production environment without changes.
  */
 export const AlbumsResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  return <Albums ref={ref} />;
+  const safeArea = useSafeArea();
+  const maxHeight = useMaxHeight();
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        paddingTop: `${safeArea?.insets.top ?? 0}px`,
+        paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,
+        paddingLeft: `${safeArea?.insets.left ?? 0}px`,
+        paddingRight: `${safeArea?.insets.right ?? 0}px`,
+        maxHeight: maxHeight ?? undefined,
+      }}
+    >
+      <Albums />
+    </div>
+  );
 });
 AlbumsResource.displayName = 'AlbumsResource';

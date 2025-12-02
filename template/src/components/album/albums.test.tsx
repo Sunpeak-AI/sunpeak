@@ -6,12 +6,20 @@ import { Albums, type AlbumsData } from './albums';
 const mockSetWidgetState = vi.fn();
 const mockRequestDisplayMode = vi.fn();
 let mockWidgetData: AlbumsData = { albums: [] };
+let mockUserAgent: {
+  device: { type: 'desktop' | 'mobile' | 'tablet' | 'unknown' };
+  capabilities: { hover: boolean; touch: boolean };
+} = {
+  device: { type: 'desktop' },
+  capabilities: { hover: true, touch: false },
+};
 
 vi.mock('sunpeak', () => ({
   useWidgetProps: () => mockWidgetData,
   useWidgetState: () => [{ selectedAlbumId: null }, mockSetWidgetState],
   useDisplayMode: () => 'default',
   useWidgetAPI: () => ({ requestDisplayMode: mockRequestDisplayMode }),
+  useUserAgent: () => mockUserAgent,
 }));
 
 // Mock child components to simplify testing
@@ -24,6 +32,22 @@ vi.mock('./fullscreen-viewer', () => ({
 vi.mock('../carousel', () => ({
   Carousel: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="carousel">{children}</div>
+  ),
+}));
+
+vi.mock('./album-card', () => ({
+  AlbumCard: ({
+    album,
+    onSelect,
+    buttonSize,
+  }: {
+    album: { title: string };
+    onSelect: (a: unknown) => void;
+    buttonSize?: string;
+  }) => (
+    <button onClick={() => onSelect(album)} data-button-size={buttonSize}>
+      {album.title}
+    </button>
   ),
 }));
 
@@ -46,6 +70,7 @@ describe('Albums', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWidgetData = { albums: mockAlbums };
+    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
   });
 
   it('renders Carousel with all albums in default mode', () => {
@@ -84,5 +109,27 @@ describe('Albums', () => {
     // Should not render any album cards
     const buttons = container.querySelectorAll('button');
     expect(buttons.length).toBe(0);
+  });
+
+  it('passes larger button size for touch devices', () => {
+    mockUserAgent = { device: { type: 'mobile' }, capabilities: { hover: false, touch: true } };
+
+    render(<Albums />);
+
+    const albumButtons = screen.getAllByRole('button');
+    albumButtons.forEach((button) => {
+      expect(button).toHaveAttribute('data-button-size', 'lg');
+    });
+  });
+
+  it('passes standard button size for non-touch devices', () => {
+    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
+
+    render(<Albums />);
+
+    const albumButtons = screen.getAllByRole('button');
+    albumButtons.forEach((button) => {
+      expect(button).toHaveAttribute('data-button-size', 'md');
+    });
   });
 });

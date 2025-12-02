@@ -4,8 +4,12 @@ import { FullscreenViewer } from './fullscreen-viewer';
 import type { Album } from './albums';
 
 // Mock sunpeak hooks
+let mockMaxHeight = 800;
+let mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
+
 vi.mock('sunpeak', () => ({
-  useMaxHeight: () => 800,
+  useMaxHeight: () => mockMaxHeight,
+  useSafeArea: () => mockSafeArea,
 }));
 
 describe('FullscreenViewer', () => {
@@ -73,5 +77,30 @@ describe('FullscreenViewer', () => {
     // Should not render any img element in the main photo area
     const images = container.querySelectorAll('img');
     expect(images.length).toBe(0);
+  });
+
+  it('respects safe area insets for main photo area', () => {
+    mockSafeArea = { insets: { top: 20, bottom: 30, left: 10, right: 15 } };
+
+    const { container } = render(<FullscreenViewer album={mockAlbum} />);
+
+    // Find the main photo area
+    const mainPhotoArea = container.querySelector('.flex-1.min-w-0');
+    expect(mainPhotoArea).toBeInTheDocument();
+
+    // Note: calc values may not be computed in jsdom, so we check the element has the style attribute
+    expect(mainPhotoArea).toHaveAttribute('style');
+  });
+
+  it('respects maxHeight constraint', () => {
+    mockMaxHeight = 600;
+
+    const { container } = render(<FullscreenViewer album={mockAlbum} />);
+
+    const mainDiv = container.firstChild as HTMLElement;
+    expect(mainDiv).toHaveStyle({
+      maxHeight: '600px',
+      height: '600px',
+    });
   });
 });

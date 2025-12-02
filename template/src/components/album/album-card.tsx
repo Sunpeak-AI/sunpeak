@@ -7,15 +7,17 @@ export type AlbumCardProps = {
   album: Album;
   onSelect?: (album: Album) => void;
   className?: string;
+  buttonSize?: 'xs' | 'sm' | 'md' | 'lg';
 };
 
 export const AlbumCard = React.forwardRef<HTMLButtonElement, AlbumCardProps>(
-  ({ album, onSelect, className }, ref) => {
+  ({ album, onSelect, className, buttonSize = 'md' }, ref) => {
     return (
       <Button
         ref={ref}
         variant="ghost"
         color="secondary"
+        size={buttonSize}
         className={cn(
           'rounded-xl flex-shrink-0 w-full h-full p-0 text-left flex flex-col [&:hover]:bg-transparent hover:bg-transparent cursor-pointer',
           className

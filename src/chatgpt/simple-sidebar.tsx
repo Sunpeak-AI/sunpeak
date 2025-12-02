@@ -18,9 +18,7 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
         <div className="p-3">
           <div className="space-y-3">
             <div>
-              <h2 className="text-xs font-semibold sticky top-0 bg-background z-10">
-                Controls
-              </h2>
+              <h2 className="text-xs font-semibold sticky top-0 bg-background z-10">Controls</h2>
               {controls}
             </div>
           </div>
