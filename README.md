@@ -1,7 +1,7 @@
 <div align="center">
   <a href="https://sunpeak.ai">
     <picture>
-      <img alt="Sunpeak logo" src="https://sunpeak.ai/images/sunpeak_github.svg">
+      <img alt="Sunpeak logo" src="https://d10djik02wlf6x.cloudfront.net/sunpeak-github.svg">
     </picture>
   </a>
 </div>
@@ -24,7 +24,7 @@ Quickstart, build, and test your ChatGPT App locally with OpenAI apps-sdk-ui Rea
 <div align="center">
   <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
     <picture>
-      <img alt="ChatGPT Simulator" src="https://sunpeak.ai/images/chatgpt-simulator.png">
+      <img alt="ChatGPT Simulator" src="https://d10djik02wlf6x.cloudfront.net/chatgpt-simulator.png">
     </picture>
   </a>
 </div>
