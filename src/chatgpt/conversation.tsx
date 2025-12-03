@@ -81,11 +81,7 @@ export function Conversation({
       >
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* User turn */}
-          <article
-            className="text-primary w-full focus:outline-none"
-            dir="auto"
-            data-turn="user"
-          >
+          <article className="text-primary w-full focus:outline-none" dir="auto" data-turn="user">
             <h5 className="sr-only">You said:</h5>
             <div className="text-base my-auto mx-auto pt-12 px-4">
               <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">

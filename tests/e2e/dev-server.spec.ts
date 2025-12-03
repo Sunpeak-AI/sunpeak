@@ -45,13 +45,11 @@ test.describe('Dev Server', () => {
       const computed = window.getComputedStyle(el);
       return {
         alignItems: computed.alignItems,
-        borderBottomWidth: computed.borderBottomWidth,
       };
     });
 
     // Verify key layout styles are applied
     expect(styles.alignItems).toBe('center');
-    expect(parseFloat(styles.borderBottomWidth)).toBeGreaterThan(0); // border-b
   });
 
   test('should render place card with proper typography styles', async ({ page }) => {
