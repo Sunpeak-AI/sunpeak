@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.5.16",
+  "version": "0.5.17",
   "description": "The MCP App SDK. Quickstart, build, & test your ChatGPT App locally!",
   "type": "module",
   "main": "./dist/index.cjs",
