@@ -14,7 +14,7 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
-      <aside className="hidden md:flex w-56 flex-col border-r border-subtle bg-background h-screen overflow-y-auto">
+      <aside className="max-md:hidden md:flex w-56 flex-col border-r border-subtle bg-background h-screen overflow-y-auto">
         <div className="p-3">
           <div className="space-y-3">
             <div>
