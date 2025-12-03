@@ -15,10 +15,10 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
       <aside className="max-md:hidden md:flex w-56 flex-col border-r border-subtle bg-sidebar overflow-hidden">
-        <div className="flex-1 overflow-y-auto min-h-0 p-3">
+        <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-3 pt-0">
           <div className="space-y-3">
             <div>
-              <h2 className="text-xs font-semibold sticky top-0 bg-sidebar z-10 pb-2">Controls</h2>
+              <h2 className="text-xs font-semibold sticky top-0 bg-sidebar z-10 py-2">Controls</h2>
               {controls}
             </div>
           </div>

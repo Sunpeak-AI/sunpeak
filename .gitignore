@@ -47,4 +47,5 @@ CLAUDE.md
 *.log
 .cache
 .temp
+.tmp
 tmp

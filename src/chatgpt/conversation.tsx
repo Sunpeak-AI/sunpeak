@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { cn } from '~/lib/index';
+import { CloseBold } from '@openai/apps-sdk-ui/components/Icon';
 import { useDisplayMode, useWidgetAPI } from '../hooks';
 import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
 
@@ -41,15 +41,7 @@ export function Conversation({
               className="h-7 w-7 flex items-center justify-center hover:bg-subtle rounded-md transition-colors text-primary"
               type="button"
             >
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M14.2548 4.75488C14.5282 4.48152 14.9717 4.48152 15.2451 4.75488C15.5184 5.02825 15.5184 5.47175 15.2451 5.74512L10.9902 10L15.2451 14.2549L15.3349 14.3652C15.514 14.6369 15.4841 15.006 15.2451 15.2451C15.006 15.4842 14.6368 15.5141 14.3652 15.335L14.2548 15.2451L9.99995 10.9902L5.74506 15.2451C5.4717 15.5185 5.0282 15.5185 4.75483 15.2451C4.48146 14.9718 4.48146 14.5282 4.75483 14.2549L9.00971 10L4.75483 5.74512L4.66499 5.63477C4.48589 5.3631 4.51575 4.99396 4.75483 4.75488C4.99391 4.51581 5.36305 4.48594 5.63471 4.66504L5.74506 4.75488L9.99995 9.00977L14.2548 4.75488Z" />
-              </svg>
+              <CloseBold />
             </button>
           </div>
           <div className="text-primary flex items-center justify-center text-base">{appName}</div>
@@ -78,7 +70,7 @@ export function Conversation({
   return (
     <div className="flex flex-col bg-surface w-full h-full flex-1">
       {/* Header bar */}
-      <header className="h-12 border-b border-subtle bg-surface flex items-center px-4 text-lg">
+      <header className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40">
         <span className="text-primary">SimGPT</span>
       </header>
 
@@ -144,15 +136,32 @@ export function Conversation({
                   >
                     <div className="flex w-full flex-col gap-1 empty:hidden">
                       {/* App UI content area - allows horizontal overflow for carousel */}
-                      <div
-                        className={cn(
-                          'w-full overflow-x-auto',
-                          displayMode === 'pip' &&
-                            'fixed bottom-20 right-6 z-50 w-80 rounded-xl shadow-xl border bg-card p-4 overflow-x-hidden'
-                        )}
-                      >
-                        {children}
-                      </div>
+                      {displayMode === 'pip' ? (
+                        <div
+                          className="fixed start-4 end-4 top-14 z-50 mx-auto max-w-[48rem] md:start-60 md:end-4 sm:start-0 sm:end-0 sm:w-full overflow-visible"
+                          style={{ maxHeight: '429px' }}
+                        >
+                          <button
+                            onClick={() => {
+                              if (api?.requestDisplayMode) {
+                                api.requestDisplayMode({ mode: 'inline' });
+                              }
+                            }}
+                            className="absolute -start-2 -top-1.5 z-10 rounded-full bg-[#3a3a3a] p-1.5 text-white shadow-[0px_0px_0px_1px_var(--border-heavy),0px_4px_12px_rgba(0,0,0,0.12)] hover:bg-[#6a6a6a]"
+                            aria-label="Close picture-in-picture"
+                            type="button"
+                          >
+                            <CloseBold className="h-4 w-4" />
+                          </button>
+                          <div className="relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_var(--border-heavy),0px_6px_20px_rgba(0,0,0,0.1)] border border-subtle">
+                            <div className="h-full w-full max-w-full overflow-auto bg-surface">
+                              {children}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="w-full overflow-x-auto">{children}</div>
+                      )}
                     </div>
                   </div>
                 </div>
