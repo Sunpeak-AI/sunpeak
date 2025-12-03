@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync, renameSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
@@ -50,6 +50,16 @@ async function init(projectName) {
       return name !== 'node_modules' && name !== 'pnpm-lock.yaml';
     },
   });
+
+  // Rename underscore-prefixed files to dotfiles
+  const dotfiles = ['_gitignore', '_prettierignore', '_prettierrc'];
+  for (const file of dotfiles) {
+    const srcPath = join(targetDir, file);
+    const destPath = join(targetDir, file.replace(/^_/, '.'));
+    if (existsSync(srcPath)) {
+      renameSync(srcPath, destPath);
+    }
+  }
 
   // Read sunpeak version from root package.json
   const rootPkgPath = join(__dirname, '..', 'package.json');
