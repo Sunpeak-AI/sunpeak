@@ -38,7 +38,7 @@ export function Conversation({
             <button
               onClick={handleClose}
               aria-label="Close"
-              className="h-7 w-7 flex items-center justify-center hover:bg-subtle rounded-md transition-colors"
+              className="h-7 w-7 flex items-center justify-center hover:bg-subtle rounded-md transition-colors text-primary"
               type="button"
             >
               <svg
@@ -52,7 +52,7 @@ export function Conversation({
               </svg>
             </button>
           </div>
-          <div className="text-secondary flex items-center justify-center text-base">{appName}</div>
+          <div className="text-primary flex items-center justify-center text-base">{appName}</div>
           <div className="flex items-center justify-end"></div>
         </div>
         <div className="relative overflow-hidden flex-1">
@@ -79,7 +79,7 @@ export function Conversation({
     <div className="flex flex-col bg-surface w-full h-full flex-1">
       {/* Header bar */}
       <header className="h-12 border-b border-subtle bg-surface flex items-center px-4 text-lg">
-        <span className="text-foreground">SimGPT</span>
+        <span className="text-primary">SimGPT</span>
       </header>
 
       {/* Conversation container with configurable width */}
@@ -90,7 +90,7 @@ export function Conversation({
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
           {/* User turn */}
           <article
-            className="text-foreground w-full focus:outline-none"
+            className="text-primary w-full focus:outline-none"
             dir="auto"
             data-turn="user"
           >
@@ -115,7 +115,7 @@ export function Conversation({
 
           {/* Assistant turn */}
           <article
-            className="text-foreground w-full focus:outline-none"
+            className="text-primary w-full focus:outline-none"
             dir="auto"
             data-turn="assistant"
           >

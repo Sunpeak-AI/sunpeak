@@ -9,3 +9,8 @@
 
 /* Configure dark mode to use data-theme attribute (OpenAI SDK standard) */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Custom utilities that use OpenAI SDK color variables */
+@utility bg-sidebar {
+  background-color: var(--color-surface-secondary);
+}
