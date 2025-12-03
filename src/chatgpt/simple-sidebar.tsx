@@ -14,11 +14,11 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
   return (
     <div className="flex h-screen w-full overflow-hidden">
       {/* Sidebar */}
-      <aside className="max-md:hidden md:flex w-56 flex-col border-r border-subtle bg-sidebar h-screen overflow-y-auto">
-        <div className="p-3">
+      <aside className="max-md:hidden md:flex w-56 flex-col border-r border-subtle bg-sidebar overflow-hidden">
+        <div className="flex-1 overflow-y-auto min-h-0 p-3">
           <div className="space-y-3">
             <div>
-              <h2 className="text-xs font-semibold sticky top-0 bg-sidebar z-10">Controls</h2>
+              <h2 className="text-xs font-semibold sticky top-0 bg-sidebar z-10 pb-2">Controls</h2>
               {controls}
             </div>
           </div>
@@ -26,7 +26,7 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto h-screen">{children}</main>
+      <main className="flex-1 overflow-auto">{children}</main>
     </div>
   );
 }
