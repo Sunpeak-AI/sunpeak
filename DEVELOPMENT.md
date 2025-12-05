@@ -41,7 +41,7 @@ ngrok http 6766
 
 You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see the template UI in action: `User > Settings > Apps & Connectors > Create`
 
-Once the app is connected, send `show app` to ChatGPT. Many changes require you to Refresh the app on the same settings modal.
+Once the app is connected, send the name of a tool simulation, like `show carousel`, to ChatGPT. Many changes require you to Refresh the app on the same settings modal.
 
 ## Deployment
 
