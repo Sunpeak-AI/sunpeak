@@ -33,6 +33,7 @@
   "files": [
     "dist",
     "bin",
+    "cli",
     "template",
     "README.md"
   ],

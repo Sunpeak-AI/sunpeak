@@ -4,8 +4,10 @@ import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync, renameSync 
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
+import { spawn } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const CLI_DIR = join(__dirname, '..', 'cli');
 
 function prompt(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -15,6 +17,28 @@ function prompt(question) {
       resolve(answer.trim());
     });
   });
+}
+
+function runCommand(command, args = [], options = {}) {
+  const child = spawn(command, args, {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+    env: { ...process.env, FORCE_COLOR: '1' },
+    ...options,
+  });
+
+  child.on('exit', (code) => {
+    process.exit(code || 0);
+  });
+}
+
+function checkPackageJson() {
+  const pkgPath = join(process.cwd(), 'package.json');
+  if (!existsSync(pkgPath)) {
+    console.error('Error: No package.json found in current directory.');
+    console.error('Make sure you are in a Sunpeak project directory.');
+    process.exit(1);
+  }
 }
 
 async function init(projectName) {
@@ -82,7 +106,8 @@ async function init(projectName) {
 Done! To get started:
 
   cd ${projectName}
-  pnpm install && pnpm dev
+  pnpm install
+  sunpeak dev
 
 See README.md for more details.
 `);
@@ -90,13 +115,100 @@ See README.md for more details.
 
 const [, , command, ...args] = process.argv;
 
-if (command === 'new') {
-  init(args[0]);
-} else {
-  console.log(`
-sunpeak - The MCP App SDK
+// Main CLI handler
+(async () => {
+  // Commands that don't require a package.json
+  const standaloneCommands = ['new', 'help', undefined];
+
+  if (command && !standaloneCommands.includes(command)) {
+    checkPackageJson();
+  }
+
+  switch (command) {
+    case 'new':
+      await init(args[0]);
+      break;
+
+    case 'dev':
+      runCommand('pnpm', ['dev', ...args]);
+      break;
+
+    case 'build':
+      {
+        const { build } = await import(join(CLI_DIR, 'build.mjs'));
+        await build(process.cwd());
+      }
+      break;
+
+    case 'mcp':
+    case 'mcp:serve':
+      if (command === 'mcp:serve' || args[0] === 'serve' || args[0] === ':serve') {
+        runCommand('pnpm', ['mcp:serve', ...(command === 'mcp:serve' ? args : args.slice(1))]);
+      } else {
+        runCommand('pnpm', ['mcp', ...args]);
+      }
+      break;
+
+    case 'lint':
+      runCommand('pnpm', ['lint', ...args]);
+      break;
+
+    case 'typecheck':
+      runCommand('pnpm', ['typecheck', ...args]);
+      break;
+
+    case 'test':
+      runCommand('pnpm', ['test', ...args]);
+      break;
+
+    case 'format':
+      runCommand('pnpm', ['format', ...args]);
+      break;
+
+    case 'validate':
+      {
+        const { validate } = await import(join(CLI_DIR, 'validate.mjs'));
+        await validate(process.cwd());
+      }
+      break;
+
+    case 'help':
+    case undefined:
+      console.log(`
+☀️ 🏔️ sunpeak - The MCP App SDK
+
+Usage:
+  sunpeak <command> [options]
 
 Commands:
-  new [name]  Create a new project from template
+  new [name]       Create a new project from template
+  dev              Start the development server
+  build            Build all resources for production
+  mcp              Run the MCP server with nodemon
+  mcp:serve        Run the MCP server directly
+  lint             Run ESLint to check code quality
+  typecheck        Run TypeScript type checking
+  test             Run tests with Vitest
+  format           Format code with Prettier
+  validate         Run full validation suite
+  help             Show this help message
+
+Examples:
+  sunpeak new my-app
+  sunpeak dev
+  sunpeak build
+  sunpeak mcp
+
+For more information, visit: https://sunpeak.ai/
 `);
-}
+      break;
+
+    default:
+      console.error(`Unknown command: ${command}`);
+      console.error('Run "sunpeak help" to see available commands.');
+      process.exit(1);
+  }
+})().catch((error) => {
+  console.error('Error:', error.message);
+  process.exit(1);
+});

@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "node scripts/build-all.mjs",
+    "build": "sunpeak build",
     "dev": "vite --port ${PORT:-6767}",
     "format": "prettier --write --list-different \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "mcp": "nodemon",
@@ -12,7 +12,7 @@
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "validate": "node scripts/validate.mjs"
+    "validate": "sunpeak validate"
   },
   "dependencies": {
     "@openai/apps-sdk-ui": "^0.2.0",
