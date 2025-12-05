@@ -36,7 +36,11 @@ Quickstart, build, and test your ChatGPT App locally with OpenAI apps-sdk-ui Rea
 Requirements: Node (20+), pnpm (10+)
 
 ```bash
-pnpm dlx sunpeak new
+# Install the CLI globally
+pnpm add -g sunpeak
+
+# Create a new project
+sunpeak new
 ```
 
 To add sunpeak to an existing project, refer to the [documentation](https://docs.sunpeak.ai/add-to-existing-project).

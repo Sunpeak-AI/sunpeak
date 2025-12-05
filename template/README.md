@@ -7,9 +7,17 @@ For an initial overview of your new app and the sunpeak API, refer to the [docum
 ## Quickstart
 
 ```bash
+# Install the sunpeak CLI (if not already installed)
+pnpm add -g sunpeak
+
+# Install project dependencies
 pnpm install
+
+# Start development server
 sunpeak dev
 ```
+
+Alternatively, use `pnpm dlx sunpeak dev` if you prefer not to install globally.
 
 Edit the resource files in [./src/components/resources/](./src/components/resources/) to build your resource UI.
 

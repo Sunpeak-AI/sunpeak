@@ -105,9 +105,17 @@ async function init(projectName) {
   console.log(`
 Done! To get started:
 
+  # Install the CLI (if not already installed)
+  pnpm add -g sunpeak
+
+  # Navigate to your project and install dependencies
   cd ${projectName}
   pnpm install
+
+  # Start development
   sunpeak dev
+
+Alternatively, use "pnpm dlx sunpeak dev" if you prefer not to install globally.
 
 See README.md for more details.
 `);
