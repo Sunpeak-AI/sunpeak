@@ -1,5 +1,7 @@
-@import "tailwindcss";
-@import "@openai/apps-sdk-ui/css";
+/* Establish explicit layer order BEFORE any imports to ensure proper cascade */
+@layer properties, theme, base, components, utilities;
+
+/* sunpeak/style.css handles tailwindcss and @openai/apps-sdk-ui/css imports */
 @import "sunpeak/style.css";
 
 /* Scan app-specific source files for Tailwind classes */
