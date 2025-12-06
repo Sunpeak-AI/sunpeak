@@ -97,10 +97,27 @@ try {
   // Template level tests
   printSection('TEMPLATE LEVEL TESTS');
 
-  console.log('Running: pnpm validate');
-  if (!runCommand('pnpm --filter my-sunpeak-app validate', REPO_ROOT)) {
-    throw new Error('Template validation failed');
+  const templateDir = join(REPO_ROOT, 'template');
+
+  console.log('Running: pnpm install (template)');
+  if (!runCommand('pnpm install', templateDir)) {
+    throw new Error('pnpm install failed in template');
   }
+  console.log()
+  printSuccess('pnpm install (template)');
+
+  console.log('\nRunning: pnpm test (template)');
+  if (!runCommand('pnpm test', templateDir)) {
+    throw new Error('pnpm test failed in template');
+  }
+  printSuccess('pnpm test (template)');
+
+  console.log('\nRunning: sunpeak build (template)');
+  if (!runCommand('node ../bin/sunpeak.js build', templateDir)) {
+    throw new Error('sunpeak build failed in template');
+  }
+  console.log()
+  printSuccess('sunpeak build (template)');
 
   console.log('Checking: Playwright browsers');
   if (!runCommand('pnpm exec playwright install chromium --with-deps', REPO_ROOT)) {

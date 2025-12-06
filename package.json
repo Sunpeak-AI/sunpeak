@@ -25,6 +25,8 @@
         "default": "./dist/mcp/index.js"
       }
     },
+    "./dev/entry": "./src/dev/entry.tsx",
+    "./mcp/entry": "./dist/mcp/entry.js",
     "./package.json": "./package.json"
   },
   "bin": {
@@ -33,7 +35,6 @@
   "files": [
     "dist",
     "bin",
-    "cli",
     "template",
     "README.md"
   ],

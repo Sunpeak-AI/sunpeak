@@ -4,10 +4,9 @@ import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync, renameSync 
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
-import { spawn } from 'child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const CLI_DIR = join(__dirname, '..', 'cli');
+const COMMANDS_DIR = join(__dirname, 'commands');
 
 function prompt(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -16,19 +15,6 @@ function prompt(question) {
       rl.close();
       resolve(answer.trim());
     });
-  });
-}
-
-function runCommand(command, args = [], options = {}) {
-  const child = spawn(command, args, {
-    cwd: process.cwd(),
-    stdio: 'inherit',
-    env: { ...process.env, FORCE_COLOR: '1' },
-    ...options,
-  });
-
-  child.on('exit', (code) => {
-    process.exit(code || 0);
   });
 }
 
@@ -105,17 +91,16 @@ async function init(projectName) {
   console.log(`
 Done! To get started:
 
-  # Install the CLI (if not already installed)
-  pnpm add -g sunpeak
-
-  # Navigate to your project and install dependencies
   cd ${projectName}
   pnpm install
+  pnpm dev
 
-  # Start development
-  sunpeak dev
+That's it! Your project commands:
 
-Alternatively, use "pnpm dlx sunpeak dev" if you prefer not to install globally.
+  pnpm dev          # Start development server
+  pnpm build        # Build for production
+  pnpm mcp          # Start MCP server
+  pnpm test         # Run tests
 
 See README.md for more details.
 `);
@@ -138,45 +123,23 @@ const [, , command, ...args] = process.argv;
       break;
 
     case 'dev':
-      runCommand('pnpm', ['dev', ...args]);
+      {
+        const { dev } = await import(join(COMMANDS_DIR, 'dev.mjs'));
+        await dev(process.cwd(), args);
+      }
       break;
 
     case 'build':
       {
-        const { build } = await import(join(CLI_DIR, 'build.mjs'));
+        const { build } = await import(join(COMMANDS_DIR, 'build.mjs'));
         await build(process.cwd());
       }
       break;
 
     case 'mcp':
-    case 'mcp:serve':
-      if (command === 'mcp:serve' || args[0] === 'serve' || args[0] === ':serve') {
-        runCommand('pnpm', ['mcp:serve', ...(command === 'mcp:serve' ? args : args.slice(1))]);
-      } else {
-        runCommand('pnpm', ['mcp', ...args]);
-      }
-      break;
-
-    case 'lint':
-      runCommand('pnpm', ['lint', ...args]);
-      break;
-
-    case 'typecheck':
-      runCommand('pnpm', ['typecheck', ...args]);
-      break;
-
-    case 'test':
-      runCommand('pnpm', ['test', ...args]);
-      break;
-
-    case 'format':
-      runCommand('pnpm', ['format', ...args]);
-      break;
-
-    case 'validate':
       {
-        const { validate } = await import(join(CLI_DIR, 'validate.mjs'));
-        await validate(process.cwd());
+        const { mcp } = await import(join(COMMANDS_DIR, 'mcp.mjs'));
+        await mcp(process.cwd(), args);
       }
       break;
 
@@ -186,26 +149,20 @@ const [, , command, ...args] = process.argv;
 ☀️ 🏔️ sunpeak - The MCP App SDK
 
 Usage:
-  sunpeak <command> [options]
+  npx sunpeak new [name]   Create a new project (no install needed)
+  pnpm dlx sunpeak new     Alternative with pnpm
 
-Commands:
-  new [name]       Create a new project from template
-  dev              Start the development server
-  build            Build all resources for production
-  mcp              Run the MCP server with nodemon
-  mcp:serve        Run the MCP server directly
-  lint             Run ESLint to check code quality
-  typecheck        Run TypeScript type checking
-  test             Run tests with Vitest
-  format           Format code with Prettier
-  validate         Run full validation suite
-  help             Show this help message
+Inside your project, use npm scripts:
+  pnpm dev                 Start development server
+  pnpm build               Build for production
+  pnpm mcp                 Start MCP server
+  pnpm test                Run tests
 
-Examples:
-  sunpeak new my-app
-  sunpeak dev
-  sunpeak build
-  sunpeak mcp
+Direct CLI commands (when sunpeak is installed):
+  sunpeak new [name]       Create a new project
+  sunpeak dev              Start dev server
+  sunpeak build            Build resources
+  sunpeak mcp              Start MCP server
 
 For more information, visit: https://sunpeak.ai/
 `);

@@ -2,6 +2,6 @@
   "watch": ["src"],
   "ext": "ts,tsx,js,jsx,css",
   "ignore": ["dist", "node_modules", ".tmp"],
-  "exec": "pnpm build && pnpm mcp:serve",
+  "exec": "sunpeak build && tsx node_modules/sunpeak/dist/mcp/entry.js",
   "delay": 500
 }

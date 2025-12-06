@@ -41,6 +41,7 @@ export default defineConfig({
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
         'mcp/index': resolve(__dirname, 'src/mcp/index.ts'),
+        'mcp/entry': resolve(__dirname, 'src/mcp/entry.ts'),
       },
       formats: ['es', 'cjs'],
       fileName: (format, entryName) => {

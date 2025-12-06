@@ -7,43 +7,31 @@ For an initial overview of your new app and the sunpeak API, refer to the [docum
 ## Quickstart
 
 ```bash
-# Install the sunpeak CLI (if not already installed)
-pnpm add -g sunpeak
-
-# Install project dependencies
 pnpm install
-
-# Start development server
-sunpeak dev
+pnpm dev
 ```
 
-Alternatively, use `pnpm dlx sunpeak dev` if you prefer not to install globally.
+That's it! Edit the resource files in [./src/components/resources/](./src/components/resources/) to build your resource UI.
 
-Edit the resource files in [./src/components/resources/](./src/components/resources/) to build your resource UI.
-
-## CLI Commands
-
-The `sunpeak` CLI provides convenient commands for common tasks:
+## Commands
 
 ```bash
-sunpeak dev         # Start development server (vite)
-sunpeak build       # Build all resources for production
-sunpeak mcp         # Run MCP server with auto-reload
-sunpeak validate    # Run full validation suite
-sunpeak test        # Run tests
-sunpeak typecheck   # Run TypeScript checks
-sunpeak lint        # Run linting
-sunpeak format      # Format code
+pnpm dev            # Start development server
+pnpm build          # Build all resources for production
+pnpm mcp            # Start MCP server with auto-reload
+pnpm test           # Run tests with Vitest
 ```
+
+The template includes a minimal test setup with Vitest. You can add additional tooling (linting, formatting, type-checking) as needed for your project.
 
 ### Customization
 
 **You can customize:**
 
-- Package.json scripts (format, lint, typecheck, test are optional)
-- Tooling configuration (ESLint, Prettier, TypeScript, Vite dev server)
+- Package.json scripts - Add your own tooling (lint, format, typecheck, etc.)
 - Component structure within `src/components/`
 - Package manager (pnpm, npm, or yarn auto-detected)
+- Vite dev server configuration
 
 **Do not customize (required by `sunpeak build`):**
 
@@ -52,25 +40,19 @@ sunpeak format      # Format code
 - `vite.config.build.ts` - Build configuration
 - Resource file naming: `*-resource.tsx` (e.g., `counter-resource.tsx`)
 
-If you need to customize these paths, create a custom build script in package.json instead of using `sunpeak build`.
+If you need to customize these paths, create a custom build script instead of using `sunpeak build`.
 
 ## Testing
 
 ### Testing Locally
 
-Run all the checks with the following:
+Run the test suite:
 
 ```bash
-sunpeak validate
+pnpm test
 ```
 
-This will:
-
-- Run linting, typechecking, and unit tests
-- Build your app
-- Verify that build outputs are created correctly
-
-For manual QA of the UI, run:
+For manual QA of the UI:
 
 ```bash
 sunpeak dev
@@ -82,7 +64,7 @@ Test your app directly in ChatGPT using the built-in MCP server:
 
 ```bash
 # Start the MCP server (rebuilds and restarts on file changes).
-sunpeak mcp
+pnpm mcp
 
 # In another terminal, run a tunnel. For example:
 ngrok http 6766
@@ -99,7 +81,7 @@ When you make changes to the UI, refresh your app in ChatGPT after the MCP serve
 Build your app for production:
 
 ```bash
-sunpeak build
+pnpm build
 ```
 
 This creates optimized builds in `dist/chatgpt/`:

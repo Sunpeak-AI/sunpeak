@@ -2,16 +2,7 @@
 import { execSync } from 'child_process';
 import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs';
 import path from 'path';
-
-/**
- * Detect package manager for the project
- */
-function detectPackageManager(projectRoot) {
-  if (existsSync(path.join(projectRoot, 'pnpm-lock.yaml'))) return 'pnpm';
-  if (existsSync(path.join(projectRoot, 'yarn.lock'))) return 'yarn';
-  if (existsSync(path.join(projectRoot, 'package-lock.json'))) return 'npm';
-  return 'pnpm'; // default
-}
+import { detectPackageManager } from '../utils.mjs';
 
 /**
  * Build all resources for a Sunpeak project

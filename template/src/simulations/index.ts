@@ -5,9 +5,9 @@
  * (like MCP servers) without causing issues with CSS imports or React components.
  */
 
-import { counterSimulation } from './counter-simulation';
-import { albumsSimulation } from './albums-simulation';
-import { carouselSimulation } from './carousel-simulation';
+import { counterSimulation } from './counter-simulation.js';
+import { albumsSimulation } from './albums-simulation.js';
+import { carouselSimulation } from './carousel-simulation.js';
 
 export const SIMULATIONS = {
   counter: counterSimulation,
