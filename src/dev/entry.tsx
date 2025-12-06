@@ -4,7 +4,7 @@
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChatGPTSimulator, type Simulation } from '../index';
+import { ChatGPTSimulator, type Simulation } from 'sunpeak';
 
 // Dynamically import user's simulations and resources using Vite's resolution
 // @ts-expect-error - These are resolved from the user's project via Vite aliases
