@@ -3,7 +3,7 @@
 @import "sunpeak/style.css";
 
 /* Scan app-specific source files for Tailwind classes */
-@source "../../src/**/*.{ts,tsx}";
+@source "../**/*.{ts,tsx}";
 
 /* Required for Tailwind to find class references in Apps SDK UI components. */
 @source "../../node_modules/@openai/apps-sdk-ui";
