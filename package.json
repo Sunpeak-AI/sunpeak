@@ -35,6 +35,8 @@
   "files": [
     "dist",
     "bin",
+    "src/dev",
+    "src/vite-env.d.ts",
     "template",
     "README.md"
   ],

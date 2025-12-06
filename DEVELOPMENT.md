@@ -56,7 +56,7 @@ Assuming `pwd` is this root sunpeak repo folder, run:
 ```bash
 rm -rf ../tmp && mkdir ../tmp && cd ../tmp
 pnpm dlx sunpeak new my-app && cd my-app
-pnpm build && pnpm test && pnpm dev
+pnpm install && pnpm build && pnpm test && pnpm dev
 ```
 
 ## Coding Guidance
