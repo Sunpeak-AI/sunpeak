@@ -25,7 +25,6 @@
         "default": "./dist/mcp/index.js"
       }
     },
-    "./dev/entry": "./src/dev/entry.tsx",
     "./mcp/entry": "./dist/mcp/entry.js",
     "./package.json": "./package.json"
   },
@@ -35,8 +34,6 @@
   "files": [
     "dist",
     "bin",
-    "src/dev",
-    "src/vite-env.d.ts",
     "template",
     "README.md"
   ],
