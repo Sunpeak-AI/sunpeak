@@ -75,6 +75,13 @@ try {
   }
   printSuccess('pnpm lint');
 
+  console.log('\nRunning: pnpm build');
+  if (!runCommand('pnpm build', REPO_ROOT)) {
+    throw new Error('pnpm build failed');
+  }
+  console.log()
+  printSuccess('pnpm build');
+
   console.log('\nRunning: pnpm typecheck');
   if (!runCommand('pnpm typecheck', REPO_ROOT)) {
     throw new Error('pnpm typecheck failed');
@@ -86,13 +93,6 @@ try {
     throw new Error('pnpm test failed');
   }
   printSuccess('pnpm test');
-
-  console.log('\nRunning: pnpm build');
-  if (!runCommand('pnpm build', REPO_ROOT)) {
-    throw new Error('pnpm build failed');
-  }
-  console.log()
-  printSuccess('pnpm build');
 
   // Template level tests
   printSection('TEMPLATE LEVEL TESTS');

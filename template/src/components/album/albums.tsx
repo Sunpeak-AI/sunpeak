@@ -43,7 +43,7 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
   const userAgent = useUserAgent();
 
   const albums = data.albums || [];
-  const selectedAlbum = albums.find((album) => album.id === widgetState?.selectedAlbumId);
+  const selectedAlbum = albums.find((album: Album) => album.id === widgetState?.selectedAlbumId);
   const hasTouch = userAgent?.capabilities.touch ?? false;
 
   const handleSelectAlbum = React.useCallback(
@@ -61,7 +61,7 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
   return (
     <div ref={ref} className={className}>
       <Carousel gap={20} showArrows={false} showEdgeGradients={false} cardWidth={272}>
-        {albums.map((album) => (
+        {albums.map((album: Album) => (
           <AlbumCard
             key={album.id}
             album={album}
