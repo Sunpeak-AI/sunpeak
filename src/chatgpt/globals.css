@@ -1,6 +1,3 @@
-/* Establish explicit layer order to ensure SDK UI components beat Tailwind's preflight */
-@layer properties, theme, base, components, utilities;
-
 @import "tailwindcss";
 @import "@openai/apps-sdk-ui/css";
 
