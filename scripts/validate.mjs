@@ -8,6 +8,7 @@
 import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { readFileSync, writeFileSync } from 'fs';
 
 // Color codes for output
 const colors = {
@@ -132,6 +133,85 @@ try {
   }
   console.log()
   printSuccess('pnpm test:e2e\n');
+
+  // Staging scenario test
+  printSection('STAGING SCENARIO TEST');
+
+  const tmpDir = join(REPO_ROOT, '..', 'tmp-sunpeak-staging');
+  const testProjectDir = join(tmpDir, 'test-app');
+
+  console.log('Cleaning up old test directory...');
+  if (!runCommand(`rm -rf ${tmpDir}`, REPO_ROOT)) {
+    console.log('Note: No previous test directory to clean');
+  }
+
+  console.log('\nCreating temp directory...');
+  if (!runCommand(`mkdir -p ${tmpDir}`, REPO_ROOT)) {
+    throw new Error('Failed to create temp directory');
+  }
+  printSuccess('Created temp directory');
+
+  console.log('\nRunning: sunpeak new test-app');
+  if (!runCommand(`node ${join(REPO_ROOT, 'bin', 'sunpeak.js')} new test-app`, tmpDir)) {
+    throw new Error('sunpeak new failed');
+  }
+  printSuccess('sunpeak new test-app');
+
+  console.log('\nLinking local sunpeak package...');
+  const testPkgPath = join(testProjectDir, 'package.json');
+  const testPkg = JSON.parse(readFileSync(testPkgPath, 'utf-8'));
+  testPkg.dependencies.sunpeak = `file:${REPO_ROOT}`;
+  writeFileSync(testPkgPath, JSON.stringify(testPkg, null, 2) + '\n');
+  printSuccess('Linked local sunpeak package');
+
+  console.log('\nRunning: pnpm install (test-app)');
+  if (!runCommand('pnpm install', testProjectDir)) {
+    throw new Error('pnpm install failed in test-app');
+  }
+  printSuccess('pnpm install (test-app)');
+
+  console.log('\nRunning: pnpm build (test-app)');
+  if (!runCommand('pnpm build', testProjectDir)) {
+    throw new Error('pnpm build failed in test-app');
+  }
+  printSuccess('pnpm build (test-app)');
+
+  console.log('\nRunning: Playwright test (test-app)');
+
+  // Copy staging templates from tests/staging directory
+  const stagingDir = join(REPO_ROOT, 'tests', 'staging');
+  const testFileContent = readFileSync(join(stagingDir, 'staging-validation.spec.ts'), 'utf-8');
+  const playwrightConfigContent = readFileSync(join(stagingDir, 'staging-playwright.config.ts'), 'utf-8');
+
+  const testDir = join(testProjectDir, 'tests', 'e2e');
+  if (!runCommand(`mkdir -p ${testDir}`, testProjectDir)) {
+    throw new Error('Failed to create test directory');
+  }
+  writeFileSync(join(testDir, 'validation.spec.ts'), testFileContent);
+  writeFileSync(join(testProjectDir, 'playwright.config.ts'), playwrightConfigContent);
+
+  // Install playwright dependencies
+  console.log('\nInstalling Playwright...');
+  if (!runCommand('pnpm add -D @playwright/test', testProjectDir)) {
+    throw new Error('Failed to install Playwright');
+  }
+
+  console.log('\nInstalling Playwright browsers...');
+  if (!runCommand('pnpm exec playwright install chromium --with-deps', testProjectDir)) {
+    console.log('Note: Browser installation may require additional system dependencies');
+  }
+
+  // Run the test
+  if (!runCommand('pnpm exec playwright test', testProjectDir)) {
+    throw new Error('Playwright test failed in test-app');
+  }
+  printSuccess('Playwright test (test-app)');
+
+  console.log('\nCleaning up test directory...');
+  if (!runCommand(`rm -rf ${tmpDir}`, REPO_ROOT)) {
+    console.log('Note: Failed to clean up test directory, you may want to remove it manually');
+  }
+  printSuccess('Cleaned up test directory\n');
 
   printSuccess('SHIP IT!\n\n');
   process.exit(0);
