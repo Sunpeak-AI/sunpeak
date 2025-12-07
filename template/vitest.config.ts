@@ -16,7 +16,6 @@ export default defineConfig({
       // In workspace dev mode, use local sunpeak source
       ...(isTemplate && {
         sunpeak: parentSrc,
-        '~': parentSrc,
       }),
     },
   },

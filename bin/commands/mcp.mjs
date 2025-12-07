@@ -19,21 +19,23 @@ export async function mcp(projectRoot = process.cwd(), args = []) {
     process.exit(1);
   }
 
-  // Check for nodemon config
-  const nodemonConfigPath = join(projectRoot, 'nodemon.json');
-  if (!existsSync(nodemonConfigPath)) {
-    console.error('Error: nodemon.json not found');
-    console.error('Expected location: ' + nodemonConfigPath);
-    console.error('\nThe MCP server requires nodemon.json for auto-reload configuration.');
-    process.exit(1);
-  }
-
   console.log('Starting MCP server with auto-reload...');
   console.log('Watching src/ for changes...\n');
 
   // Build nodemon command
   const nodemonCommand = pm === 'npm' ? 'npx' : pm;
   const nodemonArgs = pm === 'npm' ? ['nodemon'] : ['exec', 'nodemon'];
+
+  // Add inline nodemon configuration
+  nodemonArgs.push(
+    '--watch', 'src',
+    '--ext', 'ts,tsx,js,jsx,css',
+    '--ignore', 'dist',
+    '--ignore', 'node_modules',
+    '--ignore', '.tmp',
+    '--delay', '500ms',
+    '--exec', 'sunpeak build && tsx node_modules/sunpeak/dist/mcp/entry.js'
+  );
 
   // Add any additional args
   nodemonArgs.push(...args);

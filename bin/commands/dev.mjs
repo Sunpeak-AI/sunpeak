@@ -1,16 +1,15 @@
 #!/usr/bin/env node
-import { spawn } from 'child_process';
+import { createServer } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { existsSync } from 'fs';
 import { join } from 'path';
-import { detectPackageManager } from '../utils.mjs';
 
 /**
  * Start the Vite development server
  * Runs in the context of a user's project directory
  */
 export async function dev(projectRoot = process.cwd(), args = []) {
-  const pm = detectPackageManager(projectRoot);
-
   // Check for package.json
   const pkgJsonPath = join(projectRoot, 'package.json');
   if (!existsSync(pkgJsonPath)) {
@@ -20,52 +19,37 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   }
 
   // Parse port from args or use default
-  let port = process.env.PORT || '6767';
+  let port = parseInt(process.env.PORT || '6767');
   const portArgIndex = args.findIndex(arg => arg === '--port' || arg === '-p');
   if (portArgIndex !== -1 && args[portArgIndex + 1]) {
-    port = args[portArgIndex + 1];
+    port = parseInt(args[portArgIndex + 1]);
   }
-
-  // Build vite command
-  const viteCommand = pm === 'npm' ? 'npx' : pm;
-  const viteArgs = pm === 'npm' ? ['vite'] : ['exec', 'vite'];
-
-  // Add port
-  viteArgs.push('--port', port);
-
-  // Add any additional args (filtering out port if already handled)
-  const additionalArgs = portArgIndex !== -1
-    ? [...args.slice(0, portArgIndex), ...args.slice(portArgIndex + 2)]
-    : args;
-  viteArgs.push(...additionalArgs);
 
   console.log(`Starting Vite dev server on port ${port}...`);
 
-  // Spawn vite process
-  const child = spawn(viteCommand, viteArgs, {
-    cwd: projectRoot,
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      PORT: port,
-      FORCE_COLOR: '1',
+  // Create and start Vite dev server programmatically
+  const server = await createServer({
+    root: projectRoot,
+    plugins: [react(), tailwindcss()],
+    server: {
+      port,
+      open: true,
     },
   });
 
-  // Forward signals
-  process.on('SIGINT', () => {
-    child.kill('SIGINT');
+  await server.listen();
+  server.printUrls();
+  server.bindCLIShortcuts({ print: true });
+
+  // Handle signals
+  process.on('SIGINT', async () => {
+    await server.close();
     process.exit(0);
   });
 
-  process.on('SIGTERM', () => {
-    child.kill('SIGTERM');
+  process.on('SIGTERM', async () => {
+    await server.close();
     process.exit(0);
-  });
-
-  // Handle child exit
-  child.on('exit', (code) => {
-    process.exit(code || 0);
   });
 }
 

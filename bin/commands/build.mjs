@@ -1,15 +1,15 @@
 #!/usr/bin/env node
-import { execSync } from 'child_process';
-import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync } from 'fs';
+import { build as viteBuild } from 'vite';
+import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
+import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'fs';
 import path from 'path';
-import { detectPackageManager } from '../utils.mjs';
 
 /**
  * Build all resources for a Sunpeak project
  * Runs in the context of a user's project directory
  */
 export async function build(projectRoot = process.cwd()) {
-  const pm = detectPackageManager(projectRoot);
 
   // Check for package.json first
   const pkgJsonPath = path.join(projectRoot, 'package.json');
@@ -24,7 +24,6 @@ export async function build(projectRoot = process.cwd()) {
   const tempDir = path.join(projectRoot, '.tmp');
   const resourcesDir = path.join(projectRoot, 'src/components/resources');
   const templateFile = path.join(projectRoot, 'src/index-resource.tsx');
-  const viteConfigFile = path.join(projectRoot, 'vite.config.build.ts');
 
   // Validate project structure
   if (!existsSync(resourcesDir)) {
@@ -44,13 +43,31 @@ export async function build(projectRoot = process.cwd()) {
     process.exit(1);
   }
 
-  if (!existsSync(viteConfigFile)) {
-    console.error('Error: vite.config.build.ts not found');
-    console.error('Expected location: ' + viteConfigFile);
-    console.error('\nThis Vite config is required for building resources.');
-    console.error('If you have renamed it, you may need to use a custom build script.');
-    process.exit(1);
-  }
+  // Plugin factory to inline CSS into the JS bundle for all output files
+  const inlineCssPlugin = (buildOutDir) => ({
+    name: 'inline-css',
+    closeBundle() {
+      const cssFile = path.join(buildOutDir, 'style.css');
+
+      if (existsSync(cssFile)) {
+        const css = readFileSync(cssFile, 'utf-8');
+        const injectCss = `(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);})();`;
+
+        // Find all .js files in the dist directory and inject CSS
+        const files = readdirSync(buildOutDir);
+        files.forEach((file) => {
+          if (file.endsWith('.js')) {
+            const jsFile = path.join(buildOutDir, file);
+            const js = readFileSync(jsFile, 'utf-8');
+            writeFileSync(jsFile, injectCss + js);
+          }
+        });
+
+        // Remove the separate CSS file after injecting into all bundles
+        unlinkSync(cssFile);
+      }
+    },
+  });
 
   // Clean dist and temp directories
   if (existsSync(distDir)) {
@@ -111,8 +128,9 @@ export async function build(projectRoot = process.cwd()) {
   }
 
   // Build all resources (but don't copy yet)
-  resourceFiles.forEach(({ componentName, componentFile, entry, output, buildOutDir }, index) => {
-    console.log(`[${index + 1}/${resourceFiles.length}] Building ${output}...`);
+  for (let i = 0; i < resourceFiles.length; i++) {
+    const { componentName, componentFile, entry, output, buildOutDir } = resourceFiles[i];
+    console.log(`[${i + 1}/${resourceFiles.length}] Building ${output}...`);
 
     try {
       // Create build directory if it doesn't exist
@@ -128,26 +146,43 @@ export async function build(projectRoot = process.cwd()) {
       const entryPath = path.join(projectRoot, entry);
       writeFileSync(entryPath, entryContent);
 
-      // Build with vite to build directory
-      const viteCommand = pm === 'npm' ? 'npx vite' : `${pm} exec vite`;
-      execSync(
-        `${viteCommand} build --config vite.config.build.ts`,
-        {
-          cwd: projectRoot,
-          stdio: 'inherit',
-          env: {
-            ...process.env,
-            ENTRY_FILE: entry,
-            OUTPUT_FILE: output,
-            OUT_DIR: buildOutDir,
+      // Build with vite programmatically
+      await viteBuild({
+        root: projectRoot,
+        plugins: [react(), tailwindcss(), inlineCssPlugin(buildOutDir)],
+        define: {
+          'process.env.NODE_ENV': JSON.stringify('production'),
+        },
+        resolve: {
+          conditions: ['style', 'import', 'module', 'browser', 'default'],
+        },
+        build: {
+          target: 'es2020',
+          outDir: buildOutDir,
+          emptyOutDir: true,
+          cssCodeSplit: false,
+          lib: {
+            entry: entryPath,
+            name: 'SunpeakApp',
+            formats: ['iife'],
+            fileName: () => output,
           },
-        }
-      );
+          rollupOptions: {
+            output: {
+              inlineDynamicImports: true,
+              assetFileNames: 'style.css',
+            },
+          },
+          minify: true,
+          cssMinify: true,
+        },
+      });
     } catch (error) {
       console.error(`Failed to build ${output}`);
+      console.error(error);
       process.exit(1);
     }
-  });
+  }
 
   // Now copy all files from build-output to dist/chatgpt
   console.log('\nCopying built files to dist/chatgpt...');
