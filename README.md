@@ -53,16 +53,16 @@ sunpeak is an npm package consisting of:
    2. ChatGPT simulator - React component replicating ChatGPT's runtime.
    3. MCP server - Mock data MCP server for testing local Resources in the real ChatGPT.
 2. **The `sunpeak` framework** (`./template`). An end-to-end framework MCP Apps, from quickstart to shipped. This templated npm package includes:
-    1. Project scaffold - Complete development setup with build, test, and mcp tooling.
-    2. UI components - Production-ready components following ChatGPT design guidelines and using OpenAI apps-sdk-ui React components.
-    3. CLI utility (`./bin`) - Commands for working with the sunpeak framework.
+   1. Project scaffold - Complete development setup with build, test, and mcp tooling.
+   2. UI components - Production-ready components following ChatGPT design guidelines and using OpenAI apps-sdk-ui React components.
+   3. CLI utility (`./bin`) - Commands for working with the sunpeak framework.
 
 Note that the `sunpeak` library can be used without the framework.
 
 ## Example Component
 
 ```tsx
-import { Card } from "../card";
+import { Card } from '../card';
 
 export function MCPResource() {
   return (
@@ -71,8 +71,8 @@ export function MCPResource() {
       imageAlt="Lady Bird Lake"
       header="Lady Bird Lake"
       metadata="⭐ 4.5 • Austin, TX"
-      button1={{ children: "Visit", isPrimary: true, onClick: () => {} }}
-      button2={{ children: "Learn More", onClick: () => {} }}
+      button1={{ children: 'Visit', isPrimary: true, onClick: () => {} }}
+      button2={{ children: 'Learn More', onClick: () => {} }}
     >
       Scenic lake perfect for kayaking, paddleboarding, and trails.
     </Card>
