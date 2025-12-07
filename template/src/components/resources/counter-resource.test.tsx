@@ -70,10 +70,10 @@ describe('CounterResource', () => {
     const mainDiv = container.firstChild as HTMLElement;
 
     expect(mainDiv).toHaveStyle({
-      paddingTop: 'calc(2rem + 20px)',
-      paddingBottom: 'calc(2rem + 30px)',
-      paddingLeft: 'calc(2rem + 10px)',
-      paddingRight: 'calc(2rem + 15px)',
+      paddingTop: '20px',
+      paddingBottom: '30px',
+      paddingLeft: '10px',
+      paddingRight: '15px',
     });
   });
 
