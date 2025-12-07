@@ -19,7 +19,10 @@ The MCP App SDK.
 
 Quickstart, build, and test your ChatGPT App locally with OpenAI apps-sdk-ui React components.
 
-[Documentation](https://docs.sunpeak.ai/)
+[Demo (Hosted)](https://sunpeak.ai/#simulator) ~
+[Demo (Video)](https://d10djik02wlf6x.cloudfront.net/sunpeak-demo-prod.mp4) ~
+[Documentation](https://docs.sunpeak.ai/) ~
+[GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
 <div align="center">
   <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
@@ -36,16 +39,7 @@ Quickstart, build, and test your ChatGPT App locally with OpenAI apps-sdk-ui Rea
 Requirements: Node (20+), pnpm (10+)
 
 ```bash
-# Create a new project (no install needed)
-npx sunpeak new my-app
-
-# Or with pnpm
-pnpm dlx sunpeak new my-app
-
-# Start developing
-cd my-app
-pnpm install
-pnpm dev
+pnpm dlx sunpeak new
 ```
 
 To add sunpeak to an existing project, refer to the [documentation](https://docs.sunpeak.ai/add-to-existing-project).
@@ -61,18 +55,17 @@ To add sunpeak to an existing project, refer to the [documentation](https://docs
 ## Example Component
 
 ```tsx
-import './styles/globals.css';
-import { Card } from './components/card';
+import { Card } from "../card";
 
-export default function App() {
+export function MCPResource() {
   return (
     <Card
-      image="https://images.unsplash.com/photo-1520950237264-dfe336995c34?w=400&h=400&fit=crop"
+      image="https://images.unsplash.com/photo-1520950237264-dfe336995c34"
       imageAlt="Lady Bird Lake"
       header="Lady Bird Lake"
       metadata="⭐ 4.5 • Austin, TX"
-      button1={{ children: 'Visit', isPrimary: true, onClick: () => {} }}
-      button2={{ children: 'Learn More', onClick: () => {} }}
+      button1={{ children: "Visit", isPrimary: true, onClick: () => {} }}
+      button2={{ children: "Learn More", onClick: () => {} }}
     >
       Scenic lake perfect for kayaking, paddleboarding, and trails.
     </Card>
@@ -84,14 +77,14 @@ export default function App() {
 
 sunpeak is an npm package consisting of:
 
-1. **A CLI utility** for working with sunpeak (`./bin`).
-2. **A templated npm package** (`./template`). This template includes:
-   1. Project scaffold - Complete development setup with build, test, and dev tooling.
-   2. Pre-built UI components - Production-ready components following ChatGPT design guidelines.
-3. **The `sunpeak` library** (`./src`). This library contains:
-   1. Multi-platform APIs - Abstraction layer for future platform support (Gemini, Claude).
-   2. ChatGPT simulator - Local development environment replicating ChatGPT's widget runtime.
-   3. MCP server - View local widgets in the real ChatGPT.
+1. **The `sunpeak` library** (`./src`). This library contains:
+   1. Multi-platform APIs - Abstraction layer for the ChatGPT runtime and future platform runtimes (Gemini, Claude).
+   2. ChatGPT simulator - Local development environment replicating ChatGPT's runtime.
+   3. MCP server - Test local Resources in the real ChatGPT.
+2. **The `sunpeak` framework** (`./template`). This templated npm package & MCP App framework includes:
+    1. Project scaffold - Complete development setup with build, test, and dev tooling.
+    2. Pre-built UI components - Production-ready components following ChatGPT design guidelines.
+    3. CLI utility (`./bin`) - Commands for working with the sunpeak framework.
 
 ## Contributing
 

@@ -31,13 +31,11 @@ The template includes a minimal test setup with Vitest. You can add additional t
 - Package.json scripts - Add your own tooling (lint, format, typecheck, etc.)
 - Component structure within `src/components/`
 - Package manager (pnpm, npm, or yarn auto-detected)
-- Vite dev server configuration
 
 **Do not customize (required by `sunpeak build`):**
 
 - `src/components/resources/` - Resource files must be here
 - `src/index-resource.tsx` - Build template (must have `// RESOURCE_IMPORT` and `// RESOURCE_MOUNT` comments)
-- `vite.config.build.ts` - Build configuration
 - Resource file naming: `*-resource.tsx` (e.g., `counter-resource.tsx`)
 
 If you need to customize these paths, create a custom build script instead of using `sunpeak build`.
