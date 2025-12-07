@@ -146,7 +146,7 @@ const [, , command, ...args] = process.argv;
     case 'help':
     case undefined:
       console.log(`
-☀️ 🏔️ sunpeak - The MCP App SDK
+☀️ 🏔️ sunpeak - The MCP App framework
 
 Usage:
   npx sunpeak new [name]   Create a new project (no install needed)
