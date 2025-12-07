@@ -36,12 +36,12 @@ export function CounterResource() {
 
   return (
     <div
-      className="flex flex-col items-center justify-center p-8 space-y-6"
+      className="flex flex-col items-center justify-center space-y-6"
       style={{
-        paddingTop: `calc(2rem + ${safeArea?.insets.top ?? 0}px)`,
-        paddingBottom: `calc(2rem + ${safeArea?.insets.bottom ?? 0}px)`,
-        paddingLeft: `calc(2rem + ${safeArea?.insets.left ?? 0}px)`,
-        paddingRight: `calc(2rem + ${safeArea?.insets.right ?? 0}px)`,
+        paddingTop: `${safeArea?.insets.top ?? 0}px`,
+        paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,
+        paddingLeft: `${safeArea?.insets.left ?? 0}px`,
+        paddingRight: `${safeArea?.insets.right ?? 0}px`,
         maxHeight: maxHeight ?? undefined,
       }}
     >

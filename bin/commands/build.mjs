@@ -19,6 +19,10 @@ export async function build(projectRoot = process.cwd()) {
     process.exit(1);
   }
 
+  // Check if we're in the sunpeak workspace (directory is named "template")
+  const isTemplate = path.basename(projectRoot) === 'template';
+  const parentSrc = path.resolve(projectRoot, '../src');
+
   const distDir = path.join(projectRoot, 'dist/chatgpt');
   const buildDir = path.join(projectRoot, 'dist/build-output');
   const tempDir = path.join(projectRoot, '.tmp');
@@ -155,6 +159,12 @@ export async function build(projectRoot = process.cwd()) {
         },
         resolve: {
           conditions: ['style', 'import', 'module', 'browser', 'default'],
+          alias: {
+            // In workspace dev mode, use local sunpeak source
+            ...(isTemplate && {
+              sunpeak: parentSrc,
+            }),
+          },
         },
         build: {
           target: 'es2020',

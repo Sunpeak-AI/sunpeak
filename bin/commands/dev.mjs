@@ -3,7 +3,7 @@ import { createServer } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { existsSync } from 'fs';
-import { join } from 'path';
+import { join, resolve, basename } from 'path';
 
 /**
  * Start the Vite development server
@@ -27,10 +27,22 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
   console.log(`Starting Vite dev server on port ${port}...`);
 
+  // Check if we're in the sunpeak workspace (directory is named "template")
+  const isTemplate = basename(projectRoot) === 'template';
+  const parentSrc = resolve(projectRoot, '../src');
+
   // Create and start Vite dev server programmatically
   const server = await createServer({
     root: projectRoot,
     plugins: [react(), tailwindcss()],
+    resolve: {
+      alias: {
+        // In workspace dev mode, use local sunpeak source
+        ...(isTemplate && {
+          sunpeak: parentSrc,
+        }),
+      },
+    },
     server: {
       port,
       open: true,

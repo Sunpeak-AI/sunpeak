@@ -83,7 +83,7 @@ export function Conversation({
           {/* User turn */}
           <article className="text-primary w-full focus:outline-none" dir="auto" data-turn="user">
             <h5 className="sr-only">You said:</h5>
-            <div className="text-base my-auto mx-auto pt-12 px-4">
+            <div className="text-base my-auto mx-auto md:pt-12 px-4">
               <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                 <div className="flex max-w-full flex-col grow">
                   <div
@@ -112,7 +112,7 @@ export function Conversation({
               <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                 <div className="flex max-w-full flex-col grow">
                   {/* Assistant avatar and name */}
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 my-3">
                     {appIcon ? (
                       <div className="size-6 flex items-center justify-center text-base">
                         {appIcon}
