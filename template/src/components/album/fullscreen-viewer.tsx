@@ -59,7 +59,12 @@ export const FullscreenViewer = React.forwardRef<HTMLDivElement, FullscreenViewe
           ['--safe-right' as string]: `${safeArea?.insets.right ?? 0}px`,
         }}
       >
-        <div className={cn('absolute inset-0 flex overflow-hidden', isMobile ? 'flex-col' : 'flex-row')}>
+        <div
+          className={cn(
+            'absolute inset-0 flex overflow-hidden',
+            isMobile ? 'flex-col' : 'flex-row'
+          )}
+        >
           {/* Album header - mobile only */}
           {isMobile && (
             <div

@@ -50,10 +50,11 @@ export function Conversation({
           <div className="text-primary flex items-center justify-center text-base">{appName}</div>
           <div className="flex items-center justify-end"></div>
         </div>
-        <div className="relative overflow-hidden flex-1 w-full" style={{ maxWidth: containerWidth }}>
-          <div className="h-full w-full max-w-full overflow-auto">
-            {children}
-          </div>
+        <div
+          className="relative overflow-hidden flex-1 w-full"
+          style={{ maxWidth: containerWidth }}
+        >
+          <div className="h-full w-full max-w-full overflow-auto">{children}</div>
         </div>
         <footer className="bg-surface w-full" style={{ maxWidth: containerWidth }}>
           <div className="px-4 py-4">
