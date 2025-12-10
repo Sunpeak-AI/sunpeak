@@ -32,8 +32,11 @@ export function Conversation({
     };
 
     return (
-      <div className="flex flex-col bg-surface w-full h-full flex-1">
-        <div className="border-subtle bg-surface z-10 grid h-12 grid-cols-[1fr_auto_1fr] border-b px-2">
+      <div className="flex flex-col bg-surface w-full h-full flex-1 items-center">
+        <div
+          className="w-full border-subtle bg-surface z-10 grid h-12 grid-cols-[1fr_auto_1fr] border-b px-2"
+          style={{ maxWidth: containerWidth }}
+        >
           <div className="flex items-center justify-start gap-3">
             <button
               onClick={handleClose}
@@ -47,11 +50,13 @@ export function Conversation({
           <div className="text-primary flex items-center justify-center text-base">{appName}</div>
           <div className="flex items-center justify-end"></div>
         </div>
-        <div className="relative overflow-hidden flex-1">
-          <div className="h-full w-full max-w-full overflow-auto">{children}</div>
+        <div className="relative overflow-hidden flex-1 w-full" style={{ maxWidth: containerWidth }}>
+          <div className="h-full w-full max-w-full overflow-auto">
+            {children}
+          </div>
         </div>
-        <footer className="bg-surface">
-          <div className="max-w-[48rem] mx-auto px-4 py-4">
+        <footer className="bg-surface w-full" style={{ maxWidth: containerWidth }}>
+          <div className="px-4 py-4">
             <div className="relative">
               <input
                 type="text"
@@ -68,15 +73,18 @@ export function Conversation({
   }
 
   return (
-    <div className="flex flex-col bg-surface w-full h-full flex-1">
+    <div className="flex flex-col bg-surface w-full h-full flex-1 items-center">
       {/* Header bar */}
-      <header className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40">
+      <header
+        className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40 w-full"
+        style={{ maxWidth: containerWidth }}
+      >
         <span className="text-primary">SimGPT</span>
       </header>
 
       {/* Conversation container with configurable width */}
       <div
-        className="flex flex-col flex-1 mx-auto w-full transition-all duration-200 overflow-hidden"
+        className="flex flex-col flex-1 w-full transition-all duration-200 overflow-hidden"
         style={{ maxWidth: containerWidth }}
       >
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -134,8 +142,11 @@ export function Conversation({
                       {/* App UI content area - allows horizontal overflow for carousel */}
                       {displayMode === 'pip' ? (
                         <div
-                          className="fixed start-4 end-4 top-14 z-50 mx-auto max-w-[48rem] md:start-60 md:end-4 sm:start-0 sm:end-0 sm:w-full overflow-visible"
-                          style={{ maxHeight: '429px' }}
+                          className="fixed top-14 z-50 overflow-visible left-1/2 md:left-[calc(50vw+7rem)] -translate-x-1/2 max-w-[calc(100vw-2rem)] md:max-w-[calc(100vw-16rem)]"
+                          style={{
+                            maxHeight: '429px',
+                            width: containerWidth,
+                          }}
                         >
                           <button
                             onClick={() => {

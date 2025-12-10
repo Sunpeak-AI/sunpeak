@@ -49,6 +49,9 @@ export function ChatGPTSimulator({
 }: ChatGPTSimulatorProps) {
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
 
+  // Helper to check if current width is mobile
+  const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
+
   // Helper to create simulation key from resource-tool pair
   const getSimulationKey = (sim: Simulation) => `${sim.resource.name}-${sim.tool.name}`;
 
@@ -175,6 +178,13 @@ export function ChatGPTSimulator({
     };
   }, []);
 
+  // Disallow PiP on mobile widths - switch to fullscreen
+  useEffect(() => {
+    if (isMobileWidth(screenWidth) && displayMode === 'pip') {
+      mock.setDisplayMode('fullscreen');
+    }
+  }, [screenWidth, displayMode, mock]);
+
   // Reset JSON strings when simulation changes or props change
   // Only update fields that aren't currently being edited to prevent overwriting user input
   // This syncs external state (from mock) into local editing state, which is a valid use of effects
@@ -297,7 +307,15 @@ export function ChatGPTSimulator({
             <SidebarControl label="Display Mode">
               <SidebarToggle
                 value={displayMode}
-                onChange={(value) => mock.setDisplayMode(value as DisplayMode)}
+                onChange={(value) => {
+                  const newMode = value as DisplayMode;
+                  // Disallow PiP on mobile widths - switch to fullscreen instead
+                  if (isMobileWidth(screenWidth) && newMode === 'pip') {
+                    mock.setDisplayMode('fullscreen');
+                  } else {
+                    mock.setDisplayMode(newMode);
+                  }
+                }}
                 options={[
                   { value: 'inline', label: 'Inline' },
                   { value: 'pip', label: 'PiP' },
