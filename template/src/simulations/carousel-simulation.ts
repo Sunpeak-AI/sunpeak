@@ -3,6 +3,8 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
+import { defaultWidgetMeta } from './widget-config';
+
 const placesData = {
   places: [
     {
@@ -81,7 +83,9 @@ export const carouselSimulation = {
     title: 'Carousel',
     description: 'Show popular places to visit widget markup',
     mimeType: 'text/html+skybridge',
-    _meta: {},
+    _meta: {
+      ...defaultWidgetMeta,
+    },
   },
 
   // MCP CallTool protocol - data for CallTool response

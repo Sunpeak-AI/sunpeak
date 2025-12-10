@@ -3,6 +3,8 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
+import { defaultWidgetMeta } from './widget-config';
+
 const albumsData = {
   albums: [
     {
@@ -144,7 +146,9 @@ export const albumsSimulation = {
     title: 'Albums',
     description: 'Show photo albums widget markup',
     mimeType: 'text/html+skybridge',
-    _meta: {},
+    _meta: {
+      ...defaultWidgetMeta,
+    },
   },
 
   // MCP CallTool protocol - data for CallTool response

@@ -2,6 +2,9 @@
  * Server-safe configuration for the counter simulation.
  * This file contains only metadata and doesn't import React components or CSS.
  */
+
+import { defaultWidgetMeta } from './widget-config';
+
 export const counterSimulation = {
   userMessage: 'Help me count something',
 
@@ -30,7 +33,9 @@ export const counterSimulation = {
     title: 'Counter',
     description: 'Show a simple counter tool widget markup',
     mimeType: 'text/html+skybridge',
-    _meta: {},
+    _meta: {
+      ...defaultWidgetMeta,
+    },
   },
 
   // MCP CallTool protocol - data for CallTool response
