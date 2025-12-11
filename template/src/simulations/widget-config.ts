@@ -37,6 +37,6 @@ export const defaultWidgetMeta: WidgetMeta = {
   'openai/widgetDomain': 'https://sunpeak.ai', // YOUR DOMAIN HERE.
   'openai/widgetCSP': {
     connect_domains: ['https://sunpeak.ai'], // YOUR API HERE.
-    resource_domains: ['https://*.oaistatic.com'], // YOUR CDN HERE (if any).
+    resource_domains: ['https://*.oaistatic.com', 'https://images.unsplash.com'], // YOUR CDN HERE (if any).
   },
 };

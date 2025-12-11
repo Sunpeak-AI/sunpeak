@@ -93,7 +93,12 @@ export function ChatGPTSimulator({
 
       mock.userAgent = selectedSim.simulationGlobals?.userAgent ?? mock.userAgent;
       mock.locale = selectedSim.simulationGlobals?.locale ?? 'en-US';
-      mock.maxHeight = selectedSim.simulationGlobals?.maxHeight ?? 600;
+      // maxHeight is only defined for PiP mode (480px), undefined for inline and fullscreen
+      const currentDisplayMode = selectedSim.simulationGlobals?.displayMode ?? DEFAULT_DISPLAY_MODE;
+      mock.maxHeight =
+        currentDisplayMode === 'pip'
+          ? (selectedSim.simulationGlobals?.maxHeight ?? 480)
+          : undefined;
       mock.safeArea = selectedSim.simulationGlobals?.safeArea ?? mock.safeArea;
       mock.view = selectedSim.simulationGlobals?.view ?? null;
       mock.toolInput = selectedSim.simulationGlobals?.toolInput ?? {};
@@ -333,12 +338,17 @@ export function ChatGPTSimulator({
                 />
               </SidebarControl>
 
-              <SidebarControl label="Max Height">
+              <SidebarControl label="Max Height (PiP)">
                 <SidebarInput
                   type="number"
-                  value={String(maxHeight)}
-                  onChange={(value) => mock.setMaxHeight(Number(value))}
-                  placeholder="600"
+                  value={displayMode === 'pip' && maxHeight !== undefined ? String(maxHeight) : ''}
+                  onChange={(value) => {
+                    if (displayMode === 'pip') {
+                      mock.setMaxHeight(value ? Number(value) : 480);
+                    }
+                  }}
+                  placeholder={displayMode === 'pip' ? '480' : '-'}
+                  disabled={displayMode !== 'pip'}
                 />
               </SidebarControl>
             </div>

@@ -91,8 +91,13 @@ describe('Albums', () => {
     const firstAlbum = screen.getByText('Summer Vacation').closest('button')!;
     fireEvent.click(firstAlbum);
 
-    // Should update widget state with selected album ID
-    expect(mockSetWidgetState).toHaveBeenCalledWith({ selectedAlbumId: 'album-1' });
+    // Should update widget state with selected album ID using function updater
+    expect(mockSetWidgetState).toHaveBeenCalledTimes(1);
+    const updateFn = mockSetWidgetState.mock.calls[0][0];
+    expect(typeof updateFn).toBe('function');
+    // Test the updater function
+    const result = updateFn({ currentIndex: 0 });
+    expect(result).toEqual({ currentIndex: 0, selectedAlbumId: 'album-1' });
 
     // Should request fullscreen mode
     expect(mockRequestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' });

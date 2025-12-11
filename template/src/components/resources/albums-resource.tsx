@@ -15,6 +15,7 @@ export const AlbumsResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
   return (
     <div
       ref={ref}
+      className="h-full"
       style={{
         paddingTop: `${safeArea?.insets.top ?? 0}px`,
         paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,

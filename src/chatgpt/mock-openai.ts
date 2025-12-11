@@ -17,7 +17,7 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
     },
   };
   locale = 'en-US';
-  maxHeight = 600;
+  maxHeight: number | undefined = undefined;
   displayMode: DisplayMode = 'inline';
   safeArea = {
     insets: {
@@ -82,14 +82,16 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
     this.emitUpdate({ locale });
   }
 
-  setMaxHeight(maxHeight: number) {
+  setMaxHeight(maxHeight: number | undefined) {
     this.maxHeight = maxHeight;
     this.emitUpdate({ maxHeight });
   }
 
   setDisplayMode(displayMode: DisplayMode) {
     this.displayMode = displayMode;
-    this.emitUpdate({ displayMode });
+    // maxHeight is only defined for PiP mode, undefined for inline and fullscreen
+    this.maxHeight = displayMode === 'pip' ? 480 : undefined;
+    this.emitUpdate({ displayMode, maxHeight: this.maxHeight });
   }
 
   setSafeArea(safeArea: OpenAiGlobals['safeArea']) {

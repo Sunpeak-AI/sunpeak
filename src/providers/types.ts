@@ -42,7 +42,7 @@ export type WidgetGlobals<
   theme: Theme;
   userAgent: UserAgent;
   locale: string;
-  maxHeight: number;
+  maxHeight: number | undefined;
   displayMode: DisplayMode;
   safeArea: SafeArea;
   view: View | null;

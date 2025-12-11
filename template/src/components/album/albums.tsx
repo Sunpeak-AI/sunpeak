@@ -48,7 +48,7 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
 
   const handleSelectAlbum = React.useCallback(
     (album: Album) => {
-      setWidgetState({ selectedAlbumId: album.id });
+      setWidgetState((prev) => ({ ...prev, selectedAlbumId: album.id }));
       api?.requestDisplayMode?.({ mode: 'fullscreen' });
     },
     [setWidgetState, api]

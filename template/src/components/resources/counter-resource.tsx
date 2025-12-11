@@ -1,5 +1,6 @@
 import { useWidgetState, useSafeArea, useMaxHeight, useUserAgent } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
+import { useEffect } from 'react';
 
 interface CounterState extends Record<string, unknown> {
   count?: number;
@@ -21,6 +22,13 @@ export function CounterResource() {
 
   const count = widgetState?.count ?? 0;
   const hasTouch = userAgent?.capabilities.touch ?? false;
+
+  // Initialize count to 0 if not set
+  useEffect(() => {
+    if (widgetState?.count === undefined) {
+      setWidgetState({ count: 0 });
+    }
+  }, [widgetState?.count, setWidgetState]);
 
   const increment = () => {
     setWidgetState({ count: count + 1 });

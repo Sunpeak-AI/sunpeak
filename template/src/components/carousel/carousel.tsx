@@ -57,7 +57,7 @@ export const Carousel = React.forwardRef<HTMLDivElement, CarouselProps>(
 
       const currentIndex = emblaApi.selectedScrollSnap();
       if (widgetState?.currentIndex !== currentIndex) {
-        setWidgetState({ currentIndex });
+        setWidgetState((prev) => ({ ...prev, currentIndex }));
       }
     }, [emblaApi, widgetState?.currentIndex, setWidgetState]);
 

@@ -98,9 +98,16 @@ interface SidebarInputProps {
   onChange: (value: string) => void;
   placeholder?: string;
   type?: 'text' | 'number';
+  disabled?: boolean;
 }
 
-export function SidebarInput({ value, onChange, placeholder, type = 'text' }: SidebarInputProps) {
+export function SidebarInput({
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
+  disabled = false,
+}: SidebarInputProps) {
   return (
     <Input
       type={type}
@@ -108,6 +115,7 @@ export function SidebarInput({ value, onChange, placeholder, type = 'text' }: Si
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       size="2xs"
+      disabled={disabled}
     />
   );
 }
