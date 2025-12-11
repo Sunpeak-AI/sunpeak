@@ -6,7 +6,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { ChatGPTSimulator, type Simulation } from 'sunpeak';
 import { SIMULATIONS } from '../src/simulations';
-import * as Resources from '../src/components/resources';
+import * as Resources from '../src/resources';
 import '../src/styles/globals.css';
 
 /**
@@ -25,7 +25,7 @@ function getResourceComponentFromURI(uri: string): React.ComponentType {
   if (!component) {
     throw new Error(
       `Resource component "${componentName}" not found. ` +
-        `Make sure it's exported from src/components/resources/index.ts`
+        `Make sure it's exported from src/resources/index.ts`
     );
   }
 

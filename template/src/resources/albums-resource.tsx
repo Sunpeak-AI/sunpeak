@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSafeArea, useMaxHeight } from 'sunpeak';
-import { Albums } from '../album/albums';
+import { Albums } from '../components/album/albums';
 
 /**
  * Production-ready Albums Resource

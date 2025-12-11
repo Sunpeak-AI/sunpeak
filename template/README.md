@@ -11,7 +11,7 @@ pnpm install
 pnpm dev
 ```
 
-That's it! Edit the resource files in [./src/components/resources/](./src/components/resources/) to build your resource UI.
+That's it! Edit the resource files in [./src/resources/](./src/resources/) to build your resource UI.
 
 ## Commands
 
@@ -34,7 +34,7 @@ The template includes a minimal test setup with Vitest. You can add additional t
 
 **Do not customize (required by `sunpeak build`):**
 
-- `src/components/resources/` - Resource files must be here
+- `src/resources/` - Resource files must be here
 - `src/index-resource.tsx` - Build template (must have `// RESOURCE_IMPORT` and `// RESOURCE_MOUNT` comments)
 - Resource file naming: `*-resource.tsx` (e.g., `counter-resource.tsx`)
 
@@ -87,7 +87,7 @@ This creates optimized builds in `dist/chatgpt/`:
 - `dist/chatgpt/counter.js`
 - `dist/chatgpt/albums.js`
 - `dist/chatgpt/carousel.js`
-- _(One .js file per resource in src/components/resources/)_
+- _(One .js file per resource in src/resources/)_
 
 Each file is a self-contained bundle with CSS inlined. Host these files and reference them as resources in your production MCP server.
 

@@ -26,12 +26,12 @@ export async function build(projectRoot = process.cwd()) {
   const distDir = path.join(projectRoot, 'dist/chatgpt');
   const buildDir = path.join(projectRoot, 'dist/build-output');
   const tempDir = path.join(projectRoot, '.tmp');
-  const resourcesDir = path.join(projectRoot, 'src/components/resources');
+  const resourcesDir = path.join(projectRoot, 'src/resources');
   const templateFile = path.join(projectRoot, 'src/index-resource.tsx');
 
   // Validate project structure
   if (!existsSync(resourcesDir)) {
-    console.error('Error: src/components/resources directory not found');
+    console.error('Error: src/resources directory not found');
     console.error('Expected location: ' + resourcesDir);
     console.error('\nThe build command expects the standard Sunpeak project structure.');
     console.error('If you have customized your project structure, you may need to use');
@@ -106,7 +106,7 @@ export async function build(projectRoot = process.cwd()) {
     });
 
   if (resourceFiles.length === 0) {
-    console.error('Error: No resource files found in src/components/resources/');
+    console.error('Error: No resource files found in src/resources/');
     console.error('Resource files should be named like: counter-resource.tsx');
     process.exit(1);
   }
@@ -144,7 +144,7 @@ export async function build(projectRoot = process.cwd()) {
 
       // Create entry file from template in temp directory
       const entryContent = template
-        .replace('// RESOURCE_IMPORT', `import { ${componentName} } from '../src/components/resources/${componentFile}';`)
+        .replace('// RESOURCE_IMPORT', `import { ${componentName} } from '../src/resources/${componentFile}';`)
         .replace('// RESOURCE_MOUNT', `createRoot(root).render(<${componentName} />);`);
 
       const entryPath = path.join(projectRoot, entry);
