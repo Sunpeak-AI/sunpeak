@@ -21,6 +21,7 @@ Quickstart, build, test, and ship your ChatGPT App locally!
 
 [Demo (Hosted)](https://sunpeak.ai/#simulator) ~
 [Demo (Video)](https://d10djik02wlf6x.cloudfront.net/sunpeak-demo-prod.mp4) ~
+[Discord (NEW)](https://discord.gg/FB2QNXqRnw) ~
 [Documentation](https://docs.sunpeak.ai/) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
