@@ -151,7 +151,7 @@ export function Conversation({
                       {/* App UI content area - allows horizontal overflow */}
                       {displayMode === 'pip' ? (
                         <div
-                          className="no-scrollbar @w-xl/main:top-4 fixed start-4 end-4 top-4 z-50 mx-auto max-w-[40rem] lg:max-w-[48rem] sm:start-0 sm:end-0 sm:top-[3.25rem] sm:w-full overflow-visible"
+                          className="no-scrollbar @w-xl/main:top-4 fixed start-4 end-4 top-12 z-50 mx-auto max-w-[40rem] lg:max-w-[48rem] sm:start-0 sm:end-0 sm:top-[3.25rem] sm:w-full overflow-visible"
                           style={{ maxHeight: '480px' }}
                         >
                           <button
@@ -168,7 +168,7 @@ export function Conversation({
                           </button>
                           <div className="relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_#fff3,0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4">
                             {/* Simulated iframe - scrollable content */}
-                            <div className="h-full w-full max-w-full overflow-auto bg-[#212121]">
+                            <div className="h-full w-full max-w-full overflow-auto bg-white dark:bg-[#212121]">
                               {children}
                             </div>
                           </div>

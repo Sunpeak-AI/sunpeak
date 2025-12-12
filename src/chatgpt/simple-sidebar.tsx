@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Select } from '@openai/apps-sdk-ui/components/Select';
+import { ChevronRight } from '@openai/apps-sdk-ui/components/Icon';
 import { Input } from '@openai/apps-sdk-ui/components/Input';
 import { Checkbox } from '@openai/apps-sdk-ui/components/Checkbox';
 import { Textarea } from '@openai/apps-sdk-ui/components/Textarea';
@@ -11,14 +12,61 @@ interface SimpleSidebarProps {
 }
 
 export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
+  const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+
   return (
-    <div className="flex h-screen w-full overflow-hidden">
+    <div className="sunpeak-simulator-root flex h-screen w-full overflow-hidden relative">
+      {/* Mobile drawer overlay */}
+      {isDrawerOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40 pointer-events-auto"
+          onClick={(e) => {
+            // Only close if clicking directly on the overlay
+            if (e.target === e.currentTarget) {
+              setIsDrawerOpen(false);
+            }
+          }}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="max-md:hidden md:flex w-56 flex-col border-r border-subtle bg-sidebar overflow-hidden">
+      <aside
+        className={`
+          w-56 flex flex-col border-r border-subtle bg-sidebar
+          md:relative md:z-auto
+          max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[100]
+          max-md:transition-transform max-md:duration-300
+          ${isDrawerOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}
+        `}
+      >
         <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-3 pt-0">
           <div className="space-y-3">
             <div>
-              <h2 className="text-xs font-semibold sticky top-0 bg-sidebar z-10 py-2">Controls</h2>
+              <div className="flex items-center justify-between sticky top-0 bg-sidebar z-10 py-2">
+                <h2 className="text-xs font-semibold">Controls</h2>
+                {/* Close button for mobile */}
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="md:hidden text-secondary hover:text-primary transition-colors p-1"
+                  type="button"
+                  aria-label="Close sidebar"
+                >
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M12 4L4 12M4 4L12 12"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </button>
+              </div>
               {controls}
             </div>
           </div>
@@ -26,7 +74,18 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto">{children}</main>
+      <main className="flex-1 overflow-auto relative">
+        {/* Mobile drawer toggle button */}
+        <button
+          onClick={() => setIsDrawerOpen(true)}
+          className="md:hidden fixed top-18 left-0 z-30 bg-sidebar border-r border-t border-b border-subtle rounded-r-md p-2 shadow-lg hover:bg-primary/10 transition-colors"
+          type="button"
+          aria-label="Open sidebar"
+        >
+          <ChevronRight />
+        </button>
+        {children}
+      </main>
     </div>
   );
 }
