@@ -122,13 +122,11 @@ function createAppServer(config: MCPServerConfig): Server {
   );
 
   server.setRequestHandler(ListResourcesRequestSchema, async (_request: ListResourcesRequest) => {
-    console.log('[MCP] ListResources');
+    console.log(`[MCP] ListResources → ${resources.length} resource(s)`);
     return { resources };
   });
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request: ReadResourceRequest) => {
-    console.log('[MCP] ReadResource:', request.params.uri);
-
     // Strip timestamp suffix from URI (e.g., "carousel-m8k3j5.html" -> "carousel.html")
     const requestedUri = request.params.uri;
     const cleanedUri = requestedUri.includes('.')
@@ -139,6 +137,9 @@ function createAppServer(config: MCPServerConfig): Server {
     if (!resourceData) {
       throw new Error(`Unknown resource: ${request.params.uri} (cleaned: ${cleanedUri})`);
     }
+
+    const sizeKB = (resourceData.content.length / 1024).toFixed(1);
+    console.log(`[MCP] ReadResource: ${cleanedUri} → ${sizeKB}KB`);
 
     return {
       contents: [
@@ -153,12 +154,14 @@ function createAppServer(config: MCPServerConfig): Server {
   });
 
   server.setRequestHandler(ListToolsRequestSchema, async (_request: ListToolsRequest) => {
-    console.log('[MCP] ListTools');
+    console.log(`[MCP] ListTools → ${tools.length} tool(s)`);
     return { tools };
   });
 
   server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
-    console.log('[MCP] CallTool:', request.params.name, request.params.arguments);
+    const args = request.params.arguments ?? {};
+    const argKeys = Object.keys(args);
+    const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
 
     const simulation = simulations.find((s) => s.tool.name === request.params.name);
     if (!simulation) {
@@ -167,7 +170,10 @@ function createAppServer(config: MCPServerConfig): Server {
 
     const toolCallData = toolCallDataMap.get(request.params.name);
 
-    toolInputParser.parse(request.params.arguments ?? {});
+    toolInputParser.parse(args);
+
+    const hasStructuredContent = toolCallData?.structuredContent != null;
+    console.log(`[MCP] CallTool: ${request.params.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`);
 
     return {
       content: [
@@ -201,21 +207,23 @@ async function handleSseRequest(res: ServerResponse, config: MCPServerConfig) {
   const sessionId = transport.sessionId;
 
   sessions.set(sessionId, { server, transport });
+  console.log(`[MCP] Session started: ${sessionId.substring(0, 8)}... (${sessions.size} active)`);
 
   transport.onclose = async () => {
     sessions.delete(sessionId);
+    console.log(`[MCP] Session closed: ${sessionId.substring(0, 8)}... (${sessions.size} active)`);
     await server.close();
   };
 
   transport.onerror = (error) => {
-    console.error('SSE transport error', error);
+    console.error(`[MCP] SSE transport error (${sessionId.substring(0, 8)}...):`, error);
   };
 
   try {
     await server.connect(transport);
   } catch (error) {
     sessions.delete(sessionId);
-    console.error('Failed to start SSE session', error);
+    console.error(`[MCP] Failed to start session (${sessionId.substring(0, 8)}...):`, error);
     if (!res.headersSent) {
       res.writeHead(500).end('Failed to establish SSE connection');
     }
