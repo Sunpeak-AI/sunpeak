@@ -29,7 +29,7 @@ async function startServer() {
   }));
 
   runMCPServer({
-    name: pkg.name || 'Sunpeak App',
+    name: pkg.name || 'Sunpeak',
     version: pkg.version || '0.1.0',
     simulations,
     port: 6766,

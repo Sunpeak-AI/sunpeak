@@ -41,7 +41,7 @@ const simulations: Simulation[] = Object.values(
 }));
 
 // Read app config from package.json or use defaults
-const appName = import.meta.env?.VITE_APP_NAME || 'Sunpeak App';
+const appName = import.meta.env?.VITE_APP_NAME || 'Sunpeak';
 const appIcon = import.meta.env?.VITE_APP_ICON || '🌄';
 
 createRoot(document.getElementById('root')!).render(

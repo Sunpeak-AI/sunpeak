@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { CloseBold } from '@openai/apps-sdk-ui/components/Icon';
+import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { useDisplayMode, useWidgetAPI } from '../hooks';
 import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
 
@@ -9,14 +10,16 @@ interface ConversationProps {
   appName?: string;
   appIcon?: string;
   userMessage?: string;
+  resourceMeta?: Record<string, unknown>;
 }
 
 export function Conversation({
   children,
   screenWidth,
-  appName = 'Sunpeak App',
+  appName = 'Sunpeak',
   appIcon,
   userMessage = 'What have you got for me today?',
+  resourceMeta,
 }: ConversationProps) {
   // Read displayMode from window.openai (same source the App uses)
   const displayMode = useDisplayMode() ?? 'inline';
@@ -53,7 +56,22 @@ export function Conversation({
               </button>
             </div>
             <div className="text-primary flex items-center justify-center text-base">{appName}</div>
-            <div className="flex items-center justify-end"></div>
+            <div className="flex items-center justify-end">
+              <Button
+                variant="outline"
+                color="primary"
+                className="bg-token-bg-primary"
+                onClick={() => {
+                  const widgetDomain = resourceMeta?.['openai/widgetDomain'] as string | undefined;
+                  if (api?.openExternal && widgetDomain) {
+                    api.openExternal({ href: widgetDomain });
+                  }
+                }}
+              >
+                {appIcon && <span className="me-2 h-4 w-4 flex items-center justify-center">{appIcon}</span>}
+                Open in {appName}
+              </Button>
+            </div>
           </div>
           <div className="relative overflow-hidden flex-1 min-h-0">
             {/* Simulated iframe - scrollable when content exceeds viewport */}

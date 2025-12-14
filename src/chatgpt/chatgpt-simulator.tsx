@@ -44,7 +44,7 @@ interface ChatGPTSimulatorProps {
 export function ChatGPTSimulator({
   children,
   simulations = [],
-  appName = 'Sunpeak App',
+  appName = 'Sunpeak',
   appIcon,
 }: ChatGPTSimulatorProps) {
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
@@ -610,6 +610,7 @@ export function ChatGPTSimulator({
           appName={appName}
           appIcon={appIcon}
           userMessage={userMessage}
+          resourceMeta={selectedSim?.resource._meta}
           key={selectedKey}
         >
           {content}
