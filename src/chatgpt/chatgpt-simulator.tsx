@@ -610,7 +610,7 @@ export function ChatGPTSimulator({
           appName={appName}
           appIcon={appIcon}
           userMessage={userMessage}
-          resourceMeta={selectedSim?.resource._meta}
+          resourceMeta={selectedSim?.resource._meta as Record<string, unknown> | undefined}
           key={selectedKey}
         >
           {content}

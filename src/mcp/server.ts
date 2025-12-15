@@ -173,7 +173,9 @@ function createAppServer(config: MCPServerConfig): Server {
     toolInputParser.parse(args);
 
     const hasStructuredContent = toolCallData?.structuredContent != null;
-    console.log(`[MCP] CallTool: ${request.params.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`);
+    console.log(
+      `[MCP] CallTool: ${request.params.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
+    );
 
     return {
       content: [

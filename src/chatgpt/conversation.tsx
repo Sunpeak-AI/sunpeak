@@ -68,7 +68,9 @@ export function Conversation({
                   }
                 }}
               >
-                {appIcon && <span className="me-2 h-4 w-4 flex items-center justify-center">{appIcon}</span>}
+                {appIcon && (
+                  <span className="me-2 h-4 w-4 flex items-center justify-center">{appIcon}</span>
+                )}
                 Open in {appName}
               </Button>
             </div>
