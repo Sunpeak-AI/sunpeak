@@ -27,6 +27,80 @@ function checkPackageJson() {
   }
 }
 
+function parseResourcesInput(input) {
+  const VALID_RESOURCES = ['albums', 'carousel', 'counter'];
+
+  // If no input, return all resources
+  if (!input || input.trim() === '') {
+    return VALID_RESOURCES;
+  }
+
+  // Split by comma or space and trim
+  const tokens = input
+    .toLowerCase()
+    .split(/[,\s]+/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+
+  // Validate tokens
+  const invalid = tokens.filter((t) => !VALID_RESOURCES.includes(t));
+  if (invalid.length > 0) {
+    console.error(`Error: Invalid resource(s): ${invalid.join(', ')}`);
+    console.error(`Valid resources are: ${VALID_RESOURCES.join(', ')}`);
+    process.exit(1);
+  }
+
+  // Remove duplicates
+  return [...new Set(tokens)];
+}
+
+function updateIndexFiles(targetDir, selectedResources) {
+  // Map resource names to their component/export names
+  const resourceMap = {
+    albums: { component: 'album', resourceClass: 'AlbumsResource', simulation: 'albums' },
+    carousel: { component: 'carousel', resourceClass: 'CarouselResource', simulation: 'carousel' },
+    counter: { component: null, resourceClass: 'CounterResource', simulation: 'counter' },
+  };
+
+  // Update components/index.ts
+  const componentsIndexPath = join(targetDir, 'src', 'components', 'index.ts');
+  const componentExports = selectedResources
+    .map((r) => resourceMap[r].component)
+    .filter((comp) => comp !== null) // Filter out null components
+    .filter((v, i, a) => a.indexOf(v) === i) // Remove duplicates
+    .map((comp) => `export * from './${comp}';`)
+    .join('\n');
+  writeFileSync(componentsIndexPath, componentExports + '\n');
+
+  // Update resources/index.ts
+  const resourcesIndexPath = join(targetDir, 'src', 'resources', 'index.ts');
+  const resourceExports = selectedResources
+    .map((r) => `export { ${resourceMap[r].resourceClass} } from './${r}-resource';`)
+    .join('\n');
+  writeFileSync(resourcesIndexPath, resourceExports + '\n');
+
+  // Update simulations/index.ts
+  const simulationsIndexPath = join(targetDir, 'src', 'simulations', 'index.ts');
+  const simulationImports = selectedResources
+    .map((r) => `import { ${r}Simulation } from './${r}-simulation.js';`)
+    .join('\n');
+  const simulationExports = selectedResources.map((r) => `  ${r}: ${r}Simulation,`).join('\n');
+  const simulationsContent = `/**
+ * Server-safe simulation configurations
+ *
+ * This file contains only metadata and can be safely imported in Node.js contexts
+ * (like MCP servers) without causing issues with CSS imports or React components.
+ */
+
+${simulationImports}
+
+export const SIMULATIONS = {
+${simulationExports}
+} as const;
+`;
+  writeFileSync(simulationsIndexPath, simulationsContent);
+}
+
 async function init(projectName) {
   if (!projectName) {
     projectName = await prompt('☀️ 🏔️ Project name [my-app]: ');
@@ -39,6 +113,12 @@ async function init(projectName) {
     console.error('Error: "template" is a reserved name. Please choose another name.');
     process.exit(1);
   }
+
+  // Ask for resources to include
+  const resourcesInput = await prompt(
+    '☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter]: '
+  );
+  const selectedResources = parseResourcesInput(resourcesInput);
 
   const targetDir = join(process.cwd(), projectName);
 
@@ -53,11 +133,44 @@ async function init(projectName) {
 
   mkdirSync(targetDir, { recursive: true });
 
+  // Map resource names to their component directory names
+  const resourceComponentMap = {
+    albums: 'album',
+    carousel: 'carousel',
+    counter: null, // Counter doesn't have a component directory
+  };
+
   cpSync(templateDir, targetDir, {
     recursive: true,
     filter: (src) => {
       const name = basename(src);
-      return name !== 'node_modules' && name !== 'pnpm-lock.yaml';
+
+      // Skip node_modules and lock file
+      if (name === 'node_modules' || name === 'pnpm-lock.yaml') {
+        return false;
+      }
+
+      // Filter resource files based on selection
+      const VALID_RESOURCES = ['albums', 'carousel', 'counter'];
+      const excludedResources = VALID_RESOURCES.filter((r) => !selectedResources.includes(r));
+
+      for (const resource of excludedResources) {
+        // Skip resource files
+        if (name === `${resource}-resource.tsx` || name === `${resource}-resource.test.tsx`) {
+          return false;
+        }
+        // Skip simulation files
+        if (name === `${resource}-simulation.ts`) {
+          return false;
+        }
+        // Skip component directories (map resource name to component dir name)
+        const componentDirName = resourceComponentMap[resource];
+        if (componentDirName && src.includes('/components/') && name === componentDirName) {
+          return false;
+        }
+      }
+
+      return true;
     },
   });
 
@@ -87,6 +200,9 @@ async function init(projectName) {
   }
 
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+
+  // Update index.ts files based on selected resources
+  updateIndexFiles(targetDir, selectedResources);
 
   console.log(`
 Done! To get started:

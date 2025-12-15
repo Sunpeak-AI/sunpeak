@@ -6,7 +6,7 @@ import {
   useWidgetProps,
   useUserAgent,
 } from 'sunpeak';
-import { Carousel } from '../carousel';
+import { AlbumCarousel } from './album-carousel';
 import { AlbumCard } from './album-card';
 import { FullscreenViewer } from './fullscreen-viewer';
 
@@ -60,7 +60,7 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
 
   return (
     <div ref={ref} className={className}>
-      <Carousel gap={20} showArrows={false} showEdgeGradients={false} cardWidth={272}>
+      <AlbumCarousel gap={20} showArrows={false} showEdgeGradients={false} cardWidth={272}>
         {albums.map((album: Album) => (
           <AlbumCard
             key={album.id}
@@ -69,7 +69,7 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
             buttonSize={hasTouch ? 'lg' : 'md'}
           />
         ))}
-      </Carousel>
+      </AlbumCarousel>
     </div>
   );
 });

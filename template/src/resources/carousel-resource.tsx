@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { useWidgetProps, useSafeArea, useMaxHeight, useUserAgent } from 'sunpeak';
-import { Carousel } from '../components/carousel/carousel';
-import { Card } from '../components/card/card';
+import { Carousel, Card } from '../components/carousel';
 
 /**
  * Production-ready Carousel Resource
