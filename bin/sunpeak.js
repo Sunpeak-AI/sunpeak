@@ -101,7 +101,7 @@ ${simulationExports}
   writeFileSync(simulationsIndexPath, simulationsContent);
 }
 
-async function init(projectName) {
+async function init(projectName, resourcesArg) {
   if (!projectName) {
     projectName = await prompt('☀️ 🏔️ Project name [my-app]: ');
     if (!projectName) {
@@ -114,10 +114,14 @@ async function init(projectName) {
     process.exit(1);
   }
 
-  // Ask for resources to include
-  const resourcesInput = await prompt(
-    '☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter]: '
-  );
+  // Use resources from args or ask for them
+  let resourcesInput;
+  if (resourcesArg) {
+    resourcesInput = resourcesArg;
+    console.log(`☀️ 🏔️ Resources: ${resourcesArg}`);
+  } else {
+    resourcesInput = await prompt('☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter]: ');
+  }
   const selectedResources = parseResourcesInput(resourcesInput);
 
   const targetDir = join(process.cwd(), projectName);
@@ -235,7 +239,7 @@ const [, , command, ...args] = process.argv;
 
   switch (command) {
     case 'new':
-      await init(args[0]);
+      await init(args[0], args[1]);
       break;
 
     case 'dev':
@@ -265,8 +269,11 @@ const [, , command, ...args] = process.argv;
 ☀️ 🏔️ sunpeak - The MCP App framework
 
 Usage:
-  npx sunpeak new [name]   Create a new project (no install needed)
-  pnpm dlx sunpeak new     Alternative with pnpm
+  npx sunpeak new [name] [resources]   Create a new project (no install needed)
+  pnpm dlx sunpeak new                  Alternative with pnpm
+
+  Resources: albums, carousel, counter (comma/space separated, or "all")
+  Example: npx sunpeak new my-app "albums,carousel"
 
 Inside your project, use npm scripts:
   pnpm dev                 Start development server
@@ -275,7 +282,7 @@ Inside your project, use npm scripts:
   pnpm test                Run tests
 
 Direct CLI commands (when sunpeak is installed):
-  sunpeak new [name]       Create a new project
+  sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server
   sunpeak build            Build resources
   sunpeak mcp              Start MCP server

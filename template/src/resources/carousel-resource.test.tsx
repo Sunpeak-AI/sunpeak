@@ -32,13 +32,10 @@ vi.mock('sunpeak', () => ({
 }));
 
 // Mock child components
-vi.mock('../components/carousel/carousel', () => ({
+vi.mock('../components/carousel', () => ({
   Carousel: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="carousel">{children}</div>
   ),
-}));
-
-vi.mock('../components/card/card', () => ({
   Card: ({ header, buttonSize }: { header: React.ReactNode; buttonSize?: string }) => (
     <div data-testid="card" data-button-size={buttonSize}>
       {header}

@@ -6,11 +6,11 @@ import { useWidgetState, useDisplayMode } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { cn } from '../../lib/index';
 
-export interface CarouselState extends Record<string, unknown> {
+export interface AlbumCarouselState extends Record<string, unknown> {
   currentIndex?: number;
 }
 
-export type CarouselProps = {
+export type AlbumCarouselProps = {
   children?: React.ReactNode;
   gap?: number;
   showArrows?: boolean;
@@ -19,12 +19,12 @@ export type CarouselProps = {
   className?: string;
 };
 
-export const AlbumCarousel = React.forwardRef<HTMLDivElement, CarouselProps>(
+export const AlbumCarousel = React.forwardRef<HTMLDivElement, AlbumCarouselProps>(
   (
     { children, gap = 16, showArrows = true, showEdgeGradients = true, cardWidth, className },
     ref
   ) => {
-    const [widgetState, setWidgetState] = useWidgetState<CarouselState>(() => ({
+    const [widgetState, setWidgetState] = useWidgetState<AlbumCarouselState>(() => ({
       currentIndex: 0,
     }));
     const displayMode = useDisplayMode();

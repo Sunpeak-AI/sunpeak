@@ -29,8 +29,8 @@ vi.mock('./fullscreen-viewer', () => ({
   ),
 }));
 
-vi.mock('../carousel', () => ({
-  Carousel: ({ children }: { children: React.ReactNode }) => (
+vi.mock('./album-carousel', () => ({
+  AlbumCarousel: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="carousel">{children}</div>
   ),
 }));
