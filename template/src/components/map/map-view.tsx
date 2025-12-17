@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMaxHeight } from 'sunpeak';
 import { cn } from '../../lib/index';
-import type { Place } from '../../simulations/pizzaz-simulation';
+import type { Place } from '../../simulations/map-simulation';
 
 // Public Mapbox token for demo purposes
 mapboxgl.accessToken =
@@ -79,7 +79,7 @@ export const MapView = React.forwardRef<HTMLDivElement, MapViewProps>(
       if (typeof window === 'undefined') return 0;
 
       const isXlUp = window.matchMedia && window.matchMedia('(min-width: 1280px)').matches;
-      const el = document.querySelector('.pizzaz-inspector');
+      const el = document.querySelector('.map-inspector');
       const w = el ? el.getBoundingClientRect().width : 360;
       const half = Math.round(w / 2);
 

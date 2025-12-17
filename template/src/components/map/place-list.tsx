@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Settings } from '@openai/apps-sdk-ui/components/Icon';
 import { cn } from '../../lib/index';
 import { PlaceCard } from './place-card';
-import type { Place } from '../../simulations/pizzaz-simulation';
+import type { Place } from '../../simulations/map-simulation';
 
 export type PlaceListProps = {
   places: Place[];

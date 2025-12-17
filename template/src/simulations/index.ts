@@ -8,11 +8,11 @@
 import { counterSimulation } from './counter-simulation.js';
 import { albumsSimulation } from './albums-simulation.js';
 import { carouselSimulation } from './carousel-simulation.js';
-import { pizzazSimulation } from './pizzaz-simulation.js';
+import { mapSimulation } from './map-simulation.js';
 
 export const SIMULATIONS = {
   counter: counterSimulation,
   albums: albumsSimulation,
   carousel: carouselSimulation,
-  pizzaz: pizzazSimulation,
+  map: mapSimulation,
 } as const;

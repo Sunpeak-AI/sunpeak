@@ -28,7 +28,7 @@ function checkPackageJson() {
 }
 
 function parseResourcesInput(input) {
-  const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'pizzaz'];
+  const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'map'];
 
   // If no input, return all resources
   if (!input || input.trim() === '') {
@@ -60,7 +60,7 @@ function updateIndexFiles(targetDir, selectedResources) {
     albums: { component: 'album', resourceClass: 'AlbumsResource', simulation: 'albums' },
     carousel: { component: 'carousel', resourceClass: 'CarouselResource', simulation: 'carousel' },
     counter: { component: null, resourceClass: 'CounterResource', simulation: 'counter' },
-    pizzaz: { component: 'pizzaz', resourceClass: 'PizzazResource', simulation: 'pizzaz' },
+    map: { component: 'map', resourceClass: 'MapResource', simulation: 'map' },
   };
 
   // Update components/index.ts
@@ -122,7 +122,7 @@ async function init(projectName, resourcesArg) {
     console.log(`☀️ 🏔️ Resources: ${resourcesArg}`);
   } else {
     resourcesInput = await prompt(
-      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter, pizzaz]: '
+      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter, map]: '
     );
   }
   const selectedResources = parseResourcesInput(resourcesInput);
@@ -145,7 +145,7 @@ async function init(projectName, resourcesArg) {
     albums: 'album',
     carousel: 'carousel',
     counter: null, // Counter doesn't have a component directory
-    pizzaz: 'pizzaz',
+    map: 'map',
   };
 
   cpSync(templateDir, targetDir, {
@@ -159,7 +159,7 @@ async function init(projectName, resourcesArg) {
       }
 
       // Filter resource files based on selection
-      const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'pizzaz'];
+      const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'map'];
       const excludedResources = VALID_RESOURCES.filter((r) => !selectedResources.includes(r));
 
       for (const resource of excludedResources) {
@@ -276,7 +276,7 @@ Usage:
   npx sunpeak new [name] [resources]   Create a new project (no install needed)
   pnpm dlx sunpeak new                  Alternative with pnpm
 
-  Resources: albums, carousel, counter, pizzaz (comma/space separated)
+  Resources: albums, carousel, counter, map (comma/space separated)
   Example: npx sunpeak new my-app "albums,carousel"
 
 Inside your project, use npm scripts:

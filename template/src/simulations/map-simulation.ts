@@ -1,5 +1,5 @@
 /**
- * Server-safe configuration for the pizzaz simulation.
+ * Server-safe configuration for the map simulation.
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
@@ -16,11 +16,11 @@ export interface Place {
   thumbnail: string;
 }
 
-export interface PizzazData extends Record<string, unknown> {
+export interface MapData extends Record<string, unknown> {
   places: Place[];
 }
 
-const pizzazData: PizzazData = {
+const mapData: MapData = {
   places: [
     {
       id: 'nova-slice-lab',
@@ -125,7 +125,7 @@ const pizzazData: PizzazData = {
   ],
 };
 
-export const pizzazSimulation = {
+export const mapSimulation = {
   userMessage: 'Find pizza near me',
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
@@ -136,7 +136,7 @@ export const pizzazSimulation = {
     title: 'Find Pizza',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://PizzazResource',
+      'openai/outputTemplate': 'ui://MapResource',
       'openai/toolInvocation/invoking': 'Finding pizza places',
       'openai/toolInvocation/invoked': 'Found pizza places',
       'openai/widgetAccessible': true,
@@ -148,9 +148,9 @@ export const pizzazSimulation = {
   // resource.name is used as the simulation identifier
   // resource.title is used as the simulation display label
   resource: {
-    uri: 'ui://PizzazResource',
-    name: 'pizzaz',
-    title: 'Pizzaz',
+    uri: 'ui://MapResource',
+    name: 'map',
+    title: 'Map',
     description: 'Pizza restaurant finder widget',
     mimeType: 'text/html+skybridge',
     _meta: {
@@ -171,7 +171,7 @@ export const pizzazSimulation = {
 
   // MCP CallTool protocol - data for CallTool response
   toolCall: {
-    structuredContent: pizzazData,
+    structuredContent: mapData,
     _meta: {},
   },
 } as const;

@@ -1,4 +1,4 @@
-export * from './pizzaz';
+export * from './map';
 export * from './place-card';
 export * from './place-list';
 export * from './place-carousel';

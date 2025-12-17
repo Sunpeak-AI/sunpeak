@@ -13,19 +13,19 @@ import { PlaceList } from './place-list';
 import { PlaceCarousel } from './place-carousel';
 import { PlaceInspector } from './place-inspector';
 import { MapView } from './map-view';
-import type { Place, PizzazData } from '../../simulations/pizzaz-simulation';
+import type { Place, MapData } from '../../simulations/map-simulation';
 
-export interface PizzazState extends Record<string, unknown> {
+export interface MapState extends Record<string, unknown> {
   selectedPlaceId?: string | null;
 }
 
-export type PizzazProps = {
+export type MapProps = {
   className?: string;
 };
 
-export const Pizzaz = React.forwardRef<HTMLDivElement, PizzazProps>(({ className }, ref) => {
-  const data = useWidgetProps<PizzazData>(() => ({ places: [] }));
-  const [widgetState, setWidgetState] = useWidgetState<PizzazState>(() => ({
+export const Map = React.forwardRef<HTMLDivElement, MapProps>(({ className }, ref) => {
+  const data = useWidgetProps<MapData>(() => ({ places: [] }));
+  const [widgetState, setWidgetState] = useWidgetState<MapState>(() => ({
     selectedPlaceId: null,
   }));
   const displayMode = useDisplayMode();
@@ -142,4 +142,4 @@ export const Pizzaz = React.forwardRef<HTMLDivElement, PizzazProps>(({ className
     </div>
   );
 });
-Pizzaz.displayName = 'Pizzaz';
+Map.displayName = 'Map';

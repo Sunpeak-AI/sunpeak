@@ -3,7 +3,7 @@ import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { Avatar } from '@openai/apps-sdk-ui/components/Avatar';
 import { X, Star } from '@openai/apps-sdk-ui/components/Icon';
 import { cn } from '../../lib/index';
-import type { Place } from '../../simulations/pizzaz-simulation';
+import type { Place } from '../../simulations/map-simulation';
 
 export type PlaceInspectorProps = {
   place: Place;
@@ -37,7 +37,7 @@ export const PlaceInspector = React.forwardRef<HTMLDivElement, PlaceInspectorPro
       <div
         ref={ref}
         className={cn(
-          'pizzaz-inspector absolute z-30 top-0 bottom-4 left-0 right-auto xl:left-auto xl:right-6 md:z-20 w-[340px] xl:w-[360px] xl:top-6 xl:bottom-8 pointer-events-auto',
+          'map-inspector absolute z-30 top-0 bottom-4 left-0 right-auto xl:left-auto xl:right-6 md:z-20 w-[340px] xl:w-[360px] xl:top-6 xl:bottom-8 pointer-events-auto',
           'animate-in fade-in slide-in-from-left-2 xl:slide-in-from-right-2 duration-200',
           className
         )}

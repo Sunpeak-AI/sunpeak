@@ -1,3 +1,3 @@
 export * from './carousel';
 export * from './album';
-export * from './pizzaz';
+export * from './map';

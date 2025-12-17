@@ -1,15 +1,15 @@
 import * as React from 'react';
 import { useSafeArea, useMaxHeight } from 'sunpeak';
-import { Pizzaz } from '../components/pizzaz/pizzaz';
+import { Map } from '../components/map/map';
 
 /**
- * Production-ready Pizzaz Resource
+ * Production-ready Map Resource
  *
  * This resource displays a pizza restaurant finder with an interactive map,
  * place listings, and detailed inspector view.
  * Can be dropped into any production environment without changes.
  */
-export const PizzazResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
+export const MapResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
   const safeArea = useSafeArea();
   const maxHeight = useMaxHeight();
 
@@ -25,8 +25,8 @@ export const PizzazResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
         maxHeight: maxHeight ?? undefined,
       }}
     >
-      <Pizzaz />
+      <Map />
     </div>
   );
 });
-PizzazResource.displayName = 'PizzazResource';
+MapResource.displayName = 'MapResource';
