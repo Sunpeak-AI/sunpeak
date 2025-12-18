@@ -235,7 +235,7 @@ const [, , command, ...args] = process.argv;
 // Main CLI handler
 (async () => {
   // Commands that don't require a package.json
-  const standaloneCommands = ['new', 'help', undefined];
+  const standaloneCommands = ['new', 'login', 'logout', 'help', undefined];
 
   if (command && !standaloneCommands.includes(command)) {
     checkPackageJson();
@@ -267,6 +267,20 @@ const [, , command, ...args] = process.argv;
       }
       break;
 
+    case 'login':
+      {
+        const { login } = await import(join(COMMANDS_DIR, 'login.mjs'));
+        await login();
+      }
+      break;
+
+    case 'logout':
+      {
+        const { logout } = await import(join(COMMANDS_DIR, 'logout.mjs'));
+        await logout();
+      }
+      break;
+
     case 'help':
     case undefined:
       console.log(`
@@ -290,6 +304,8 @@ Direct CLI commands (when sunpeak is installed):
   sunpeak dev              Start dev server
   sunpeak build            Build resources
   sunpeak mcp              Start MCP server
+  sunpeak login            Log in to Sunpeak
+  sunpeak logout           Log out of Sunpeak
 
 For more information, visit: https://sunpeak.ai/
 `);
