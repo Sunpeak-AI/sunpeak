@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { defaultWidgetMeta } from './widget-config';
+import { counterResourceMeta } from '../resources/counter-resource.meta';
 
 export const counterSimulation = {
   userMessage: 'Help me count something',
@@ -24,19 +24,8 @@ export const counterSimulation = {
     },
   },
 
-  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
-  // resource.name is used as the simulation identifier
-  // resource.title is used as the simulation display label
-  resource: {
-    uri: 'ui://CounterResource',
-    name: 'counter',
-    title: 'Counter',
-    description: 'Show a simple counter tool widget markup',
-    mimeType: 'text/html+skybridge',
-    _meta: {
-      ...defaultWidgetMeta,
-    },
-  },
+  // MCP Resource protocol - imported from resource meta file
+  resource: counterResourceMeta,
 
   // MCP CallTool protocol - data for CallTool response
   toolCall: {

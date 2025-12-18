@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { defaultWidgetMeta } from './widget-config';
+import { mapResourceMeta } from '../resources/map-resource.meta';
 
 export interface Place {
   id: string;
@@ -144,30 +144,8 @@ export const mapSimulation = {
     },
   },
 
-  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
-  // resource.name is used as the simulation identifier
-  // resource.title is used as the simulation display label
-  resource: {
-    uri: 'ui://MapResource',
-    name: 'map',
-    title: 'Map',
-    description: 'Pizza restaurant finder widget',
-    mimeType: 'text/html+skybridge',
-    _meta: {
-      ...defaultWidgetMeta,
-      'openai/widgetCSP': {
-        ...defaultWidgetMeta['openai/widgetCSP'],
-        connect_domains: [
-          ...defaultWidgetMeta['openai/widgetCSP'].connect_domains,
-          'https://api.mapbox.com',
-        ],
-        resource_domains: [
-          ...defaultWidgetMeta['openai/widgetCSP'].resource_domains,
-          'https://api.mapbox.com',
-        ],
-      },
-    },
-  },
+  // MCP Resource protocol - imported from resource meta file
+  resource: mapResourceMeta,
 
   // MCP CallTool protocol - data for CallTool response
   toolCall: {

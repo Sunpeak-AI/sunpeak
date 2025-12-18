@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { defaultWidgetMeta } from './widget-config';
+import { albumsResourceMeta } from '../resources/albums-resource.meta';
 
 const albumsData = {
   albums: [
@@ -137,19 +137,8 @@ export const albumsSimulation = {
     },
   },
 
-  // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
-  // resource.name is used as the simulation identifier
-  // resource.title is used as the simulation display label
-  resource: {
-    uri: 'ui://AlbumsResource',
-    name: 'albums',
-    title: 'Albums',
-    description: 'Show photo albums widget markup',
-    mimeType: 'text/html+skybridge',
-    _meta: {
-      ...defaultWidgetMeta,
-    },
-  },
+  // MCP Resource protocol - imported from resource meta file
+  resource: albumsResourceMeta,
 
   // MCP CallTool protocol - data for CallTool response
   toolCall: {
