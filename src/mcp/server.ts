@@ -22,10 +22,10 @@ import { type MCPServerConfig } from './types.js';
 export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult } from './types.js';
 
 /**
- * Read and wrap tool JS in HTML shell.
+ * Read and wrap resource JS in HTML shell.
  * Assumes styles are already bundled in the JS by the build process.
  */
-function readToolHtml(distPath: string): string {
+function readResourceHtml(distPath: string): string {
   const htmlPath = path.resolve(distPath);
 
   if (!fs.existsSync(htmlPath)) {
@@ -56,9 +56,9 @@ function createAppServer(config: MCPServerConfig): Server {
 
   const toolInputParser = z.object({});
 
-  // Read widget content for each simulation
-  const widgetContentMap = new Map(
-    simulations.map((simulation) => [simulation.tool.name, readToolHtml(simulation.distPath)])
+  // Read resource content for each simulation
+  const resourceContentMap = new Map(
+    simulations.map((simulation) => [simulation.tool.name, readResourceHtml(simulation.distPath)])
   );
 
   // Generate base-36 timestamp once for this server instance
@@ -102,7 +102,7 @@ function createAppServer(config: MCPServerConfig): Server {
     resources.map((resource, index) => [
       resource.uri,
       {
-        content: widgetContentMap.get(simulations[index].tool.name)!,
+        content: resourceContentMap.get(simulations[index].tool.name)!,
         resource,
       },
     ])

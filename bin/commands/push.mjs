@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
+import { join, dirname, basename } from 'path';
 import { homedir } from 'os';
 import { execSync } from 'child_process';
 
@@ -75,9 +75,39 @@ function findResources(distDir) {
 }
 
 /**
+ * Build a resource from a specific JS file path
+ * Returns { name, jsPath, metaPath, meta }
+ */
+function buildResourceFromFile(jsPath) {
+  if (!existsSync(jsPath)) {
+    console.error(`Error: File not found: ${jsPath}`);
+    process.exit(1);
+  }
+
+  // Extract name from filename (remove .js extension)
+  const fileName = basename(jsPath);
+  const name = fileName.replace('.js', '');
+
+  // Look for .meta.json in the same directory
+  const dir = dirname(jsPath);
+  const metaPath = join(dir, `${name}.meta.json`);
+
+  let meta = null;
+  if (existsSync(metaPath)) {
+    try {
+      meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+    } catch {
+      console.warn(`Warning: Could not parse ${name}.meta.json`);
+    }
+  }
+
+  return { name, jsPath, metaPath, meta };
+}
+
+/**
  * Push a single resource to the API
  */
-async function pushResource(resource, repository, tag, accessToken) {
+async function pushResource(resource, repository, tags, accessToken) {
   const jsContent = readFileSync(resource.jsPath);
   const jsBlob = new Blob([jsContent], { type: 'application/javascript' });
 
@@ -123,9 +153,11 @@ async function pushResource(resource, repository, tag, accessToken) {
     formData.append('mime_type', 'text/html+skybridge');
   }
 
-  // Add tag if provided
-  if (tag) {
-    formData.append('tag', tag);
+  // Add tags if provided
+  if (tags && tags.length > 0) {
+    tags.forEach((tag) => {
+      formData.append('tags[]', tag);
+    });
   }
 
   const response = await fetch(`${SUNPEAK_API_URL}/api/v1/resources`, {
@@ -149,8 +181,8 @@ async function pushResource(resource, repository, tag, accessToken) {
  * @param {string} projectRoot - Project root directory
  * @param {Object} options - Command options
  * @param {string} options.repository - Repository name (optional, defaults to git repo name)
- * @param {string} options.distDir - Distribution directory (optional, defaults to dist/chatgpt)
- * @param {string} options.tag - Tag name (optional)
+ * @param {string} options.file - Path to a specific resource JS file (optional)
+ * @param {string[]} options.tags - Tags to assign to the pushed resources (optional)
  */
 export async function push(projectRoot = process.cwd(), options = {}) {
   // Handle help flag
@@ -159,19 +191,23 @@ export async function push(projectRoot = process.cwd(), options = {}) {
 sunpeak push - Push resources to the Sunpeak repository
 
 Usage:
-  sunpeak push [options]
+  sunpeak push [file] [options]
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -d, --dist <path>              Distribution directory (defaults to dist/chatgpt)
-  -t, --tag <name>               Tag to assign to the pushed resources
+  -t, --tag <name>               Tag to assign (can be specified multiple times)
   -h, --help                     Show this help message
 
+Arguments:
+  file                           Optional JS file to push (e.g., dist/carousel.js)
+                                 If not provided, pushes all resources from dist/
+
 Examples:
-  sunpeak push                              Push using defaults
-  sunpeak push -r myorg/my-app              Push to "myorg/my-app" repository
-  sunpeak push -t v1.0.0                    Push with a version tag
-  sunpeak push -r myorg/my-app -t staging   Push with "staging" tag
+  sunpeak push                       Push all resources from dist/
+  sunpeak push dist/carousel.js      Push a single resource
+  sunpeak push -r myorg/my-app       Push to "myorg/my-app" repository
+  sunpeak push -t v1.0.0             Push with a version tag
+  sunpeak push -t v1.0.0 -t latest   Push with multiple tags
 `);
     return;
   }
@@ -192,25 +228,31 @@ Examples:
     process.exit(1);
   }
 
-  // Determine dist directory
-  const distDir = options.distDir || join(projectRoot, 'dist/chatgpt');
-  if (!existsSync(distDir)) {
-    console.error(`Error: Distribution directory not found: ${distDir}`);
-    console.error('Run "sunpeak build" first to build your resources.');
-    process.exit(1);
-  }
+  // Find resources - either a specific file or all from dist directory
+  let resources;
+  if (options.file) {
+    // Push a single specific resource
+    resources = [buildResourceFromFile(options.file)];
+  } else {
+    // Default: find all resources in dist directory
+    const distDir = join(projectRoot, 'dist');
+    if (!existsSync(distDir)) {
+      console.error(`Error: dist/ directory not found`);
+      console.error('Run "sunpeak build" first to build your resources.');
+      process.exit(1);
+    }
 
-  // Find resources
-  const resources = findResources(distDir);
-  if (resources.length === 0) {
-    console.error(`Error: No resources found in ${distDir}`);
-    console.error('Run "sunpeak build" first to build your resources.');
-    process.exit(1);
+    resources = findResources(distDir);
+    if (resources.length === 0) {
+      console.error(`Error: No resources found in dist/`);
+      console.error('Run "sunpeak build" first to build your resources.');
+      process.exit(1);
+    }
   }
 
   console.log(`Pushing ${resources.length} resource(s) to repository "${repository}"...`);
-  if (options.tag) {
-    console.log(`Tag: ${options.tag}`);
+  if (options.tags && options.tags.length > 0) {
+    console.log(`Tags: ${options.tags.join(', ')}`);
   }
   console.log();
 
@@ -218,7 +260,7 @@ Examples:
   let successCount = 0;
   for (const resource of resources) {
     try {
-      const result = await pushResource(resource, repository, options.tag, credentials.access_token);
+      const result = await pushResource(resource, repository, options.tags, credentials.access_token);
       console.log(`✓ Pushed ${resource.name} (id: ${result.id})`);
       if (result.tags?.length > 0) {
         console.log(`  Tags: ${result.tags.join(', ')}`);
@@ -242,7 +284,7 @@ Examples:
  * Parse command line arguments
  */
 function parseArgs(args) {
-  const options = {};
+  const options = { tags: [] };
   let i = 0;
 
   while (i < args.length) {
@@ -250,35 +292,35 @@ function parseArgs(args) {
 
     if (arg === '--repository' || arg === '-r') {
       options.repository = args[++i];
-    } else if (arg === '--dist' || arg === '-d') {
-      options.distDir = args[++i];
     } else if (arg === '--tag' || arg === '-t') {
-      options.tag = args[++i];
+      options.tags.push(args[++i]);
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 sunpeak push - Push resources to the Sunpeak repository
 
 Usage:
-  sunpeak push [options]
+  sunpeak push [file] [options]
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -d, --dist <path>              Distribution directory (defaults to dist/chatgpt)
-  -t, --tag <name>               Tag to assign to the pushed resources
+  -t, --tag <name>               Tag to assign (can be specified multiple times)
   -h, --help                     Show this help message
 
+Arguments:
+  file                           Optional JS file to push (e.g., dist/carousel.js)
+                                 If not provided, pushes all resources from dist/
+
 Examples:
-  sunpeak push                              Push using defaults
-  sunpeak push -r myorg/my-app              Push to "myorg/my-app" repository
-  sunpeak push -t v1.0.0                    Push with a version tag
-  sunpeak push -r myorg/my-app -t staging   Push with "staging" tag
+  sunpeak push                       Push all resources from dist/
+  sunpeak push dist/carousel.js      Push a single resource
+  sunpeak push -r myorg/my-app       Push to "myorg/my-app" repository
+  sunpeak push -t v1.0.0             Push with a version tag
+  sunpeak push -t v1.0.0 -t latest   Push with multiple tags
 `);
       process.exit(0);
     } else if (!arg.startsWith('-')) {
-      // Positional argument - treat as repository name
-      if (!options.repository) {
-        options.repository = arg;
-      }
+      // Positional argument - treat as file path
+      options.file = arg;
     }
 
     i++;

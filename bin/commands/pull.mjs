@@ -91,7 +91,7 @@ async function downloadJsFile(resource, accessToken) {
  * @param {Object} options - Command options
  * @param {string} options.tag - Tag name to pull (required)
  * @param {string} options.repository - Repository name (optional, defaults to git repo name)
- * @param {string} options.output - Output directory (optional, defaults to dist/chatgpt)
+ * @param {string} options.output - Output directory (optional, defaults to dist)
  */
 export async function pull(projectRoot = process.cwd(), options = {}) {
   // Handle help flag
@@ -105,7 +105,7 @@ Usage:
 Options:
   -t, --tag <name>               Tag name to pull (required)
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -o, --output <path>            Output directory (defaults to dist/chatgpt)
+  -o, --output <path>            Output directory (defaults to dist)
   -h, --help                     Show this help message
 
 Examples:
@@ -162,7 +162,7 @@ Examples:
     const jsContent = await downloadJsFile(resource, credentials.access_token);
 
     // Determine output directory and file
-    const outputDir = options.output || join(projectRoot, 'dist/chatgpt');
+    const outputDir = options.output || join(projectRoot, 'dist');
     const outputFile = join(outputDir, `${resource.name}.js`);
     const metaFile = join(outputDir, `${resource.name}.meta.json`);
 
@@ -226,7 +226,7 @@ Usage:
 Options:
   -t, --tag <name>               Tag name to pull (required)
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -o, --output <path>            Output directory (defaults to dist/chatgpt)
+  -o, --output <path>            Output directory (defaults to dist)
   -h, --help                     Show this help message
 
 Examples:

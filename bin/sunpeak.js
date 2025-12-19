@@ -236,7 +236,7 @@ const [, , command, ...args] = process.argv;
  * Parse arguments for resource commands (push, pull, deploy)
  */
 function parseResourceArgs(args) {
-  const options = {};
+  const options = { tags: [] };
   let i = 0;
 
   while (i < args.length) {
@@ -244,19 +244,15 @@ function parseResourceArgs(args) {
 
     if (arg === '--repository' || arg === '-r') {
       options.repository = args[++i];
-    } else if (arg === '--dist' || arg === '-d') {
-      options.distDir = args[++i];
     } else if (arg === '--tag' || arg === '-t') {
-      options.tag = args[++i];
+      options.tags.push(args[++i]);
     } else if (arg === '--output' || arg === '-o') {
       options.output = args[++i];
     } else if (arg === '--help' || arg === '-h') {
       options.help = true;
     } else if (!arg.startsWith('-')) {
-      // Positional argument
-      if (!options.repository) {
-        options.repository = arg;
-      }
+      // Positional argument - treat as file path
+      options.file = arg;
     }
 
     i++;
