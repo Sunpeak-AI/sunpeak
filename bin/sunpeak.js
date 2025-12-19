@@ -264,7 +264,16 @@ function parseResourceArgs(args) {
 // Main CLI handler
 (async () => {
   // Commands that don't require a package.json
-  const standaloneCommands = ['new', 'login', 'logout', 'push', 'pull', 'deploy', 'help', undefined];
+  const standaloneCommands = [
+    'new',
+    'login',
+    'logout',
+    'push',
+    'pull',
+    'deploy',
+    'help',
+    undefined,
+  ];
 
   if (command && !standaloneCommands.includes(command)) {
     checkPackageJson();

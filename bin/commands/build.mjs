@@ -72,7 +72,7 @@ export async function build(projectRoot = process.cwd()) {
   const isTemplate = path.basename(projectRoot) === 'template';
   const parentSrc = path.resolve(projectRoot, '../src');
 
-  const distDir = path.join(projectRoot, 'dist/chatgpt');
+  const distDir = path.join(projectRoot, 'dist');
   const buildDir = path.join(projectRoot, 'dist/build-output');
   const tempDir = path.join(projectRoot, '.tmp');
   const resourcesDir = path.join(projectRoot, 'src/resources');
@@ -243,8 +243,8 @@ export async function build(projectRoot = process.cwd()) {
     }
   }
 
-  // Now copy all files from build-output to dist/chatgpt
-  console.log('\nCopying built files to dist/chatgpt...');
+  // Now copy all files from build-output to dist/
+  console.log('\nCopying built files to dist/...');
   for (const { output, buildOutDir } of resourceFiles) {
     const builtFile = path.join(buildOutDir, output);
     const destFile = path.join(distDir, output);

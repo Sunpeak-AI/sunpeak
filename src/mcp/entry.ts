@@ -25,7 +25,7 @@ async function startServer() {
     SIMULATIONS as Record<string, Omit<SimulationWithDist, 'distPath'>>
   ).map(([simulationKey, simulation]) => ({
     ...simulation,
-    distPath: path.join(projectRoot, `dist/chatgpt/${simulationKey}.js`),
+    distPath: path.join(projectRoot, `dist/${simulationKey}.js`),
   }));
 
   runMCPServer({

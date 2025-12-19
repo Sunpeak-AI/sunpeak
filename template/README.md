@@ -82,11 +82,11 @@ Build your app for production:
 pnpm build
 ```
 
-This creates optimized builds in `dist/chatgpt/`:
+This creates optimized builds in `dist/`:
 
-- `dist/chatgpt/counter.js`
-- `dist/chatgpt/albums.js`
-- `dist/chatgpt/carousel.js`
+- `dist/counter.js`
+- `dist/albums.js`
+- `dist/carousel.js`
 - _(One .js file per resource in src/resources/)_
 
 Each file is a self-contained bundle with CSS inlined. Host these files and reference them as resources in your production MCP server.

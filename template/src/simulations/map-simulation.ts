@@ -130,8 +130,8 @@ export const mapSimulation = {
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
   tool: {
-    name: 'find-pizza',
-    description: 'Find pizza restaurants nearby',
+    name: 'show-map',
+    description: 'Show the map',
     inputSchema: { type: 'object', properties: {}, additionalProperties: false } as const,
     title: 'Find Pizza',
     annotations: { readOnlyHint: true },
