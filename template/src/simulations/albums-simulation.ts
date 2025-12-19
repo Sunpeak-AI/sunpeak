@@ -129,7 +129,6 @@ export const albumsSimulation = {
     title: 'Show Albums',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://AlbumsResource',
       'openai/toolInvocation/invoking': 'Loading albums',
       'openai/toolInvocation/invoked': 'Album loaded',
       'openai/widgetAccessible': true,

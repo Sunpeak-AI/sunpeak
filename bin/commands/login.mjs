@@ -9,8 +9,8 @@ const CREDENTIALS_DIR = join(homedir(), '.sunpeak');
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json');
 
 // Polling configuration
-const POLL_INTERVAL_MS = 3000; // 3 seconds between polls
-const MAX_POLL_DURATION_MS = 5 * 60 * 1000; // 5 minutes max
+const POLL_INTERVAL_MS = 2000; // 2 seconds between polls.
+const MAX_POLL_DURATION_MS = 2 * 60 * 1000; // 2 minutes max.
 
 /**
  * Load existing credentials if present

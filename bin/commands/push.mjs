@@ -118,7 +118,6 @@ async function pushResource(resource, repository, tags, accessToken) {
 
   // Add metadata fields
   if (resource.meta) {
-    formData.append('uri', resource.meta.uri || `ui://${resource.name}`);
     formData.append('name', resource.meta.name || resource.name);
     formData.append('title', resource.meta.title || resource.name);
     if (resource.meta.description) {
@@ -147,7 +146,6 @@ async function pushResource(resource, repository, tags, accessToken) {
     }
   } else {
     // Fallback metadata
-    formData.append('uri', `ui://${resource.name}`);
     formData.append('name', resource.name);
     formData.append('title', resource.name);
     formData.append('mime_type', 'text/html+skybridge');

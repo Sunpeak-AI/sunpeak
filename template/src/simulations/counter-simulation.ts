@@ -16,7 +16,6 @@ export const counterSimulation = {
     title: 'Show Counter',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://CounterResource',
       'openai/toolInvocation/invoking': 'Counting beans',
       'openai/toolInvocation/invoked': 'Beans counted',
       'openai/widgetAccessible': true,

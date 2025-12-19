@@ -6,7 +6,6 @@
 import { defaultWidgetMeta } from '../simulations/widget-config';
 
 export const carouselResourceMeta = {
-  uri: 'ui://CarouselResource',
   name: 'carousel',
   title: 'Carousel',
   description: 'Show popular places to visit widget markup',

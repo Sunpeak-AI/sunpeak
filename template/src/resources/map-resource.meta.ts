@@ -6,7 +6,6 @@
 import { defaultWidgetMeta } from '../simulations/widget-config';
 
 export const mapResourceMeta = {
-  uri: 'ui://MapResource',
   name: 'map',
   title: 'Map',
   description: 'Pizza restaurant finder widget',

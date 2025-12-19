@@ -6,7 +6,6 @@
 import { defaultWidgetMeta } from '../simulations/widget-config';
 
 export const counterResourceMeta = {
-  uri: 'ui://CounterResource',
   name: 'counter',
   title: 'Counter',
   description: 'Show a simple counter tool widget markup',

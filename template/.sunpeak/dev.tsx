@@ -10,21 +10,19 @@ import * as Resources from '../src/resources';
 import '../src/styles/globals.css';
 
 /**
- * Extract the resource component name from a URI
- * Example: 'ui://CounterResource' -> 'CounterResource'
+ * Convert resource name to component name
+ * Example: 'carousel' -> 'CarouselResource', 'counter' -> 'CounterResource'
  */
-function getResourceComponentFromURI(uri: string): React.ComponentType {
-  const match = uri.match(/^ui:\/\/(.+)$/);
-  if (!match) {
-    throw new Error(`Invalid resource URI format: ${uri}. Expected format: ui://ComponentName`);
-  }
+function getResourceComponentFromName(name: string): React.ComponentType {
+  // Convert name to PascalCase and append 'Resource'
+  const pascalName = name.charAt(0).toUpperCase() + name.slice(1);
+  const componentName = `${pascalName}Resource`;
 
-  const componentName = match[1];
   const component = Resources[componentName as keyof typeof Resources];
 
   if (!component) {
     throw new Error(
-      `Resource component "${componentName}" not found. ` +
+      `Resource component "${componentName}" not found for resource "${name}". ` +
         `Make sure it's exported from src/resources/index.ts`
     );
   }
@@ -37,7 +35,7 @@ const simulations: Simulation[] = Object.values(
   SIMULATIONS as Record<string, Omit<Simulation, 'resourceComponent'>>
 ).map((simulation) => ({
   ...simulation,
-  resourceComponent: getResourceComponentFromURI(simulation.resource.uri),
+  resourceComponent: getResourceComponentFromName(simulation.resource.name),
 }));
 
 // Read app config from package.json or use defaults

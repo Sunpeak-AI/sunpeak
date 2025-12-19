@@ -64,31 +64,39 @@ function createAppServer(config: MCPServerConfig): Server {
   // Generate base-36 timestamp once for this server instance
   const timestamp = Date.now().toString(36);
 
-  // Use tools and resources directly from simulations (official MCP SDK types)
-  // Add timestamped URI to each tool's resource's URI to cache-bust
+  // Generate URIs for each resource based on name + timestamp
+  // Sunpeak owns the complete URI end-to-end
+  const uriMap = new Map(
+    simulations.map((simulation) => {
+      const resourceName = simulation.resource.name as string;
+      const uri = `ui://${resourceName}-${timestamp}.html`;
+      return [simulation.tool.name, uri];
+    })
+  );
+
+  // Build tools with generated outputTemplate URIs
   const tools = simulations.map((simulation) => {
     const tool = simulation.tool;
     const meta = tool._meta as Record<string, unknown> | undefined;
-    const outputTemplate = meta?.['openai/outputTemplate'];
+    const generatedUri = uriMap.get(tool.name)!;
 
-    if (outputTemplate && typeof outputTemplate === 'string') {
-      const timestampedUri = outputTemplate.includes('.')
-        ? outputTemplate.replace(/(\.[^.]+)$/, `-${timestamp}$1`)
-        : `${outputTemplate}-${timestamp}`;
-
-      return {
-        ...tool,
-        _meta: {
-          ...(meta ?? {}),
-          'openai/outputTemplate': timestampedUri,
-        },
-      };
-    }
-
-    return tool;
+    return {
+      ...tool,
+      _meta: {
+        ...(meta ?? {}),
+        'openai/outputTemplate': generatedUri,
+      },
+    };
   });
 
-  const resources = simulations.map((simulation) => simulation.resource);
+  // Build resources with generated URIs
+  const resources = simulations.map((simulation) => {
+    const generatedUri = uriMap.get(simulation.tool.name)!;
+    return {
+      ...simulation.resource,
+      uri: generatedUri,
+    };
+  });
 
   // Create maps for quick lookup of tool call data
   const toolCallDataMap = new Map(
@@ -104,6 +112,7 @@ function createAppServer(config: MCPServerConfig): Server {
       {
         content: resourceContentMap.get(simulations[index].tool.name)!,
         resource,
+        _meta: (simulations[index].resource as { _meta?: Record<string, unknown> })._meta,
       },
     ])
   );
@@ -127,19 +136,14 @@ function createAppServer(config: MCPServerConfig): Server {
   });
 
   server.setRequestHandler(ReadResourceRequestSchema, async (request: ReadResourceRequest) => {
-    // Strip timestamp suffix from URI (e.g., "carousel-m8k3j5.html" -> "carousel.html")
     const requestedUri = request.params.uri;
-    const cleanedUri = requestedUri.includes('.')
-      ? requestedUri.replace(/-[a-z0-9]+(\.[^.]+)$/, '$1')
-      : requestedUri.replace(/-[a-z0-9]+$/, '');
-
-    const resourceData = resourceMap.get(cleanedUri);
+    const resourceData = resourceMap.get(requestedUri);
     if (!resourceData) {
-      throw new Error(`Unknown resource: ${request.params.uri} (cleaned: ${cleanedUri})`);
+      throw new Error(`Unknown resource: ${requestedUri}`);
     }
 
     const sizeKB = (resourceData.content.length / 1024).toFixed(1);
-    console.log(`[MCP] ReadResource: ${cleanedUri} → ${sizeKB}KB`);
+    console.log(`[MCP] ReadResource: ${requestedUri} → ${sizeKB}KB`);
 
     return {
       contents: [
@@ -147,7 +151,7 @@ function createAppServer(config: MCPServerConfig): Server {
           uri: resourceData.resource.uri,
           mimeType: resourceData.resource.mimeType,
           text: resourceData.content,
-          _meta: resourceData.resource._meta,
+          _meta: resourceData._meta,
         },
       ],
     };

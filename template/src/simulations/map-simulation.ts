@@ -136,7 +136,6 @@ export const mapSimulation = {
     title: 'Find Pizza',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://MapResource',
       'openai/toolInvocation/invoking': 'Finding pizza places',
       'openai/toolInvocation/invoked': 'Found pizza places',
       'openai/widgetAccessible': true,

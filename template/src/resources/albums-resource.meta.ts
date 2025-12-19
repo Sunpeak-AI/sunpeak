@@ -6,7 +6,6 @@
 import { defaultWidgetMeta } from '../simulations/widget-config';
 
 export const albumsResourceMeta = {
-  uri: 'ui://AlbumsResource',
   name: 'albums',
   title: 'Albums',
   description: 'Show photo albums widget markup',

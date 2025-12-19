@@ -66,7 +66,6 @@ export const carouselSimulation = {
     title: 'Show Carousel',
     annotations: { readOnlyHint: true },
     _meta: {
-      'openai/outputTemplate': 'ui://CarouselResource',
       'openai/toolInvocation/invoking': 'Loading carousel',
       'openai/toolInvocation/invoked': 'Carousel loaded',
       'openai/widgetAccessible': true,
