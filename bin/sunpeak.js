@@ -232,10 +232,43 @@ See README.md for more details.
 
 const [, , command, ...args] = process.argv;
 
+/**
+ * Parse arguments for resource commands (push, pull, deploy)
+ */
+function parseResourceArgs(args) {
+  const options = {};
+  let i = 0;
+
+  while (i < args.length) {
+    const arg = args[i];
+
+    if (arg === '--repository' || arg === '-r') {
+      options.repository = args[++i];
+    } else if (arg === '--dist' || arg === '-d') {
+      options.distDir = args[++i];
+    } else if (arg === '--tag' || arg === '-t') {
+      options.tag = args[++i];
+    } else if (arg === '--output' || arg === '-o') {
+      options.output = args[++i];
+    } else if (arg === '--help' || arg === '-h') {
+      options.help = true;
+    } else if (!arg.startsWith('-')) {
+      // Positional argument
+      if (!options.repository) {
+        options.repository = arg;
+      }
+    }
+
+    i++;
+  }
+
+  return options;
+}
+
 // Main CLI handler
 (async () => {
   // Commands that don't require a package.json
-  const standaloneCommands = ['new', 'login', 'logout', 'help', undefined];
+  const standaloneCommands = ['new', 'login', 'logout', 'push', 'pull', 'deploy', 'help', undefined];
 
   if (command && !standaloneCommands.includes(command)) {
     checkPackageJson();
@@ -281,10 +314,31 @@ const [, , command, ...args] = process.argv;
       }
       break;
 
+    case 'push':
+      {
+        const { push } = await import(join(COMMANDS_DIR, 'push.mjs'));
+        await push(process.cwd(), parseResourceArgs(args));
+      }
+      break;
+
+    case 'pull':
+      {
+        const { pull } = await import(join(COMMANDS_DIR, 'pull.mjs'));
+        await pull(process.cwd(), parseResourceArgs(args));
+      }
+      break;
+
+    case 'deploy':
+      {
+        const { deploy } = await import(join(COMMANDS_DIR, 'deploy.mjs'));
+        await deploy(process.cwd(), parseResourceArgs(args));
+      }
+      break;
+
     case 'help':
     case undefined:
       console.log(`
-☀️ 🏔️ sunpeak - The MCP App framework
+☀️ 🏔️ sunpeak - The ChatGPT App framework
 
 Usage:
   npx sunpeak new [name] [resources]   Create a new project (no install needed)
@@ -306,6 +360,9 @@ Direct CLI commands (when sunpeak is installed):
   sunpeak mcp              Start MCP server
   sunpeak login            Log in to Sunpeak
   sunpeak logout           Log out of Sunpeak
+  sunpeak push             Push resources to repository
+  sunpeak pull             Pull resources from repository
+  sunpeak deploy           Push resources with "prod" tag
 
 For more information, visit: https://sunpeak.ai/
 `);
