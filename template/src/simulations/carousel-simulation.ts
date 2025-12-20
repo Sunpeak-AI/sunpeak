@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { carouselResourceMeta } from '../resources/carousel-resource.meta';
+import carouselResourceMeta from '../resources/carousel-resource.json';
 
 const placesData = {
   places: [

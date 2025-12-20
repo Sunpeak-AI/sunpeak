@@ -4,55 +4,6 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'fs';
 import path from 'path';
-import { pathToFileURL } from 'url';
-
-/**
- * Bundle and extract metadata from a resource meta file.
- * Uses Vite to bundle the TS file and its imports, then extracts the exported object.
- */
-async function extractResourceMeta(metaFilePath, projectRoot) {
-  const tempBundleDir = path.join(projectRoot, '.tmp', 'meta-bundle');
-
-  // Use Vite to bundle the meta file
-  await viteBuild({
-    root: projectRoot,
-    logLevel: 'silent',
-    build: {
-      lib: {
-        entry: metaFilePath,
-        formats: ['es'],
-        fileName: () => 'meta.mjs',
-      },
-      outDir: tempBundleDir,
-      emptyOutDir: true,
-      minify: false,
-      rollupOptions: {
-        output: {
-          // Ensure we get a single file
-          inlineDynamicImports: true,
-        },
-      },
-    },
-  });
-
-  const bundledFile = path.join(tempBundleDir, 'meta.mjs');
-
-  try {
-    const module = await import(pathToFileURL(bundledFile).href + `?t=${Date.now()}`);
-    // Find the exported meta object (it's named like "counterResourceMeta")
-    const exportedKey = Object.keys(module).find(key => key.endsWith('ResourceMeta'));
-    if (!exportedKey) {
-      console.warn(`Warning: No *ResourceMeta export found in ${metaFilePath}`);
-      return null;
-    }
-    return module[exportedKey];
-  } finally {
-    // Clean up temp bundle
-    if (existsSync(tempBundleDir)) {
-      rmSync(tempBundleDir, { recursive: true });
-    }
-  }
-}
 
 /**
  * Build all resources for a Sunpeak project
@@ -263,23 +214,16 @@ export async function build(projectRoot = process.cwd()) {
     }
   }
 
-  // Build resource metadata JSON files
-  console.log('\nBuilding resource metadata JSON files...');
+  // Copy resource metadata JSON files
+  console.log('\nCopying resource metadata JSON files...');
   for (const { componentFile } of resourceFiles) {
-    const metaFile = path.join(resourcesDir, `${componentFile}.meta.ts`);
     const kebabName = componentFile.replace('-resource', '');
-    const jsonFile = path.join(distDir, `${kebabName}.meta.json`);
+    const srcJson = path.join(resourcesDir, `${componentFile}.json`);
+    const destJson = path.join(distDir, `${kebabName}.json`);
 
-    if (existsSync(metaFile)) {
-      try {
-        const meta = await extractResourceMeta(metaFile, projectRoot);
-        if (meta) {
-          writeFileSync(jsonFile, JSON.stringify(meta, null, 2));
-          console.log(`✓ Built ${kebabName}.meta.json`);
-        }
-      } catch (error) {
-        console.warn(`Warning: Failed to extract metadata from ${metaFile}: ${error.message}`);
-      }
+    if (existsSync(srcJson)) {
+      copyFileSync(srcJson, destJson);
+      console.log(`✓ Copied ${kebabName}.json`);
     }
   }
 

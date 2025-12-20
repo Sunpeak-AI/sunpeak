@@ -1,0 +1,13 @@
+{
+  "name": "counter",
+  "title": "Counter",
+  "description": "Show a simple counter tool widget markup",
+  "mimeType": "text/html+skybridge",
+  "_meta": {
+    "openai/widgetDomain": "https://sunpeak.ai",
+    "openai/widgetCSP": {
+      "connect_domains": ["https://sunpeak.ai"],
+      "resource_domains": []
+    }
+  }
+}

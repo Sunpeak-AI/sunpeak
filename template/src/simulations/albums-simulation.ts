@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { albumsResourceMeta } from '../resources/albums-resource.meta';
+import albumsResourceMeta from '../resources/albums-resource.json';
 
 const albumsData = {
   albums: [

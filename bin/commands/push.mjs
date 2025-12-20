@@ -59,14 +59,14 @@ function findResources(distDir) {
   return jsFiles.map((jsFile) => {
     const name = jsFile.replace('.js', '');
     const jsPath = join(distDir, jsFile);
-    const metaPath = join(distDir, `${name}.meta.json`);
+    const metaPath = join(distDir, `${name}.json`);
 
     let meta = null;
     if (existsSync(metaPath)) {
       try {
         meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
       } catch {
-        console.warn(`Warning: Could not parse ${name}.meta.json`);
+        console.warn(`Warning: Could not parse ${name}.json`);
       }
     }
 
@@ -88,16 +88,16 @@ function buildResourceFromFile(jsPath) {
   const fileName = basename(jsPath);
   const name = fileName.replace('.js', '');
 
-  // Look for .meta.json in the same directory
+  // Look for .json in the same directory
   const dir = dirname(jsPath);
-  const metaPath = join(dir, `${name}.meta.json`);
+  const metaPath = join(dir, `${name}.json`);
 
   let meta = null;
   if (existsSync(metaPath)) {
     try {
       meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
     } catch {
-      console.warn(`Warning: Could not parse ${name}.meta.json`);
+      console.warn(`Warning: Could not parse ${name}.json`);
     }
   }
 

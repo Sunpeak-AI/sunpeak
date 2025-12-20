@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { mapResourceMeta } from '../resources/map-resource.meta';
+import mapResourceMeta from '../resources/map-resource.json';
 
 export interface Place {
   id: string;

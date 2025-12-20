@@ -164,7 +164,7 @@ Examples:
     // Determine output directory and file
     const outputDir = options.output || join(projectRoot, 'dist');
     const outputFile = join(outputDir, `${resource.name}.js`);
-    const metaFile = join(outputDir, `${resource.name}.meta.json`);
+    const metaFile = join(outputDir, `${resource.name}.json`);
 
     // Create output directory if it doesn't exist
     if (!existsSync(outputDir)) {
@@ -191,7 +191,7 @@ Examples:
       },
     };
     writeFileSync(metaFile, JSON.stringify(meta, null, 2));
-    console.log(`✓ Saved ${resource.name}.meta.json`);
+    console.log(`✓ Saved ${resource.name}.json`);
 
     console.log(`\n✓ Successfully pulled resource to ${outputDir}`);
   } catch (error) {

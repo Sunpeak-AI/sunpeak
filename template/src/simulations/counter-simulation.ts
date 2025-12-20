@@ -3,7 +3,7 @@
  * This file contains only metadata and doesn't import React components or CSS.
  */
 
-import { counterResourceMeta } from '../resources/counter-resource.meta';
+import counterResourceMeta from '../resources/counter-resource.json';
 
 export const counterSimulation = {
   userMessage: 'Help me count something',
