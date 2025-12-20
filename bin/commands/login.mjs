@@ -9,7 +9,7 @@ const CREDENTIALS_DIR = join(homedir(), '.sunpeak');
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json');
 
 // Polling configuration
-const POLL_INTERVAL_MS = 2000; // 2 seconds between polls.
+const POLL_INTERVAL_MS = 2500; // 2.5 seconds between polls.
 const MAX_POLL_DURATION_MS = 2 * 60 * 1000; // 2 minutes max.
 
 /**
@@ -60,22 +60,39 @@ async function pollForToken(deviceCode) {
   const startTime = Date.now();
 
   while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
-    const response = await fetch(`${SUNPEAK_API_URL}/oauth/token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-        device_code: deviceCode,
-      }),
-    });
-
-    if (response.ok) {
-      return response.json();
+    let response;
+    try {
+      response = await fetch(`${SUNPEAK_API_URL}/oauth/token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+          device_code: deviceCode,
+        }),
+      });
+    } catch (err) {
+      // Network error - wait and retry
+      await sleep(POLL_INTERVAL_MS);
+      continue;
     }
 
-    const data = await response.json().catch(() => ({}));
+    let data;
+    let responseText;
+    try {
+      responseText = await response.text();
+      data = JSON.parse(responseText);
+    } catch {
+      // Non-JSON response - this is unexpected, throw with details
+      throw new Error(
+        `Server returned unexpected response (${response.status}): ${responseText?.slice(0, 200) || 'empty response'}`
+      );
+    }
 
-    // Handle standard OAuth 2.0 device flow errors
+    if (response.ok && data.access_token) {
+      return data;
+    }
+
+    // Handle standard OAuth 2.0 device flow errors (expected during polling)
     if (data.error === 'authorization_pending') {
       // User hasn't authorized yet, keep polling
       await sleep(POLL_INTERVAL_MS);
@@ -96,8 +113,14 @@ async function pollForToken(deviceCode) {
       throw new Error('Device code expired. Please try again.');
     }
 
-    // Unknown error
-    throw new Error(data.error_description || data.error || 'Authorization failed');
+    // If response was OK but no access_token, something is wrong with the response
+    if (response.ok) {
+      throw new Error('Invalid token response from server');
+    }
+
+    // Unknown error - include status code for debugging
+    const errorMessage = data.error_description || data.error || 'Unknown error';
+    throw new Error(`Authorization failed (${response.status}): ${errorMessage}`);
   }
 
   throw new Error('Authorization timed out. Please try again.');
