@@ -1,7 +1,7 @@
 {
   "name": "carousel",
   "title": "Carousel",
-  "description": "Show popular places to visit widget markup",
+  "description": "Show popular places to visit widget",
   "mimeType": "text/html+skybridge",
   "_meta": {
     "openai/widgetDomain": "https://sunpeak.ai",

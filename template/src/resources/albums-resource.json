@@ -1,7 +1,7 @@
 {
   "name": "albums",
   "title": "Albums",
-  "description": "Show photo albums widget markup",
+  "description": "Show photo albums widget",
   "mimeType": "text/html+skybridge",
   "_meta": {
     "openai/widgetDomain": "https://sunpeak.ai",
