@@ -108,6 +108,10 @@ function buildResourceFromFile(jsPath) {
  * Push a single resource to the API
  */
 async function pushResource(resource, repository, tags, accessToken) {
+  if (!resource.meta?.uri) {
+    throw new Error('Resource is missing URI. Run "sunpeak build" to generate URIs.');
+  }
+
   const jsContent = readFileSync(resource.jsPath);
   const jsBlob = new Blob([jsContent], { type: 'application/javascript' });
 
@@ -124,6 +128,7 @@ async function pushResource(resource, repository, tags, accessToken) {
       formData.append('description', resource.meta.description);
     }
     formData.append('mime_type', resource.meta.mimeType || 'text/html+skybridge');
+    formData.append('uri', resource.meta.uri);
 
     // Handle OpenAI widget metadata
     if (resource.meta._meta) {

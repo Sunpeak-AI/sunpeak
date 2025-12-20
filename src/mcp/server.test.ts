@@ -39,16 +39,16 @@ ${mockJsCode}
 
   it('verifies timestamp pattern for cache busting URIs', () => {
     // Test the timestamp suffix pattern used for cache busting
-    const baseUri = 'widget.html';
+    const resourceName = 'widget';
     const timestamp = Date.now().toString(36);
-    const timestampedUri = baseUri.replace(/(\.[^.]+)$/, `-${timestamp}$1`);
+    const uri = `ui://${resourceName}-${timestamp}`;
 
-    // Verify timestamp was added before extension
-    expect(timestampedUri).toMatch(/^widget-[a-z0-9]+\.html$/);
-    expect(timestampedUri).not.toBe(baseUri);
+    // Verify URI format: ui://name-timestamp
+    expect(uri).toMatch(/^ui:\/\/widget-[a-z0-9]+$/);
+    expect(uri).not.toBe(`ui://${resourceName}`);
 
     // Verify timestamp can be stripped
-    const cleaned = timestampedUri.replace(/-[a-z0-9]+(\.[^.]+)$/, '$1');
-    expect(cleaned).toBe(baseUri);
+    const cleaned = uri.replace(/-[a-z0-9]+$/, '');
+    expect(cleaned).toBe(`ui://${resourceName}`);
   });
 });

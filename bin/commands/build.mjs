@@ -214,16 +214,20 @@ export async function build(projectRoot = process.cwd()) {
     }
   }
 
-  // Copy resource metadata JSON files
-  console.log('\nCopying resource metadata JSON files...');
+  // Generate resource metadata JSON files with URIs
+  console.log('\nGenerating resource metadata JSON files...');
+  const timestamp = Date.now().toString(36);
   for (const { componentFile } of resourceFiles) {
     const kebabName = componentFile.replace('-resource', '');
     const srcJson = path.join(resourcesDir, `${componentFile}.json`);
     const destJson = path.join(distDir, `${kebabName}.json`);
 
     if (existsSync(srcJson)) {
-      copyFileSync(srcJson, destJson);
-      console.log(`✓ Copied ${kebabName}.json`);
+      const meta = JSON.parse(readFileSync(srcJson, 'utf-8'));
+      // Generate URI using resource name and build timestamp
+      meta.uri = `ui://${meta.name}-${timestamp}`;
+      writeFileSync(destJson, JSON.stringify(meta, null, 2));
+      console.log(`✓ Generated ${kebabName}.json (uri: ${meta.uri})`);
     }
   }
 

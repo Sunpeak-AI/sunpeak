@@ -61,40 +61,27 @@ function createAppServer(config: MCPServerConfig): Server {
     simulations.map((simulation) => [simulation.tool.name, readResourceHtml(simulation.distPath)])
   );
 
-  // Generate base-36 timestamp once for this server instance
-  const timestamp = Date.now().toString(36);
+  // Generate fallback timestamp for resources without URIs (dev mode)
+  const devTimestamp = Date.now().toString(36);
 
-  // Generate URIs for each resource based on name + timestamp
-  // Sunpeak owns the complete URI end-to-end
-  const uriMap = new Map(
-    simulations.map((simulation) => {
-      const resourceName = simulation.resource.name as string;
-      const uri = `ui://${resourceName}-${timestamp}.html`;
-      return [simulation.tool.name, uri];
-    })
-  );
+  // Build resources with URIs (use existing URI or generate one for dev mode)
+  const resources = simulations.map((simulation) => {
+    const resource = simulation.resource;
+    const uri = (resource.uri as string) ?? `ui://${resource.name as string}-${devTimestamp}`;
+    return { ...resource, uri };
+  });
 
-  // Build tools with generated outputTemplate URIs
-  const tools = simulations.map((simulation) => {
+  // Build tools with outputTemplate URIs from resources
+  const tools = simulations.map((simulation, index) => {
     const tool = simulation.tool;
     const meta = tool._meta as Record<string, unknown> | undefined;
-    const generatedUri = uriMap.get(tool.name)!;
 
     return {
       ...tool,
       _meta: {
         ...(meta ?? {}),
-        'openai/outputTemplate': generatedUri,
+        'openai/outputTemplate': resources[index].uri,
       },
-    };
-  });
-
-  // Build resources with generated URIs
-  const resources = simulations.map((simulation) => {
-    const generatedUri = uriMap.get(simulation.tool.name)!;
-    return {
-      ...simulation.resource,
-      uri: generatedUri,
     };
   });
 
