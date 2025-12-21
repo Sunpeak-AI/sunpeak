@@ -173,7 +173,11 @@ async function pushResource(resource, repository, tags, accessToken) {
 
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
-    throw new Error(data.message || data.error || `HTTP ${response.status}`);
+    let errorMessage = data.message || data.error || `HTTP ${response.status}`;
+    if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+      errorMessage += ': ' + data.errors.join(', ');
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();
