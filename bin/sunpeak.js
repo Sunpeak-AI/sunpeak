@@ -246,6 +246,8 @@ function parseResourceArgs(args) {
       options.repository = args[++i];
     } else if (arg === '--tag' || arg === '-t') {
       options.tags.push(args[++i]);
+    } else if (arg === '--name' || arg === '-n') {
+      options.name = args[++i];
     } else if (arg === '--output' || arg === '-o') {
       options.output = args[++i];
     } else if (arg === '--help' || arg === '-h') {
