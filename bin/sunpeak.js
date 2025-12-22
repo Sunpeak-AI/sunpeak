@@ -258,6 +258,9 @@ function parseResourceArgs(args) {
     i++;
   }
 
+  // Set singular tag for commands that expect it (e.g., pull)
+  options.tag = options.tags[0];
+
   return options;
 }
 

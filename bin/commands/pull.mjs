@@ -66,17 +66,13 @@ async function lookupResource(tag, repository, accessToken) {
 /**
  * Download the JS file for a resource
  */
-async function downloadJsFile(resource, accessToken) {
-  if (!resource.js_file?.path) {
+async function downloadJsFile(resource) {
+  if (!resource.js_file?.url) {
     throw new Error('Resource has no JS file attached');
   }
 
-  const url = `${SUNPEAK_API_URL}${resource.js_file.path}`;
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
+  // The URL is a pre-signed S3 URL, no additional auth needed
+  const response = await fetch(resource.js_file.url);
 
   if (!response.ok) {
     throw new Error(`Failed to download JS file: HTTP ${response.status}`);
@@ -105,7 +101,7 @@ Usage:
 Options:
   -t, --tag <name>               Tag name to pull (required)
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -o, --output <path>            Output directory (defaults to dist)
+  -o, --output <path>            Output directory (defaults to current directory)
   -h, --help                     Show this help message
 
 Examples:
@@ -159,10 +155,10 @@ Examples:
 
     // Download the JS file
     console.log('\nDownloading JS file...');
-    const jsContent = await downloadJsFile(resource, credentials.access_token);
+    const jsContent = await downloadJsFile(resource);
 
     // Determine output directory and file
-    const outputDir = options.output || join(projectRoot, 'dist');
+    const outputDir = options.output || projectRoot;
     const outputFile = join(outputDir, `${resource.name}.js`);
     const metaFile = join(outputDir, `${resource.name}.json`);
 
@@ -226,7 +222,7 @@ Usage:
 Options:
   -t, --tag <name>               Tag name to pull (required)
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -o, --output <path>            Output directory (defaults to dist)
+  -o, --output <path>            Output directory (defaults to current directory)
   -h, --help                     Show this help message
 
 Examples:
