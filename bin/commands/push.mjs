@@ -45,33 +45,38 @@ function getGitRepoName() {
 }
 
 /**
- * Find all resources in the dist folder
+ * Find all resources in a directory
  * Returns array of { name, jsPath, metaPath, meta }
  */
-function findResources(distDir) {
+export function findResources(distDir) {
   if (!existsSync(distDir)) {
     return [];
   }
 
   const files = readdirSync(distDir);
-  const jsFiles = files.filter((f) => f.endsWith('.js') && !f.endsWith('.meta.js'));
+  const jsFiles = files.filter((f) => f.endsWith('.js'));
+  const jsonFiles = new Set(files.filter((f) => f.endsWith('.json')));
 
-  return jsFiles.map((jsFile) => {
-    const name = jsFile.replace('.js', '');
-    const jsPath = join(distDir, jsFile);
-    const metaPath = join(distDir, `${name}.json`);
+  // Only include .js files that have a matching .json file
+  return jsFiles
+    .filter((jsFile) => {
+      const name = jsFile.replace('.js', '');
+      return jsonFiles.has(`${name}.json`);
+    })
+    .map((jsFile) => {
+      const name = jsFile.replace('.js', '');
+      const jsPath = join(distDir, jsFile);
+      const metaPath = join(distDir, `${name}.json`);
 
-    let meta = null;
-    if (existsSync(metaPath)) {
+      let meta = null;
       try {
         meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
       } catch {
         console.warn(`Warning: Could not parse ${name}.json`);
       }
-    }
 
-    return { name, jsPath, metaPath, meta };
-  });
+      return { name, jsPath, metaPath, meta };
+    });
 }
 
 /**

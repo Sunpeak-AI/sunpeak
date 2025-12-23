@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-import { push } from './push.mjs';
+import { join } from 'path';
+import { push, findResources } from './push.mjs';
 
 /**
  * Deploy command - same as push but with tag="prod"
@@ -22,7 +23,8 @@ Options:
 
 Arguments:
   file                           Optional JS file to deploy (e.g., dist/carousel.js)
-                                 If not provided, deploys all resources from dist/
+                                 If not provided, looks for resources in current
+                                 directory first, then falls back to dist/
 
 Examples:
   sunpeak deploy                     Push all resources with "prod" tag
@@ -44,6 +46,19 @@ This command is equivalent to: sunpeak push --tag prod
 
   console.log('Deploying to production...');
   console.log();
+
+  // If no specific file provided, check current directory first, then dist/
+  if (!deployOptions.file) {
+    const cwdResources = findResources(projectRoot);
+    if (cwdResources.length > 0) {
+      // Found resources in current directory, push each one
+      for (const resource of cwdResources) {
+        await push(projectRoot, { ...deployOptions, file: resource.jsPath });
+      }
+      return;
+    }
+    // Fall back to dist/ directory (handled by push)
+  }
 
   await push(projectRoot, deployOptions);
 }
@@ -76,7 +91,8 @@ Options:
 
 Arguments:
   file                           Optional JS file to deploy (e.g., dist/carousel.js)
-                                 If not provided, deploys all resources from dist/
+                                 If not provided, looks for resources in current
+                                 directory first, then falls back to dist/
 
 Examples:
   sunpeak deploy                     Deploy all resources with "prod" tag
