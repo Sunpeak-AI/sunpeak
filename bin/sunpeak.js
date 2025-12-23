@@ -233,6 +233,15 @@ See README.md for more details.
 const [, , command, ...args] = process.argv;
 
 /**
+ * Get the sunpeak version from package.json
+ */
+function getVersion() {
+  const pkgPath = join(__dirname, '..', 'package.json');
+  const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  return pkg.version;
+}
+
+/**
  * Parse arguments for resource commands (push, pull, deploy)
  */
 function parseResourceArgs(args) {
@@ -268,6 +277,12 @@ function parseResourceArgs(args) {
 
 // Main CLI handler
 (async () => {
+  // Handle --version / -v flags early
+  if (command === '--version' || command === '-v' || command === 'version') {
+    console.log(getVersion());
+    process.exit(0);
+  }
+
   // Commands that don't require a package.json
   const standaloneCommands = [
     'new',
@@ -373,6 +388,7 @@ Direct CLI commands (when sunpeak is installed):
   sunpeak push             Push resources to repository
   sunpeak pull             Pull resources from repository
   sunpeak deploy           Push resources with "prod" tag
+  sunpeak --version        Show version number
 
 For more information, visit: https://sunpeak.ai/
 `);

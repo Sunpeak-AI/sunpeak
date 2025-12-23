@@ -17,7 +17,7 @@ Usage:
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -t, --tag <name>               Tag to assign (defaults to "prod")
+  -t, --tag <name>               Additional tag(s) to assign (always includes "prod")
   -h, --help                     Show this help message
 
 Arguments:
@@ -28,17 +28,18 @@ Examples:
   sunpeak deploy                     Push all resources with "prod" tag
   sunpeak deploy dist/carousel.js    Deploy a single resource
   sunpeak deploy -r myorg/my-app     Deploy to "myorg/my-app" repository
-  sunpeak deploy -t production       Deploy with custom tag
+  sunpeak deploy -t v1.0              Deploy with "prod" and "v1.0" tags
 
 This command is equivalent to: sunpeak push --tag prod
 `);
     return;
   }
 
-  // Default tag to "prod" for deploy
+  // Always include "prod" tag, supplemented by any additional tags
+  const additionalTags = options.tags?.filter((t) => t !== 'prod') ?? [];
   const deployOptions = {
     ...options,
-    tags: options.tags && options.tags.length > 0 ? options.tags : ['prod'],
+    tags: ['prod', ...additionalTags],
   };
 
   console.log('Deploying to production...');
@@ -70,7 +71,7 @@ Usage:
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
-  -t, --tag <name>               Tag to assign (defaults to "prod")
+  -t, --tag <name>               Additional tag(s) to assign (always includes "prod")
   -h, --help                     Show this help message
 
 Arguments:
@@ -81,7 +82,7 @@ Examples:
   sunpeak deploy                     Deploy all resources with "prod" tag
   sunpeak deploy dist/carousel.js    Deploy a single resource
   sunpeak deploy -r myorg/my-app     Deploy to "myorg/my-app" repository
-  sunpeak deploy -t production       Deploy with custom tag
+  sunpeak deploy -t v1.0              Deploy with "prod" and "v1.0" tags
 
 This command is equivalent to: sunpeak push --tag prod
 `);
