@@ -53,12 +53,15 @@ sunpeak is an npm package consisting of:
    1. Runtime APIs - Strongly typed, multi-platform APIs for interacting with the ChatGPT runtime, architected to support future platforms (Gemini, Claude).
    2. ChatGPT simulator - React component replicating ChatGPT's runtime.
    3. MCP server - Mock data MCP server for testing local Resources in the real ChatGPT.
-2. **The `sunpeak` framework** (`./template`). An end-to-end framework for ChatGPT Apps, from quickstart to shipped. This templated npm package includes:
-   1. Project scaffold - Complete development setup with build, test, and mcp tooling.
+2. **The `sunpeak` framework** (`./template`). Next.js for ChatGPT Apps. This templated npm package includes:
+   1. Project scaffold - Complete development setup with build, test, and mcp tooling, including the sunpeak library.
    2. UI components - Production-ready components following ChatGPT design guidelines and using OpenAI apps-sdk-ui React components.
-   3. CLI utility (`./bin`) - Commands for working with the sunpeak framework.
+3. **The `sunpeak` CLI** (`./bin`). Commands for managing ChatGPT Apps. Includes a client for the sunpeak Resource Repository (ECR for ChatGPT Apps). The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server:
+   1. Tag your app builds with version numbers and environment names (like `v1.0.0` and `prod`)
+   2. `push` built Apps to a central location
+   3. `pull` built Apps to be run in different environments
 
-Note that the `sunpeak` library can be used without the framework.
+Note that each `sunpeak` component can be used in isolation if preferred, though the most seamless experience combines all 3.
 
 ## Example Component
 
@@ -80,12 +83,6 @@ export function MCPResource() {
   );
 }
 ```
-
-## Contributing
-
-We welcome your contributions!
-
-For development quickstart on this package, see [DEVELOPMENT.md](./DEVELOPMENT.md).
 
 ## Resources
 

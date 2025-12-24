@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { join } from 'path';
 import { push, findResources } from './push.mjs';
 
 /**
