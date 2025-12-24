@@ -8,7 +8,7 @@ For an initial overview of your new app and the sunpeak API, refer to the [docum
 
 ```bash
 pnpm install
-pnpm dev
+sunpeak dev
 ```
 
 That's it! Edit the resource files in [./src/resources/](./src/resources/) to build your resource UI.
@@ -16,9 +16,9 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 ## Commands
 
 ```bash
-pnpm dev            # Start development server
-pnpm build          # Build all resources for production
-pnpm mcp            # Start MCP server with auto-reload
+sunpeak dev            # Start development server
+sunpeak build          # Build all resources for production
+sunpeak mcp            # Start MCP server with auto-reload
 pnpm test           # Run tests with Vitest
 ```
 
@@ -62,7 +62,7 @@ Test your app directly in ChatGPT using the built-in MCP server:
 
 ```bash
 # Start the MCP server (rebuilds and restarts on file changes).
-pnpm mcp
+sunpeak mcp
 
 # In another terminal, run a tunnel. For example:
 ngrok http 6766
@@ -79,7 +79,7 @@ When you make changes to the UI, refresh your app in ChatGPT after the MCP serve
 Build your app for production:
 
 ```bash
-pnpm build
+sunpeak build
 ```
 
 This creates optimized builds in `dist/`:

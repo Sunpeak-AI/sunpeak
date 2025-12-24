@@ -17,7 +17,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'PORT=6778 pnpm dev',
+    command: 'PORT=6778 sunpeak dev',
     url: 'http://localhost:6778',
     reuseExistingServer: false,
     timeout: 10000,

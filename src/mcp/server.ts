@@ -30,7 +30,7 @@ function readResourceHtml(distPath: string): string {
 
   if (!fs.existsSync(htmlPath)) {
     throw new Error(
-      `Widget file not found at ${htmlPath}. Run "pnpm build" to generate the built app.`
+      `Widget file not found at ${htmlPath}. Run "sunpeak build" to generate the built app.`
     );
   }
 

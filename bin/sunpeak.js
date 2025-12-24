@@ -217,13 +217,13 @@ Done! To get started:
 
   cd ${projectName}
   pnpm install
-  pnpm dev
+  sunpeak dev
 
 That's it! Your project commands:
 
-  pnpm dev          # Start development server
-  pnpm build        # Build for production
-  pnpm mcp          # Start MCP server
+  sunpeak dev       # Start development server
+  sunpeak build     # Build for production
+  sunpeak mcp       # Start MCP server
   pnpm test         # Run tests
 
 See README.md for more details.
@@ -373,9 +373,6 @@ Usage:
   Example: npx sunpeak new my-app "albums,carousel"
 
 Inside your project, use npm scripts:
-  pnpm dev                 Start development server
-  pnpm build               Build for production
-  pnpm mcp                 Start MCP server
   pnpm test                Run tests
 
 Direct CLI commands (when sunpeak is installed):
