@@ -10,7 +10,7 @@ const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json');
 /**
  * Load existing credentials if present
  */
-function loadCredentials() {
+function loadCredentialsImpl() {
   if (!existsSync(CREDENTIALS_FILE)) {
     return null;
   }
@@ -24,18 +24,29 @@ function loadCredentials() {
 /**
  * Delete credentials file
  */
-function deleteCredentials() {
+function deleteCredentialsImpl() {
   if (existsSync(CREDENTIALS_FILE)) {
     unlinkSync(CREDENTIALS_FILE);
   }
 }
 
 /**
+ * Default dependencies (real implementations)
+ */
+export const defaultDeps = {
+  fetch: globalThis.fetch,
+  loadCredentials: loadCredentialsImpl,
+  deleteCredentials: deleteCredentialsImpl,
+  console,
+  apiUrl: SUNPEAK_API_URL,
+};
+
+/**
  * Revoke the access token on the server
  */
-async function revokeToken(accessToken) {
+async function revokeToken(accessToken, deps) {
   try {
-    const response = await fetch(`${SUNPEAK_API_URL}/oauth/revoke`, {
+    const response = await deps.fetch(`${deps.apiUrl}/oauth/revoke`, {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -54,27 +65,30 @@ async function revokeToken(accessToken) {
 
 /**
  * Main logout command
+ * @param {Object} deps - Dependencies (for testing). Uses defaultDeps if not provided.
  */
-export async function logout() {
-  const credentials = loadCredentials();
+export async function logout(deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
+  const credentials = d.loadCredentials();
 
   if (!credentials?.access_token) {
-    console.log('Not logged in.');
+    d.console.log('Not logged in.');
     return;
   }
 
-  console.log('Logging out...');
+  d.console.log('Logging out...');
 
   // Revoke token on server
-  const revoked = await revokeToken(credentials.access_token);
+  const revoked = await revokeToken(credentials.access_token, d);
 
   // Always delete local credentials regardless of revocation result
-  deleteCredentials();
+  d.deleteCredentials();
 
   if (revoked) {
-    console.log('✓ Successfully logged out of Sunpeak.');
+    d.console.log('✓ Successfully logged out of Sunpeak.');
   } else {
-    console.log('✓ Logged out locally. (Server token revocation may have failed)');
+    d.console.log('✓ Logged out locally. (Server token revocation may have failed)');
   }
 }
 

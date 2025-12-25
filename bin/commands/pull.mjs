@@ -10,7 +10,7 @@ const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json');
 /**
  * Load credentials from disk
  */
-function loadCredentials() {
+function loadCredentialsImpl() {
   if (!existsSync(CREDENTIALS_FILE)) {
     return null;
   }
@@ -22,15 +22,31 @@ function loadCredentials() {
 }
 
 /**
+ * Default dependencies (real implementations)
+ */
+export const defaultDeps = {
+  fetch: globalThis.fetch,
+  loadCredentials: loadCredentialsImpl,
+  existsSync,
+  mkdirSync,
+  writeFileSync,
+  console,
+  process,
+  apiUrl: SUNPEAK_API_URL,
+};
+
+/**
  * Lookup resources by tag and repository
  * @returns {Promise<Array>} Array of matching resources
  */
-async function lookupResources(tag, repository, accessToken, name = null) {
+async function lookupResources(tag, repository, accessToken, name = null, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   const params = new URLSearchParams({ tag, repository });
   if (name) {
     params.set('name', name);
   }
-  const response = await fetch(`${SUNPEAK_API_URL}/api/v1/resources/lookup?${params}`, {
+  const response = await d.fetch(`${d.apiUrl}/api/v1/resources/lookup?${params}`, {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
@@ -48,13 +64,15 @@ async function lookupResources(tag, repository, accessToken, name = null) {
 /**
  * Download the JS file for a resource
  */
-async function downloadJsFile(resource) {
+async function downloadJsFile(resource, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   if (!resource.js_file?.url) {
     throw new Error('Resource has no JS file attached');
   }
 
   // The URL is a pre-signed S3 URL, no additional auth needed
-  const response = await fetch(resource.js_file.url);
+  const response = await d.fetch(resource.js_file.url);
 
   if (!response.ok) {
     throw new Error(`Failed to download JS file: HTTP ${response.status}`);
@@ -71,11 +89,14 @@ async function downloadJsFile(resource) {
  * @param {string} options.tag - Tag name to pull (required)
  * @param {string} options.name - Resource name to filter by (optional)
  * @param {string} options.output - Output directory (optional, defaults to current directory)
+ * @param {Object} deps - Dependencies (for testing). Uses defaultDeps if not provided.
  */
-export async function pull(projectRoot = process.cwd(), options = {}) {
+export async function pull(projectRoot = process.cwd(), options = {}, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   // Handle help flag
   if (options.help) {
-    console.log(`
+    d.console.log(`
 sunpeak pull - Pull resources from the Sunpeak repository
 
 Usage:
@@ -97,74 +118,74 @@ Examples:
   }
 
   // Check credentials
-  const credentials = loadCredentials();
+  const credentials = d.loadCredentials();
   if (!credentials?.access_token) {
-    console.error('Error: Not logged in. Run "sunpeak login" first.');
-    process.exit(1);
+    d.console.error('Error: Not logged in. Run "sunpeak login" first.');
+    d.process.exit(1);
   }
 
   // Require repository
   if (!options.repository) {
-    console.error('Error: Repository is required. Use --repository or -r to specify a repository.');
-    console.error('Example: sunpeak pull -r myorg/my-app -t prod');
-    process.exit(1);
+    d.console.error('Error: Repository is required. Use --repository or -r to specify a repository.');
+    d.console.error('Example: sunpeak pull -r myorg/my-app -t prod');
+    d.process.exit(1);
   }
 
   // Require tag
   if (!options.tag) {
-    console.error('Error: Tag is required. Use --tag or -t to specify a tag.');
-    console.error('Example: sunpeak pull -r myorg/my-app -t prod');
-    process.exit(1);
+    d.console.error('Error: Tag is required. Use --tag or -t to specify a tag.');
+    d.console.error('Example: sunpeak pull -r myorg/my-app -t prod');
+    d.process.exit(1);
   }
 
   const repository = options.repository;
 
   const nameFilter = options.name ? ` with name "${options.name}"` : '';
-  console.log(`Pulling resources from repository "${repository}" with tag "${options.tag}"${nameFilter}...`);
-  console.log();
+  d.console.log(`Pulling resources from repository "${repository}" with tag "${options.tag}"${nameFilter}...`);
+  d.console.log();
 
   try {
     // Lookup resources
-    const resources = await lookupResources(options.tag, repository, credentials.access_token, options.name);
+    const resources = await lookupResources(options.tag, repository, credentials.access_token, options.name, d);
 
     if (!resources || resources.length === 0) {
-      console.error('Error: No resources found matching the criteria.');
-      process.exit(1);
+      d.console.error('Error: No resources found matching the criteria.');
+      d.process.exit(1);
     }
 
-    console.log(`Found ${resources.length} resource(s):\n`);
+    d.console.log(`Found ${resources.length} resource(s):\n`);
 
     // Determine output directory
     const outputDir = options.output || projectRoot;
 
     // Create output directory if it doesn't exist
-    if (!existsSync(outputDir)) {
-      mkdirSync(outputDir, { recursive: true });
+    if (!d.existsSync(outputDir)) {
+      d.mkdirSync(outputDir, { recursive: true });
     }
 
     // Process each resource
     for (const resource of resources) {
-      console.log(`Resource: ${resource.name}`);
-      console.log(`  Title: ${resource.title}`);
-      console.log(`  URI: ${resource.uri}`);
-      console.log(`  Tags: ${resource.tags?.join(', ') || 'none'}`);
-      console.log(`  Created: ${resource.created_at}`);
+      d.console.log(`Resource: ${resource.name}`);
+      d.console.log(`  Title: ${resource.title}`);
+      d.console.log(`  URI: ${resource.uri}`);
+      d.console.log(`  Tags: ${resource.tags?.join(', ') || 'none'}`);
+      d.console.log(`  Created: ${resource.created_at}`);
 
       if (!resource.js_file) {
-        console.log(`  ⚠ Skipping: No JS file attached.\n`);
+        d.console.log(`  ⚠ Skipping: No JS file attached.\n`);
         continue;
       }
 
       // Download the JS file
-      console.log(`  Downloading JS file...`);
-      const jsContent = await downloadJsFile(resource);
+      d.console.log(`  Downloading JS file...`);
+      const jsContent = await downloadJsFile(resource, d);
 
       const outputFile = join(outputDir, `${resource.name}.js`);
       const metaFile = join(outputDir, `${resource.name}.json`);
 
       // Write the JS file
-      writeFileSync(outputFile, jsContent);
-      console.log(`  ✓ Saved ${resource.name}.js`);
+      d.writeFileSync(outputFile, jsContent);
+      d.console.log(`  ✓ Saved ${resource.name}.js`);
 
       // Write metadata JSON
       const meta = {
@@ -181,14 +202,14 @@ Examples:
           },
         },
       };
-      writeFileSync(metaFile, JSON.stringify(meta, null, 2));
-      console.log(`  ✓ Saved ${resource.name}.json\n`);
+      d.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
+      d.console.log(`  ✓ Saved ${resource.name}.json\n`);
     }
 
-    console.log(`✓ Successfully pulled ${resources.length} resource(s) to ${outputDir}`);
+    d.console.log(`✓ Successfully pulled ${resources.length} resource(s) to ${outputDir}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
-    process.exit(1);
+    d.console.error(`Error: ${error.message}`);
+    d.process.exit(1);
   }
 }
 

@@ -15,7 +15,7 @@ const MAX_POLL_DURATION_MS = 2 * 60 * 1000; // 2 minutes max.
 /**
  * Load existing credentials if present
  */
-function loadCredentials() {
+function loadCredentialsImpl() {
   if (!existsSync(CREDENTIALS_FILE)) {
     return null;
   }
@@ -29,7 +29,7 @@ function loadCredentials() {
 /**
  * Save credentials to disk
  */
-function saveCredentials(credentials) {
+function saveCredentialsImpl(credentials) {
   if (!existsSync(CREDENTIALS_DIR)) {
     mkdirSync(CREDENTIALS_DIR, { recursive: true, mode: 0o700 });
   }
@@ -37,10 +37,54 @@ function saveCredentials(credentials) {
 }
 
 /**
+ * Open a URL in the default browser
+ * Returns true if successful, false otherwise
+ */
+function openBrowserImpl(url) {
+  return new Promise((resolve) => {
+    const os = platform();
+    let command;
+
+    // Platform-specific commands to open URLs
+    if (os === 'darwin') {
+      command = `open "${url}"`;
+    } else if (os === 'win32') {
+      command = `start "" "${url}"`;
+    } else {
+      // Linux and other Unix-like systems
+      command = `xdg-open "${url}"`;
+    }
+
+    exec(command, (error) => {
+      resolve(!error);
+    });
+  });
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Default dependencies (real implementations)
+ */
+export const defaultDeps = {
+  fetch: globalThis.fetch,
+  loadCredentials: loadCredentialsImpl,
+  saveCredentials: saveCredentialsImpl,
+  openBrowser: openBrowserImpl,
+  console,
+  sleep,
+  apiUrl: SUNPEAK_API_URL,
+  pollIntervalMs: POLL_INTERVAL_MS,
+  maxPollDurationMs: MAX_POLL_DURATION_MS,
+};
+
+/**
  * Request a device code from the authorization server
  */
-async function requestDeviceCode() {
-  const response = await fetch(`${SUNPEAK_API_URL}/oauth/device_authorization`, {
+async function requestDeviceCode(deps) {
+  const response = await deps.fetch(`${deps.apiUrl}/oauth/device_authorization`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
   });
@@ -56,13 +100,13 @@ async function requestDeviceCode() {
 /**
  * Poll for the access token
  */
-async function pollForToken(deviceCode) {
+async function pollForToken(deviceCode, deps) {
   const startTime = Date.now();
 
-  while (Date.now() - startTime < MAX_POLL_DURATION_MS) {
+  while (Date.now() - startTime < deps.maxPollDurationMs) {
     let response;
     try {
-      response = await fetch(`${SUNPEAK_API_URL}/oauth/token`, {
+      response = await deps.fetch(`${deps.apiUrl}/oauth/token`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
@@ -72,7 +116,7 @@ async function pollForToken(deviceCode) {
       });
     } catch (err) {
       // Network error - wait and retry
-      await sleep(POLL_INTERVAL_MS);
+      await deps.sleep(deps.pollIntervalMs);
       continue;
     }
 
@@ -95,13 +139,13 @@ async function pollForToken(deviceCode) {
     // Handle standard OAuth 2.0 device flow errors (expected during polling)
     if (data.error === 'authorization_pending') {
       // User hasn't authorized yet, keep polling
-      await sleep(POLL_INTERVAL_MS);
+      await deps.sleep(deps.pollIntervalMs);
       continue;
     }
 
     if (data.error === 'slow_down') {
       // Server asking us to slow down, increase interval
-      await sleep(POLL_INTERVAL_MS * 2);
+      await deps.sleep(deps.pollIntervalMs * 2);
       continue;
     }
 
@@ -126,50 +170,24 @@ async function pollForToken(deviceCode) {
   throw new Error('Authorization timed out. Please try again.');
 }
 
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Open a URL in the default browser
- * Returns true if successful, false otherwise
- */
-function openBrowser(url) {
-  return new Promise((resolve) => {
-    const os = platform();
-    let command;
-
-    // Platform-specific commands to open URLs
-    if (os === 'darwin') {
-      command = `open "${url}"`;
-    } else if (os === 'win32') {
-      command = `start "" "${url}"`;
-    } else {
-      // Linux and other Unix-like systems
-      command = `xdg-open "${url}"`;
-    }
-
-    exec(command, (error) => {
-      resolve(!error);
-    });
-  });
-}
-
 /**
  * Main login command
+ * @param {Object} deps - Dependencies (for testing). Uses defaultDeps if not provided.
  */
-export async function login() {
+export async function login(deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   // Check if already logged in
-  const existing = loadCredentials();
+  const existing = d.loadCredentials();
   if (existing?.access_token) {
-    console.log('Already logged in. Run "sunpeak logout" first to switch accounts.');
+    d.console.log('Already logged in. Run "sunpeak logout" first to switch accounts.');
     return;
   }
 
-  console.log('Starting device authorization flow...\n');
+  d.console.log('Starting device authorization flow...\n');
 
   // Step 1: Request device code
-  const deviceAuth = await requestDeviceCode();
+  const deviceAuth = await requestDeviceCode(d);
 
   // Step 2: Open browser and display instructions
   // Prefer verification_uri_complete which has the code pre-filled
@@ -177,21 +195,21 @@ export async function login() {
     deviceAuth.verification_uri_complete ||
     `${deviceAuth.verification_uri}?user_code=${encodeURIComponent(deviceAuth.user_code)}`;
 
-  const browserOpened = await openBrowser(authUrl);
+  const browserOpened = await d.openBrowser(authUrl);
 
   if (browserOpened) {
-    console.log('Opening browser for authentication...\n');
-    console.log(`If the browser didn't open, visit: ${deviceAuth.verification_uri}`);
-    console.log(`And enter code: ${deviceAuth.user_code}`);
+    d.console.log('Opening browser for authentication...\n');
+    d.console.log(`If the browser didn't open, visit: ${deviceAuth.verification_uri}`);
+    d.console.log(`And enter code: ${deviceAuth.user_code}`);
   } else {
-    console.log('To complete login, please:');
-    console.log(`  1. Visit: ${deviceAuth.verification_uri}`);
-    console.log(`  2. Enter code: ${deviceAuth.user_code}`);
+    d.console.log('To complete login, please:');
+    d.console.log(`  1. Visit: ${deviceAuth.verification_uri}`);
+    d.console.log(`  2. Enter code: ${deviceAuth.user_code}`);
   }
-  console.log('\nWaiting for authorization...');
+  d.console.log('\nWaiting for authorization...');
 
   // Step 3: Poll for token
-  const tokenResponse = await pollForToken(deviceAuth.device_code);
+  const tokenResponse = await pollForToken(deviceAuth.device_code, d);
 
   // Step 4: Save credentials
   const credentials = {
@@ -203,9 +221,9 @@ export async function login() {
     created_at: Date.now(),
   };
 
-  saveCredentials(credentials);
+  d.saveCredentials(credentials);
 
-  console.log('\n✓ Successfully logged in to Sunpeak!');
+  d.console.log('\n✓ Successfully logged in to Sunpeak!');
 }
 
 // Allow running directly

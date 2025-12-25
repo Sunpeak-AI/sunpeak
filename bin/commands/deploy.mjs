@@ -1,15 +1,25 @@
 #!/usr/bin/env node
-import { push, findResources } from './push.mjs';
+import { push, findResources, defaultDeps as pushDefaultDeps } from './push.mjs';
+
+/**
+ * Default dependencies (real implementations)
+ */
+export const defaultDeps = {
+  ...pushDefaultDeps,
+};
 
 /**
  * Deploy command - same as push but with tag="prod"
  * @param {string} projectRoot - Project root directory
  * @param {Object} options - Command options (same as push, but tag defaults to "prod")
+ * @param {Object} deps - Dependencies (for testing). Uses defaultDeps if not provided.
  */
-export async function deploy(projectRoot = process.cwd(), options = {}) {
+export async function deploy(projectRoot = process.cwd(), options = {}, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   // Handle help flag
   if (options.help) {
-    console.log(`
+    d.console.log(`
 sunpeak deploy - Push resources to production (push with "prod" tag)
 
 Usage:
@@ -43,23 +53,23 @@ This command is equivalent to: sunpeak push --tag prod
     tags: ['prod', ...additionalTags],
   };
 
-  console.log('Deploying to production...');
-  console.log();
+  d.console.log('Deploying to production...');
+  d.console.log();
 
   // If no specific file provided, check current directory first, then dist/
   if (!deployOptions.file) {
-    const cwdResources = findResources(projectRoot);
+    const cwdResources = findResources(projectRoot, d);
     if (cwdResources.length > 0) {
       // Found resources in current directory, push each one
       for (const resource of cwdResources) {
-        await push(projectRoot, { ...deployOptions, file: resource.jsPath });
+        await push(projectRoot, { ...deployOptions, file: resource.jsPath }, d);
       }
       return;
     }
     // Fall back to dist/ directory (handled by push)
   }
 
-  await push(projectRoot, deployOptions);
+  await push(projectRoot, deployOptions, d);
 }
 
 /**

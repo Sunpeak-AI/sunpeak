@@ -11,7 +11,7 @@ const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json');
 /**
  * Load credentials from disk
  */
-function loadCredentials() {
+function loadCredentialsImpl() {
   if (!existsSync(CREDENTIALS_FILE)) {
     return null;
   }
@@ -25,7 +25,7 @@ function loadCredentials() {
 /**
  * Get the current git repository name in owner/repo format
  */
-function getGitRepoName() {
+function getGitRepoNameImpl() {
   try {
     // Try to get the remote URL first
     const remoteUrl = execSync('git remote get-url origin 2>/dev/null', { encoding: 'utf-8' }).trim();
@@ -45,15 +45,32 @@ function getGitRepoName() {
 }
 
 /**
+ * Default dependencies (real implementations)
+ */
+export const defaultDeps = {
+  fetch: globalThis.fetch,
+  loadCredentials: loadCredentialsImpl,
+  getGitRepoName: getGitRepoNameImpl,
+  existsSync,
+  readFileSync,
+  readdirSync,
+  console,
+  process,
+  apiUrl: SUNPEAK_API_URL,
+};
+
+/**
  * Find all resources in a directory
  * Returns array of { name, jsPath, metaPath, meta }
  */
-export function findResources(distDir) {
-  if (!existsSync(distDir)) {
+export function findResources(distDir, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
+  if (!d.existsSync(distDir)) {
     return [];
   }
 
-  const files = readdirSync(distDir);
+  const files = d.readdirSync(distDir);
   const jsFiles = files.filter((f) => f.endsWith('.js'));
   const jsonFiles = new Set(files.filter((f) => f.endsWith('.json')));
 
@@ -70,9 +87,9 @@ export function findResources(distDir) {
 
       let meta = null;
       try {
-        meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+        meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
       } catch {
-        console.warn(`Warning: Could not parse ${name}.json`);
+        d.console.warn(`Warning: Could not parse ${name}.json`);
       }
 
       return { name, jsPath, metaPath, meta };
@@ -83,10 +100,12 @@ export function findResources(distDir) {
  * Build a resource from a specific JS file path
  * Returns { name, jsPath, metaPath, meta }
  */
-function buildResourceFromFile(jsPath) {
-  if (!existsSync(jsPath)) {
-    console.error(`Error: File not found: ${jsPath}`);
-    process.exit(1);
+function buildResourceFromFile(jsPath, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
+  if (!d.existsSync(jsPath)) {
+    d.console.error(`Error: File not found: ${jsPath}`);
+    d.process.exit(1);
   }
 
   // Extract name from filename (remove .js extension)
@@ -98,11 +117,11 @@ function buildResourceFromFile(jsPath) {
   const metaPath = join(dir, `${name}.json`);
 
   let meta = null;
-  if (existsSync(metaPath)) {
+  if (d.existsSync(metaPath)) {
     try {
-      meta = JSON.parse(readFileSync(metaPath, 'utf-8'));
+      meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
     } catch {
-      console.warn(`Warning: Could not parse ${name}.json`);
+      d.console.warn(`Warning: Could not parse ${name}.json`);
     }
   }
 
@@ -112,12 +131,14 @@ function buildResourceFromFile(jsPath) {
 /**
  * Push a single resource to the API
  */
-async function pushResource(resource, repository, tags, accessToken) {
+async function pushResource(resource, repository, tags, accessToken, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   if (!resource.meta?.uri) {
     throw new Error('Resource is missing URI. Run "sunpeak build" to generate URIs.');
   }
 
-  const jsContent = readFileSync(resource.jsPath);
+  const jsContent = d.readFileSync(resource.jsPath);
   const jsBlob = new Blob([jsContent], { type: 'application/javascript' });
 
   // Build form data
@@ -168,7 +189,7 @@ async function pushResource(resource, repository, tags, accessToken) {
     });
   }
 
-  const response = await fetch(`${SUNPEAK_API_URL}/api/v1/resources`, {
+  const response = await d.fetch(`${d.apiUrl}/api/v1/resources`, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -195,11 +216,14 @@ async function pushResource(resource, repository, tags, accessToken) {
  * @param {string} options.repository - Repository name (optional, defaults to git repo name)
  * @param {string} options.file - Path to a specific resource JS file (optional)
  * @param {string[]} options.tags - Tags to assign to the pushed resources (optional)
+ * @param {Object} deps - Dependencies (for testing). Uses defaultDeps if not provided.
  */
-export async function push(projectRoot = process.cwd(), options = {}) {
+export async function push(projectRoot = process.cwd(), options = {}, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
   // Handle help flag
   if (options.help) {
-    console.log(`
+    d.console.log(`
 sunpeak push - Push resources to the Sunpeak repository
 
 Usage:
@@ -219,76 +243,76 @@ Examples:
   sunpeak push dist/carousel.js      Push a single resource
   sunpeak push -r myorg/my-app       Push to "myorg/my-app" repository
   sunpeak push -t v1.0.0             Push with a version tag
-  sunpeak push -t v1.0.0 -t latest   Push with multiple tags
+  sunpeak push -t v1.0.0 -t prod     Push with multiple tags
 `);
     return;
   }
 
   // Check credentials
-  const credentials = loadCredentials();
+  const credentials = d.loadCredentials();
   if (!credentials?.access_token) {
-    console.error('Error: Not logged in. Run "sunpeak login" first.');
-    process.exit(1);
+    d.console.error('Error: Not logged in. Run "sunpeak login" first.');
+    d.process.exit(1);
   }
 
   // Determine repository name (owner/repo format)
-  const repository = options.repository || getGitRepoName();
+  const repository = options.repository || d.getGitRepoName();
   if (!repository) {
-    console.error('Error: Could not determine repository name.');
-    console.error('Please provide a repository name: sunpeak push --repository <owner/repo>');
-    console.error('Or run this command from within a git repository with a remote origin.');
-    process.exit(1);
+    d.console.error('Error: Could not determine repository name.');
+    d.console.error('Please provide a repository name: sunpeak push --repository <owner/repo>');
+    d.console.error('Or run this command from within a git repository with a remote origin.');
+    d.process.exit(1);
   }
 
   // Find resources - either a specific file or all from dist directory
   let resources;
   if (options.file) {
     // Push a single specific resource
-    resources = [buildResourceFromFile(options.file)];
+    resources = [buildResourceFromFile(options.file, d)];
   } else {
     // Default: find all resources in dist directory
     const distDir = join(projectRoot, 'dist');
-    if (!existsSync(distDir)) {
-      console.error(`Error: dist/ directory not found`);
-      console.error('Run "sunpeak build" first to build your resources.');
-      process.exit(1);
+    if (!d.existsSync(distDir)) {
+      d.console.error(`Error: dist/ directory not found`);
+      d.console.error('Run "sunpeak build" first to build your resources.');
+      d.process.exit(1);
     }
 
-    resources = findResources(distDir);
+    resources = findResources(distDir, d);
     if (resources.length === 0) {
-      console.error(`Error: No resources found in dist/`);
-      console.error('Run "sunpeak build" first to build your resources.');
-      process.exit(1);
+      d.console.error(`Error: No resources found in dist/`);
+      d.console.error('Run "sunpeak build" first to build your resources.');
+      d.process.exit(1);
     }
   }
 
-  console.log(`Pushing ${resources.length} resource(s) to repository "${repository}"...`);
+  d.console.log(`Pushing ${resources.length} resource(s) to repository "${repository}"...`);
   if (options.tags && options.tags.length > 0) {
-    console.log(`Tags: ${options.tags.join(', ')}`);
+    d.console.log(`Tags: ${options.tags.join(', ')}`);
   }
-  console.log();
+  d.console.log();
 
   // Push each resource
   let successCount = 0;
   for (const resource of resources) {
     try {
-      const result = await pushResource(resource, repository, options.tags, credentials.access_token);
-      console.log(`✓ Pushed ${resource.name} (id: ${result.id})`);
+      const result = await pushResource(resource, repository, options.tags, credentials.access_token, d);
+      d.console.log(`✓ Pushed ${resource.name} (id: ${result.id})`);
       if (result.tags?.length > 0) {
-        console.log(`  Tags: ${result.tags.join(', ')}`);
+        d.console.log(`  Tags: ${result.tags.join(', ')}`);
       }
       successCount++;
     } catch (error) {
-      console.error(`✗ Failed to push ${resource.name}: ${error.message}`);
+      d.console.error(`✗ Failed to push ${resource.name}: ${error.message}`);
     }
   }
 
-  console.log();
+  d.console.log();
   if (successCount === resources.length) {
-    console.log(`✓ Successfully pushed ${successCount} resource(s).`);
+    d.console.log(`✓ Successfully pushed ${successCount} resource(s).`);
   } else {
-    console.log(`Pushed ${successCount}/${resources.length} resource(s).`);
-    process.exit(1);
+    d.console.log(`Pushed ${successCount}/${resources.length} resource(s).`);
+    d.process.exit(1);
   }
 }
 
@@ -327,7 +351,7 @@ Examples:
   sunpeak push dist/carousel.js      Push a single resource
   sunpeak push -r myorg/my-app       Push to "myorg/my-app" repository
   sunpeak push -t v1.0.0             Push with a version tag
-  sunpeak push -t v1.0.0 -t latest   Push with multiple tags
+  sunpeak push -t v1.0.0 -t prod     Push with multiple tags
 `);
       process.exit(0);
     } else if (!arg.startsWith('-')) {
