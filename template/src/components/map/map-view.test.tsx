@@ -1,7 +1,7 @@
 import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MapView } from './map-view';
-import type { Place } from '../../simulations/map-simulation';
+import type { Place } from './types';
 
 // Mock mapbox-gl
 vi.mock('mapbox-gl', () => ({

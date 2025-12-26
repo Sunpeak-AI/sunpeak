@@ -1,0 +1,20 @@
+{
+  "userMessage": "Help me count something",
+  "tool": {
+    "name": "show-counter",
+    "description": "Show a simple counter tool",
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "title": "Show Counter",
+    "annotations": { "readOnlyHint": true },
+    "_meta": {
+      "openai/toolInvocation/invoking": "Counting beans",
+      "openai/toolInvocation/invoked": "Beans counted",
+      "openai/widgetAccessible": true,
+      "openai/resultCanProduceWidget": true
+    }
+  },
+  "toolCall": {
+    "structuredContent": null,
+    "_meta": {}
+  }
+}

@@ -13,7 +13,7 @@ import { PlaceList } from './place-list';
 import { PlaceCarousel } from './place-carousel';
 import { PlaceInspector } from './place-inspector';
 import { MapView } from './map-view';
-import type { Place, MapData } from '../../simulations/map-simulation';
+import type { Place, MapData } from './types';
 
 export interface MapState extends Record<string, unknown> {
   selectedPlaceId?: string | null;

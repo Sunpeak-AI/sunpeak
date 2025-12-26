@@ -3,7 +3,7 @@ import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { Avatar } from '@openai/apps-sdk-ui/components/Avatar';
 import { X, Star } from '@openai/apps-sdk-ui/components/Icon';
 import { cn } from '../../lib/index';
-import type { Place } from '../../simulations/map-simulation';
+import type { Place } from './types';
 
 export type PlaceInspectorProps = {
   place: Place;

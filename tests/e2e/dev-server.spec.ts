@@ -2,15 +2,7 @@ import { test, expect } from '@playwright/test';
 
 test.describe('Dev Server', () => {
   test('should load the home page', async ({ page }) => {
-    await page.goto('/');
-
-    // Wait for the page to load
-    await page.waitForLoadState('networkidle');
-
-    // Check that the page loaded successfully
-    await expect(page).not.toHaveTitle('');
-
-    // Verify no console errors (except known warnings)
+    // Set up console listener BEFORE navigation to catch all errors
     const errors: string[] = [];
     page.on('console', (msg) => {
       if (msg.type() === 'error') {
@@ -18,8 +10,11 @@ test.describe('Dev Server', () => {
       }
     });
 
-    // Give it a moment to catch any errors
-    await page.waitForTimeout(1000);
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+
+    // Check that the page loaded successfully
+    await expect(page).not.toHaveTitle('');
 
     // We expect no errors
     expect(errors).toHaveLength(0);
@@ -29,7 +24,7 @@ test.describe('Dev Server', () => {
     await page.goto('/');
 
     // Check for common React root element
-    const root = await page.locator('#root');
+    const root = page.locator('#root');
     await expect(root).toBeAttached();
   });
 
@@ -52,21 +47,24 @@ test.describe('Dev Server', () => {
     expect(styles.alignItems).toBe('center');
   });
 
-  test('should render place card with proper typography styles', async ({ page }) => {
+  test('should render albums with proper styles', async ({ page }) => {
     await page.goto('/');
 
-    const placeHeader = page.locator('h1:has-text("Welcome to Sunpeak!")');
-    await expect(placeHeader).toBeVisible();
+    // Use specific locator for album card button
+    const albumCard = page.locator('button:has-text("Summer Slice")');
+    await expect(albumCard).toBeVisible();
 
-    // Verify computed styles to confirm Tailwind typography classes are applied
-    const styles = await placeHeader.evaluate((el) => {
+    // Verify computed styles to confirm Tailwind classes are applied
+    const styles = await albumCard.evaluate((el) => {
       const computed = window.getComputedStyle(el);
       return {
-        fontWeight: computed.fontWeight,
+        cursor: computed.cursor,
+        borderRadius: computed.borderRadius,
       };
     });
 
-    // Verify typography styles are applied
-    expect(styles.fontWeight).toBe('700'); // font-medium
+    // Verify interactive and styled
+    expect(styles.cursor).toBe('pointer');
+    expect(styles.borderRadius).toBeTruthy();
   });
 });

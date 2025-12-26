@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { PlaceInspector } from './place-inspector';
-import type { Place } from '../../simulations/map-simulation';
+import type { Place } from './types';
 
 describe('PlaceInspector', () => {
   const mockPlace: Place = {

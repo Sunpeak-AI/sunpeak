@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { PlaceCarousel } from './place-carousel';
-import type { Place } from '../../simulations/map-simulation';
+import type { Place } from './types';
 
 describe('PlaceCarousel', () => {
   const mockPlaces: Place[] = [

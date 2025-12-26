@@ -53,7 +53,9 @@ export interface Simulation {
   tool: Tool;
 
   // Official Resource type from the MCP SDK, used in ListResources response.
-  resource: Resource;
+  // Optional - when omitted, resource is loaded from resources/NAME-resource.json
+  // where NAME matches the simulation key.
+  resource?: Resource;
 
   // Official CallToolResultSchema from the MCP SDK, mock data for the CallTool response.
   toolCall?: SimulationCallToolResult;

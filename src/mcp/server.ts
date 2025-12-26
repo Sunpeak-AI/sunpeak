@@ -203,6 +203,8 @@ async function handleSseRequest(res: ServerResponse, config: MCPServerConfig) {
   console.log(`[MCP] Session started: ${sessionId.substring(0, 8)}... (${sessions.size} active)`);
 
   transport.onclose = async () => {
+    // Guard against re-entrancy (server.close() may trigger onclose again)
+    if (!sessions.has(sessionId)) return;
     sessions.delete(sessionId);
     console.log(`[MCP] Session closed: ${sessionId.substring(0, 8)}... (${sessions.size} active)`);
     await server.close();

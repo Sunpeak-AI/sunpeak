@@ -1,7 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { PlaceCard } from './place-card';
-import type { Place } from '../../simulations/map-simulation';
+import type { Place } from './types';
 
 describe('PlaceCard', () => {
   const mockPlace: Place = {

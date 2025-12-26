@@ -19,6 +19,7 @@ export interface SimulationWithDist {
   tool: Tool;
 
   // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
+  // Loaded from resources/NAME-resource.json where NAME is the simulation key.
   resource: Resource;
 
   // MCP CallToolResult protocol - data for CallTool response

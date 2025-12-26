@@ -34,9 +34,12 @@ import type { Simulation } from '../types/simulation';
 const DEFAULT_THEME: Theme = 'dark';
 const DEFAULT_DISPLAY_MODE: DisplayMode = 'inline';
 
+// Simulations passed to the simulator must have resource populated
+type SimulationWithResource = Simulation & Required<Pick<Simulation, 'resource'>>;
+
 interface ChatGPTSimulatorProps {
   children?: React.ReactNode;
-  simulations?: Simulation[];
+  simulations?: SimulationWithResource[];
   appName?: string;
   appIcon?: string;
 }
@@ -52,15 +55,11 @@ export function ChatGPTSimulator({
   // Helper to check if current width is mobile
   const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
 
-  // Helper to create simulation key from resource-tool pair
-  const getSimulationKey = (sim: Simulation) => `${sim.resource.name}-${sim.tool.name}`;
-
-  const [selectedKey, setSelectedKey] = React.useState<string>(
-    simulations.length > 0 ? getSimulationKey(simulations[0]) : ''
-  );
+  // Track selected simulation by index
+  const [selectedIndex, setSelectedIndex] = React.useState<number>(0);
 
   // Get the selected simulation
-  const selectedSim = simulations.find((sim) => getSimulationKey(sim) === selectedKey);
+  const selectedSim = simulations[selectedIndex];
 
   // Extract metadata from the selected simulation
   const userMessage = selectedSim?.userMessage;
@@ -105,7 +104,7 @@ export function ChatGPTSimulator({
       mock.widgetState = selectedSim.simulationGlobals?.widgetState ?? null;
       mock.toolOutput = selectedSim.toolCall?.structuredContent ?? null;
     }
-  }, [selectedKey, selectedSim, mock]);
+  }, [selectedIndex, selectedSim, mock]);
 
   // Read all globals from window.openai (same as widget code would)
   const theme = useTheme() ?? DEFAULT_THEME;
@@ -215,7 +214,7 @@ export function ChatGPTSimulator({
       setViewParamsError('');
     }
   }, [
-    selectedKey,
+    selectedIndex,
     toolInput,
     toolOutput,
     toolResponseMetadata,
@@ -270,14 +269,14 @@ export function ChatGPTSimulator({
             {simulations.length > 0 && (
               <SidebarControl label="Simulation">
                 <SidebarSelect
-                  value={selectedKey}
-                  onChange={(value) => setSelectedKey(value)}
-                  options={simulations.map((sim) => {
+                  value={String(selectedIndex)}
+                  onChange={(value) => setSelectedIndex(Number(value))}
+                  options={simulations.map((sim, index) => {
                     const resourceTitle =
                       (sim.resource.title as string | undefined) || sim.resource.name;
                     const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
                     return {
-                      value: getSimulationKey(sim),
+                      value: String(index),
                       label: `${resourceTitle}: ${toolTitle}`,
                     };
                   })}
@@ -611,7 +610,7 @@ export function ChatGPTSimulator({
           appIcon={appIcon}
           userMessage={userMessage}
           resourceMeta={selectedSim?.resource._meta as Record<string, unknown> | undefined}
-          key={selectedKey}
+          key={selectedIndex}
         >
           {content}
         </Conversation>

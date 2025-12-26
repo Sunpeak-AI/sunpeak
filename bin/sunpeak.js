@@ -57,10 +57,10 @@ function parseResourcesInput(input) {
 function updateIndexFiles(targetDir, selectedResources) {
   // Map resource names to their component/export names
   const resourceMap = {
-    albums: { component: 'album', resourceClass: 'AlbumsResource', simulation: 'albums' },
-    carousel: { component: 'carousel', resourceClass: 'CarouselResource', simulation: 'carousel' },
-    counter: { component: null, resourceClass: 'CounterResource', simulation: 'counter' },
-    map: { component: 'map', resourceClass: 'MapResource', simulation: 'map' },
+    albums: { component: 'album', resourceClass: 'AlbumsResource' },
+    carousel: { component: 'carousel', resourceClass: 'CarouselResource' },
+    counter: { component: null, resourceClass: 'CounterResource' },
+    map: { component: 'map', resourceClass: 'MapResource' },
   };
 
   // Update components/index.ts
@@ -73,31 +73,47 @@ function updateIndexFiles(targetDir, selectedResources) {
     .join('\n');
   writeFileSync(componentsIndexPath, componentExports + '\n');
 
-  // Update resources/index.ts
+  // Update resources/index.ts - must have default export for dev.tsx
   const resourcesIndexPath = join(targetDir, 'src', 'resources', 'index.ts');
-  const resourceExports = selectedResources
-    .map((r) => `export { ${resourceMap[r].resourceClass} } from './${r}-resource';`)
+  const resourceImports = selectedResources
+    .map((r) => `import { ${resourceMap[r].resourceClass} } from './${r}-resource';`)
     .join('\n');
-  writeFileSync(resourcesIndexPath, resourceExports + '\n');
+  const resourceExportsObject = selectedResources
+    .map((r) => `  ${resourceMap[r].resourceClass},`)
+    .join('\n');
+  const resourcesContent = `${resourceImports}
 
-  // Update simulations/index.ts
+export default {
+${resourceExportsObject}
+};
+`;
+  writeFileSync(resourcesIndexPath, resourcesContent);
+
+  // Update simulations/index.ts - uses auto-discovery for JSON simulation files
   const simulationsIndexPath = join(targetDir, 'src', 'simulations', 'index.ts');
-  const simulationImports = selectedResources
-    .map((r) => `import { ${r}Simulation } from './${r}-simulation.js';`)
-    .join('\n');
-  const simulationExports = selectedResources.map((r) => `  ${r}: ${r}Simulation,`).join('\n');
   const simulationsContent = `/**
  * Server-safe simulation configurations
  *
- * This file contains only metadata and can be safely imported in Node.js contexts
- * (like MCP servers) without causing issues with CSS imports or React components.
+ * Auto-discovers all *-simulation.json files in this directory.
+ * File naming: {resource}-{tool}-simulation.json (e.g., albums-show-simulation.json)
+ *
+ * This file can be safely imported in Node.js contexts (like MCP servers)
+ * without causing issues with CSS imports or React components.
  */
 
-${simulationImports}
+// Auto-discover all simulation JSON files
+const simulationModules = import.meta.glob('./*-simulation.json', { eager: true });
 
-export const SIMULATIONS = {
-${simulationExports}
-} as const;
+// Build SIMULATIONS object from discovered files
+// Key is the full name without -simulation.json suffix (e.g., 'albums-show')
+export const SIMULATIONS = Object.fromEntries(
+  Object.entries(simulationModules).map(([path, module]) => {
+    // Extract simulation key from path: './albums-show-simulation.json' -> 'albums-show'
+    const match = path.match(/\\.\\/(.+)-simulation\\.json$/);
+    const key = match?.[1] ?? path;
+    return [key, (module as { default: unknown }).default];
+  })
+) as Record<string, unknown>;
 `;
   writeFileSync(simulationsIndexPath, simulationsContent);
 }
@@ -163,12 +179,17 @@ async function init(projectName, resourcesArg) {
       const excludedResources = VALID_RESOURCES.filter((r) => !selectedResources.includes(r));
 
       for (const resource of excludedResources) {
-        // Skip resource files
-        if (name === `${resource}-resource.tsx` || name === `${resource}-resource.test.tsx`) {
+        // Skip resource files (tsx, test, and json metadata)
+        if (
+          name === `${resource}-resource.tsx` ||
+          name === `${resource}-resource.test.tsx` ||
+          name === `${resource}-resource.json`
+        ) {
           return false;
         }
-        // Skip simulation files
-        if (name === `${resource}-simulation.ts`) {
+        // Skip simulation JSON files that start with the resource name
+        // e.g., albums-show-simulation.json, albums-edit-simulation.json
+        if (name.startsWith(`${resource}-`) && name.endsWith('-simulation.json')) {
           return false;
         }
         // Skip component directories (map resource name to component dir name)
