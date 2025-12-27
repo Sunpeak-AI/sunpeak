@@ -312,6 +312,7 @@ function parseResourceArgs(args) {
     'push',
     'pull',
     'deploy',
+    'upgrade',
     'help',
     undefined,
   ];
@@ -381,6 +382,17 @@ function parseResourceArgs(args) {
       }
       break;
 
+    case 'upgrade':
+      {
+        const { upgrade } = await import(join(COMMANDS_DIR, 'upgrade.mjs'));
+        const options = {
+          check: args.includes('--check') || args.includes('-c'),
+          help: args.includes('--help') || args.includes('-h'),
+        };
+        await upgrade(options);
+      }
+      break;
+
     case 'help':
     case undefined:
       console.log(`
@@ -406,6 +418,7 @@ Direct CLI commands (when sunpeak is installed):
   sunpeak push             Push resources to repository
   sunpeak pull             Pull resources from repository
   sunpeak deploy           Push resources with "prod" tag
+  sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 
 For more information, visit: https://sunpeak.ai/

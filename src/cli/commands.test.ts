@@ -8,6 +8,7 @@ const importLogout = () => import('../../bin/commands/logout.mjs');
 const importPush = () => import('../../bin/commands/push.mjs');
 const importPull = () => import('../../bin/commands/pull.mjs');
 const importDeploy = () => import('../../bin/commands/deploy.mjs');
+const importUpgrade = () => import('../../bin/commands/upgrade.mjs');
 
 // Mock console for all tests
 const createMockConsole = () => ({
@@ -646,6 +647,148 @@ describe('CLI Commands', () => {
       // standalone.js has no matching json, other.json has no matching js
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('widget');
+    });
+  });
+
+  describe('upgrade command', () => {
+    it('should show help when requested', async () => {
+      const { upgrade } = await importUpgrade();
+      const mockConsole = createMockConsole();
+
+      await upgrade(
+        { help: true },
+        {
+          console: mockConsole,
+        }
+      );
+
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('sunpeak upgrade'));
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('--check'));
+    });
+
+    it('should report when already on latest version', async () => {
+      const { upgrade } = await importUpgrade();
+      const mockConsole = createMockConsole();
+
+      await upgrade(
+        {},
+        {
+          getCurrentVersion: () => '1.0.0',
+          fetchLatestVersion: async () => '1.0.0',
+          console: mockConsole,
+        }
+      );
+
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('already on the latest version')
+      );
+    });
+
+    it('should report when newer version is available with --check', async () => {
+      const { upgrade } = await importUpgrade();
+      const mockConsole = createMockConsole();
+
+      await upgrade(
+        { check: true },
+        {
+          getCurrentVersion: () => '1.0.0',
+          fetchLatestVersion: async () => '2.0.0',
+          console: mockConsole,
+        }
+      );
+
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('New version available'));
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('2.0.0'));
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('Run "sunpeak upgrade" to upgrade')
+      );
+    });
+
+    it('should upgrade when newer version is available', async () => {
+      const { upgrade } = await importUpgrade();
+      const mockConsole = createMockConsole();
+      let upgradeRan = false;
+
+      await upgrade(
+        {},
+        {
+          getCurrentVersion: () => '1.0.0',
+          fetchLatestVersion: async () => '2.0.0',
+          detectPackageManager: () => 'npm',
+          runUpgrade: async () => {
+            upgradeRan = true;
+          },
+          console: mockConsole,
+        }
+      );
+
+      expect(upgradeRan).toBe(true);
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('Successfully upgraded')
+      );
+    });
+
+    it('should handle upgrade failure gracefully', async () => {
+      const { upgrade } = await importUpgrade();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      await upgrade(
+        {},
+        {
+          getCurrentVersion: () => '1.0.0',
+          fetchLatestVersion: async () => '2.0.0',
+          detectPackageManager: () => 'npm',
+          runUpgrade: async () => {
+            throw new Error('Network error');
+          },
+          console: mockConsole,
+          process: mockProcess,
+        }
+      );
+
+      expect(mockConsole.error).toHaveBeenCalledWith(expect.stringContaining('Error upgrading'));
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('manually upgrade')
+      );
+      expect(mockProcess.exit).toHaveBeenCalledWith(1);
+    });
+
+    it('should handle fetch error gracefully', async () => {
+      const { upgrade } = await importUpgrade();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      await upgrade(
+        {},
+        {
+          getCurrentVersion: () => '1.0.0',
+          fetchLatestVersion: async () => {
+            throw new Error('Failed to fetch');
+          },
+          console: mockConsole,
+          process: mockProcess,
+        }
+      );
+
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        expect.stringContaining('Error checking for updates')
+      );
+      expect(mockProcess.exit).toHaveBeenCalledWith(1);
+    });
+  });
+
+  describe('compareVersions', () => {
+    it('should correctly compare semver versions', async () => {
+      const { compareVersions } = await importUpgrade();
+
+      expect(compareVersions('1.0.0', '1.0.0')).toBe(0);
+      expect(compareVersions('1.0.0', '2.0.0')).toBe(-1);
+      expect(compareVersions('2.0.0', '1.0.0')).toBe(1);
+      expect(compareVersions('1.0.0', '1.1.0')).toBe(-1);
+      expect(compareVersions('1.0.0', '1.0.1')).toBe(-1);
+      expect(compareVersions('1.2.3', '1.2.4')).toBe(-1);
+      expect(compareVersions('2.0.0', '1.9.9')).toBe(1);
     });
   });
 });
