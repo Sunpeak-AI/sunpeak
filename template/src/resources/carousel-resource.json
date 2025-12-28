@@ -6,7 +6,7 @@
   "_meta": {
     "openai/widgetDomain": "https://sunpeak.ai",
     "openai/widgetCSP": {
-      "resource_domains": ["https://images.unsplash.com"]
+      "resource_domains": ["https://images.unsplash.com", "https://cdn.openai.com"]
     }
   }
 }

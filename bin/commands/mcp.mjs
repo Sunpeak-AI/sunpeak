@@ -29,7 +29,7 @@ export async function mcp(projectRoot = process.cwd(), args = []) {
   // Add inline nodemon configuration
   nodemonArgs.push(
     '--watch', 'src',
-    '--ext', 'ts,tsx,js,jsx,css',
+    '--ext', 'ts,tsx,js,jsx,css,json',
     '--ignore', 'dist',
     '--ignore', 'node_modules',
     '--ignore', '.tmp',

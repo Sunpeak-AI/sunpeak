@@ -6,7 +6,7 @@
   "_meta": {
     "openai/widgetDomain": "https://sunpeak.ai",
     "openai/widgetCSP": {
-      "resource_domains": ["https://*.oaistatic.com"]
+      "resource_domains": ["https://*.oaistatic.com", "https://cdn.openai.com"]
     }
   }
 }
