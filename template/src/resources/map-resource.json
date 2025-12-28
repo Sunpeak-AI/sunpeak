@@ -7,7 +7,12 @@
     "openai/widgetDomain": "https://sunpeak.ai",
     "openai/widgetCSP": {
       "connect_domains": ["https://api.mapbox.com", "https://events.mapbox.com"],
-      "resource_domains": ["https://*.oaistatic.com", "https://cdn.openai.com", "https://api.mapbox.com", "https://events.mapbox.com"]
+      "resource_domains": [
+        "https://*.oaistatic.com",
+        "https://cdn.openai.com",
+        "https://api.mapbox.com",
+        "https://events.mapbox.com"
+      ]
     }
   }
 }

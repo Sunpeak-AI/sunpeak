@@ -58,7 +58,9 @@ export function Conversation({
               </button>
             </div>
             {isDesktop && (
-              <div className="text-primary flex items-center justify-center text-base">{appName}</div>
+              <div className="text-primary flex items-center justify-center text-base">
+                {appName}
+              </div>
             )}
             {isDesktop && (
               <div className="flex items-center justify-end">
@@ -67,7 +69,9 @@ export function Conversation({
                   color="primary"
                   className="bg-token-bg-primary"
                   onClick={() => {
-                    const widgetDomain = resourceMeta?.['openai/widgetDomain'] as string | undefined;
+                    const widgetDomain = resourceMeta?.['openai/widgetDomain'] as
+                      | string
+                      | undefined;
                     if (api?.openExternal && widgetDomain) {
                       api.openExternal({ href: widgetDomain });
                     }

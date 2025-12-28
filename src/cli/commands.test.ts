@@ -697,7 +697,9 @@ describe('CLI Commands', () => {
         }
       );
 
-      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('New version available'));
+      expect(mockConsole.log).toHaveBeenCalledWith(
+        expect.stringContaining('New version available')
+      );
       expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('2.0.0'));
       expect(mockConsole.log).toHaveBeenCalledWith(
         expect.stringContaining('Run "sunpeak upgrade" to upgrade')
@@ -748,9 +750,7 @@ describe('CLI Commands', () => {
       );
 
       expect(mockConsole.error).toHaveBeenCalledWith(expect.stringContaining('Error upgrading'));
-      expect(mockConsole.log).toHaveBeenCalledWith(
-        expect.stringContaining('manually upgrade')
-      );
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('manually upgrade'));
       expect(mockProcess.exit).toHaveBeenCalledWith(1);
     });
 
