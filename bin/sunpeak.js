@@ -28,7 +28,7 @@ function checkPackageJson() {
 }
 
 function parseResourcesInput(input) {
-  const VALID_RESOURCES = ['albums', 'carousel', 'confirmation', 'counter', 'map'];
+  const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'map', 'review'];
 
   // If no input, return all resources
   if (!input || input.trim() === '') {
@@ -59,9 +59,9 @@ function updateIndexFiles(targetDir, selectedResources) {
   const resourceMap = {
     albums: { component: 'album', resourceClass: 'AlbumsResource' },
     carousel: { component: 'carousel', resourceClass: 'CarouselResource' },
-    confirmation: { component: null, resourceClass: 'ConfirmationResource' },
     counter: { component: null, resourceClass: 'CounterResource' },
     map: { component: 'map', resourceClass: 'MapResource' },
+    review: { component: null, resourceClass: 'ReviewResource' },
   };
 
   // Update components/index.ts
@@ -139,7 +139,7 @@ async function init(projectName, resourcesArg) {
     console.log(`☀️ 🏔️ Resources: ${resourcesArg}`);
   } else {
     resourcesInput = await prompt(
-      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, confirmation, counter, map]: '
+      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter, map, review]: '
     );
   }
   const selectedResources = parseResourcesInput(resourcesInput);
@@ -161,9 +161,9 @@ async function init(projectName, resourcesArg) {
   const resourceComponentMap = {
     albums: 'album',
     carousel: 'carousel',
-    confirmation: null, // Confirmation doesn't have a component directory
     counter: null, // Counter doesn't have a component directory
     map: 'map',
+    review: null, // Review doesn't have a component directory
   };
 
   cpSync(templateDir, targetDir, {
@@ -177,7 +177,7 @@ async function init(projectName, resourcesArg) {
       }
 
       // Filter resource files based on selection
-      const VALID_RESOURCES = ['albums', 'carousel', 'confirmation', 'counter', 'map'];
+      const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'map', 'review'];
       const excludedResources = VALID_RESOURCES.filter((r) => !selectedResources.includes(r));
 
       for (const resource of excludedResources) {
@@ -416,7 +416,7 @@ Usage:
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 
-  Resources: albums, carousel, confirmation, counter, map (comma/space separated)
+  Resources: albums, carousel, counter, map, review (comma/space separated)
   Example: sunpeak new my-app "albums,carousel"
 
 For more information, visit: https://sunpeak.ai/

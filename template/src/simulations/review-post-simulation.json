@@ -1,10 +1,10 @@
 {
   "userMessage": "Post this to my social media",
   "tool": {
-    "name": "confirm-post",
-    "description": "Confirm a social media post before publishing",
+    "name": "review-post",
+    "description": "Review a social media post before publishing",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-    "title": "Confirm Post",
+    "title": "Review Post",
     "annotations": { "readOnlyHint": false },
     "_meta": {
       "openai/toolInvocation/invoking": "Preparing post",
@@ -43,7 +43,7 @@
       "rejectLabel": "Cancel",
       "acceptedMessage": "Post published!",
       "rejectedMessage": "Post cancelled",
-      "confirmationTool": {
+      "reviewTool": {
         "name": "publish_post",
         "arguments": {
           "postId": "draft_456",

@@ -1,10 +1,10 @@
 {
   "userMessage": "I'd like to refactor the authentication module",
   "tool": {
-    "name": "diff-confirmation",
-    "description": "Show a confirmation dialog for a proposed code diff",
+    "name": "diff-review",
+    "description": "Show a review dialog for a proposed code diff",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-    "title": "Diff Confirmation",
+    "title": "Diff Review",
     "annotations": { "readOnlyHint": false },
     "_meta": {
       "openai/toolInvocation/invoking": "Preparing changes",
@@ -62,7 +62,7 @@
       "rejectLabel": "Cancel",
       "acceptedMessage": "Changes applied",
       "rejectedMessage": "Changes cancelled",
-      "confirmationTool": {
+      "reviewTool": {
         "name": "apply_changes",
         "arguments": {
           "changesetId": "cs_789",

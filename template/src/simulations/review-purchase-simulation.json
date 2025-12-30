@@ -1,10 +1,10 @@
 {
   "userMessage": "I want to buy these items",
   "tool": {
-    "name": "confirm-purchase",
-    "description": "Confirm a purchase before completing the transaction",
+    "name": "review-purchase",
+    "description": "Review a purchase before completing the transaction",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-    "title": "Confirm Purchase",
+    "title": "Review Purchase",
     "annotations": { "readOnlyHint": false },
     "_meta": {
       "openai/toolInvocation/invoking": "Preparing order",
@@ -74,7 +74,7 @@
       "rejectLabel": "Cancel",
       "acceptedMessage": "Order placed!",
       "rejectedMessage": "Order cancelled",
-      "confirmationTool": {
+      "reviewTool": {
         "name": "complete_purchase",
         "arguments": {
           "orderId": "order_123",

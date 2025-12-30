@@ -1,7 +1,7 @@
 {
-  "name": "confirmation",
-  "title": "Confirmation",
-  "description": "Visualize and confirm a proposed set of changes or actions",
+  "name": "review",
+  "title": "Review",
+  "description": "Visualize and review a proposed set of changes or actions",
   "mimeType": "text/html+skybridge",
   "_meta": {
     "openai/widgetDomain": "https://sunpeak.ai",

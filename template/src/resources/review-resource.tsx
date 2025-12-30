@@ -12,14 +12,14 @@ import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
 
 /**
- * Production-ready Confirmation Resource
+ * Production-ready Review Resource
  *
- * A flexible confirmation dialog that adapts to various use cases:
- * - Purchase confirmations (items, totals, payment)
- * - Code change confirmations (file changes with diffs)
- * - Social media post confirmations (content preview)
- * - Booking confirmations (details, dates, prices)
- * - Generic action confirmations (simple approve/reject)
+ * A flexible review dialog that adapts to various use cases:
+ * - Purchase reviews (items, totals, payment)
+ * - Code change reviews (file changes with diffs)
+ * - Social media post reviews (content preview)
+ * - Booking reviews (details, dates, prices)
+ * - Generic action reviews (simple approve/reject)
  */
 
 // ============================================================================
@@ -75,15 +75,15 @@ interface Section {
   content: Detail[] | Item[] | Change[] | string;
 }
 
-/** Tool call configuration for domain-specific confirmation actions */
-interface ConfirmationTool {
+/** Tool call configuration for domain-specific review actions */
+interface ReviewTool {
   /** Tool name to call (e.g., "complete_purchase", "publish_post") */
   name: string;
   /** Additional arguments to pass to the tool */
   arguments?: Record<string, unknown>;
 }
 
-interface ConfirmationData extends Record<string, unknown> {
+interface ReviewData extends Record<string, unknown> {
   /** Main title */
   title: string;
   /** Optional description below title */
@@ -102,11 +102,11 @@ interface ConfirmationData extends Record<string, unknown> {
   acceptedMessage?: string;
   /** Message shown after rejecting */
   rejectedMessage?: string;
-  /** Domain-specific tool to call on confirmation */
-  confirmationTool?: ConfirmationTool;
+  /** Domain-specific tool to call on review */
+  reviewTool?: ReviewTool;
 }
 
-interface ConfirmationState extends Record<string, unknown> {
+interface ReviewState extends Record<string, unknown> {
   decision?: 'accepted' | 'rejected' | null;
   decidedAt?: string | null;
 }
@@ -306,13 +306,13 @@ function AlertBanner({ alert }: { alert: Alert }) {
 // Main Component
 // ============================================================================
 
-export const ConfirmationResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const data = useWidgetProps<ConfirmationData>(() => ({
-    title: 'Confirm',
+export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
+  const data = useWidgetProps<ReviewData>(() => ({
+    title: 'Review',
     sections: [],
   }));
 
-  const [widgetState, setWidgetState] = useWidgetState<ConfirmationState>(() => ({
+  const [widgetState, setWidgetState] = useWidgetState<ReviewState>(() => ({
     decision: null,
     decidedAt: null,
   }));
@@ -338,7 +338,7 @@ export const ConfirmationResource = React.forwardRef<HTMLDivElement>((_props, re
       decidedAt,
     });
 
-    const tool = data.confirmationTool;
+    const tool = data.reviewTool;
     if (tool) {
       console.log('callTool', {
         name: tool.name,
@@ -358,7 +358,7 @@ export const ConfirmationResource = React.forwardRef<HTMLDivElement>((_props, re
       decidedAt,
     });
 
-    const tool = data.confirmationTool;
+    const tool = data.reviewTool;
     if (tool) {
       console.log('callTool', {
         name: tool.name,
@@ -476,4 +476,4 @@ export const ConfirmationResource = React.forwardRef<HTMLDivElement>((_props, re
     </div>
   );
 });
-ConfirmationResource.displayName = 'ConfirmationResource';
+ReviewResource.displayName = 'ReviewResource';
