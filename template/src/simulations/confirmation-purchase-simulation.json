@@ -1,0 +1,88 @@
+{
+  "userMessage": "I want to buy these items",
+  "tool": {
+    "name": "confirm-purchase",
+    "description": "Confirm a purchase before completing the transaction",
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "title": "Confirm Purchase",
+    "annotations": { "readOnlyHint": false },
+    "_meta": {
+      "openai/toolInvocation/invoking": "Preparing order",
+      "openai/toolInvocation/invoked": "Order ready for review",
+      "openai/widgetAccessible": true,
+      "openai/resultCanProduceWidget": true
+    }
+  },
+  "toolCall": {
+    "structuredContent": {
+      "title": "Confirm Your Order",
+      "description": "Please review your order before completing the purchase.",
+      "alerts": [
+        {
+          "type": "info",
+          "message": "Free shipping on orders over $50!"
+        }
+      ],
+      "sections": [
+        {
+          "title": "Items",
+          "type": "items",
+          "content": [
+            {
+              "id": "1",
+              "title": "Wireless Headphones",
+              "subtitle": "Black, Over-ear",
+              "image": "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=100&h=100&fit=crop",
+              "value": "$79.99"
+            },
+            {
+              "id": "2",
+              "title": "USB-C Charging Cable",
+              "subtitle": "2m, Braided",
+              "image": "https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?w=100&h=100&fit=crop",
+              "value": "$12.99",
+              "badge": "Sale"
+            },
+            {
+              "id": "3",
+              "title": "Phone Case",
+              "subtitle": "Clear, iPhone 15 Pro",
+              "image": "https://images.unsplash.com/photo-1601784551446-20c9e07cdbdb?w=100&h=100&fit=crop",
+              "value": "$24.99"
+            }
+          ]
+        },
+        {
+          "title": "Shipping",
+          "type": "details",
+          "content": [
+            { "label": "Method", "value": "Standard (5-7 days)" },
+            { "label": "Address", "value": "123 Main St, Austin, TX", "sublabel": "John Doe" }
+          ]
+        },
+        {
+          "type": "summary",
+          "content": [
+            { "label": "Subtotal", "value": "$117.97" },
+            { "label": "Shipping", "value": "FREE" },
+            { "label": "Tax", "value": "$9.68" },
+            { "label": "Total", "value": "$127.65", "emphasis": true }
+          ]
+        }
+      ],
+      "acceptLabel": "Place Order",
+      "rejectLabel": "Cancel",
+      "acceptedMessage": "Order placed!",
+      "rejectedMessage": "Order cancelled",
+      "confirmationTool": {
+        "name": "complete_purchase",
+        "arguments": {
+          "orderId": "order_123",
+          "items": ["1", "2", "3"],
+          "total": 127.65
+        }
+      }
+    },
+    "_meta": {}
+  }
+}

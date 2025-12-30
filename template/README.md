@@ -102,7 +102,7 @@ To add a new UI (MCP Resource), simply create the following files:
 
 - `src/resource/NAME-resource.tsx`
 - `src/resource/NAME-resource.json`
-- `src/simulations/NAME-TOOLNAME-resource.json`
+- `src/simulations/NAME-TOOLNAME-simulation.json`
 
 Only the resource files are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev` or `sunpeak mcp`.
 

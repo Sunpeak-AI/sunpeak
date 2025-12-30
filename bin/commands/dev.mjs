@@ -1,9 +1,56 @@
 #!/usr/bin/env node
-import { createServer } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 import { existsSync } from 'fs';
-import { join, resolve, basename } from 'path';
+import { join, resolve, basename, dirname } from 'path';
+import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
+
+/**
+ * Import a module from the project's node_modules using ESM resolution
+ */
+async function importFromProject(require, moduleName) {
+  // Resolve the module's main entry to find its location
+  const resolvedPath = require.resolve(moduleName);
+
+  // Walk up to find package.json
+  const { readFileSync } = await import('fs');
+  let pkgDir = dirname(resolvedPath);
+  let pkg;
+  while (pkgDir !== dirname(pkgDir)) {
+    try {
+      const pkgJsonPath = join(pkgDir, 'package.json');
+      pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+      if (pkg.name === moduleName || moduleName.startsWith(pkg.name + '/')) {
+        break;
+      }
+    } catch {
+      // No package.json at this level, keep looking
+    }
+    pkgDir = dirname(pkgDir);
+  }
+
+  if (!pkg) {
+    // Fallback to CJS resolution if we can't find package.json
+    return import(resolvedPath);
+  }
+
+  // Determine ESM entry: exports.import > exports.default > module > main
+  let entry = pkg.main || 'index.js';
+  if (pkg.exports) {
+    const exp = pkg.exports['.'] || pkg.exports;
+    if (typeof exp === 'string') {
+      entry = exp;
+    } else if (exp.import) {
+      entry = typeof exp.import === 'string' ? exp.import : exp.import.default;
+    } else if (exp.default) {
+      entry = exp.default;
+    }
+  } else if (pkg.module) {
+    entry = pkg.module;
+  }
+
+  const entryPath = join(pkgDir, entry);
+  return import(pathToFileURL(entryPath).href);
+}
 
 /**
  * Start the Vite development server
@@ -17,6 +64,15 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     console.error('Make sure you are in a Sunpeak project directory');
     process.exit(1);
   }
+
+  // Import vite and plugins from the project's node_modules (ESM)
+  const require = createRequire(join(projectRoot, 'package.json'));
+  const vite = await importFromProject(require, 'vite');
+  const createServer = vite.createServer;
+  const reactPlugin = await importFromProject(require, '@vitejs/plugin-react');
+  const react = reactPlugin.default;
+  const tailwindPlugin = await importFromProject(require, '@tailwindcss/vite');
+  const tailwindcss = tailwindPlugin.default;
 
   // Parse port from args or use default
   let port = parseInt(process.env.PORT || '6767');

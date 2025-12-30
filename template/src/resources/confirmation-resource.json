@@ -1,0 +1,12 @@
+{
+  "name": "confirmation",
+  "title": "Confirmation",
+  "description": "Visualize and confirm a proposed set of changes or actions",
+  "mimeType": "text/html+skybridge",
+  "_meta": {
+    "openai/widgetDomain": "https://sunpeak.ai",
+    "openai/widgetCSP": {
+      "resource_domains": ["https://images.unsplash.com", "https://cdn.openai.com"]
+    }
+  }
+}

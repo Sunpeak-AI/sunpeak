@@ -28,7 +28,7 @@ function checkPackageJson() {
 }
 
 function parseResourcesInput(input) {
-  const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'map'];
+  const VALID_RESOURCES = ['albums', 'carousel', 'confirmation', 'counter', 'map'];
 
   // If no input, return all resources
   if (!input || input.trim() === '') {
@@ -59,6 +59,7 @@ function updateIndexFiles(targetDir, selectedResources) {
   const resourceMap = {
     albums: { component: 'album', resourceClass: 'AlbumsResource' },
     carousel: { component: 'carousel', resourceClass: 'CarouselResource' },
+    confirmation: { component: null, resourceClass: 'ConfirmationResource' },
     counter: { component: null, resourceClass: 'CounterResource' },
     map: { component: 'map', resourceClass: 'MapResource' },
   };
@@ -138,7 +139,7 @@ async function init(projectName, resourcesArg) {
     console.log(`☀️ 🏔️ Resources: ${resourcesArg}`);
   } else {
     resourcesInput = await prompt(
-      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, counter, map]: '
+      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, confirmation, counter, map]: '
     );
   }
   const selectedResources = parseResourcesInput(resourcesInput);
@@ -160,6 +161,7 @@ async function init(projectName, resourcesArg) {
   const resourceComponentMap = {
     albums: 'album',
     carousel: 'carousel',
+    confirmation: null, // Confirmation doesn't have a component directory
     counter: null, // Counter doesn't have a component directory
     map: 'map',
   };
@@ -175,7 +177,7 @@ async function init(projectName, resourcesArg) {
       }
 
       // Filter resource files based on selection
-      const VALID_RESOURCES = ['albums', 'carousel', 'counter', 'map'];
+      const VALID_RESOURCES = ['albums', 'carousel', 'confirmation', 'counter', 'map'];
       const excludedResources = VALID_RESOURCES.filter((r) => !selectedResources.includes(r));
 
       for (const resource of excludedResources) {
@@ -402,7 +404,7 @@ Usage:
   npx sunpeak new [name] [resources]   Create a new project (no install needed)
   pnpm dlx sunpeak new                  Alternative with pnpm
 
-  Resources: albums, carousel, counter, map (comma/space separated)
+  Resources: albums, carousel, confirmation, counter, map (comma/space separated)
   Example: npx sunpeak new my-app "albums,carousel"
 
 Inside your project, use npm scripts:

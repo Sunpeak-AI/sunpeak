@@ -1,0 +1,56 @@
+{
+  "userMessage": "Post this to my social media",
+  "tool": {
+    "name": "confirm-post",
+    "description": "Confirm a social media post before publishing",
+    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "title": "Confirm Post",
+    "annotations": { "readOnlyHint": false },
+    "_meta": {
+      "openai/toolInvocation/invoking": "Preparing post",
+      "openai/toolInvocation/invoked": "Post ready for review",
+      "openai/widgetAccessible": true,
+      "openai/resultCanProduceWidget": true
+    }
+  },
+  "toolCall": {
+    "structuredContent": {
+      "title": "Review Your Post",
+      "description": "This post will be published to your connected accounts.",
+      "sections": [
+        {
+          "title": "Content",
+          "type": "preview",
+          "content": "Just shipped a major update to our app! 🚀\n\nNew features include:\n• Dark mode support\n• Faster load times\n• Bug fixes and improvements\n\nThanks to everyone who provided feedback. You all are amazing! 💪\n\n#ProductUpdate #TechNews #Startup"
+        },
+        {
+          "title": "Post Details",
+          "type": "details",
+          "content": [
+            { "label": "Platforms", "value": "X, LinkedIn" },
+            { "label": "Schedule", "value": "Post immediately" },
+            { "label": "Visibility", "value": "Public" }
+          ]
+        }
+      ],
+      "alerts": [
+        {
+          "type": "warning",
+          "message": "This post contains hashtags that may limit reach on some platforms."
+        }
+      ],
+      "acceptLabel": "Publish",
+      "rejectLabel": "Cancel",
+      "acceptedMessage": "Post published!",
+      "rejectedMessage": "Post cancelled",
+      "confirmationTool": {
+        "name": "publish_post",
+        "arguments": {
+          "postId": "draft_456",
+          "platforms": ["x", "linkedin"]
+        }
+      }
+    },
+    "_meta": {}
+  }
+}
