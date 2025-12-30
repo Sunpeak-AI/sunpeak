@@ -400,17 +400,10 @@ function parseResourceArgs(args) {
       console.log(`
 ☀️ 🏔️ sunpeak - The ChatGPT App framework
 
+Install:
+  pnpm add -g sunpeak
+
 Usage:
-  npx sunpeak new [name] [resources]   Create a new project (no install needed)
-  pnpm dlx sunpeak new                  Alternative with pnpm
-
-  Resources: albums, carousel, confirmation, counter, map (comma/space separated)
-  Example: npx sunpeak new my-app "albums,carousel"
-
-Inside your project, use npm scripts:
-  pnpm test                Run tests
-
-Direct CLI commands (when sunpeak is installed):
   sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server
   sunpeak build            Build resources
@@ -422,6 +415,9 @@ Direct CLI commands (when sunpeak is installed):
   sunpeak deploy           Push resources with "prod" tag
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
+
+  Resources: albums, carousel, confirmation, counter, map (comma/space separated)
+  Example: sunpeak new my-app "albums,carousel"
 
 For more information, visit: https://sunpeak.ai/
 `);

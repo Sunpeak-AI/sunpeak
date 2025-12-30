@@ -40,7 +40,8 @@ Quickstart, build, test, and ship your ChatGPT App locally!
 Requirements: Node (20+), pnpm (10+)
 
 ```bash
-pnpm dlx sunpeak new
+pnpm add -g sunpeak
+sunpeak new
 ```
 
 To add sunpeak to an existing project, refer to the [documentation](https://docs.sunpeak.ai/add-to-existing-project).
