@@ -23,7 +23,7 @@ const resourceModules = import.meta.glob('../src/resources/*-resource.json', { e
 type ResourceData = { name: string; [key: string]: unknown };
 const resourcesMap = new Map<string, ResourceData>();
 for (const [path, module] of Object.entries(resourceModules)) {
-  // Extract key from path: '../src/resources/counter-resource.json' -> 'counter'
+  // Extract key from path: '../src/resources/review-resource.json' -> 'review'
   const match = path.match(/\/([^/]+)-resource\.json$/);
   const key = match?.[1];
   if (key) {
@@ -52,7 +52,7 @@ function findResourceKey(simulationKey: string): string | undefined {
 
 /**
  * Convert resource name to component name
- * Example: 'carousel' -> 'CarouselResource', 'counter' -> 'CounterResource'
+ * Example: 'carousel' -> 'CarouselResource', 'review' -> 'ReviewResource'
  */
 function getResourceComponent(name: string): React.ComponentType {
   const pascalName = name.charAt(0).toUpperCase() + name.slice(1);

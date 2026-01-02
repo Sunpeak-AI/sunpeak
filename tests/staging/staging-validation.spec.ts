@@ -32,15 +32,16 @@ test.describe('Staging validation', () => {
     expect(headerStyles.display).toBeTruthy();
     expect(headerStyles.alignItems).toBe('center');
 
-    // Check for counter resource content (Counter is the only resource in staging test)
-    const welcomeHeading = page.locator('h1:has-text("Welcome to Sunpeak!")');
-    await expect(welcomeHeading).toBeVisible();
+    // Check for review resource content (Review is the only resource in staging test)
+    // All review simulations have an h1 title and a Cancel button
+    const reviewHeading = page.locator('h1');
+    await expect(reviewHeading).toBeVisible();
 
-    // Verify the increment button exists and has styling
-    const incrementButton = page.locator('button[aria-label="Increment"]');
-    await expect(incrementButton).toBeVisible();
+    // Verify the cancel button exists and has styling (all review simulations have Cancel)
+    const cancelButton = page.locator('button:has-text("Cancel")');
+    await expect(cancelButton).toBeVisible();
 
-    const buttonStyles = await incrementButton.evaluate((el) => {
+    const buttonStyles = await cancelButton.evaluate((el) => {
       const computed = window.getComputedStyle(el);
       return {
         cursor: computed.cursor,

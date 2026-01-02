@@ -42,7 +42,7 @@ async function startServer() {
 
   const resourcesMap = new Map<string, Resource>();
   for (const filename of resourceFiles) {
-    // Extract key from filename: 'counter-resource.json' -> 'counter'
+    // Extract key from filename: 'review-resource.json' -> 'review'
     const key = filename.replace(/-resource\.json$/, '');
     const resourcePath = path.join(resourcesDir, filename);
     const resource = JSON.parse(readFileSync(resourcePath, 'utf-8')) as Resource;

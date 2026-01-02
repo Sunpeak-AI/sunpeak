@@ -30,8 +30,8 @@ The template includes a minimal test setup with Vitest. You can add additional t
 
 - `src/resources/` - Resource files must be here
 - `src/simulations/` - Simulation files must be here
-- Resource file naming: `*-resource.tsx` (e.g., `counter-resource.tsx`)
-- Simulation file naming: `*-simulation.tsx` (e.g., `counter-simulation.tsx`)
+- Resource file naming: `*-resource.tsx` (e.g., `review-resource.tsx`)
+- Simulation file naming: `*-simulation.json` (e.g., `review-purchase-simulation.json`)
 - `src/index-resource.tsx` - Build template (must have `// RESOURCE_IMPORT` and `// RESOURCE_MOUNT` comments)
 
 **You can customize:**
@@ -71,7 +71,7 @@ ngrok http 6766
 
 You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps & Connectors > Create`
 
-Once your app is connected, send the name of the app and a tool, like `/sunpeak show counter`, to ChatGPT.
+Once your app is connected, send the name of the app and a tool, like `/sunpeak show review`, to ChatGPT.
 
 When you make changes to the UI, refresh your app in ChatGPT after the MCP server has finished rebuilding your app: `User > Settings > Apps & Connectors > My App > Refresh`
 
@@ -87,8 +87,8 @@ This creates optimized builds in `dist/`:
 
 - `dist/albums.js`
 - `dist/albums.json`
-- `dist/counter.js`
-- `dist/counter.json`
+- `dist/review.js`
+- `dist/review.json`
 - _(One .js file per resource in src/resources/)_
 - _(One .json file per resource in src/resources/)_
 

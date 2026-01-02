@@ -111,7 +111,7 @@ Options:
 
 Examples:
   sunpeak pull -r myorg/my-app -t prod             Pull all resources tagged "prod"
-  sunpeak pull -r myorg/my-app -t prod -n counter  Pull only the "counter" resource
+  sunpeak pull -r myorg/my-app -t prod -n review   Pull only the "review" resource
   sunpeak pull -r myorg/my-app -t v1.0.0           Pull a specific version
 `);
     return;
@@ -247,7 +247,7 @@ Options:
 
 Examples:
   sunpeak pull -r myorg/my-app -t prod             Pull all resources tagged "prod"
-  sunpeak pull -r myorg/my-app -t prod -n counter  Pull only the "counter" resource
+  sunpeak pull -r myorg/my-app -t prod -n review   Pull only the "review" resource
   sunpeak pull -r myorg/my-app -t v1.0.0           Pull a specific version
 `);
       process.exit(0);

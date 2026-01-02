@@ -151,11 +151,11 @@ try {
   }
   printSuccess('Created temp directory');
 
-  console.log('\nRunning: sunpeak new test-app counter');
-  if (!runCommand(`node ${join(REPO_ROOT, 'bin', 'sunpeak.js')} new test-app counter`, tmpDir)) {
+  console.log('\nRunning: sunpeak new test-app review');
+  if (!runCommand(`node ${join(REPO_ROOT, 'bin', 'sunpeak.js')} new test-app review`, tmpDir)) {
     throw new Error('sunpeak new failed');
   }
-  printSuccess('sunpeak new test-app counter');
+  printSuccess('sunpeak new test-app review');
 
   console.log('\nLinking local sunpeak package...');
   const testPkgPath = join(testProjectDir, 'package.json');

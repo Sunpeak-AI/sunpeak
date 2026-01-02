@@ -87,10 +87,10 @@ export async function build(projectRoot = process.cwd()) {
   const resourceFiles = readdirSync(resourcesDir)
     .filter(file => file.endsWith('-resource.tsx'))
     .map(file => {
-      // Extract kebab-case name: 'counter-resource.tsx' -> 'counter'
+      // Extract kebab-case name: 'review-resource.tsx' -> 'review'
       const kebabName = file.replace('-resource.tsx', '');
 
-      // Convert kebab-case to PascalCase: 'counter' -> 'Counter', 'my-widget' -> 'MyWidget'
+      // Convert kebab-case to PascalCase: 'review' -> 'Review', 'my-widget' -> 'MyWidget'
       const pascalName = kebabName
         .split('-')
         .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -107,7 +107,7 @@ export async function build(projectRoot = process.cwd()) {
 
   if (resourceFiles.length === 0) {
     console.error('Error: No resource files found in src/resources/');
-    console.error('Resource files should be named like: counter-resource.tsx');
+    console.error('Resource files should be named like: review-resource.tsx');
     process.exit(1);
   }
 
