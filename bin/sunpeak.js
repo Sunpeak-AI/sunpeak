@@ -192,6 +192,10 @@ async function init(projectName, resourcesArg) {
         if (name.startsWith(`${resource}-`) && name.endsWith('-simulation.json')) {
           return false;
         }
+        // Skip e2e test files for excluded resources
+        if (src.includes('/tests/e2e/') && name === `${resource}.spec.ts`) {
+          return false;
+        }
         // Skip component directories (map resource name to component dir name)
         const componentDirName = resourceComponentMap[resource];
         if (componentDirName && src.includes('/components/') && name === componentDirName) {

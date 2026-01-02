@@ -121,18 +121,18 @@ try {
   printSuccess('sunpeak build (template)');
 
   console.log('Checking: Playwright browsers');
-  if (!runCommand('pnpm exec playwright install chromium --with-deps', REPO_ROOT)) {
+  if (!runCommand('pnpm exec playwright install chromium --with-deps', templateDir)) {
     console.log('Note: Browser installation may require additional system dependencies');
   }
   console.log()
   printSuccess('Playwright browsers');
 
-  console.log('\nRunning: pnpm test:e2e');
-  if (!runCommand('pnpm test:e2e', REPO_ROOT)) {
+  console.log('\nRunning: pnpm test:e2e (template)');
+  if (!runCommand('pnpm test:e2e', templateDir)) {
     throw new Error('Playwright tests failed');
   }
   console.log()
-  printSuccess('pnpm test:e2e\n');
+  printSuccess('pnpm test:e2e (template)\n');
 
   // Staging scenario test
   printSection('STAGING SCENARIO TEST');

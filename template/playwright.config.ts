@@ -18,7 +18,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'PORT=6776 pnpm --filter my-sunpeak-app dev',
+    command: 'PORT=6776 pnpm dev',
     url: 'http://localhost:6776',
     reuseExistingServer: !process.env.CI,
     timeout: 10000,
