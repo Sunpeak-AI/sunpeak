@@ -425,7 +425,12 @@ export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
 
         {/* Sections */}
         {sections.length === 0 ? (
-          <p className="text-secondary text-center py-8">Nothing to confirm</p>
+          // Note: Apps cannot distinguish between "still loading" and "empty response".
+          // We show a loading state as the optimistic assumption.
+          <div className="flex items-center justify-center gap-2 py-8 text-secondary">
+            <div className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+            <span>Loading...</span>
+          </div>
         ) : (
           sections.map((section, i) => <Section key={i} section={section} />)
         )}

@@ -30,81 +30,158 @@ import { resetProviderCache } from '../providers';
 import type { Theme, DisplayMode, DeviceType, ViewMode } from '../types';
 import type { ScreenWidth } from './chatgpt-simulator-types';
 import type { Simulation } from '../types/simulation';
+import type { UserAgent, SafeArea, View } from '../types';
 
 const DEFAULT_THEME: Theme = 'dark';
 const DEFAULT_DISPLAY_MODE: DisplayMode = 'inline';
 
-// Simulations passed to the simulator must have resource populated
-type SimulationWithResource = Simulation & Required<Pick<Simulation, 'resource'>>;
-
 interface ChatGPTSimulatorProps {
   children?: React.ReactNode;
-  simulations?: SimulationWithResource[];
+  simulations?: Record<string, Simulation>;
   appName?: string;
   appIcon?: string;
 }
 
+/**
+ * Parse URL params for initial simulator values.
+ * Supported params:
+ * - simulation: simulation name (e.g., 'albums-show')
+ * - theme: 'light' | 'dark'
+ * - displayMode: 'inline' | 'pip' | 'fullscreen'
+ * - locale: e.g., 'en-US'
+ * - maxHeight: number (for pip mode)
+ * - deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown'
+ * - hover: 'true' | 'false'
+ * - touch: 'true' | 'false'
+ * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
+ * - viewMode: 'modal' | null
+ */
+function parseUrlParams(): {
+  simulation?: string;
+  theme?: Theme;
+  displayMode?: DisplayMode;
+  locale?: string;
+  maxHeight?: number;
+  userAgent?: UserAgent;
+  safeArea?: SafeArea;
+  view?: View | null;
+} {
+  if (typeof window === 'undefined') return {};
+
+  const params = new URLSearchParams(window.location.search);
+
+  const simulation = params.get('simulation') ?? undefined;
+  const theme = params.get('theme') as Theme | null;
+  const displayMode = params.get('displayMode') as DisplayMode | null;
+  const locale = params.get('locale');
+  const maxHeightParam = params.get('maxHeight');
+  const maxHeight = maxHeightParam ? Number(maxHeightParam) : undefined;
+
+  // UserAgent params
+  const deviceType = params.get('deviceType') as DeviceType | null;
+  const hoverParam = params.get('hover');
+  const touchParam = params.get('touch');
+  const hasUserAgentParams = deviceType || hoverParam || touchParam;
+  const userAgent: UserAgent | undefined = hasUserAgentParams
+    ? {
+        device: { type: deviceType ?? 'desktop' },
+        capabilities: {
+          hover: hoverParam === 'false' ? false : true,
+          touch: touchParam === 'true' ? true : false,
+        },
+      }
+    : undefined;
+
+  // SafeArea params
+  const safeAreaTop = params.get('safeAreaTop');
+  const safeAreaBottom = params.get('safeAreaBottom');
+  const safeAreaLeft = params.get('safeAreaLeft');
+  const safeAreaRight = params.get('safeAreaRight');
+  const hasSafeAreaParams = safeAreaTop || safeAreaBottom || safeAreaLeft || safeAreaRight;
+  const safeArea: SafeArea | undefined = hasSafeAreaParams
+    ? {
+        insets: {
+          top: safeAreaTop ? Number(safeAreaTop) : 0,
+          bottom: safeAreaBottom ? Number(safeAreaBottom) : 0,
+          left: safeAreaLeft ? Number(safeAreaLeft) : 0,
+          right: safeAreaRight ? Number(safeAreaRight) : 0,
+        },
+      }
+    : undefined;
+
+  // View params
+  const viewMode = params.get('viewMode') as ViewMode | null;
+  const view: View | null | undefined = viewMode ? { mode: viewMode } : undefined;
+
+  return {
+    simulation,
+    theme: theme ?? undefined,
+    displayMode: displayMode ?? undefined,
+    locale: locale ?? undefined,
+    maxHeight,
+    userAgent,
+    safeArea,
+    view,
+  };
+}
+
 export function ChatGPTSimulator({
   children,
-  simulations = [],
+  simulations = {},
   appName = 'Sunpeak',
   appIcon,
 }: ChatGPTSimulatorProps) {
+  // Get simulation names for iteration
+  const simulationNames = Object.keys(simulations);
+  // Parse URL params once on mount
+  const urlParams = useMemo(() => parseUrlParams(), []);
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
 
   // Helper to check if current width is mobile
   const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
 
-  // Track selected simulation by index
-  const [selectedIndex, setSelectedIndex] = React.useState<number>(0);
+  // Find initial simulation name from URL param (e.g., ?simulation=albums-show)
+  const initialSimulationName = useMemo(() => {
+    const defaultName = simulationNames[0] ?? '';
+    if (!urlParams.simulation) return defaultName;
+    return urlParams.simulation in simulations ? urlParams.simulation : defaultName;
+  }, [urlParams.simulation, simulations, simulationNames]);
+
+  // Track selected simulation by name
+  const [selectedSimulationName, setSelectedSimulationName] =
+    React.useState<string>(initialSimulationName);
 
   // Get the selected simulation
-  const selectedSim = simulations[selectedIndex];
+  const selectedSim = simulations[selectedSimulationName];
 
   // Extract metadata from the selected simulation
   const userMessage = selectedSim?.userMessage;
 
   // Create mock once and keep it stable - never recreate it
+  // Initial values come from URL params
   const mock = useMemo(
     () =>
       initMockOpenAI({
-        theme: DEFAULT_THEME,
-        displayMode: DEFAULT_DISPLAY_MODE,
+        theme: urlParams.theme ?? DEFAULT_THEME,
+        displayMode: urlParams.displayMode ?? DEFAULT_DISPLAY_MODE,
+        locale: urlParams.locale,
+        maxHeight: urlParams.maxHeight,
+        userAgent: urlParams.userAgent,
+        safeArea: urlParams.safeArea,
+        view: urlParams.view,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only initialize once
     []
   );
 
-  // Update mock properties when simulation changes
+  // Update simulation-specific values when simulation changes
   useEffect(() => {
     if (selectedSim) {
-      // Update all properties from the selected simulation
-      if (selectedSim.simulationGlobals?.theme !== undefined) {
-        mock.theme = selectedSim.simulationGlobals.theme;
-      } else {
-        mock.theme = DEFAULT_THEME;
-      }
-
-      if (selectedSim.simulationGlobals?.displayMode !== undefined) {
-        mock.displayMode = selectedSim.simulationGlobals.displayMode;
-      } else {
-        mock.displayMode = DEFAULT_DISPLAY_MODE;
-      }
-
-      mock.userAgent = selectedSim.simulationGlobals?.userAgent ?? mock.userAgent;
-      mock.locale = selectedSim.simulationGlobals?.locale ?? 'en-US';
-      // maxHeight is only defined for PiP mode (480px), undefined for inline and fullscreen
-      const currentDisplayMode = selectedSim.simulationGlobals?.displayMode ?? DEFAULT_DISPLAY_MODE;
-      mock.maxHeight =
-        currentDisplayMode === 'pip'
-          ? (selectedSim.simulationGlobals?.maxHeight ?? 480)
-          : undefined;
-      mock.safeArea = selectedSim.simulationGlobals?.safeArea ?? mock.safeArea;
-      mock.view = selectedSim.simulationGlobals?.view ?? null;
-      mock.toolInput = selectedSim.simulationGlobals?.toolInput ?? {};
-      mock.widgetState = selectedSim.simulationGlobals?.widgetState ?? null;
-      mock.toolOutput = selectedSim.toolCall?.structuredContent ?? null;
+      mock.toolInput = selectedSim.callToolRequestParams?.arguments ?? {};
+      mock.widgetState = selectedSim.widgetState ?? null;
+      mock.toolOutput = selectedSim.callToolResult?.structuredContent ?? null;
     }
-  }, [selectedIndex, selectedSim, mock]);
+  }, [selectedSimulationName, selectedSim, mock]);
 
   // Read all globals from window.openai (same as widget code would)
   const theme = useTheme() ?? DEFAULT_THEME;
@@ -214,7 +291,7 @@ export function ChatGPTSimulator({
       setViewParamsError('');
     }
   }, [
-    selectedIndex,
+    selectedSimulationName,
     toolInput,
     toolOutput,
     toolResponseMetadata,
@@ -266,17 +343,18 @@ export function ChatGPTSimulator({
       <SimpleSidebar
         controls={
           <div className="space-y-2">
-            {simulations.length > 0 && (
+            {simulationNames.length > 0 && (
               <SidebarControl label="Simulation">
                 <SidebarSelect
-                  value={String(selectedIndex)}
-                  onChange={(value) => setSelectedIndex(Number(value))}
-                  options={simulations.map((sim, index) => {
+                  value={selectedSimulationName}
+                  onChange={(value) => setSelectedSimulationName(value)}
+                  options={simulationNames.map((name) => {
+                    const sim = simulations[name];
                     const resourceTitle =
                       (sim.resource.title as string | undefined) || sim.resource.name;
                     const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
                     return {
-                      value: String(index),
+                      value: name,
                       label: `${resourceTitle}: ${toolTitle}`,
                     };
                   })}
@@ -610,7 +688,7 @@ export function ChatGPTSimulator({
           appIcon={appIcon}
           userMessage={userMessage}
           resourceMeta={selectedSim?.resource._meta as Record<string, unknown> | undefined}
-          key={selectedIndex}
+          key={selectedSimulationName}
         >
           {content}
         </Conversation>

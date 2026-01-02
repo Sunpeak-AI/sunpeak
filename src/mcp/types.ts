@@ -1,18 +1,13 @@
-import type { Resource, Tool } from '@modelcontextprotocol/sdk/types.js';
-
-/**
- * MCP CallTool response data (subset used in simulations)
- */
-export interface SimulationCallToolResult {
-  structuredContent?: Record<string, unknown> | null;
-  _meta?: Record<string, unknown>;
-}
+import type { Resource, Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Simulation configuration for MCP server.
  * Must include distPath for the built widget file.
  */
 export interface SimulationWithDist {
+  // Unique identifier derived from the simulation filename (e.g., 'albums-show')
+  name: string;
+
   distPath: string;
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
@@ -22,8 +17,8 @@ export interface SimulationWithDist {
   // Loaded from resources/NAME-resource.json where NAME is the simulation key.
   resource: Resource;
 
-  // MCP CallToolResult protocol - data for CallTool response
-  toolCall?: SimulationCallToolResult;
+  // Official CallToolResult from the MCP SDK, data for CallTool response
+  callToolResult?: CallToolResult;
 }
 
 /**

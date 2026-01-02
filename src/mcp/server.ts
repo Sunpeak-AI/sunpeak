@@ -19,7 +19,7 @@ import { z } from 'zod';
 
 import { type MCPServerConfig } from './types.js';
 
-export type { MCPServerConfig, SimulationWithDist, SimulationCallToolResult } from './types.js';
+export type { MCPServerConfig, SimulationWithDist } from './types.js';
 
 /**
  * Read and wrap resource JS in HTML shell.
@@ -89,7 +89,7 @@ function createAppServer(config: MCPServerConfig): Server {
   const toolCallDataMap = new Map(
     simulations.map((simulation) => [
       simulation.tool.name,
-      simulation.toolCall ?? { structuredContent: null, _meta: {} },
+      simulation.callToolResult ?? { structuredContent: null, _meta: {} },
     ])
   );
 

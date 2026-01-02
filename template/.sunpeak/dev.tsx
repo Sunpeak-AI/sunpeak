@@ -70,9 +70,9 @@ function getResourceComponent(name: string): React.ComponentType {
   return component;
 }
 
-// Build simulations array from discovered files
-type SimulationData = Omit<Simulation, 'resourceComponent' | 'resource'>;
-const simulations: Simulation[] = [];
+// Build simulations object from discovered files
+type SimulationData = Omit<Simulation, 'name' | 'resourceComponent' | 'resource'>;
+const simulations: Record<string, Simulation> = {};
 
 for (const [path, module] of Object.entries(simulationModules)) {
   // Extract simulation key from path: '../src/simulations/albums-show-simulation.json' -> 'albums-show'
@@ -94,11 +94,12 @@ for (const [path, module] of Object.entries(simulationModules)) {
 
   const resource = resourcesMap.get(resourceKey)!;
 
-  simulations.push({
+  simulations[simulationKey] = {
     ...simulation,
+    name: simulationKey,
     resource,
     resourceComponent: getResourceComponent(resource.name),
-  });
+  };
 }
 
 // Read app config from environment or use defaults

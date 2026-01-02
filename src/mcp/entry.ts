@@ -80,6 +80,7 @@ async function startServer() {
 
     simulations.push({
       ...simulation,
+      name: simulationKey,
       distPath: path.join(projectRoot, `dist/${resourceKey}.js`),
       resource,
     });

@@ -5,58 +5,37 @@
  */
 
 import type * as React from 'react';
-import type { Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
-import type { Theme, DisplayMode, UserAgent, SafeArea, View } from './index';
-
-/**
- * Simulation globals that configure the simulator environment.
- * These values are passed to the mock runtime to set initial values for development/testing.
- * All fields are optional as simulations can use defaults.
- * Globals initialized based on tool responses are instead set in SimulationCallToolResult:
- *  (structuredContent > toolOutput, _meta > toolResponseMetadata)
- */
-export interface SimulationGlobals {
-  theme?: Theme;
-  userAgent?: UserAgent;
-  locale?: string;
-  maxHeight?: number;
-  displayMode?: DisplayMode;
-  safeArea?: SafeArea;
-  view?: View | null;
-  toolInput?: Record<string, unknown>;
-  widgetState?: Record<string, unknown> | null;
-}
-
-/**
- * MCP CallTool response data (subset used in simulations).
- * Note: toolOutput (structuredContent) and toolResponseMetadata (_meta)
- * are set here for use by the MCP server as well, not in SimulationGlobals.
- */
-export interface SimulationCallToolResult {
-  structuredContent?: Record<string, unknown> | null;
-  _meta?: Record<string, unknown>;
-}
+import type {
+  Tool,
+  Resource,
+  CallToolRequestParams,
+  CallToolResult,
+} from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * A simulation packages a component with its example data and metadata.
  * Each simulation represents a complete tool experience in the simulator.
  */
 export interface Simulation {
+  // Unique identifier derived from the simulation filename (e.g., 'albums-show')
+  name: string;
+
   // Core simulation fields.
   resourceComponent: React.ComponentType;
   userMessage?: string; // Decoration for the simulator, no functional purpose.
-
-  // Simulation globals for simulator environment (optional).
-  simulationGlobals?: SimulationGlobals;
 
   // Official Tool type from the MCP SDK, used in ListTools response.
   tool: Tool;
 
   // Official Resource type from the MCP SDK, used in ListResources response.
-  // Optional - when omitted, resource is loaded from resources/NAME-resource.json
-  // where NAME matches the simulation key.
-  resource?: Resource;
+  resource: Resource;
 
-  // Official CallToolResultSchema from the MCP SDK, mock data for the CallTool response.
-  toolCall?: SimulationCallToolResult;
+  // Official CallToolResult from the MCP SDK, mock data for the CallTool response.
+  callToolResult?: CallToolResult;
+
+  // Official CallToolRequestParams from the MCP SDK (arguments maps to toolInput in the runtime).
+  callToolRequestParams?: CallToolRequestParams;
+
+  // Initial widget state for the simulation.
+  widgetState?: Record<string, unknown> | null;
 }

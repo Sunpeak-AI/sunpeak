@@ -13,7 +13,7 @@
       "openai/resultCanProduceWidget": true
     }
   },
-  "toolCall": {
+  "callToolResult": {
     "structuredContent": {
       "places": [
         {

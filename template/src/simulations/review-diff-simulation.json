@@ -13,7 +13,7 @@
       "openai/resultCanProduceWidget": true
     }
   },
-  "toolCall": {
+  "callToolResult": {
     "structuredContent": {
       "title": "Refactor Authentication Module",
       "description": "The following changes will update the authentication system to use JWT tokens instead of session-based auth.",

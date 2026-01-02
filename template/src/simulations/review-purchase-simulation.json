@@ -13,7 +13,7 @@
       "openai/resultCanProduceWidget": true
     }
   },
-  "toolCall": {
+  "callToolResult": {
     "structuredContent": {
       "title": "Confirm Your Order",
       "description": "Please review your order before completing the purchase.",

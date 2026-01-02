@@ -13,7 +13,7 @@
       "openai/resultCanProduceWidget": true
     }
   },
-  "toolCall": {
+  "callToolResult": {
     "structuredContent": {
       "title": "Review Your Post",
       "description": "This post will be published to your connected accounts.",
