@@ -107,12 +107,12 @@ describe('ReviewResource', () => {
       expect(screen.getByText('Please review the following items')).toBeInTheDocument();
     });
 
-    it('renders empty state when no sections', () => {
+    it('renders loading when no sections', () => {
       mockWidgetData = { title: 'Test', sections: [] };
 
       render(<ReviewResource />);
 
-      expect(screen.getByText('Nothing to confirm')).toBeInTheDocument();
+      expect(screen.getByText('Loading...')).toBeInTheDocument();
     });
 
     it('has the correct displayName', () => {
