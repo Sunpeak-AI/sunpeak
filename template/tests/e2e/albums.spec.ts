@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
 
 test.describe('Albums Resource', () => {
   test.describe('Light Mode', () => {
     test('should render album cards with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=albums-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'light' }));
 
       const albumCard = page.locator('button:has-text("Summer Slice")');
       await expect(albumCard).toBeVisible();
@@ -22,7 +23,7 @@ test.describe('Albums Resource', () => {
     });
 
     test('should have album image with correct aspect ratio', async ({ page }) => {
-      await page.goto('/?simulation=albums-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'light' }));
 
       const albumImage = page.locator('button:has-text("Summer Slice") img').first();
       await expect(albumImage).toBeVisible();
@@ -46,7 +47,7 @@ test.describe('Albums Resource', () => {
 
   test.describe('Dark Mode', () => {
     test('should render album cards with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=albums-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'dark' }));
 
       const albumCard = page.locator('button:has-text("Summer Slice")');
       await expect(albumCard).toBeVisible();
@@ -64,7 +65,7 @@ test.describe('Albums Resource', () => {
     });
 
     test('should have text with appropriate contrast', async ({ page }) => {
-      await page.goto('/?simulation=albums-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'dark' }));
 
       const albumTitle = page.locator('button:has-text("Summer Slice") .text-primary').first();
       await expect(albumTitle).toBeVisible();
@@ -84,7 +85,9 @@ test.describe('Albums Resource', () => {
 
   test.describe('Fullscreen Mode', () => {
     test('should render correctly in fullscreen displayMode', async ({ page }) => {
-      await page.goto('/?simulation=albums-show&theme=light&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'albums-show', theme: 'light', displayMode: 'fullscreen' })
+      );
 
       // Wait for content to load
       await page.waitForLoadState('networkidle');
@@ -95,7 +98,9 @@ test.describe('Albums Resource', () => {
     });
 
     test('should maintain album card styles in fullscreen', async ({ page }) => {
-      await page.goto('/?simulation=albums-show&theme=dark&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'albums-show', theme: 'dark', displayMode: 'fullscreen' })
+      );
 
       const albumCard = page.locator('button:has-text("Summer Slice")');
       await expect(albumCard).toBeVisible();

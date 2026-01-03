@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
 
 test.describe('Review Resource', () => {
   test.describe('Light Mode', () => {
     test('should render review title with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -23,7 +24,7 @@ test.describe('Review Resource', () => {
     });
 
     test('should render change items with type-specific styling', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -45,7 +46,7 @@ test.describe('Review Resource', () => {
     });
 
     test('should have interactive apply and cancel buttons', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -75,7 +76,9 @@ test.describe('Review Resource', () => {
     });
 
     test('should have expand fullscreen button in inline mode', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=light&displayMode=inline');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'review-diff', theme: 'light', displayMode: 'inline' })
+      );
 
       await page.waitForLoadState('networkidle');
 
@@ -96,7 +99,7 @@ test.describe('Review Resource', () => {
 
   test.describe('Dark Mode', () => {
     test('should render review title with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -105,7 +108,7 @@ test.describe('Review Resource', () => {
     });
 
     test('should have appropriate text colors for dark mode', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -125,7 +128,7 @@ test.describe('Review Resource', () => {
     });
 
     test('should render change items in dark mode', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -141,7 +144,7 @@ test.describe('Review Resource', () => {
         }
       });
 
-      await page.goto('/?simulation=review-diff&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
       await page.waitForLoadState('networkidle');
 
       expect(errors).toHaveLength(0);
@@ -150,7 +153,9 @@ test.describe('Review Resource', () => {
 
   test.describe('Fullscreen Mode', () => {
     test('should not show fullscreen button when already in fullscreen', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=light&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'review-diff', theme: 'light', displayMode: 'fullscreen' })
+      );
 
       await page.waitForLoadState('networkidle');
 
@@ -160,7 +165,9 @@ test.describe('Review Resource', () => {
     });
 
     test('should render content correctly in fullscreen', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=dark&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', displayMode: 'fullscreen' })
+      );
 
       await page.waitForLoadState('networkidle');
 
@@ -174,7 +181,9 @@ test.describe('Review Resource', () => {
     });
 
     test('should have scrollable content area in fullscreen', async ({ page }) => {
-      await page.goto('/?simulation=review-diff&theme=light&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'review-diff', theme: 'light', displayMode: 'fullscreen' })
+      );
 
       await page.waitForLoadState('networkidle');
 
@@ -195,7 +204,7 @@ test.describe('Review Resource', () => {
 
   test.describe('Review Post Simulation', () => {
     test('should render post review in light mode', async ({ page }) => {
-      await page.goto('/?simulation=review-post&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'review-post', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -205,7 +214,7 @@ test.describe('Review Resource', () => {
     });
 
     test('should render post review in dark mode', async ({ page }) => {
-      await page.goto('/?simulation=review-post&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'review-post', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -216,7 +225,7 @@ test.describe('Review Resource', () => {
 
   test.describe('Review Purchase Simulation', () => {
     test('should render purchase review in light mode', async ({ page }) => {
-      await page.goto('/?simulation=review-purchase&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'review-purchase', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -225,7 +234,7 @@ test.describe('Review Resource', () => {
     });
 
     test('should render purchase review in dark mode', async ({ page }) => {
-      await page.goto('/?simulation=review-purchase&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'review-purchase', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 

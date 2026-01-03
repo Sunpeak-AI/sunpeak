@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
 
 test.describe('Carousel Resource', () => {
   test.describe('Light Mode', () => {
     test('should render carousel cards with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=carousel-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light' }));
 
       // Wait for carousel to load
       await page.waitForLoadState('networkidle');
@@ -25,7 +26,7 @@ test.describe('Carousel Resource', () => {
     });
 
     test('should have card with border styling', async ({ page }) => {
-      await page.goto('/?simulation=carousel-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -46,7 +47,7 @@ test.describe('Carousel Resource', () => {
     });
 
     test('should have interactive buttons', async ({ page }) => {
-      await page.goto('/?simulation=carousel-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -67,7 +68,7 @@ test.describe('Carousel Resource', () => {
 
   test.describe('Dark Mode', () => {
     test('should render carousel cards with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=carousel-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -87,7 +88,7 @@ test.describe('Carousel Resource', () => {
     });
 
     test('should have appropriate background color for dark mode', async ({ page }) => {
-      await page.goto('/?simulation=carousel-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark' }));
 
       await page.waitForLoadState('networkidle');
 
@@ -115,7 +116,7 @@ test.describe('Carousel Resource', () => {
         }
       });
 
-      await page.goto('/?simulation=carousel-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark' }));
       await page.waitForLoadState('networkidle');
 
       expect(errors).toHaveLength(0);

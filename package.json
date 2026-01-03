@@ -17,6 +17,12 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./chatgpt": {
+      "import": {
+        "types": "./dist/chatgpt/index.d.ts",
+        "default": "./dist/chatgpt/index.js"
+      }
+    },
     "./style.css": "./dist/style.css",
     "./chatgpt/globals.css": "./dist/chatgpt/globals.css",
     "./mcp": {

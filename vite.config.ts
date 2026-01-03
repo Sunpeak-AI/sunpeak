@@ -35,6 +35,7 @@ export default defineConfig({
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
+        'chatgpt/index': resolve(__dirname, 'src/chatgpt/index.ts'),
         'mcp/index': resolve(__dirname, 'src/mcp/index.ts'),
         'mcp/entry': resolve(__dirname, 'src/mcp/entry.ts'),
       },

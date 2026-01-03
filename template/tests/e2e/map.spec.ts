@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
 
 test.describe('Map Resource', () => {
   test.describe('Light Mode', () => {
     test('should render map container with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'light' }));
 
       // Wait for the map component to render
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
@@ -20,7 +21,9 @@ test.describe('Map Resource', () => {
     });
 
     test('should have rounded border in inline mode', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=light&displayMode=inline');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'inline' })
+      );
 
       // Wait for the inner container with rounded borders
       const innerContainer = page.locator('.border.rounded-2xl').first();
@@ -39,7 +42,9 @@ test.describe('Map Resource', () => {
     });
 
     test('should have fullscreen expand button in inline mode', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=light&displayMode=inline');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'inline' })
+      );
 
       // Wait for the expand button
       const expandButton = page.locator('button[aria-label="Enter fullscreen"]');
@@ -65,7 +70,7 @@ test.describe('Map Resource', () => {
         }
       });
 
-      await page.goto('/?simulation=map-show&theme=light');
+      await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'light' }));
 
       // Wait for map to render
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
@@ -77,14 +82,16 @@ test.describe('Map Resource', () => {
 
   test.describe('Dark Mode', () => {
     test('should render map container with correct styles', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'dark' }));
 
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
     });
 
     test('should have appropriate border color for dark mode', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=dark&displayMode=inline');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'dark', displayMode: 'inline' })
+      );
 
       // In dark mode, the border uses dark:border-white/10
       const innerContainer = page.locator('.border.rounded-2xl').first();
@@ -109,7 +116,7 @@ test.describe('Map Resource', () => {
         }
       });
 
-      await page.goto('/?simulation=map-show&theme=dark');
+      await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'dark' }));
 
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
@@ -120,7 +127,9 @@ test.describe('Map Resource', () => {
 
   test.describe('Fullscreen Mode', () => {
     test('should not have rounded border in fullscreen mode', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=light&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'fullscreen' })
+      );
 
       // In fullscreen, the container uses rounded-none and border-0
       const innerContainer = page.locator('.rounded-none.border-0').first();
@@ -137,7 +146,9 @@ test.describe('Map Resource', () => {
     });
 
     test('should not show fullscreen button when already in fullscreen', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=light&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'fullscreen' })
+      );
 
       // Wait for content to render
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
@@ -149,7 +160,9 @@ test.describe('Map Resource', () => {
     });
 
     test('should show place list sidebar in fullscreen', async ({ page }) => {
-      await page.goto('/?simulation=map-show&theme=dark&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'dark', displayMode: 'fullscreen' })
+      );
 
       // The map container should be present
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
@@ -159,7 +172,9 @@ test.describe('Map Resource', () => {
     test('should show suggestion chips in fullscreen on desktop', async ({ page }) => {
       // Set viewport to desktop size
       await page.setViewportSize({ width: 1024, height: 768 });
-      await page.goto('/?simulation=map-show&theme=light&displayMode=fullscreen');
+      await page.goto(
+        createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'fullscreen' })
+      );
 
       // Wait for map to render
       const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
