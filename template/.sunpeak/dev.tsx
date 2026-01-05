@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /**
  * Bootstrap file for Sunpeak dev server
  * This file bootstraps the ChatGPT simulator for development
@@ -58,7 +59,7 @@ function getResourceComponent(name: string): React.ComponentType {
   const pascalName = name.charAt(0).toUpperCase() + name.slice(1);
   const componentName = `${pascalName}Resource`;
 
-  const component = resourceComponents[componentName];
+  const component = (resourceComponents as Record<string, React.ComponentType>)[componentName];
 
   if (!component) {
     throw new Error(
@@ -97,7 +98,10 @@ for (const [path, module] of Object.entries(simulationModules)) {
   simulations[simulationKey] = {
     ...simulation,
     name: simulationKey,
-    resource,
+    resource: {
+      uri: `ui://${resource.name}`, // Dummy URI.
+      ...resource,
+    },
     resourceComponent: getResourceComponent(resource.name),
   };
 }

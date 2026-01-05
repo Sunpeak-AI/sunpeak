@@ -18,6 +18,6 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "scripts", "template/src"],
+  "include": ["src", "scripts"],
   "exclude": ["tests", "template/node_modules", "template/dist"]
 }
