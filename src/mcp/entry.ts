@@ -8,28 +8,13 @@
  * - resources/{resource}-resource.json
  */
 import { runMCPServer, type SimulationWithDist } from './index.js';
+import { findResourceKey } from '../lib/discovery.js';
 import path from 'path';
 import { readFileSync, readdirSync } from 'fs';
 import type { Resource } from '@modelcontextprotocol/sdk/types.js';
 
 // Determine project root (where this is being run from)
 const projectRoot = process.cwd();
-
-/**
- * Find the best matching resource key for a simulation key.
- * Matches the longest resource name that is a prefix of the simulation key.
- * e.g., 'albums-show' matches 'albums' (not 'album' if both exist)
- */
-function findResourceKey(simulationKey: string, resourceKeys: string[]): string | undefined {
-  // Sort by length descending to find longest match first
-  const sorted = [...resourceKeys].sort((a, b) => b.length - a.length);
-  for (const resourceKey of sorted) {
-    if (simulationKey === resourceKey || simulationKey.startsWith(resourceKey + '-')) {
-      return resourceKey;
-    }
-  }
-  return undefined;
-}
 
 async function startServer() {
   // Read package.json for app metadata

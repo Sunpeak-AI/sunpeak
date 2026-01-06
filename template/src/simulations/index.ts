@@ -7,17 +7,10 @@
  * This file can be safely imported in Node.js contexts (like MCP servers)
  * without causing issues with CSS imports or React components.
  */
+import { createSimulationIndex } from 'sunpeak';
 
 // Auto-discover all simulation JSON files
 const simulationModules = import.meta.glob('./*-simulation.json', { eager: true });
 
-// Build SIMULATIONS object from discovered files
-// Key is the full name without -simulation.json suffix (e.g., 'albums-show')
-export const SIMULATIONS = Object.fromEntries(
-  Object.entries(simulationModules).map(([path, module]) => {
-    // Extract simulation key from path: './albums-show-simulation.json' -> 'albums-show'
-    const match = path.match(/\.\/(.+)-simulation\.json$/);
-    const key = match?.[1] ?? path;
-    return [key, (module as { default: unknown }).default];
-  })
-) as Record<string, unknown>;
+// Build SIMULATIONS object from discovered files using library helper
+export const SIMULATIONS = createSimulationIndex(simulationModules);
