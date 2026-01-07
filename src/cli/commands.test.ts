@@ -791,4 +791,43 @@ describe('CLI Commands', () => {
       expect(compareVersions('2.0.0', '1.9.9')).toBe(1);
     });
   });
+
+  describe('version command', () => {
+    it('should output a valid semver version', async () => {
+      const { execSync } = await import('child_process');
+      const { join } = await import('path');
+      const cliPath = join(process.cwd(), 'bin/sunpeak.js');
+
+      const output = execSync(`node ${cliPath} version`, { encoding: 'utf-8' }).trim();
+
+      // Should be a valid semver version (e.g., "0.9.3")
+      expect(output).toMatch(/^\d+\.\d+\.\d+$/);
+    });
+
+    it('should output same version with --version flag', async () => {
+      const { execSync } = await import('child_process');
+      const { join } = await import('path');
+      const cliPath = join(process.cwd(), 'bin/sunpeak.js');
+
+      const versionOutput = execSync(`node ${cliPath} version`, { encoding: 'utf-8' }).trim();
+      const flagOutput = execSync(`node ${cliPath} --version`, { encoding: 'utf-8' }).trim();
+      const shortFlagOutput = execSync(`node ${cliPath} -v`, { encoding: 'utf-8' }).trim();
+
+      expect(versionOutput).toBe(flagOutput);
+      expect(versionOutput).toBe(shortFlagOutput);
+    });
+
+    it('should match version in package.json', async () => {
+      const { execSync } = await import('child_process');
+      const { join } = await import('path');
+      const { readFileSync } = await import('fs');
+      const cliPath = join(process.cwd(), 'bin/sunpeak.js');
+      const pkgPath = join(process.cwd(), 'package.json');
+
+      const output = execSync(`node ${cliPath} version`, { encoding: 'utf-8' }).trim();
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+
+      expect(output).toBe(pkg.version);
+    });
+  });
 });
