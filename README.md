@@ -12,7 +12,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/sunpeak.svg?style=flat-square)](https://www.npmjs.com/package/sunpeak)
 [![CI](https://img.shields.io/github/actions/workflow/status/Sunpeak-AI/sunpeak/ci.yml?branch=main&style=flat-square&label=CI)](https://github.com/Sunpeak-AI/sunpeak/actions)
 [![License](https://img.shields.io/npm/l/sunpeak.svg?style=flat-square)](https://github.com/Sunpeak-AI/sunpeak/blob/main/LICENSE)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat-square&logo=react)](https://reactjs.org/)
 
 The ChatGPT App framework.
@@ -57,7 +57,7 @@ sunpeak is an npm package consisting of:
 2. **The `sunpeak` framework** (`./template`). Next.js for ChatGPT Apps. This templated npm package includes:
    1. Project scaffold - Complete development setup with build, test, and mcp tooling, including the sunpeak library.
    2. UI components - Production-ready components following ChatGPT design guidelines and using OpenAI apps-sdk-ui React components.
-   3. Convention over configuration - Create UIs (resources) by simply creating a `resources/NAME-resource.tsx` React file and `resources/NAME-resource.json` metadata file.
+   3. Convention over configuration - Create UIs (resources) by simply creating a `src/resources/NAME-resource.tsx` React file and `src/resources/NAME-resource.json` metadata file.
 3. **The `sunpeak` CLI** (`./bin`). Commands for managing ChatGPT Apps. Includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/) (ECR for ChatGPT Apps). The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server:
    1. Tag your app builds with version numbers and environment names (like `v1.0.0` and `prod`)
    2. `push` built Apps to a central location
