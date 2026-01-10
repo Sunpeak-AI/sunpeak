@@ -3,9 +3,13 @@ import { CloseBold } from '@openai/apps-sdk-ui/components/Icon';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { useDisplayMode, useUserAgent, useWidgetAPI } from '../hooks';
 import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
+import { IframeResource, type WidgetCSP } from './iframe-resource';
 
 interface ConversationProps {
-  children: React.ReactNode;
+  /** React content to render (mutually exclusive with iframeScriptSrc) */
+  children?: React.ReactNode;
+  /** URL to a built .js file to render in an iframe (mutually exclusive with children) */
+  iframeScriptSrc?: string;
   screenWidth: ScreenWidth;
   appName?: string;
   appIcon?: string;
@@ -15,6 +19,7 @@ interface ConversationProps {
 
 export function Conversation({
   children,
+  iframeScriptSrc,
   screenWidth,
   appName = 'Sunpeak',
   appIcon,
@@ -27,6 +32,16 @@ export function Conversation({
   const userAgent = useUserAgent();
   const isDesktop = userAgent?.device.type === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
+
+  // Extract CSP from resource metadata
+  const widgetCSP = resourceMeta?.['openai/widgetCSP'] as WidgetCSP | undefined;
+
+  // Determine what content to render: iframe or React children
+  const content = iframeScriptSrc ? (
+    <IframeResource scriptSrc={iframeScriptSrc} className="h-full w-full" csp={widgetCSP} />
+  ) : (
+    children
+  );
 
   // Fullscreen mode: children take over the entire conversation area
   if (displayMode === 'fullscreen') {
@@ -87,7 +102,7 @@ export function Conversation({
           </div>
           <div className="relative overflow-hidden flex-1 min-h-0">
             {/* Simulated iframe - scrollable when content exceeds viewport */}
-            <div className="h-full w-full max-w-full overflow-auto">{children}</div>
+            <div className="h-full w-full max-w-full overflow-auto">{content}</div>
           </div>
           {/* Input area */}
           <footer className="bg-surface">
@@ -199,7 +214,7 @@ export function Conversation({
                           <div className="relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_#fff3,0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4">
                             {/* Simulated iframe - scrollable content */}
                             <div className="h-full w-full max-w-full overflow-auto bg-white dark:bg-[#212121]">
-                              {children}
+                              {content}
                             </div>
                           </div>
                         </div>
@@ -207,7 +222,7 @@ export function Conversation({
                         <div className="no-scrollbar relative mb-2 @w-sm/main:w-full mx-0 max-sm:-mx-[1rem] max-sm:w-[100cqw] max-sm:overflow-hidden overflow-visible">
                           <div className="relative overflow-hidden h-full">
                             {/* Simulated iframe - expands to content height, not scrollable */}
-                            {children}
+                            {content}
                           </div>
                         </div>
                       )}

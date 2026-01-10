@@ -334,8 +334,9 @@ export function ChatGPTSimulator({
     }
   };
 
-  // Determine what to render
+  // Determine what to render: prefer React component over iframe script (for better dev experience)
   const SelectedComponent = selectedSim?.resourceComponent;
+  const iframeScriptSrc = !SelectedComponent ? selectedSim?.resourceScript : undefined;
   const content = SelectedComponent ? <SelectedComponent /> : children;
 
   return (
@@ -688,6 +689,7 @@ export function ChatGPTSimulator({
           appIcon={appIcon}
           userMessage={userMessage}
           resourceMeta={selectedSim?.resource._meta as Record<string, unknown> | undefined}
+          iframeScriptSrc={iframeScriptSrc}
           key={selectedSimulationName}
         >
           {content}

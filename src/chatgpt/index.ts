@@ -4,3 +4,4 @@ export { initMockOpenAI } from './mock-openai';
 export * from './theme-provider';
 export { createSimulatorUrl } from './simulator-url';
 export type { SimulatorUrlParams } from './simulator-url';
+export { IframeResource } from './iframe-resource';

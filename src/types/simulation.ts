@@ -15,13 +15,19 @@ import type {
 /**
  * A simulation packages a component with its example data and metadata.
  * Each simulation represents a complete tool experience in the simulator.
+ *
+ * Specify either `resourceComponent` (React component) or `resourceScript` (URL to built .js file).
  */
 export interface Simulation {
   // Unique identifier derived from the simulation filename (e.g., 'albums-show')
   name: string;
 
-  // Core simulation fields.
-  resourceComponent: React.ComponentType;
+  // Core simulation fields - provide one of these:
+  // React component for direct rendering
+  resourceComponent?: React.ComponentType;
+  // URL to a built .js file for iframe rendering (e.g., '/dist/carousel.js')
+  resourceScript?: string;
+
   userMessage?: string; // Decoration for the simulator, no functional purpose.
 
   // Official Tool type from the MCP SDK, used in ListTools response.
