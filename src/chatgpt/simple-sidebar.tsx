@@ -201,7 +201,7 @@ interface SidebarTextareaProps {
   onFocus?: () => void;
   onBlur?: () => void;
   placeholder?: string;
-  rows?: number;
+  maxRows?: number;
   error?: string;
 }
 
@@ -211,9 +211,12 @@ export function SidebarTextarea({
   onFocus,
   onBlur,
   placeholder,
-  rows = 2,
+  maxRows = 8,
   error,
 }: SidebarTextareaProps) {
+  const contentRows = (value?.split('\n').length ?? 1);
+  const rows = Math.min(contentRows, maxRows);
+
   return (
     <div className="space-y-0.5">
       <Textarea
@@ -224,7 +227,8 @@ export function SidebarTextarea({
         placeholder={placeholder}
         rows={rows}
         size="2xs"
-        className="text-[10px] font-mono"
+        className="text-[10px] font-mono resize-y"
+        style={{ whiteSpace: 'pre', overflowX: 'auto', overflowWrap: 'normal' }}
         invalid={!!error}
       />
       {error && <div className="text-[9px] text-[var(--color-error)]">{error}</div>}

@@ -376,248 +376,267 @@ export function ChatGPTSimulator({
               />
             </SidebarControl>
 
-            <SidebarControl label="Theme">
-              <SidebarToggle
-                value={theme}
-                onChange={(value) => mock.setTheme(value as Theme)}
-                options={[
-                  { value: 'light', label: 'Light' },
-                  { value: 'dark', label: 'Dark' },
-                ]}
-              />
-            </SidebarControl>
-
-            <SidebarControl label="Display Mode">
-              <SidebarToggle
-                value={displayMode}
-                onChange={(value) => {
-                  const newMode = value as DisplayMode;
-                  // Disallow PiP on mobile widths - switch to fullscreen instead
-                  if (isMobileWidth(screenWidth) && newMode === 'pip') {
-                    mock.setDisplayMode('fullscreen');
-                  } else {
-                    mock.setDisplayMode(newMode);
-                  }
-                }}
-                options={[
-                  { value: 'inline', label: 'Inline' },
-                  { value: 'pip', label: 'PiP' },
-                  { value: 'fullscreen', label: 'Full' },
-                ]}
-              />
-            </SidebarControl>
-
-            <div className="grid grid-cols-2 gap-2">
-              <SidebarControl label="Locale">
-                <SidebarInput
-                  value={locale}
-                  onChange={(value) => mock.setLocale(value)}
-                  placeholder="e.g. en-US"
-                />
-              </SidebarControl>
-
-              <SidebarControl label="Max Height (PiP)">
-                <SidebarInput
-                  type="number"
-                  value={displayMode === 'pip' && maxHeight !== undefined ? String(maxHeight) : ''}
-                  onChange={(value) => {
-                    if (displayMode === 'pip') {
-                      mock.setMaxHeight(value ? Number(value) : 480);
-                    }
-                  }}
-                  placeholder={displayMode === 'pip' ? '480' : '-'}
-                  disabled={displayMode !== 'pip'}
-                />
-              </SidebarControl>
-            </div>
-
-            <SidebarControl label="User Agent - Device">
-              <SidebarSelect
-                value={userAgent?.device.type ?? 'desktop'}
-                onChange={(value) => {
-                  const deviceType = value as DeviceType;
-                  // Set appropriate default capabilities based on device type
-                  let capabilities;
-                  switch (deviceType) {
-                    case 'mobile':
-                      capabilities = { hover: false, touch: true };
-                      break;
-                    case 'tablet':
-                      capabilities = { hover: false, touch: true };
-                      break;
-                    case 'desktop':
-                      capabilities = { hover: true, touch: false };
-                      break;
-                    case 'unknown':
-                    default:
-                      capabilities = { hover: true, touch: false };
-                      break;
-                  }
-                  mock.setUserAgent({
-                    ...userAgent,
-                    device: { type: deviceType },
-                    capabilities,
-                  });
-                }}
-                options={[
-                  { value: 'mobile', label: 'Mobile' },
-                  { value: 'tablet', label: 'Tablet' },
-                  { value: 'desktop', label: 'Desktop' },
-                  { value: 'unknown', label: 'Unknown' },
-                ]}
-              />
-            </SidebarControl>
-
-            <div className="pl-4">
-              <SidebarControl label="Capabilities">
-                <div className="flex gap-2">
-                  <SidebarCheckbox
-                    checked={userAgent?.capabilities.hover ?? true}
-                    onChange={(checked) =>
-                      mock.setUserAgent({
-                        ...userAgent,
-                        device: userAgent?.device ?? { type: 'desktop' },
-                        capabilities: {
-                          hover: checked,
-                          touch: userAgent?.capabilities.touch ?? false,
-                        },
-                      })
-                    }
-                    label="Hover"
+            <SidebarCollapsibleControl label="Runtime Globals" defaultCollapsed={false}>
+              <div className="space-y-2">
+                <SidebarControl label="Theme">
+                  <SidebarToggle
+                    value={theme}
+                    onChange={(value) => mock.setTheme(value as Theme)}
+                    options={[
+                      { value: 'light', label: 'Light' },
+                      { value: 'dark', label: 'Dark' },
+                    ]}
                   />
-                  <SidebarCheckbox
-                    checked={userAgent?.capabilities.touch ?? false}
-                    onChange={(checked) =>
-                      mock.setUserAgent({
-                        ...userAgent,
-                        device: userAgent?.device ?? { type: 'desktop' },
-                        capabilities: {
-                          hover: userAgent?.capabilities.hover ?? true,
-                          touch: checked,
-                        },
-                      })
-                    }
-                    label="Touch"
-                  />
-                </div>
-              </SidebarControl>
-            </div>
+                </SidebarControl>
 
-            <SidebarControl label="Safe Area Insets">
-              <div className="grid grid-cols-2 gap-1">
-                <div className="space-y-0.5">
-                  <label className="text-[9px] text-secondary">Top</label>
-                  <SidebarInput
-                    type="number"
-                    value={String(safeArea?.insets.top ?? 0)}
-                    onChange={(value) =>
-                      mock.setSafeArea({
-                        insets: {
-                          ...safeArea?.insets,
-                          top: Number(value),
-                          bottom: safeArea?.insets.bottom ?? 0,
-                          left: safeArea?.insets.left ?? 0,
-                          right: safeArea?.insets.right ?? 0,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-[9px] text-secondary">Bottom</label>
-                  <SidebarInput
-                    type="number"
-                    value={String(safeArea?.insets.bottom ?? 0)}
-                    onChange={(value) =>
-                      mock.setSafeArea({
-                        insets: {
-                          ...safeArea?.insets,
-                          top: safeArea?.insets.top ?? 0,
-                          bottom: Number(value),
-                          left: safeArea?.insets.left ?? 0,
-                          right: safeArea?.insets.right ?? 0,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-[9px] text-secondary">Left</label>
-                  <SidebarInput
-                    type="number"
-                    value={String(safeArea?.insets.left ?? 0)}
-                    onChange={(value) =>
-                      mock.setSafeArea({
-                        insets: {
-                          ...safeArea?.insets,
-                          top: safeArea?.insets.top ?? 0,
-                          bottom: safeArea?.insets.bottom ?? 0,
-                          left: Number(value),
-                          right: safeArea?.insets.right ?? 0,
-                        },
-                      })
-                    }
-                  />
-                </div>
-                <div className="space-y-0.5">
-                  <label className="text-[9px] text-secondary">Right</label>
-                  <SidebarInput
-                    type="number"
-                    value={String(safeArea?.insets.right ?? 0)}
-                    onChange={(value) =>
-                      mock.setSafeArea({
-                        insets: {
-                          ...safeArea?.insets,
-                          top: safeArea?.insets.top ?? 0,
-                          bottom: safeArea?.insets.bottom ?? 0,
-                          left: safeArea?.insets.left ?? 0,
-                          right: Number(value),
-                        },
-                      })
-                    }
-                  />
-                </div>
-              </div>
-            </SidebarControl>
-
-            <SidebarControl label="View Mode">
-              <SidebarSelect
-                value={view?.mode ?? 'default'}
-                onChange={(value) =>
-                  mock.setView(
-                    value === 'default'
-                      ? null
-                      : {
-                          mode: value as ViewMode,
-                          params: view?.params,
-                        }
-                  )
-                }
-                options={[
-                  { value: 'default', label: 'Default (null)' },
-                  { value: 'modal', label: 'Modal' },
-                ]}
-              />
-            </SidebarControl>
-
-            {view && view.mode !== 'default' && (
-              <SidebarControl label="View Params (JSON)">
-                <SidebarTextarea
-                  value={viewParamsJson}
-                  onChange={(json) => validateJSON(json, setViewParamsJson, setViewParamsError)}
-                  onFocus={() => setEditingField('viewParams')}
-                  onBlur={() =>
-                    commitJSON(viewParamsJson, setViewParamsError, (parsed) => {
-                      if (view) {
-                        mock.setView({ ...view, params: parsed ?? undefined });
+                <SidebarControl label="Display Mode">
+                  <SidebarToggle
+                    value={displayMode}
+                    onChange={(value) => {
+                      const newMode = value as DisplayMode;
+                      // Disallow PiP on mobile widths - switch to fullscreen instead
+                      if (isMobileWidth(screenWidth) && newMode === 'pip') {
+                        mock.setDisplayMode('fullscreen');
+                      } else {
+                        mock.setDisplayMode(newMode);
                       }
-                    })
-                  }
-                  error={viewParamsError}
-                  rows={2}
-                />
-              </SidebarControl>
-            )}
+                    }}
+                    options={[
+                      { value: 'inline', label: 'Inline' },
+                      { value: 'pip', label: 'PiP' },
+                      { value: 'fullscreen', label: 'Full' },
+                    ]}
+                  />
+                </SidebarControl>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <SidebarControl label="Locale">
+                    <SidebarInput
+                      value={locale}
+                      onChange={(value) => mock.setLocale(value)}
+                      placeholder="e.g. en-US"
+                    />
+                  </SidebarControl>
+
+                  <SidebarControl label="Max Height (PiP)">
+                    <SidebarInput
+                      type="number"
+                      value={displayMode === 'pip' && maxHeight !== undefined ? String(maxHeight) : ''}
+                      onChange={(value) => {
+                        if (displayMode === 'pip') {
+                          mock.setMaxHeight(value ? Number(value) : 480);
+                        }
+                      }}
+                      placeholder={displayMode === 'pip' ? '480' : '-'}
+                      disabled={displayMode !== 'pip'}
+                    />
+                  </SidebarControl>
+                </div>
+
+                <SidebarControl label="User Agent - Device">
+                  <SidebarSelect
+                    value={userAgent?.device.type ?? 'desktop'}
+                    onChange={(value) => {
+                      const deviceType = value as DeviceType;
+                      // Set appropriate default capabilities based on device type
+                      let capabilities;
+                      switch (deviceType) {
+                        case 'mobile':
+                          capabilities = { hover: false, touch: true };
+                          break;
+                        case 'tablet':
+                          capabilities = { hover: false, touch: true };
+                          break;
+                        case 'desktop':
+                          capabilities = { hover: true, touch: false };
+                          break;
+                        case 'unknown':
+                        default:
+                          capabilities = { hover: true, touch: false };
+                          break;
+                      }
+                      mock.setUserAgent({
+                        ...userAgent,
+                        device: { type: deviceType },
+                        capabilities,
+                      });
+                    }}
+                    options={[
+                      { value: 'mobile', label: 'Mobile' },
+                      { value: 'tablet', label: 'Tablet' },
+                      { value: 'desktop', label: 'Desktop' },
+                      { value: 'unknown', label: 'Unknown' },
+                    ]}
+                  />
+                </SidebarControl>
+
+                <div className="pl-4">
+                  <SidebarControl label="Capabilities">
+                    <div className="flex gap-2">
+                      <SidebarCheckbox
+                        checked={userAgent?.capabilities.hover ?? true}
+                        onChange={(checked) =>
+                          mock.setUserAgent({
+                            ...userAgent,
+                            device: userAgent?.device ?? { type: 'desktop' },
+                            capabilities: {
+                              hover: checked,
+                              touch: userAgent?.capabilities.touch ?? false,
+                            },
+                          })
+                        }
+                        label="Hover"
+                      />
+                      <SidebarCheckbox
+                        checked={userAgent?.capabilities.touch ?? false}
+                        onChange={(checked) =>
+                          mock.setUserAgent({
+                            ...userAgent,
+                            device: userAgent?.device ?? { type: 'desktop' },
+                            capabilities: {
+                              hover: userAgent?.capabilities.hover ?? true,
+                              touch: checked,
+                            },
+                          })
+                        }
+                        label="Touch"
+                      />
+                    </div>
+                  </SidebarControl>
+                </div>
+
+                <SidebarControl label="Safe Area Insets">
+                  <div className="grid grid-cols-4 gap-1">
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[10px] text-secondary">↑</span>
+                      <SidebarInput
+                        type="number"
+                        value={String(safeArea?.insets.top ?? 0)}
+                        onChange={(value) =>
+                          mock.setSafeArea({
+                            insets: {
+                              ...safeArea?.insets,
+                              top: Number(value),
+                              bottom: safeArea?.insets.bottom ?? 0,
+                              left: safeArea?.insets.left ?? 0,
+                              right: safeArea?.insets.right ?? 0,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[10px] text-secondary">↓</span>
+                      <SidebarInput
+                        type="number"
+                        value={String(safeArea?.insets.bottom ?? 0)}
+                        onChange={(value) =>
+                          mock.setSafeArea({
+                            insets: {
+                              ...safeArea?.insets,
+                              top: safeArea?.insets.top ?? 0,
+                              bottom: Number(value),
+                              left: safeArea?.insets.left ?? 0,
+                              right: safeArea?.insets.right ?? 0,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[10px] text-secondary">←</span>
+                      <SidebarInput
+                        type="number"
+                        value={String(safeArea?.insets.left ?? 0)}
+                        onChange={(value) =>
+                          mock.setSafeArea({
+                            insets: {
+                              ...safeArea?.insets,
+                              top: safeArea?.insets.top ?? 0,
+                              bottom: safeArea?.insets.bottom ?? 0,
+                              left: Number(value),
+                              right: safeArea?.insets.right ?? 0,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                    <div className="flex items-center gap-0.5">
+                      <span className="text-[10px] text-secondary">→</span>
+                      <SidebarInput
+                        type="number"
+                        value={String(safeArea?.insets.right ?? 0)}
+                        onChange={(value) =>
+                          mock.setSafeArea({
+                            insets: {
+                              ...safeArea?.insets,
+                              top: safeArea?.insets.top ?? 0,
+                              bottom: safeArea?.insets.bottom ?? 0,
+                              left: safeArea?.insets.left ?? 0,
+                              right: Number(value),
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+                </SidebarControl>
+
+                <SidebarControl label="View Mode">
+                  <SidebarSelect
+                    value={view?.mode ?? 'default'}
+                    onChange={(value) =>
+                      mock.setView(
+                        value === 'default'
+                          ? null
+                          : {
+                              mode: value as ViewMode,
+                              params: view?.params,
+                            }
+                      )
+                    }
+                    options={[
+                      { value: 'default', label: 'Default (null)' },
+                      { value: 'modal', label: 'Modal' },
+                    ]}
+                  />
+                </SidebarControl>
+
+                {view && view.mode !== 'default' && (
+                  <SidebarControl label="View Params (JSON)">
+                    <SidebarTextarea
+                      value={viewParamsJson}
+                      onChange={(json) => validateJSON(json, setViewParamsJson, setViewParamsError)}
+                      onFocus={() => setEditingField('viewParams')}
+                      onBlur={() =>
+                        commitJSON(viewParamsJson, setViewParamsError, (parsed) => {
+                          if (view) {
+                            mock.setView({ ...view, params: parsed ?? undefined });
+                          }
+                        })
+                      }
+                      error={viewParamsError}
+                      maxRows={2}
+                    />
+                  </SidebarControl>
+                )}
+
+                <SidebarCollapsibleControl label="Widget State (JSON)" defaultCollapsed={false}>
+                  <SidebarTextarea
+                    value={widgetStateJson}
+                    onChange={(json) => validateJSON(json, setWidgetStateJson, setWidgetStateError)}
+                    onFocus={() => setEditingField('widgetState')}
+                    onBlur={() =>
+                      commitJSON(widgetStateJson, setWidgetStateError, (parsed) =>
+                        mock.setWidgetStateExternal(parsed)
+                      )
+                    }
+                    error={widgetStateError}
+                    maxRows={8}
+                  />
+                </SidebarCollapsibleControl>
+              </div>
+            </SidebarCollapsibleControl>
 
             <SidebarCollapsibleControl label="Tool Input (JSON)">
               <SidebarTextarea
@@ -630,7 +649,7 @@ export function ChatGPTSimulator({
                   )
                 }
                 error={toolInputError}
-                rows={8}
+                maxRows={8}
               />
             </SidebarCollapsibleControl>
 
@@ -645,7 +664,7 @@ export function ChatGPTSimulator({
                   )
                 }
                 error={toolOutputError}
-                rows={8}
+                maxRows={8}
               />
             </SidebarCollapsibleControl>
 
@@ -662,24 +681,10 @@ export function ChatGPTSimulator({
                   )
                 }
                 error={toolResponseMetadataError}
-                rows={8}
+                maxRows={8}
               />
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Widget State (JSON)">
-              <SidebarTextarea
-                value={widgetStateJson}
-                onChange={(json) => validateJSON(json, setWidgetStateJson, setWidgetStateError)}
-                onFocus={() => setEditingField('widgetState')}
-                onBlur={() =>
-                  commitJSON(widgetStateJson, setWidgetStateError, (parsed) =>
-                    mock.setWidgetStateExternal(parsed)
-                  )
-                }
-                error={widgetStateError}
-                rows={8}
-              />
-            </SidebarCollapsibleControl>
           </div>
         }
       >
