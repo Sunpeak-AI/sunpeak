@@ -227,7 +227,7 @@ export function SidebarTextarea({
         placeholder={placeholder}
         rows={rows}
         size="2xs"
-        className="text-[10px] font-mono resize-y"
+        className="text-[10px] font-mono resize-y [&>textarea]:!h-full [&>textarea]:!max-h-none [&>textarea]:!min-h-0"
         style={{ whiteSpace: 'pre', overflowX: 'auto', overflowWrap: 'normal' }}
         invalid={!!error}
       />
