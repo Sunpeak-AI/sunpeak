@@ -22,9 +22,10 @@ export interface Simulation {
   // Unique identifier derived from the simulation filename (e.g., 'albums-show')
   name: string;
 
-  // Core simulation fields - provide one of these:
-  // React component for direct rendering
+  // React resource to be rendered.
   resourceComponent?: React.ComponentType;
+
+  // Used by https://app.sunpeak.ai, ignore in favor of resourceComponent.
   // URL to a built .js file for iframe rendering (e.g., '/dist/carousel.js')
   resourceScript?: string;
 

@@ -344,7 +344,7 @@ export function ChatGPTSimulator({
       <SimpleSidebar
         controls={
           <div className="space-y-2">
-            {simulationNames.length > 0 && (
+            {simulationNames.length > 1 && (
               <SidebarControl label="Simulation">
                 <SidebarSelect
                   value={selectedSimulationName}
