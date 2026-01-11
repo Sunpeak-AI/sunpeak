@@ -11,11 +11,45 @@ interface SimpleSidebarProps {
   controls: React.ReactNode;
 }
 
+const DEFAULT_SIDEBAR_WIDTH = 224; // w-56 = 14rem = 224px
+
 export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
+  const [sidebarWidth, setSidebarWidth] = React.useState(DEFAULT_SIDEBAR_WIDTH);
+  const [isResizing, setIsResizing] = React.useState(false);
+
+  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizing(true);
+  }, []);
+
+  React.useEffect(() => {
+    if (!isResizing) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const maxWidth = Math.floor(window.innerWidth / 3);
+      const newWidth = Math.min(maxWidth, Math.max(DEFAULT_SIDEBAR_WIDTH, e.clientX));
+      setSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizing]);
 
   return (
     <div className="sunpeak-simulator-root flex h-screen w-full overflow-hidden relative">
+      {/* Resize overlay to capture mouse events during drag */}
+      {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
+
       {/* Mobile drawer overlay */}
       {isDrawerOpen && (
         <div
@@ -32,12 +66,13 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
       {/* Sidebar */}
       <aside
         className={`
-          w-56 flex flex-col border-r border-subtle bg-sidebar
-          md:relative md:z-auto
+          relative flex flex-col border-r border-subtle bg-sidebar
+          md:z-auto
           max-md:fixed max-md:inset-y-0 max-md:left-0 max-md:z-[100]
-          max-md:transition-transform max-md:duration-300
+          max-md:transition-transform max-md:duration-300 max-md:!w-2/3
           ${isDrawerOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}
         `}
+        style={{ width: sidebarWidth }}
       >
         <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-3 pt-0">
           <div className="space-y-3">
@@ -71,6 +106,12 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
             </div>
           </div>
         </div>
+
+        {/* Resize handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className="hidden md:block absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-primary/20 active:bg-primary/30 transition-colors"
+        />
       </aside>
 
       {/* Main content */}
