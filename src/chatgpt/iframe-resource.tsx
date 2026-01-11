@@ -17,10 +17,10 @@ import {
 /**
  * Allowed origins for cross-origin script loading.
  * - Local development: localhost, 127.0.0.1, file://
- * - Production: sandbox.sunpeakai.com (serves user scripts)
+ * - Production: sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com (serves user scripts)
  */
 const ALLOWED_SCRIPT_ORIGINS = [
-  'https://sandbox.sunpeakai.com',
+  'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com',
   'http://localhost',
   'https://localhost',
   'http://127.0.0.1',
@@ -773,17 +773,14 @@ export function IframeResource({ scriptSrc, className, style, csp }: IframeResou
   // Validate script source is from an allowed origin
   const isValidScriptSrc = useMemo(() => isAllowedScriptSrc(scriptSrc), [scriptSrc]);
 
-  // Generate HTML and create blob URL (keeps DOM clean in devtools)
-  const blobUrl = useMemo(() => {
+  // Generate HTML content for srcdoc (avoids blob URLs which require allow-same-origin)
+  const htmlContent = useMemo(() => {
     if (!isValidScriptSrc) {
       console.error('[IframeResource] Script source not allowed:', scriptSrc);
-      // Return a safe error page
-      const errorHtml = `<!DOCTYPE html><html><body><h1>Error</h1><p>Script source not allowed.</p></body></html>`;
-      const blob = new Blob([errorHtml], { type: 'text/html' });
-      return URL.createObjectURL(blob);
+      return `<!DOCTYPE html><html><body><h1>Error</h1><p>Script source not allowed.</p></body></html>`;
     }
 
-    // Convert relative paths to absolute (blob URLs can't resolve relative paths)
+    // Convert relative paths to absolute (srcdoc iframes can't resolve relative paths)
     const absoluteScriptSrc = scriptSrc.startsWith('/')
       ? `${window.location.origin}${scriptSrc}`
       : scriptSrc;
@@ -793,23 +790,16 @@ export function IframeResource({ scriptSrc, className, style, csp }: IframeResou
 
     // Generate bridge script with allowed parent origins
     const bridgeScript = generateBridgeScript(ALLOWED_PARENT_ORIGINS);
-    const html = injectBridgeScript(
+    return injectBridgeScript(
       generateScriptHtml(absoluteScriptSrc, theme ?? 'dark', cspPolicy),
       bridgeScript
     );
-    const blob = new Blob([html], { type: 'text/html' });
-    return URL.createObjectURL(blob);
   }, [scriptSrc, theme, isValidScriptSrc, csp]);
-
-  // Clean up blob URL on unmount or when it changes
-  useEffect(() => {
-    return () => URL.revokeObjectURL(blobUrl);
-  }, [blobUrl]);
 
   return (
     <iframe
       ref={iframeRef}
-      src={blobUrl}
+      srcDoc={htmlContent}
       className={className}
       style={{
         border: 'none',

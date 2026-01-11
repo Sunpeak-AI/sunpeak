@@ -14,63 +14,44 @@ const {
 } = _testExports;
 
 describe('IframeResource', () => {
-  let capturedHtml: string | null = null;
-  const originalCreateObjectURL = URL.createObjectURL;
-  const originalRevokeObjectURL = URL.revokeObjectURL;
-
   beforeEach(() => {
     initMockOpenAI({ theme: 'dark', displayMode: 'inline' });
-    capturedHtml = null;
-
-    // Mock URL.createObjectURL to capture the blob content
-    URL.createObjectURL = vi.fn((blob: Blob) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        capturedHtml = reader.result as string;
-      };
-      reader.readAsText(blob);
-      return 'blob:mock-url';
-    });
-    URL.revokeObjectURL = vi.fn();
   });
 
   afterEach(() => {
     delete (window as unknown as { openai?: unknown }).openai;
-    URL.createObjectURL = originalCreateObjectURL;
-    URL.revokeObjectURL = originalRevokeObjectURL;
   });
 
-  it('renders an iframe with a blob URL', () => {
+  it('renders an iframe with srcDoc', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview');
     expect(iframe).toBeInTheDocument();
     expect(iframe.tagName).toBe('IFRAME');
-    expect(iframe.getAttribute('src')).toBe('blob:mock-url');
+    expect(iframe.getAttribute('srcDoc')).not.toBeNull();
   });
 
-  it('generates HTML wrapper with script tag (absolute URL)', async () => {
+  it('generates HTML wrapper with script tag (absolute URL)', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-    // Wait for FileReader to process the blob
-    await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    // Relative paths are converted to absolute for blob URL compatibility
-    expect(capturedHtml).toContain(
-      '<script src="http://localhost:3000/dist/carousel.js"></script>'
-    );
-    expect(capturedHtml).toContain('<div id="root"></div>');
-    expect(capturedHtml).toContain('<!DOCTYPE html>');
+    // Relative paths are converted to absolute for srcdoc iframe compatibility
+    expect(srcDoc).toContain('<script src="http://localhost:3000/dist/carousel.js"></script>');
+    expect(srcDoc).toContain('<div id="root"></div>');
+    expect(srcDoc).toContain('<!DOCTYPE html>');
   });
 
-  it('injects bridge script into the generated HTML', async () => {
+  it('injects bridge script into the generated HTML', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-    await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    expect(capturedHtml).toContain('window.openai');
-    expect(capturedHtml).toContain('openai:ready');
-    expect(capturedHtml).toContain('openai:set_globals');
+    expect(srcDoc).toContain('window.openai');
+    expect(srcDoc).toContain('openai:ready');
+    expect(srcDoc).toContain('openai:set_globals');
   });
 
   it('sets appropriate sandbox attributes', () => {
@@ -113,59 +94,43 @@ describe('IframeResource', () => {
     expect(iframe.style.height).toBe('100%');
   });
 
-  it('includes theme in generated HTML', async () => {
+  it('includes theme in generated HTML', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-    await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    expect(capturedHtml).toContain('data-theme="dark"');
+    expect(srcDoc).toContain('data-theme="dark"');
   });
 
-  it('includes transparent background style', async () => {
+  it('includes transparent background style', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-    await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    expect(capturedHtml).toContain('background: transparent');
-  });
-
-  it('cleans up blob URL on unmount', () => {
-    const { unmount } = render(<IframeResource scriptSrc="/dist/carousel.js" />);
-
-    unmount();
-
-    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+    expect(srcDoc).toContain('background: transparent');
   });
 });
 
 describe('IframeResource Security', () => {
-  let capturedHtml: string | null = null;
-  const originalCreateObjectURL = URL.createObjectURL;
-  const originalRevokeObjectURL = URL.revokeObjectURL;
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     initMockOpenAI({ theme: 'dark', displayMode: 'inline' });
-    capturedHtml = null;
-
-    URL.createObjectURL = vi.fn((blob: Blob) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        capturedHtml = reader.result as string;
-      };
-      reader.readAsText(blob);
-      return 'blob:mock-url';
-    });
-    URL.revokeObjectURL = vi.fn();
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
     delete (window as unknown as { openai?: unknown }).openai;
-    URL.createObjectURL = originalCreateObjectURL;
-    URL.revokeObjectURL = originalRevokeObjectURL;
     consoleErrorSpy.mockRestore();
   });
+
+  // Helper to get srcDoc content from rendered iframe
+  function getSrcDoc(): string {
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    return iframe.getAttribute('srcDoc') ?? '';
+  }
 
   describe('XSS Prevention - escapeHtml', () => {
     it('escapes < and > to prevent script injection', () => {
@@ -211,35 +176,35 @@ describe('IframeResource Security', () => {
   });
 
   describe('XSS Prevention - Component Integration', () => {
-    it('escapes malicious scriptSrc in generated HTML', async () => {
+    it('escapes malicious scriptSrc in generated HTML', () => {
       // Use a relative path (which passes validation) with XSS payload
       const malicious = '/dist/"></script><script>alert("xss")</script><script x=".js';
       render(<IframeResource scriptSrc={malicious} />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
       // The malicious script tags should be escaped, not executable
-      expect(capturedHtml).not.toContain('><script>alert');
-      expect(capturedHtml).toContain('&lt;script&gt;');
+      expect(srcDoc).not.toContain('><script>alert');
+      expect(srcDoc).toContain('&lt;script&gt;');
     });
 
-    it('blocks javascript: protocol attempts', async () => {
+    it('blocks javascript: protocol attempts', () => {
       const malicious = 'javascript:alert(document.cookie)';
       render(<IframeResource scriptSrc={malicious} />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
       // Should show error page for disallowed origin
-      expect(capturedHtml).toContain('Script source not allowed');
+      expect(srcDoc).toContain('Script source not allowed');
     });
 
-    it('blocks data: URL attempts', async () => {
+    it('blocks data: URL attempts', () => {
       const malicious = 'data:text/javascript,alert(1)';
       render(<IframeResource scriptSrc={malicious} />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
-      expect(capturedHtml).toContain('Script source not allowed');
+      expect(srcDoc).toContain('Script source not allowed');
     });
   });
 
@@ -268,8 +233,12 @@ describe('IframeResource Security', () => {
       expect(isAllowedScriptSrc('http://127.0.0.1:5173/script.js')).toBe(true);
     });
 
-    it('allows sandbox.sunpeakai.com', () => {
-      expect(isAllowedScriptSrc('https://sandbox.sunpeakai.com/widgets/carousel.js')).toBe(true);
+    it('allows sunpeak-prod-app-storage S3 bucket', () => {
+      expect(
+        isAllowedScriptSrc(
+          'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widgets/carousel.js'
+        )
+      ).toBe(true);
     });
 
     it('rejects arbitrary external domains', () => {
@@ -279,9 +248,15 @@ describe('IframeResource Security', () => {
     });
 
     it('rejects similar-looking domains (typosquatting)', () => {
-      expect(isAllowedScriptSrc('https://sandbox.sunpeakai.com.evil.com/script.js')).toBe(false);
-      expect(isAllowedScriptSrc('https://sunpeakai.com.attacker.io/script.js')).toBe(false);
-      expect(isAllowedScriptSrc('https://sandbox-sunpeakai.com/script.js')).toBe(false);
+      expect(
+        isAllowedScriptSrc(
+          'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com.evil.com/script.js'
+        )
+      ).toBe(false);
+      expect(
+        isAllowedScriptSrc('https://sunpeak-fake-app-storage.s3.us-east-2.amazonaws.com/script.js')
+      ).toBe(false);
+      expect(isAllowedScriptSrc('https://s3.us-east-2.amazonaws.com/script.js')).toBe(false);
     });
 
     it('rejects data: URLs', () => {
@@ -299,26 +274,30 @@ describe('IframeResource Security', () => {
   });
 
   describe('Script Origin Validation - Component Integration', () => {
-    it('blocks scripts from disallowed origins', async () => {
+    it('blocks scripts from disallowed origins', () => {
       render(<IframeResource scriptSrc="https://evil.com/malware.js" />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
-      expect(capturedHtml).toContain('Script source not allowed');
-      expect(capturedHtml).not.toContain('evil.com');
+      expect(srcDoc).toContain('Script source not allowed');
+      expect(srcDoc).not.toContain('evil.com');
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         '[IframeResource] Script source not allowed:',
         'https://evil.com/malware.js'
       );
     });
 
-    it('allows scripts from sandbox.sunpeakai.com', async () => {
-      render(<IframeResource scriptSrc="https://sandbox.sunpeakai.com/widgets/test.js" />);
+    it('allows scripts from sunpeak-prod-app-storage S3 bucket', () => {
+      render(
+        <IframeResource scriptSrc="https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widgets/test.js" />
+      );
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
-      expect(capturedHtml).toContain('https://sandbox.sunpeakai.com/widgets/test.js');
-      expect(capturedHtml).not.toContain('Script source not allowed');
+      expect(srcDoc).toContain(
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widgets/test.js'
+      );
+      expect(srcDoc).not.toContain('Script source not allowed');
     });
   });
 
@@ -371,24 +350,24 @@ describe('IframeResource Security', () => {
   });
 
   describe('PostMessage Security - Message Handling', () => {
-    it('validates message structure before processing', async () => {
+    it('validates message structure before processing', () => {
       render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
       // Bridge script should check for valid message structure (via MessagePort now)
-      expect(capturedHtml).toContain('data.type');
-      expect(capturedHtml).toContain("data.type === 'openai:init'");
+      expect(srcDoc).toContain('data.type');
+      expect(srcDoc).toContain("data.type === 'openai:init'");
     });
 
-    it('only processes known message types', async () => {
+    it('only processes known message types', () => {
       render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
       // Should only handle openai: prefixed messages
-      expect(capturedHtml).toContain('openai:init');
-      expect(capturedHtml).toContain('openai:update');
+      expect(srcDoc).toContain('openai:init');
+      expect(srcDoc).toContain('openai:update');
     });
   });
 
@@ -435,8 +414,10 @@ describe('IframeResource Security', () => {
   });
 
   describe('Allowed Origins Configuration', () => {
-    it('ALLOWED_SCRIPT_ORIGINS contains sandbox.sunpeakai.com', () => {
-      expect(ALLOWED_SCRIPT_ORIGINS).toContain('https://sandbox.sunpeakai.com');
+    it('ALLOWED_SCRIPT_ORIGINS contains sunpeak-prod-app-storage S3 bucket', () => {
+      expect(ALLOWED_SCRIPT_ORIGINS).toContain(
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com'
+      );
     });
 
     it('ALLOWED_SCRIPT_ORIGINS contains localhost for development', () => {
@@ -456,7 +437,10 @@ describe('IframeResource Security', () => {
 
   describe('Content Security Policy - generateCSP', () => {
     it('generates restrictive default CSP without config', () => {
-      const csp = generateCSP(undefined, 'https://sandbox.sunpeakai.com/widget.js');
+      const csp = generateCSP(
+        undefined,
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
+      );
 
       expect(csp).toContain("default-src 'self'");
       expect(csp).toContain("script-src 'self' 'unsafe-inline' blob:");
@@ -467,10 +451,13 @@ describe('IframeResource Security', () => {
     });
 
     it('includes script origin in connect-src', () => {
-      const csp = generateCSP(undefined, 'https://sandbox.sunpeakai.com/widget.js');
+      const csp = generateCSP(
+        undefined,
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
+      );
 
       expect(csp).toContain('connect-src');
-      expect(csp).toContain('https://sandbox.sunpeakai.com');
+      expect(csp).toContain('https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com');
     });
 
     it('adds custom connect domains to connect-src', () => {
@@ -478,7 +465,7 @@ describe('IframeResource Security', () => {
         {
           connect_domains: ['https://api.mapbox.com', 'https://events.mapbox.com'],
         },
-        'https://sandbox.sunpeakai.com/widget.js'
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
 
       expect(csp).toContain('https://api.mapbox.com');
@@ -490,7 +477,7 @@ describe('IframeResource Security', () => {
         {
           resource_domains: ['https://images.unsplash.com', 'https://cdn.openai.com'],
         },
-        'https://sandbox.sunpeakai.com/widget.js'
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
 
       expect(csp).toContain('img-src');
@@ -500,37 +487,46 @@ describe('IframeResource Security', () => {
     });
 
     it('includes data: and blob: in resource sources', () => {
-      const csp = generateCSP(undefined, 'https://sandbox.sunpeakai.com/widget.js');
+      const csp = generateCSP(
+        undefined,
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
+      );
 
       expect(csp).toContain('data:');
       expect(csp).toContain('blob:');
     });
 
     it('disallows nested iframes', () => {
-      const csp = generateCSP(undefined, 'https://sandbox.sunpeakai.com/widget.js');
+      const csp = generateCSP(
+        undefined,
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
+      );
 
       expect(csp).toContain("frame-src 'none'");
     });
 
     it('disallows form submissions', () => {
-      const csp = generateCSP(undefined, 'https://sandbox.sunpeakai.com/widget.js');
+      const csp = generateCSP(
+        undefined,
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
+      );
 
       expect(csp).toContain("form-action 'none'");
     });
   });
 
   describe('Content Security Policy - Component Integration', () => {
-    it('includes CSP meta tag in generated HTML', async () => {
+    it('includes CSP meta tag in generated HTML', () => {
       render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
-      expect(capturedHtml).toContain('http-equiv="Content-Security-Policy"');
+      expect(srcDoc).toContain('http-equiv="Content-Security-Policy"');
       // Single quotes are HTML-escaped in the content attribute
-      expect(capturedHtml).toContain('default-src &#39;self&#39;');
+      expect(srcDoc).toContain('default-src &#39;self&#39;');
     });
 
-    it('applies custom CSP from props', async () => {
+    it('applies custom CSP from props', () => {
       render(
         <IframeResource
           scriptSrc="/dist/carousel.js"
@@ -541,10 +537,10 @@ describe('IframeResource Security', () => {
         />
       );
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
-      expect(capturedHtml).toContain('https://api.example.com');
-      expect(capturedHtml).toContain('https://images.example.com');
+      expect(srcDoc).toContain('https://api.example.com');
+      expect(srcDoc).toContain('https://images.example.com');
     });
   });
 
@@ -582,15 +578,15 @@ describe('IframeResource Security', () => {
       expect(bridgeScript).toContain('openai:handshake_complete');
     });
 
-    it('only uses postMessage for ready signal and height updates', async () => {
+    it('only uses postMessage for ready signal and height updates', () => {
       render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
-      await vi.waitFor(() => expect(capturedHtml).not.toBeNull());
+      const srcDoc = getSrcDoc();
 
       // postMessage to '*' is only used for:
       // 1. Initial ready signal (required for handshake)
       // 2. Height updates (for immediate responsiveness, validated on parent)
-      const postMessageStarMatches = capturedHtml!.match(/postMessage\([^)]+,\s*'\*'\)/g) || [];
+      const postMessageStarMatches = srcDoc.match(/postMessage\([^)]+,\s*'\*'\)/g) || [];
       expect(postMessageStarMatches.length).toBe(2);
       expect(postMessageStarMatches.some((m) => m.includes('openai:ready'))).toBe(true);
       expect(postMessageStarMatches.some((m) => m.includes('openai:notifyIntrinsicHeight'))).toBe(
