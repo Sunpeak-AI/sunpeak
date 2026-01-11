@@ -52,15 +52,16 @@ class OpenAiProvider implements WidgetProvider {
       return null;
     }
 
-    const api = window.openai;
+    // Return wrapper functions that always call the current window.openai
+    // This ensures we always use the latest mock instance (important for React Strict Mode)
     return {
-      callTool: api.callTool?.bind(api),
-      sendFollowUpMessage: api.sendFollowUpMessage?.bind(api),
-      openExternal: api.openExternal?.bind(api),
-      requestDisplayMode: api.requestDisplayMode?.bind(api),
-      requestModal: api.requestModal?.bind(api),
-      notifyIntrinsicHeight: api.notifyIntrinsicHeight?.bind(api),
-      setWidgetState: api.setWidgetState?.bind(api),
+      callTool: (...args) => window.openai?.callTool?.(...args),
+      sendFollowUpMessage: (...args) => window.openai?.sendFollowUpMessage?.(...args),
+      openExternal: (...args) => window.openai?.openExternal?.(...args),
+      requestDisplayMode: (...args) => window.openai?.requestDisplayMode?.(...args),
+      requestModal: (...args) => window.openai?.requestModal?.(...args),
+      notifyIntrinsicHeight: (...args) => window.openai?.notifyIntrinsicHeight?.(...args),
+      setWidgetState: (...args) => window.openai?.setWidgetState?.(...args),
     };
   }
 }

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   SimpleSidebar,
   SidebarControl,
@@ -22,7 +22,7 @@ import {
   useSafeArea,
   useView,
   useToolInput,
-  useWidgetState,
+  useWidgetGlobal,
   useToolResponseMetadata,
   useWidgetProps,
 } from '../hooks';
@@ -174,11 +174,22 @@ export function ChatGPTSimulator({
     []
   );
 
+  // Ensure window.openai is set before children render on every render cycle
+  // This handles React Strict Mode where cleanup deletes window.openai but useMemo returns cached mock
+  if (typeof window !== 'undefined') {
+    (window as unknown as { openai: typeof mock }).openai = mock;
+    resetProviderCache();
+  }
+
   // Update simulation-specific values when simulation changes
   useEffect(() => {
     if (selectedSim) {
       mock.toolInput = selectedSim.callToolRequestParams?.arguments ?? {};
-      mock.widgetState = selectedSim.widgetState ?? null;
+      // Only override widget state if simulation explicitly defines one
+      // Otherwise, let the component set its own initial state via useWidgetState
+      if (selectedSim.widgetState !== undefined) {
+        mock.setWidgetStateExternal(selectedSim.widgetState);
+      }
       mock.toolOutput = selectedSim.callToolResult?.structuredContent ?? null;
     }
   }, [selectedSimulationName, selectedSim, mock]);
@@ -192,7 +203,7 @@ export function ChatGPTSimulator({
   const safeArea = useSafeArea();
   const view = useView();
   const toolInput = useToolInput();
-  const [widgetState] = useWidgetState();
+  const widgetState = useWidgetGlobal('widgetState');
   const toolResponseMetadata = useToolResponseMetadata();
   const toolOutput = useWidgetProps();
 
@@ -222,15 +233,6 @@ export function ChatGPTSimulator({
   const [toolResponseMetadataError, setToolResponseMetadataError] = useState('');
   const [widgetStateError, setWidgetStateError] = useState('');
   const [viewParamsError, setViewParamsError] = useState('');
-
-  // Re-register mock on window.openai after each mount (handles Strict Mode remounts)
-  useLayoutEffect(() => {
-    if (mock && typeof window !== 'undefined') {
-      (window as unknown as { openai: typeof mock }).openai = mock;
-      // Reset provider cache to ensure it detects the newly registered mock
-      resetProviderCache();
-    }
-  }, [mock]);
 
   // Emit update events when mock changes to update sidebar controls
   useEffect(() => {
@@ -348,7 +350,13 @@ export function ChatGPTSimulator({
               <SidebarControl label="Simulation">
                 <SidebarSelect
                   value={selectedSimulationName}
-                  onChange={(value) => setSelectedSimulationName(value)}
+                  onChange={(value) => {
+                    // Reset widget state synchronously before switching so the new component
+                    // can set its own initial state via useWidgetState
+                    const newSim = simulations[value];
+                    mock.setWidgetStateExternal(newSim?.widgetState ?? null);
+                    setSelectedSimulationName(value);
+                  }}
                   options={simulationNames.map((name) => {
                     const sim = simulations[name];
                     const resourceTitle =
@@ -421,7 +429,9 @@ export function ChatGPTSimulator({
                   <SidebarControl label="Max Height (PiP)">
                     <SidebarInput
                       type="number"
-                      value={displayMode === 'pip' && maxHeight !== undefined ? String(maxHeight) : ''}
+                      value={
+                        displayMode === 'pip' && maxHeight !== undefined ? String(maxHeight) : ''
+                      }
                       onChange={(value) => {
                         if (displayMode === 'pip') {
                           mock.setMaxHeight(value ? Number(value) : 480);
@@ -684,7 +694,6 @@ export function ChatGPTSimulator({
                 maxRows={8}
               />
             </SidebarCollapsibleControl>
-
           </div>
         }
       >

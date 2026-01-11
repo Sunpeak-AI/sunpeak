@@ -214,7 +214,7 @@ export function SidebarTextarea({
   maxRows = 8,
   error,
 }: SidebarTextareaProps) {
-  const contentRows = (value?.split('\n').length ?? 1);
+  const contentRows = value?.split('\n').length ?? 1;
   const rows = Math.min(contentRows, maxRows);
 
   return (

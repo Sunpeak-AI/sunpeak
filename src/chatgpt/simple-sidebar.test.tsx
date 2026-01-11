@@ -228,7 +228,9 @@ describe('SidebarTextarea', () => {
   it('renders textarea and calls onChange when value changes', async () => {
     const handleChange = vi.fn();
     const user = userEvent.setup();
-    render(<SidebarTextarea value="" onChange={handleChange} placeholder="Enter JSON" rows={4} />);
+    render(
+      <SidebarTextarea value="" onChange={handleChange} placeholder="Enter JSON" maxRows={4} />
+    );
 
     const textarea = screen.getByPlaceholderText('Enter JSON');
     expect(textarea).toBeInTheDocument();

@@ -63,8 +63,9 @@ class MockOpenAI implements OpenAiAPI, OpenAiGlobals {
   }
 
   async setWidgetState(state: Record<string, unknown>) {
-    this.widgetState = state;
-    this.emitUpdate({ widgetState: state });
+    // Merge with existing state to support multiple components using useWidgetState
+    this.widgetState = { ...this.widgetState, ...state };
+    this.emitUpdate({ widgetState: this.widgetState });
   }
 
   setTheme(theme: Theme) {

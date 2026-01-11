@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type SetStateAction } from 'react';
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
 import { useWidgetGlobal } from './use-widget-global';
 import { useWidgetAPI } from './use-widget-api';
 import type { UnknownObject } from '../types';
@@ -23,8 +23,28 @@ export function useWidgetState<T extends UnknownObject>(
     return typeof defaultState === 'function' ? defaultState() : (defaultState ?? null);
   });
 
+  // Track whether we've sent the initial state to the API
+  const hasSentInitialState = useRef(false);
+
+  // Send initial default state to API when api becomes available and no provider state exists
   useEffect(() => {
-    _setWidgetState(widgetStateFromProvider);
+    if (
+      !hasSentInitialState.current &&
+      widgetStateFromProvider == null &&
+      widgetState != null &&
+      api?.setWidgetState
+    ) {
+      hasSentInitialState.current = true;
+      api.setWidgetState(widgetState);
+    }
+  }, [api, widgetState, widgetStateFromProvider]);
+
+  // Sync local state when provider state changes (external system subscription)
+  useEffect(() => {
+    if (widgetStateFromProvider != null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing with external provider state
+      _setWidgetState(widgetStateFromProvider);
+    }
   }, [widgetStateFromProvider]);
 
   const setWidgetState = useCallback(

@@ -49,6 +49,9 @@ export const AlbumCarousel = React.forwardRef<HTMLDivElement, AlbumCarouselProps
       if (emblaApi) emblaApi.scrollNext();
     }, [emblaApi]);
 
+    // Track the last index we synced to widget state to avoid redundant updates
+    const lastSyncedIndexRef = React.useRef<number | null>(null);
+
     const onSelect = React.useCallback(() => {
       if (!emblaApi) return;
 
@@ -56,15 +59,22 @@ export const AlbumCarousel = React.forwardRef<HTMLDivElement, AlbumCarouselProps
       setCanScrollNext(emblaApi.canScrollNext());
 
       const currentIndex = emblaApi.selectedScrollSnap();
-      if (widgetState?.currentIndex !== currentIndex) {
+
+      // Only update widget state if the index actually changed from user interaction
+      if (lastSyncedIndexRef.current !== currentIndex) {
+        lastSyncedIndexRef.current = currentIndex;
         setWidgetState((prev) => ({ ...prev, currentIndex }));
       }
-    }, [emblaApi, widgetState?.currentIndex, setWidgetState]);
+    }, [emblaApi, setWidgetState]);
 
     React.useEffect(() => {
       if (!emblaApi) return;
 
-      onSelect();
+      // Initialize scroll state without updating widget state
+      setCanScrollPrev(emblaApi.canScrollPrev());
+      setCanScrollNext(emblaApi.canScrollNext());
+      lastSyncedIndexRef.current = emblaApi.selectedScrollSnap();
+
       emblaApi.on('select', onSelect);
       emblaApi.on('reInit', onSelect);
 
@@ -73,6 +83,21 @@ export const AlbumCarousel = React.forwardRef<HTMLDivElement, AlbumCarouselProps
         emblaApi.off('reInit', onSelect);
       };
     }, [emblaApi, onSelect]);
+
+    // Sync external widget state changes to carousel scroll position
+    React.useEffect(() => {
+      if (!emblaApi) return;
+
+      const targetIndex = widgetState?.currentIndex ?? 0;
+      const currentIndex = emblaApi.selectedScrollSnap();
+
+      // Only scroll if the external state differs from carousel position
+      // AND it's not a state we just synced from the carousel
+      if (targetIndex !== currentIndex && lastSyncedIndexRef.current !== targetIndex) {
+        lastSyncedIndexRef.current = targetIndex;
+        emblaApi.scrollTo(targetIndex);
+      }
+    }, [emblaApi, widgetState?.currentIndex]);
 
     const childArray = React.Children.toArray(children);
 
