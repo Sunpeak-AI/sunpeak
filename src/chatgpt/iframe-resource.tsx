@@ -30,10 +30,10 @@ const ALLOWED_SCRIPT_ORIGINS = [
 /**
  * Allowed parent origins that can send messages to the iframe.
  * - Local development: localhost, 127.0.0.1
- * - Production: app.sunpeak.ai (hosts the simulator)
+ * - Production: sandbox.sunpeakai.com (isolated sandbox domain for user scripts)
  */
 const ALLOWED_PARENT_ORIGINS = [
-  'https://app.sunpeak.ai',
+  'https://sandbox.sunpeakai.com',
   'http://localhost',
   'https://localhost',
   'http://127.0.0.1',
@@ -811,9 +811,10 @@ export function IframeResource({ scriptSrc, className, style, csp }: IframeResou
         ...style,
       }}
       title="Resource Preview"
-      sandbox="allow-scripts"
-      // Permissions policy: deny access to sensitive device APIs
-      allow="accelerometer 'none'; autoplay 'none'; camera 'none'; display-capture 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; microphone 'none'; midi 'none'; payment 'none'; publickey-credentials-get 'none'; usb 'none'; xr-spatial-tracking 'none'"
+      // Sandbox permissions matching ChatGPT's iframe model (requires hosting on separate sandbox domain)
+      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+      // Permissions policy matching ChatGPT: allow local-network, microphone, midi; deny other sensitive APIs
+      allow="local-network-access *; microphone *; midi *; accelerometer 'none'; autoplay 'none'; camera 'none'; display-capture 'none'; geolocation 'none'; gyroscope 'none'; magnetometer 'none'; payment 'none'; publickey-credentials-get 'none'; usb 'none'; xr-spatial-tracking 'none'"
     />
   );
 }

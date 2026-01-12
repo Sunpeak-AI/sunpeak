@@ -58,16 +58,22 @@ describe('IframeResource', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
-    expect(iframe.getAttribute('sandbox')).toBe('allow-scripts');
+    expect(iframe.getAttribute('sandbox')).toBe(
+      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox'
+    );
   });
 
-  it('sets permissions policy to deny sensitive APIs', () => {
+  it('sets permissions policy matching ChatGPT iframe model', () => {
     render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const allow = iframe.getAttribute('allow');
+    // Allowed APIs (matching ChatGPT)
+    expect(allow).toContain('local-network-access *');
+    expect(allow).toContain('microphone *');
+    expect(allow).toContain('midi *');
+    // Denied APIs
     expect(allow).toContain("camera 'none'");
-    expect(allow).toContain("microphone 'none'");
     expect(allow).toContain("geolocation 'none'");
     expect(allow).toContain("usb 'none'");
   });
@@ -313,7 +319,7 @@ describe('IframeResource Security', () => {
     it('includes all allowed parent origins', () => {
       const bridgeScript = generateBridgeScript(ALLOWED_PARENT_ORIGINS);
 
-      expect(bridgeScript).toContain('https://app.sunpeak.ai');
+      expect(bridgeScript).toContain('https://sandbox.sunpeakai.com');
       expect(bridgeScript).toContain('http://localhost');
     });
 
@@ -372,32 +378,39 @@ describe('IframeResource Security', () => {
   });
 
   describe('Iframe Sandbox Restrictions', () => {
-    it('only allows scripts, no other capabilities', () => {
+    it('has sandbox permissions matching ChatGPT iframe model', () => {
       render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const sandbox = iframe.getAttribute('sandbox');
 
-      expect(sandbox).toBe('allow-scripts');
-      expect(sandbox).not.toContain('allow-same-origin');
-      expect(sandbox).not.toContain('allow-forms');
-      expect(sandbox).not.toContain('allow-popups');
+      // Allowed (matching ChatGPT)
+      expect(sandbox).toContain('allow-scripts');
+      expect(sandbox).toContain('allow-same-origin');
+      expect(sandbox).toContain('allow-forms');
+      expect(sandbox).toContain('allow-popups');
+      expect(sandbox).toContain('allow-popups-to-escape-sandbox');
+      // Still denied
       expect(sandbox).not.toContain('allow-top-navigation');
     });
 
-    it('denies all sensitive device APIs via permissions policy', () => {
+    it('allows some device APIs and denies others via permissions policy', () => {
       render(<IframeResource scriptSrc="/dist/carousel.js" />);
 
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const allow = iframe.getAttribute('allow');
 
+      // Allowed APIs (matching ChatGPT)
+      expect(allow).toContain('local-network-access *');
+      expect(allow).toContain('microphone *');
+      expect(allow).toContain('midi *');
+
+      // Denied APIs
       const deniedAPIs = [
         'camera',
-        'microphone',
         'geolocation',
         'usb',
         'payment',
-        'midi',
         'gyroscope',
         'magnetometer',
         'accelerometer',
@@ -425,8 +438,8 @@ describe('IframeResource Security', () => {
       expect(ALLOWED_SCRIPT_ORIGINS).toContain('https://localhost');
     });
 
-    it('ALLOWED_PARENT_ORIGINS contains app.sunpeak.ai', () => {
-      expect(ALLOWED_PARENT_ORIGINS).toContain('https://app.sunpeak.ai');
+    it('ALLOWED_PARENT_ORIGINS contains sandbox.sunpeakai.com', () => {
+      expect(ALLOWED_PARENT_ORIGINS).toContain('https://sandbox.sunpeakai.com');
     });
 
     it('ALLOWED_PARENT_ORIGINS contains localhost for development', () => {

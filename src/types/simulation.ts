@@ -26,7 +26,8 @@ export interface Simulation {
   resourceComponent?: React.ComponentType;
 
   // Used by https://app.sunpeak.ai, ignore in favor of resourceComponent.
-  // URL to a built .js file for iframe rendering (e.g., '/dist/carousel.js')
+  // URL to a built .js file for iframe rendering (e.g., '/dist/carousel.js').
+  // WARNING: using this attribute without proper safeguards is dangerous.
   resourceScript?: string;
 
   userMessage?: string; // Decoration for the simulator, no functional purpose.
