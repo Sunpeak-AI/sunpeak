@@ -64,7 +64,12 @@ export default defineConfig({
       ],
       output: {
         preserveModules: false,
-        assetFileNames: '[name][extname]',
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.names?.[0]?.endsWith('.css')) {
+            return 'style.css';
+          }
+          return '[name][extname]';
+        },
       },
     },
   },
