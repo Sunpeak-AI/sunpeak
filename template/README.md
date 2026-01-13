@@ -16,48 +16,32 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 ## Commands
 
 ```bash
-sunpeak dev            # Start development server
-sunpeak build          # Build all resources for production
-sunpeak mcp            # Start MCP server with auto-reload
-pnpm test              # Run tests with Vitest
+# Core commands:
+pnpm test              # Run tests with Vitest.
+pnpm test:e2e          # Run end-to-end tests with Playwright.
+sunpeak dev            # Start development server.
+sunpeak build          # Build all resources for production.
+sunpeak mcp            # Start MCP server for ChatGPT testing with mock data.
+
+# sunpeak repository (think ECR for ChatGPT Apps):
+sunpeak login          # Authenticate with the sunpeak repository.
+sunpeak push           # Push built resources to the sunpeak repository.
+sunpeak pull           # Pull built resources from the sunpeak repository (for your prod MCP server).
 ```
 
 The template includes a minimal test setup with Vitest. You can add additional tooling (linting, formatting, type-checking) as needed for your project.
 
-### Customization
+## Project Structure
 
-**Do not customize (required by `sunpeak` commands):**
+- `src/resources/` - Directory containing all your MCP Resources (ChatGPT App UIs).
+  - Every file in this directory ending with -resource.tsx will be automatically built by the framework to dist/name.js, where the output name will be whatever was prefixed to -resource.tsx.
+  - Each resource must have a companion -resource.json file containing metadata (name, title, description, etc.).
+- `src/simulations/` - Directory containing simulation JSON files.
+  - Files in this directory matching \*-simulation.json are automatically discovered by the dev server and MCP server.
+  - Simulations are linked to resources by filename prefix (e.g., albums-show-simulation.json links to albums-resource.tsx).
+- `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource. Uses the ChatGPTSimulator to test your resources render properly with any state (tool calls, saved state, dark mode, pip display mode, etc.).
 
-- `src/resources/` - Resource files must be here
-- `src/simulations/` - Simulation files must be here
-- Resource file naming: `*-resource.tsx` (e.g., `review-resource.tsx`)
-- Simulation file naming: `*-simulation.json` (e.g., `review-purchase-simulation.json`)
-- `src/index-resource.tsx` - Build template (must have `// RESOURCE_IMPORT` and `// RESOURCE_MOUNT` comments)
-
-**You can customize:**
-
-- Package.json scripts - Add your own tooling (lint, format, typecheck, etc.)
-- Component structure within `src/components/`
-- Package manager (pnpm, npm, or yarn auto-detected)
-- Pretty much everything else!
-
-## Testing
-
-### Testing Locally
-
-Run the test suite:
-
-```bash
-pnpm test
-```
-
-For manual QA of the UI:
-
-```bash
-sunpeak dev
-```
-
-### Testing in ChatGPT
+## Testing in ChatGPT
 
 Test your app directly in ChatGPT using the built-in MCP server:
 
@@ -83,18 +67,31 @@ Build your app for production:
 sunpeak build
 ```
 
-This creates optimized builds in `dist/`:
+This creates optimized builds in `dist/`, organized by resource:
 
-- `dist/albums.js`
-- `dist/albums.json`
-- `dist/review.js`
-- `dist/review.json`
-- _(One .js file per resource in src/resources/)_
-- _(One .json file per resource in src/resources/)_
+```bash
+dist/
+├── albums/
+│   ├── albums.js                     # Built resource component.
+│   ├── albums.json                   # Resource metadata.
+│   └── albums-show-simulation.json   # Resource mock data for testing.
+├── review/
+│   ├── review.js
+│   ├── review.json
+│   ├── review-diff-simulation.json
+│   ├── review-post-simulation.json
+│   └── review-purchase-simulation.json
+└── ...
+```
 
-Each `.js` file is a self-contained bundle with CSS inlined. Host these files and reference them as resources in your production MCP server.
+Each resource folder contains:
 
-Each `.json` file is a copy of each of your resource MCP metadata files `src/resource/*-resource.json`. The copy is identical, but with a unique `uri` field added that will cache-bust earlier resource versions pre-loaded in ChatGPT.
+- **`.js` file**: Self-contained bundle with CSS inlined
+- **`.json` file**: Resource metadata with unique `uri` for cache-busting
+- **`*-simulation.json` files**: All affiliated simulation files for the resource. These are not needed for the production runtime, but are used in the sunpeak repository for testing.
+
+Host these files and reference them as resources in your production MCP server.
+Use the sunpeak resource repository for built-in resource hosting.
 
 ## Add a new UI (Resource)
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, readFileSync, readdirSync } from 'fs';
-import { join, dirname, basename } from 'path';
+import { join, basename } from 'path';
 import { homedir } from 'os';
 import { execSync } from 'child_process';
 
@@ -61,6 +61,7 @@ export const defaultDeps = {
 
 /**
  * Find all resources in a directory
+ * Expects folder structure: dist/{resource}/{resource}.js
  * Returns array of { name, jsPath, metaPath, meta }
  */
 export function findResources(distDir, deps = defaultDeps) {
@@ -70,59 +71,67 @@ export function findResources(distDir, deps = defaultDeps) {
     return [];
   }
 
-  const files = d.readdirSync(distDir);
-  const jsFiles = files.filter((f) => f.endsWith('.js'));
-  const jsonFiles = new Set(files.filter((f) => f.endsWith('.json')));
+  const entries = d.readdirSync(distDir, { withFileTypes: true });
+  const resources = [];
 
-  // Only include .js files that have a matching .json file
-  return jsFiles
-    .filter((jsFile) => {
-      const name = jsFile.replace('.js', '');
-      return jsonFiles.has(`${name}.json`);
-    })
-    .map((jsFile) => {
-      const name = jsFile.replace('.js', '');
-      const jsPath = join(distDir, jsFile);
-      const metaPath = join(distDir, `${name}.json`);
+  for (const entry of entries) {
+    if (entry.isDirectory()) {
+      const resourceName = entry.name;
+      const resourceDir = join(distDir, resourceName);
+      const jsPath = join(resourceDir, `${resourceName}.js`);
+      const metaPath = join(resourceDir, `${resourceName}.json`);
 
-      let meta = null;
-      try {
-        meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
-      } catch {
-        d.console.warn(`Warning: Could not parse ${name}.json`);
+      if (d.existsSync(jsPath) && d.existsSync(metaPath)) {
+        let meta = null;
+        try {
+          meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
+        } catch {
+          d.console.warn(`Warning: Could not parse ${resourceName}.json`);
+        }
+        resources.push({ name: resourceName, dir: resourceDir, jsPath, metaPath, meta });
       }
+    }
+  }
 
-      return { name, jsPath, metaPath, meta };
-    });
+  return resources;
 }
 
 /**
- * Build a resource from a specific JS file path
+ * Build a resource from a resource directory path
+ * Expects structure: dir/{name}.js, dir/{name}.json
  * Returns { name, jsPath, metaPath, meta }
  */
-function buildResourceFromFile(jsPath, deps = defaultDeps) {
+function buildResourceFromDir(resourceDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
 
-  if (!d.existsSync(jsPath)) {
-    d.console.error(`Error: File not found: ${jsPath}`);
+  // Remove trailing slash if present
+  const dir = resourceDir.replace(/\/$/, '');
+
+  if (!d.existsSync(dir)) {
+    d.console.error(`Error: Directory not found: ${dir}`);
     d.process.exit(1);
   }
 
-  // Extract name from filename (remove .js extension)
-  const fileName = basename(jsPath);
-  const name = fileName.replace('.js', '');
-
-  // Look for .json in the same directory
-  const dir = dirname(jsPath);
+  // Extract resource name from directory name
+  const name = basename(dir);
+  const jsPath = join(dir, `${name}.js`);
   const metaPath = join(dir, `${name}.json`);
 
+  if (!d.existsSync(jsPath)) {
+    d.console.error(`Error: Resource JS file not found: ${jsPath}`);
+    d.process.exit(1);
+  }
+
+  if (!d.existsSync(metaPath)) {
+    d.console.error(`Error: Resource metadata file not found: ${metaPath}`);
+    d.process.exit(1);
+  }
+
   let meta = null;
-  if (d.existsSync(metaPath)) {
-    try {
-      meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
-    } catch {
-      d.console.warn(`Warning: Could not parse ${name}.json`);
-    }
+  try {
+    meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
+  } catch {
+    d.console.warn(`Warning: Could not parse ${name}.json`);
   }
 
   return { name, jsPath, metaPath, meta };
@@ -214,7 +223,7 @@ async function pushResource(resource, repository, tags, accessToken, deps = defa
  * @param {string} projectRoot - Project root directory
  * @param {Object} options - Command options
  * @param {string} options.repository - Repository name (optional, defaults to git repo name)
- * @param {string} options.file - Path to a specific resource JS file (optional)
+ * @param {string} options.dir - Path to a specific resource directory (optional)
  * @param {string[]} options.tags - Tags to assign to the pushed resources (optional)
  * @param {Object} deps - Dependencies (for testing). Uses defaultDeps if not provided.
  */
@@ -227,7 +236,7 @@ export async function push(projectRoot = process.cwd(), options = {}, deps = def
 sunpeak push - Push resources to the Sunpeak repository
 
 Usage:
-  sunpeak push [file] [options]
+  sunpeak push [directory] [options]
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
@@ -235,15 +244,15 @@ Options:
   -h, --help                     Show this help message
 
 Arguments:
-  file                           Optional JS file to push (e.g., dist/carousel.js)
+  directory                      Optional resource directory to push (e.g., dist/carousel)
                                  If not provided, pushes all resources from dist/
 
 Examples:
-  sunpeak push                       Push all resources from dist/
-  sunpeak push dist/carousel.js      Push a single resource
-  sunpeak push -r myorg/my-app       Push to "myorg/my-app" repository
-  sunpeak push -t v1.0.0             Push with a version tag
-  sunpeak push -t v1.0.0 -t prod     Push with multiple tags
+  sunpeak push                   Push all resources from dist/
+  sunpeak push dist/carousel     Push a single resource
+  sunpeak push -r myorg/my-app   Push to "myorg/my-app" repository
+  sunpeak push -t v1.0.0         Push with a version tag
+  sunpeak push -t v1.0.0 -t prod Push with multiple tags
 `);
     return;
   }
@@ -264,11 +273,11 @@ Examples:
     d.process.exit(1);
   }
 
-  // Find resources - either a specific file or all from dist directory
+  // Find resources - either a specific directory or all from dist directory
   let resources;
-  if (options.file) {
-    // Push a single specific resource
-    resources = [buildResourceFromFile(options.file, d)];
+  if (options.dir) {
+    // Push a single specific resource from directory
+    resources = [buildResourceFromDir(options.dir, d)];
   } else {
     // Default: find all resources in dist directory
     const distDir = join(projectRoot, 'dist');
@@ -335,7 +344,7 @@ function parseArgs(args) {
 sunpeak push - Push resources to the Sunpeak repository
 
 Usage:
-  sunpeak push [file] [options]
+  sunpeak push [directory] [options]
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
@@ -343,20 +352,20 @@ Options:
   -h, --help                     Show this help message
 
 Arguments:
-  file                           Optional JS file to push (e.g., dist/carousel.js)
+  directory                      Optional resource directory to push (e.g., dist/carousel)
                                  If not provided, pushes all resources from dist/
 
 Examples:
-  sunpeak push                       Push all resources from dist/
-  sunpeak push dist/carousel.js      Push a single resource
-  sunpeak push -r myorg/my-app       Push to "myorg/my-app" repository
-  sunpeak push -t v1.0.0             Push with a version tag
-  sunpeak push -t v1.0.0 -t prod     Push with multiple tags
+  sunpeak push                   Push all resources from dist/
+  sunpeak push dist/carousel     Push a single resource
+  sunpeak push -r myorg/my-app   Push to "myorg/my-app" repository
+  sunpeak push -t v1.0.0         Push with a version tag
+  sunpeak push -t v1.0.0 -t prod Push with multiple tags
 `);
       process.exit(0);
     } else if (!arg.startsWith('-')) {
-      // Positional argument - treat as file path
-      options.file = arg;
+      // Positional argument - treat as directory path
+      options.dir = arg;
     }
 
     i++;

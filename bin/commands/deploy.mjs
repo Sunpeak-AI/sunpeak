@@ -23,7 +23,7 @@ export async function deploy(projectRoot = process.cwd(), options = {}, deps = d
 sunpeak deploy - Push resources to production (push with "prod" tag)
 
 Usage:
-  sunpeak deploy [file] [options]
+  sunpeak deploy [directory] [options]
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
@@ -31,15 +31,15 @@ Options:
   -h, --help                     Show this help message
 
 Arguments:
-  file                           Optional JS file to deploy (e.g., dist/carousel.js)
+  directory                      Optional resource directory to deploy (e.g., dist/carousel)
                                  If not provided, looks for resources in current
                                  directory first, then falls back to dist/
 
 Examples:
-  sunpeak deploy                     Push all resources with "prod" tag
-  sunpeak deploy dist/carousel.js    Deploy a single resource
-  sunpeak deploy -r myorg/my-app     Deploy to "myorg/my-app" repository
-  sunpeak deploy -t v1.0              Deploy with "prod" and "v1.0" tags
+  sunpeak deploy                 Deploy all resources with "prod" tag
+  sunpeak deploy dist/carousel   Deploy a single resource
+  sunpeak deploy -r myorg/my-app Deploy to "myorg/my-app" repository
+  sunpeak deploy -t v1.0         Deploy with "prod" and "v1.0" tags
 
 This command is equivalent to: sunpeak push --tag prod
 `);
@@ -56,13 +56,13 @@ This command is equivalent to: sunpeak push --tag prod
   d.console.log('Deploying to production...');
   d.console.log();
 
-  // If no specific file provided, check current directory first, then dist/
-  if (!deployOptions.file) {
+  // If no specific directory provided, check current directory first, then dist/
+  if (!deployOptions.dir) {
     const cwdResources = findResources(projectRoot, d);
     if (cwdResources.length > 0) {
       // Found resources in current directory, push each one
       for (const resource of cwdResources) {
-        await push(projectRoot, { ...deployOptions, file: resource.jsPath }, d);
+        await push(projectRoot, { ...deployOptions, dir: resource.dir }, d);
       }
       return;
     }
@@ -91,7 +91,7 @@ function parseArgs(args) {
 sunpeak deploy - Deploy resources to production (push with "prod" tag)
 
 Usage:
-  sunpeak deploy [file] [options]
+  sunpeak deploy [directory] [options]
 
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
@@ -99,22 +99,22 @@ Options:
   -h, --help                     Show this help message
 
 Arguments:
-  file                           Optional JS file to deploy (e.g., dist/carousel.js)
+  directory                      Optional resource directory to deploy (e.g., dist/carousel)
                                  If not provided, looks for resources in current
                                  directory first, then falls back to dist/
 
 Examples:
-  sunpeak deploy                     Deploy all resources with "prod" tag
-  sunpeak deploy dist/carousel.js    Deploy a single resource
-  sunpeak deploy -r myorg/my-app     Deploy to "myorg/my-app" repository
-  sunpeak deploy -t v1.0              Deploy with "prod" and "v1.0" tags
+  sunpeak deploy                 Deploy all resources with "prod" tag
+  sunpeak deploy dist/carousel   Deploy a single resource
+  sunpeak deploy -r myorg/my-app Deploy to "myorg/my-app" repository
+  sunpeak deploy -t v1.0         Deploy with "prod" and "v1.0" tags
 
 This command is equivalent to: sunpeak push --tag prod
 `);
       process.exit(0);
     } else if (!arg.startsWith('-')) {
-      // Positional argument - treat as file path
-      options.file = arg;
+      // Positional argument - treat as directory path
+      options.dir = arg;
     }
 
     i++;

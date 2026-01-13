@@ -23,7 +23,7 @@ describe('IframeResource', () => {
   });
 
   it('renders an iframe with srcDoc', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview');
     expect(iframe).toBeInTheDocument();
@@ -32,19 +32,21 @@ describe('IframeResource', () => {
   });
 
   it('generates HTML wrapper with script tag (absolute URL)', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
     // Relative paths are converted to absolute for srcdoc iframe compatibility
-    expect(srcDoc).toContain('<script src="http://localhost:3000/dist/carousel.js"></script>');
+    expect(srcDoc).toContain(
+      '<script src="http://localhost:3000/dist/carousel/carousel.js"></script>'
+    );
     expect(srcDoc).toContain('<div id="root"></div>');
     expect(srcDoc).toContain('<!DOCTYPE html>');
   });
 
   it('injects bridge script into the generated HTML', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
@@ -55,7 +57,7 @@ describe('IframeResource', () => {
   });
 
   it('sets appropriate sandbox attributes', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     expect(iframe.getAttribute('sandbox')).toBe(
@@ -64,7 +66,7 @@ describe('IframeResource', () => {
   });
 
   it('sets permissions policy matching ChatGPT iframe model', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const allow = iframe.getAttribute('allow');
@@ -81,7 +83,7 @@ describe('IframeResource', () => {
   it('applies custom className and style', () => {
     render(
       <IframeResource
-        scriptSrc="/dist/carousel.js"
+        scriptSrc="/dist/carousel/carousel.js"
         className="custom-class"
         style={{ maxHeight: '500px' }}
       />
@@ -93,7 +95,7 @@ describe('IframeResource', () => {
   });
 
   it('sets default iframe styles', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     expect(iframe.style.width).toBe('100%');
@@ -101,7 +103,7 @@ describe('IframeResource', () => {
   });
 
   it('includes theme in generated HTML', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
@@ -110,7 +112,7 @@ describe('IframeResource', () => {
   });
 
   it('includes transparent background style', () => {
-    render(<IframeResource scriptSrc="/dist/carousel.js" />);
+    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
@@ -216,7 +218,7 @@ describe('IframeResource Security', () => {
 
   describe('Script Origin Validation - isAllowedScriptSrc', () => {
     it('allows relative paths starting with /', () => {
-      expect(isAllowedScriptSrc('/dist/carousel.js')).toBe(true);
+      expect(isAllowedScriptSrc('/dist/carousel/carousel.js')).toBe(true);
       expect(isAllowedScriptSrc('/scripts/widget.js')).toBe(true);
     });
 
@@ -357,7 +359,7 @@ describe('IframeResource Security', () => {
 
   describe('PostMessage Security - Message Handling', () => {
     it('validates message structure before processing', () => {
-      render(<IframeResource scriptSrc="/dist/carousel.js" />);
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
       const srcDoc = getSrcDoc();
 
@@ -367,7 +369,7 @@ describe('IframeResource Security', () => {
     });
 
     it('only processes known message types', () => {
-      render(<IframeResource scriptSrc="/dist/carousel.js" />);
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
       const srcDoc = getSrcDoc();
 
@@ -379,7 +381,7 @@ describe('IframeResource Security', () => {
 
   describe('Iframe Sandbox Restrictions', () => {
     it('has sandbox permissions matching ChatGPT iframe model', () => {
-      render(<IframeResource scriptSrc="/dist/carousel.js" />);
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const sandbox = iframe.getAttribute('sandbox');
@@ -395,7 +397,7 @@ describe('IframeResource Security', () => {
     });
 
     it('allows some device APIs and denies others via permissions policy', () => {
-      render(<IframeResource scriptSrc="/dist/carousel.js" />);
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const allow = iframe.getAttribute('allow');
@@ -530,7 +532,7 @@ describe('IframeResource Security', () => {
 
   describe('Content Security Policy - Component Integration', () => {
     it('includes CSP meta tag in generated HTML', () => {
-      render(<IframeResource scriptSrc="/dist/carousel.js" />);
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
       const srcDoc = getSrcDoc();
 
@@ -542,7 +544,7 @@ describe('IframeResource Security', () => {
     it('applies custom CSP from props', () => {
       render(
         <IframeResource
-          scriptSrc="/dist/carousel.js"
+          scriptSrc="/dist/carousel/carousel.js"
           csp={{
             connect_domains: ['https://api.example.com'],
             resource_domains: ['https://images.example.com'],
@@ -592,7 +594,7 @@ describe('IframeResource Security', () => {
     });
 
     it('only uses postMessage for ready signal and height updates', () => {
-      render(<IframeResource scriptSrc="/dist/carousel.js" />);
+      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
       const srcDoc = getSrcDoc();
 

@@ -350,12 +350,21 @@ describe('CLI Commands', () => {
           loadCredentials: () => ({ access_token: 'test-token' }),
           getGitRepoName: () => 'owner/repo',
           existsSync: (path: string) => {
+            // Support new folder structure: dist/widget/widget.js
             if (path.includes('dist')) return true;
-            if (path.endsWith('.js')) return true;
-            if (path.endsWith('.json')) return true;
+            if (path.includes('widget')) return true;
             return false;
           },
-          readdirSync: () => ['widget.js', 'widget.json'],
+          readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
+            // New folder structure: dist/{resource}/{resource}.js
+            if (options?.withFileTypes) {
+              if (dirPath.endsWith('dist')) {
+                // Return directory entry for widget
+                return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
+              }
+            }
+            return [];
+          },
           readFileSync: (path: string) => {
             if (path.endsWith('.json')) {
               return JSON.stringify({
@@ -587,12 +596,21 @@ describe('CLI Commands', () => {
           loadCredentials: () => ({ access_token: 'test-token' }),
           getGitRepoName: () => 'owner/repo',
           existsSync: (path: string) => {
+            // Support new folder structure: dist/widget/widget.js
             if (path.includes('dist')) return true;
-            if (path.endsWith('.js')) return true;
-            if (path.endsWith('.json')) return true;
+            if (path.includes('widget')) return true;
             return false;
           },
-          readdirSync: () => ['widget.js', 'widget.json'],
+          readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
+            // New folder structure: dist/{resource}/{resource}.js
+            if (options?.withFileTypes) {
+              if (dirPath.endsWith('dist')) {
+                // Return directory entry for widget
+                return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
+              }
+            }
+            return [];
+          },
           readFileSync: (path: string) => {
             if (path.endsWith('.json')) {
               return JSON.stringify({
@@ -629,12 +647,35 @@ describe('CLI Commands', () => {
       expect(result).toEqual([]);
     });
 
-    it('should find resources with matching js and json files', async () => {
+    it('should find resources with new folder structure', async () => {
       const { findResources } = await importPush();
 
       const result = findResources('/test/dist', {
-        existsSync: () => true,
-        readdirSync: () => ['widget.js', 'widget.json', 'standalone.js', 'other.json'],
+        existsSync: (path: string) => {
+          // New folder structure: dist/widget/widget.js, dist/widget/widget.json
+          // Only widget folder has both .js and .json files
+          if (path.endsWith('/test/dist')) return true;
+          if (path.endsWith('/test/dist/widget')) return true;
+          if (path.endsWith('/test/dist/widget/widget.js')) return true;
+          if (path.endsWith('/test/dist/widget/widget.json')) return true;
+          // standalone folder exists but is missing the .json file
+          if (path.endsWith('/test/dist/standalone')) return true;
+          if (path.endsWith('/test/dist/standalone/standalone.js')) return true;
+          // standalone.json does NOT exist
+          return false;
+        },
+        readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
+          if (options?.withFileTypes) {
+            if (dirPath.endsWith('dist')) {
+              // Return directory entries
+              return [
+                { name: 'widget', isDirectory: () => true, isFile: () => false },
+                { name: 'standalone', isDirectory: () => true, isFile: () => false },
+              ];
+            }
+          }
+          return [];
+        },
         readFileSync: () =>
           JSON.stringify({
             uri: 'ui://widget',
@@ -643,10 +684,11 @@ describe('CLI Commands', () => {
         console: createMockConsole(),
       });
 
-      // Should only find widget.js because it has a matching widget.json
-      // standalone.js has no matching json, other.json has no matching js
+      // Should find widget because it has matching widget.js and widget.json in its folder
+      // standalone folder exists but is missing standalone.json
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('widget');
+      expect(result[0].dir).toBe('/test/dist/widget');
     });
   });
 

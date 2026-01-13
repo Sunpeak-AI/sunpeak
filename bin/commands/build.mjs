@@ -27,6 +27,7 @@ export async function build(projectRoot = process.cwd()) {
   const buildDir = path.join(projectRoot, 'dist/build-output');
   const tempDir = path.join(projectRoot, '.tmp');
   const resourcesDir = path.join(projectRoot, 'src/resources');
+  const simulationsDir = path.join(projectRoot, 'src/simulations');
   const templateFile = path.join(projectRoot, 'src/index-resource.tsx');
 
   // Validate project structure
@@ -99,9 +100,11 @@ export async function build(projectRoot = process.cwd()) {
       return {
         componentName: `${pascalName}Resource`,
         componentFile: file.replace('.tsx', ''),
+        kebabName,
         entry: `.tmp/index-${kebabName}.tsx`,
         output: `${kebabName}.js`,
         buildOutDir: path.join(buildDir, kebabName),
+        distOutDir: path.join(distDir, kebabName),  // Final output: dist/{resource}/
       };
     });
 
@@ -194,15 +197,23 @@ export async function build(projectRoot = process.cwd()) {
     }
   }
 
-  // Now copy all files from build-output to dist/
+  // Now copy all files from build-output to dist/{resource}/
   console.log('\nCopying built files to dist/...');
-  for (const { output, buildOutDir } of resourceFiles) {
+  const timestamp = Date.now().toString(36);
+
+  for (const { output, buildOutDir, distOutDir, kebabName, componentFile } of resourceFiles) {
+    // Create resource-specific output directory
+    if (!existsSync(distOutDir)) {
+      mkdirSync(distOutDir, { recursive: true });
+    }
+
+    // Copy built JS file
     const builtFile = path.join(buildOutDir, output);
-    const destFile = path.join(distDir, output);
+    const destFile = path.join(distOutDir, output);
 
     if (existsSync(builtFile)) {
       copyFileSync(builtFile, destFile);
-      console.log(`✓ Copied ${output}`);
+      console.log(`✓ Copied ${kebabName}/${output}`);
     } else {
       console.error(`Built file not found: ${builtFile}`);
       if (existsSync(buildOutDir)) {
@@ -212,22 +223,30 @@ export async function build(projectRoot = process.cwd()) {
       }
       process.exit(1);
     }
-  }
 
-  // Generate resource metadata JSON files with URIs
-  console.log('\nGenerating resource metadata JSON files...');
-  const timestamp = Date.now().toString(36);
-  for (const { componentFile } of resourceFiles) {
-    const kebabName = componentFile.replace('-resource', '');
+    // Copy and process resource metadata JSON file
     const srcJson = path.join(resourcesDir, `${componentFile}.json`);
-    const destJson = path.join(distDir, `${kebabName}.json`);
+    const destJson = path.join(distOutDir, `${kebabName}.json`);
 
     if (existsSync(srcJson)) {
       const meta = JSON.parse(readFileSync(srcJson, 'utf-8'));
       // Generate URI using resource name and build timestamp
       meta.uri = `ui://${meta.name}-${timestamp}`;
       writeFileSync(destJson, JSON.stringify(meta, null, 2));
-      console.log(`✓ Generated ${kebabName}.json (uri: ${meta.uri})`);
+      console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
+    }
+
+    // Copy affiliated simulation files (matching {resource}-*-simulation.json pattern)
+    if (existsSync(simulationsDir)) {
+      const simulationFiles = readdirSync(simulationsDir)
+        .filter(file => file.startsWith(`${kebabName}-`) && file.endsWith('-simulation.json'));
+
+      for (const simFile of simulationFiles) {
+        const srcSim = path.join(simulationsDir, simFile);
+        const destSim = path.join(distOutDir, simFile);
+        copyFileSync(srcSim, destSim);
+        console.log(`✓ Copied ${kebabName}/${simFile}`);
+      }
     }
   }
 
@@ -240,7 +259,11 @@ export async function build(projectRoot = process.cwd()) {
   }
 
   console.log('\n✓ All resources built successfully!');
-  console.log(`\nBuilt files:`, readdirSync(distDir));
+  console.log('\nBuilt resources:');
+  for (const { kebabName, distOutDir } of resourceFiles) {
+    const files = readdirSync(distOutDir);
+    console.log(`  ${kebabName}/: ${files.join(', ')}`);
+  }
 }
 
 // Allow running directly
