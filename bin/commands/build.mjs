@@ -212,6 +212,18 @@ export async function build(projectRoot = process.cwd()) {
       mkdirSync(distOutDir, { recursive: true });
     }
 
+    // Copy and process resource metadata JSON file
+    const srcJson = path.join(resourceDir, `${componentFile}.json`);
+    const destJson = path.join(distOutDir, `${kebabName}.json`);
+
+    if (existsSync(srcJson)) {
+      const meta = JSON.parse(readFileSync(srcJson, 'utf-8'));
+      // Generate URI using resource name and build timestamp
+      meta.uri = `ui://${meta.name}-${timestamp}`;
+      writeFileSync(destJson, JSON.stringify(meta, null, 2));
+      console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
+    }
+
     // Copy built JS file
     const builtFile = path.join(buildOutDir, output);
     const destFile = path.join(distOutDir, output);
@@ -227,18 +239,6 @@ export async function build(projectRoot = process.cwd()) {
         console.log(`  Build directory doesn't exist: ${buildOutDir}`);
       }
       process.exit(1);
-    }
-
-    // Copy and process resource metadata JSON file
-    const srcJson = path.join(resourceDir, `${componentFile}.json`);
-    const destJson = path.join(distOutDir, `${kebabName}.json`);
-
-    if (existsSync(srcJson)) {
-      const meta = JSON.parse(readFileSync(srcJson, 'utf-8'));
-      // Generate URI using resource name and build timestamp
-      meta.uri = `ui://${meta.name}-${timestamp}`;
-      writeFileSync(destJson, JSON.stringify(meta, null, 2));
-      console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
     }
 
     // Copy affiliated simulation files (matching {resource}-*-simulation.json pattern)
@@ -265,7 +265,7 @@ export async function build(projectRoot = process.cwd()) {
   console.log('\nBuilt resources:');
   for (const { kebabName, distOutDir } of resourceFiles) {
     const files = readdirSync(distOutDir);
-    console.log(`  ${kebabName}/: ${files.join(', ')}`);
+    console.log(`  ${kebabName}`);
   }
 }
 

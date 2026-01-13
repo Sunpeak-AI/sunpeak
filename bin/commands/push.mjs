@@ -348,10 +348,9 @@ Examples:
       const result = await pushResource(resource, repository, options.tags, credentials.access_token, d);
       const simCount = resource.simulations?.length || 0;
       const simInfo = simCount > 0 ? `, ${simCount} simulation(s)` : '';
-      d.console.log(`✓ Pushed ${resource.name} (id: ${result.id}${simInfo})`);
-      if (result.tags?.length > 0) {
-        d.console.log(`  Tags: ${result.tags.join(', ')}`);
-      }
+      const tagInfo = result.tags?.length > 0 ? `, tag(s): ${result.tags.join(', ')}` : '';
+      d.console.log(`✓ Pushed ${resource.name}${simInfo}${tagInfo}`);
+      d.console.log(`  ${d.apiUrl}/resources/${result.id}`);
       successCount++;
     } catch (error) {
       d.console.error(`✗ Failed to push ${resource.name}: ${error.message}`);
