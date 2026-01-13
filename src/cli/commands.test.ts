@@ -363,6 +363,10 @@ describe('CLI Commands', () => {
                 return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
               }
             }
+            // Return files in resource directory (for simulation discovery)
+            if (dirPath.endsWith('/widget')) {
+              return ['widget.js', 'widget.json'];
+            }
             return [];
           },
           readFileSync: (path: string) => {
@@ -392,6 +396,79 @@ describe('CLI Commands', () => {
         })
       );
       expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('Successfully pushed'));
+    });
+
+    it('should push resources with simulations', async () => {
+      const { push } = await importPush();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      const simulationData = {
+        userMessage: 'Test message',
+        tool: { name: 'test-tool', title: 'Test Tool' },
+        callToolResult: { structuredContent: { data: 'test' } },
+      };
+
+      let capturedFormData: FormData | null = null;
+      const mockFetch = vi.fn().mockImplementation(async (_url: string, options: { body: FormData }) => {
+        capturedFormData = options.body;
+        return {
+          ok: true,
+          json: async () => ({ id: 'resource-123', tags: ['v1.0'] }),
+        };
+      });
+
+      await push(
+        '/test/project',
+        { repository: 'owner/repo', tags: ['v1.0'] },
+        {
+          loadCredentials: () => ({ access_token: 'test-token' }),
+          getGitRepoName: () => 'owner/repo',
+          existsSync: (path: string) => {
+            if (path.includes('dist')) return true;
+            if (path.includes('widget')) return true;
+            return false;
+          },
+          readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
+            if (options?.withFileTypes) {
+              if (dirPath.endsWith('dist')) {
+                return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
+              }
+            }
+            // Return files including simulations
+            if (dirPath.endsWith('/widget')) {
+              return ['widget.js', 'widget.json', 'widget-show-simulation.json'];
+            }
+            return [];
+          },
+          readFileSync: (path: string) => {
+            if (path.endsWith('simulation.json')) {
+              return JSON.stringify(simulationData);
+            }
+            if (path.endsWith('.json')) {
+              return JSON.stringify({
+                uri: 'ui://widget',
+                name: 'widget',
+                title: 'Test Widget',
+              });
+            }
+            return 'console.log("test");';
+          },
+          fetch: mockFetch,
+          console: mockConsole,
+          process: mockProcess,
+          apiUrl: 'https://test.sunpeak.ai',
+        }
+      );
+
+      expect(capturedFormData).not.toBeNull();
+      const simulations = capturedFormData!.get('simulations');
+      expect(simulations).not.toBeNull();
+      const parsed = JSON.parse(simulations as string);
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0].name).toBe('show');
+      expect(parsed[0].userMessage).toBe('Test message');
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('1 simulation(s)'));
     });
 
     it('should show help when requested', async () => {
@@ -609,6 +686,10 @@ describe('CLI Commands', () => {
                 return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
               }
             }
+            // Return files in resource directory (for simulation discovery)
+            if (dirPath.endsWith('/widget')) {
+              return ['widget.js', 'widget.json'];
+            }
             return [];
           },
           readFileSync: (path: string) => {
@@ -674,6 +755,10 @@ describe('CLI Commands', () => {
               ];
             }
           }
+          // Return files in resource directory (for simulation discovery)
+          if (dirPath.endsWith('/test/dist/widget')) {
+            return ['widget.js', 'widget.json'];
+          }
           return [];
         },
         readFileSync: () =>
@@ -689,6 +774,55 @@ describe('CLI Commands', () => {
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('widget');
       expect(result[0].dir).toBe('/test/dist/widget');
+      expect(result[0].simulations).toEqual([]);
+    });
+
+    it('should find simulations for resources', async () => {
+      const { findResources } = await importPush();
+
+      const simulationData = {
+        userMessage: 'Test message',
+        tool: { name: 'test-tool' },
+        callToolResult: { structuredContent: {} },
+      };
+
+      const result = findResources('/test/dist', {
+        existsSync: (path: string) => {
+          if (path.endsWith('/test/dist')) return true;
+          if (path.endsWith('/test/dist/widget')) return true;
+          if (path.endsWith('/test/dist/widget/widget.js')) return true;
+          if (path.endsWith('/test/dist/widget/widget.json')) return true;
+          return false;
+        },
+        readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
+          if (options?.withFileTypes) {
+            if (dirPath.endsWith('dist')) {
+              return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
+            }
+          }
+          // Return files in resource directory including simulation
+          if (dirPath.endsWith('/test/dist/widget')) {
+            return ['widget.js', 'widget.json', 'widget-show-simulation.json', 'widget-demo-simulation.json'];
+          }
+          return [];
+        },
+        readFileSync: (path: string) => {
+          if (path.endsWith('simulation.json')) {
+            return JSON.stringify(simulationData);
+          }
+          return JSON.stringify({
+            uri: 'ui://widget',
+            name: 'widget',
+          });
+        },
+        console: createMockConsole(),
+      });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].simulations).toHaveLength(2);
+      expect(result[0].simulations[0].name).toBe('show');
+      expect(result[0].simulations[0].userMessage).toBe('Test message');
+      expect(result[0].simulations[1].name).toBe('demo');
     });
   });
 

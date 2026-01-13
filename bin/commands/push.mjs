@@ -60,9 +60,41 @@ export const defaultDeps = {
 };
 
 /**
+ * Find simulation files for a resource in its directory
+ * Expects files matching: {resourceName}-*-simulation.json
+ * Returns array of parsed simulation objects
+ */
+function findSimulations(resourceDir, resourceName, deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
+  if (!d.existsSync(resourceDir)) {
+    return [];
+  }
+
+  const entries = d.readdirSync(resourceDir);
+  const simulations = [];
+
+  for (const entry of entries) {
+    if (entry.startsWith(`${resourceName}-`) && entry.endsWith('-simulation.json')) {
+      const simPath = join(resourceDir, entry);
+      try {
+        const simData = JSON.parse(d.readFileSync(simPath, 'utf-8'));
+        // Extract simulation name from filename: {resource}-{name}-simulation.json -> {name}
+        const simName = entry.replace(`${resourceName}-`, '').replace('-simulation.json', '');
+        simulations.push({ ...simData, name: simName });
+      } catch {
+        d.console.warn(`Warning: Could not parse simulation file ${entry}`);
+      }
+    }
+  }
+
+  return simulations;
+}
+
+/**
  * Find all resources in a directory
  * Expects folder structure: dist/{resource}/{resource}.js
- * Returns array of { name, jsPath, metaPath, meta }
+ * Returns array of { name, jsPath, metaPath, meta, simulations }
  */
 export function findResources(distDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
@@ -88,7 +120,8 @@ export function findResources(distDir, deps = defaultDeps) {
         } catch {
           d.console.warn(`Warning: Could not parse ${resourceName}.json`);
         }
-        resources.push({ name: resourceName, dir: resourceDir, jsPath, metaPath, meta });
+        const simulations = findSimulations(resourceDir, resourceName, d);
+        resources.push({ name: resourceName, dir: resourceDir, jsPath, metaPath, meta, simulations });
       }
     }
   }
@@ -99,7 +132,7 @@ export function findResources(distDir, deps = defaultDeps) {
 /**
  * Build a resource from a resource directory path
  * Expects structure: dir/{name}.js, dir/{name}.json
- * Returns { name, jsPath, metaPath, meta }
+ * Returns { name, jsPath, metaPath, meta, simulations }
  */
 function buildResourceFromDir(resourceDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
@@ -134,7 +167,9 @@ function buildResourceFromDir(resourceDir, deps = defaultDeps) {
     d.console.warn(`Warning: Could not parse ${name}.json`);
   }
 
-  return { name, jsPath, metaPath, meta };
+  const simulations = findSimulations(dir, name, d);
+
+  return { name, jsPath, metaPath, meta, simulations };
 }
 
 /**
@@ -196,6 +231,11 @@ async function pushResource(resource, repository, tags, accessToken, deps = defa
     tags.forEach((tag) => {
       formData.append('tags[]', tag);
     });
+  }
+
+  // Add simulations if present
+  if (resource.simulations && resource.simulations.length > 0) {
+    formData.append('simulations', JSON.stringify(resource.simulations));
   }
 
   const response = await d.fetch(`${d.apiUrl}/api/v1/resources`, {
@@ -306,7 +346,9 @@ Examples:
   for (const resource of resources) {
     try {
       const result = await pushResource(resource, repository, options.tags, credentials.access_token, d);
-      d.console.log(`✓ Pushed ${resource.name} (id: ${result.id})`);
+      const simCount = resource.simulations?.length || 0;
+      const simInfo = simCount > 0 ? `, ${simCount} simulation(s)` : '';
+      d.console.log(`✓ Pushed ${resource.name} (id: ${result.id}${simInfo})`);
       if (result.tags?.length > 0) {
         d.console.log(`  Tags: ${result.tags.join(', ')}`);
       }
