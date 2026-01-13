@@ -4,7 +4,7 @@
  * This is run by nodemon or directly to start the MCP server
  *
  * Auto-discovers simulations and resources by file naming convention:
- * - resources/{resource}/{resource}-{tool}-simulation.json (e.g., resources/albums/albums-show-simulation.json)
+ * - resources/{resource}/{resource}-{scenario}-simulation.json (e.g., resources/albums/albums-show-simulation.json)
  * - resources/{resource}/{resource}-resource.json
  */
 import { runMCPServer, type SimulationWithDist } from './index.js';
