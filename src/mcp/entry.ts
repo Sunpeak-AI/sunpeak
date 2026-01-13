@@ -4,13 +4,12 @@
  * This is run by nodemon or directly to start the MCP server
  *
  * Auto-discovers simulations and resources by file naming convention:
- * - simulations/{resource}-{tool}-simulation.json (e.g., albums-show-simulation.json)
- * - resources/{resource}-resource.json
+ * - resources/{resource}/{resource}-{tool}-simulation.json (e.g., resources/albums/albums-show-simulation.json)
+ * - resources/{resource}/{resource}-resource.json
  */
 import { runMCPServer, type SimulationWithDist } from './index.js';
-import { findResourceKey } from '../lib/discovery.js';
 import path from 'path';
-import { readFileSync, readdirSync } from 'fs';
+import { existsSync, readFileSync, readdirSync } from 'fs';
 import type { Resource } from '@modelcontextprotocol/sdk/types.js';
 
 // Determine project root (where this is being run from)
@@ -21,54 +20,46 @@ async function startServer() {
   const pkgPath = path.join(projectRoot, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 
-  // Auto-discover resource files first (to build lookup map)
+  // Auto-discover resources and simulations from subdirectories
   const resourcesDir = path.join(projectRoot, 'src/resources');
-  const resourceFiles = readdirSync(resourcesDir).filter((f) => f.endsWith('-resource.json'));
+  const resourceDirs = readdirSync(resourcesDir, { withFileTypes: true }).filter((entry) =>
+    entry.isDirectory()
+  );
 
   const resourcesMap = new Map<string, Resource>();
-  for (const filename of resourceFiles) {
-    // Extract key from filename: 'review-resource.json' -> 'review'
-    const key = filename.replace(/-resource\.json$/, '');
-    const resourcePath = path.join(resourcesDir, filename);
-    const resource = JSON.parse(readFileSync(resourcePath, 'utf-8')) as Resource;
-    resourcesMap.set(key, resource);
-  }
-
-  const resourceKeys = Array.from(resourcesMap.keys());
-
-  // Auto-discover simulation files
-  const simulationsDir = path.join(projectRoot, 'src/simulations');
-  const simulationFiles = readdirSync(simulationsDir).filter((f) => f.endsWith('-simulation.json'));
-
-  // Build simulations array from discovered files
   const simulations: SimulationWithDist[] = [];
 
-  for (const filename of simulationFiles) {
-    // Extract simulation key from filename: 'albums-show-simulation.json' -> 'albums-show'
-    const simulationKey = filename.replace(/-simulation\.json$/, '');
+  for (const entry of resourceDirs) {
+    const resourceKey = entry.name;
+    const resourceDir = path.join(resourcesDir, resourceKey);
+    const resourcePath = path.join(resourceDir, `${resourceKey}-resource.json`);
 
-    // Load simulation data
-    const simulationPath = path.join(simulationsDir, filename);
-    const simulation = JSON.parse(readFileSync(simulationPath, 'utf-8'));
-
-    // Find matching resource by best prefix match
-    const resourceKey = findResourceKey(simulationKey, resourceKeys);
-    if (!resourceKey) {
-      console.warn(
-        `No matching resource found for simulation "${simulationKey}". ` +
-          `Expected a resource file like src/resources/${simulationKey.split('-')[0]}-resource.json`
-      );
+    // Skip directories without a resource file
+    if (!existsSync(resourcePath)) {
       continue;
     }
 
-    const resource = resourcesMap.get(resourceKey)!;
+    // Load resource
+    const resource = JSON.parse(readFileSync(resourcePath, 'utf-8')) as Resource;
+    resourcesMap.set(resourceKey, resource);
 
-    simulations.push({
-      ...simulation,
-      name: simulationKey,
-      distPath: path.join(projectRoot, `dist/${resourceKey}.js`),
-      resource,
-    });
+    // Discover simulation files in the same directory
+    const dirFiles = readdirSync(resourceDir);
+    for (const file of dirFiles) {
+      if (file.endsWith('-simulation.json')) {
+        // Extract simulation key from filename: 'albums-show-simulation.json' -> 'albums-show'
+        const simulationKey = file.replace(/-simulation\.json$/, '');
+        const simulationPath = path.join(resourceDir, file);
+        const simulation = JSON.parse(readFileSync(simulationPath, 'utf-8'));
+
+        simulations.push({
+          ...simulation,
+          name: simulationKey,
+          distPath: path.join(projectRoot, `dist/${resourceKey}/${resourceKey}.js`),
+          resource,
+        });
+      }
+    }
   }
 
   runMCPServer({

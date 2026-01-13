@@ -1,6 +1,6 @@
 import * as React from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 import { PlaceCard } from './place-card';
 import type { Place } from './types';
 

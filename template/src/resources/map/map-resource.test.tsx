@@ -15,7 +15,7 @@ vi.mock('sunpeak', () => ({
 }));
 
 // Mock the Map component
-vi.mock('../components/map/map', () => ({
+vi.mock('./components/map', () => ({
   Map: () => <div data-testid="map">Map Component</div>,
 }));
 

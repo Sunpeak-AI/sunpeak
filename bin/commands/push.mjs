@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, basename } from 'path';
 import { homedir } from 'os';
 import { execSync } from 'child_process';
+import { isSimulationFile, extractSimulationName } from '../lib/patterns.mjs';
 
 const SUNPEAK_API_URL = process.env.SUNPEAK_API_URL || 'https://app.sunpeak.ai';
 const CREDENTIALS_DIR = join(homedir(), '.sunpeak');
@@ -75,12 +76,11 @@ function findSimulations(resourceDir, resourceName, deps = defaultDeps) {
   const simulations = [];
 
   for (const entry of entries) {
-    if (entry.startsWith(`${resourceName}-`) && entry.endsWith('-simulation.json')) {
+    if (isSimulationFile(entry, resourceName)) {
       const simPath = join(resourceDir, entry);
       try {
         const simData = JSON.parse(d.readFileSync(simPath, 'utf-8'));
-        // Extract simulation name from filename: {resource}-{name}-simulation.json -> {name}
-        const simName = entry.replace(`${resourceName}-`, '').replace('-simulation.json', '');
+        const simName = extractSimulationName(entry, resourceName);
         simulations.push({ ...simData, name: simName });
       } catch {
         d.console.warn(`Warning: Could not parse simulation file ${entry}`);

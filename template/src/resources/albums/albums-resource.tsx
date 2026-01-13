@@ -1,15 +1,14 @@
 import * as React from 'react';
 import { useSafeArea, useMaxHeight } from 'sunpeak';
-import { Map } from '../components/map/map';
+import { Albums } from './components/albums';
 
 /**
- * Production-ready Map Resource
+ * Production-ready Albums Resource
  *
- * This resource displays a pizza restaurant finder with an interactive map,
- * place listings, and detailed inspector view.
+ * This resource displays photo albums in a carousel layout with fullscreen viewing capability.
  * Can be dropped into any production environment without changes.
  */
-export const MapResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
+export const AlbumsResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
   const safeArea = useSafeArea();
   const maxHeight = useMaxHeight();
 
@@ -25,8 +24,8 @@ export const MapResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
         maxHeight: maxHeight ?? undefined,
       }}
     >
-      <Map />
+      <Albums />
     </div>
   );
 });
-MapResource.displayName = 'MapResource';
+AlbumsResource.displayName = 'AlbumsResource';

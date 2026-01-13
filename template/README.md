@@ -34,11 +34,13 @@ The template includes a minimal test setup with Vitest. You can add additional t
 ## Project Structure
 
 - `src/resources/` - Directory containing all your MCP Resources (ChatGPT App UIs).
-  - Every file in this directory ending with -resource.tsx will be automatically built by the framework to dist/name.js, where the output name will be whatever was prefixed to -resource.tsx.
-  - Each resource must have a companion -resource.json file containing metadata (name, title, description, etc.).
-- `src/simulations/` - Directory containing simulation JSON files.
-  - Files in this directory matching \*-simulation.json are automatically discovered by the dev server and MCP server.
-  - Simulations are linked to resources by filename prefix (e.g., albums-show-simulation.json links to albums-resource.tsx).
+  - Each resource is a subdirectory containing all files for that resource.
+  - Example: `src/resources/albums/` contains:
+    - `albums-resource.tsx` - The React component.
+    - `albums-resource.json` - Resource metadata (name, title, description, etc.).
+    - `albums-resource.test.tsx` - Unit tests for the resource.
+    - `albums-show-simulation.json` - Simulation data for testing.
+    - `components/` - UI components used by the resource.
 - `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource. Uses the ChatGPTSimulator to test your resources render properly with any state (tool calls, saved state, dark mode, pip display mode, etc.).
 
 ## Testing in ChatGPT
@@ -95,13 +97,18 @@ Use the sunpeak resource repository for built-in resource hosting.
 
 ## Add a new UI (Resource)
 
-To add a new UI (MCP Resource), simply create the following files:
+To add a new UI (MCP Resource), create a new directory under `src/resources/` with the following files:
 
-- `src/resources/NAME-resource.tsx`
-- `src/resources/NAME-resource.json`
-- `src/simulations/NAME-TOOLNAME-simulation.json`
+```
+src/resources/NAME/
+├── NAME-resource.tsx         # React component (required)
+├── NAME-resource.json        # Resource metadata (required)
+├── NAME-resource.test.tsx    # Unit tests (optional)
+├── NAME-TOOLNAME-simulation.json  # Simulation data (optional)
+└── components/               # UI components (optional)
+```
 
-Only the resource files are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev` or `sunpeak mcp`.
+Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev` or `sunpeak mcp`.
 
 ## Resources
 

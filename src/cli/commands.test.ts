@@ -410,13 +410,15 @@ describe('CLI Commands', () => {
       };
 
       let capturedFormData: FormData | null = null;
-      const mockFetch = vi.fn().mockImplementation(async (_url: string, options: { body: FormData }) => {
-        capturedFormData = options.body;
-        return {
-          ok: true,
-          json: async () => ({ id: 'resource-123', tags: ['v1.0'] }),
-        };
-      });
+      const mockFetch = vi
+        .fn()
+        .mockImplementation(async (_url: string, options: { body: FormData }) => {
+          capturedFormData = options.body;
+          return {
+            ok: true,
+            json: async () => ({ id: 'resource-123', tags: ['v1.0'] }),
+          };
+        });
 
       await push(
         '/test/project',
@@ -802,7 +804,12 @@ describe('CLI Commands', () => {
           }
           // Return files in resource directory including simulation
           if (dirPath.endsWith('/test/dist/widget')) {
-            return ['widget.js', 'widget.json', 'widget-show-simulation.json', 'widget-demo-simulation.json'];
+            return [
+              'widget.js',
+              'widget.json',
+              'widget-show-simulation.json',
+              'widget-demo-simulation.json',
+            ];
           }
           return [];
         },

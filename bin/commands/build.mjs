@@ -4,6 +4,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'fs';
 import path from 'path';
+import { toPascalCase, isSimulationFile } from '../lib/patterns.mjs';
 
 /**
  * Build all resources for a Sunpeak project
@@ -27,7 +28,6 @@ export async function build(projectRoot = process.cwd()) {
   const buildDir = path.join(projectRoot, 'dist/build-output');
   const tempDir = path.join(projectRoot, '.tmp');
   const resourcesDir = path.join(projectRoot, 'src/resources');
-  const simulationsDir = path.join(projectRoot, 'src/simulations');
   const templateFile = path.join(projectRoot, 'src/index-resource.tsx');
 
   // Validate project structure
@@ -84,33 +84,38 @@ export async function build(projectRoot = process.cwd()) {
   mkdirSync(distDir, { recursive: true });
   mkdirSync(tempDir, { recursive: true });
 
-  // Auto-discover all resources
-  const resourceFiles = readdirSync(resourcesDir)
-    .filter(file => file.endsWith('-resource.tsx'))
-    .map(file => {
-      // Extract kebab-case name: 'review-resource.tsx' -> 'review'
-      const kebabName = file.replace('-resource.tsx', '');
+  // Auto-discover all resources (each resource is a subdirectory)
+  const resourceFiles = readdirSync(resourcesDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => {
+      const kebabName = entry.name;
+      const resourceFile = `${kebabName}-resource.tsx`;
+      const resourcePath = path.join(resourcesDir, kebabName, resourceFile);
+
+      // Skip directories without a resource file
+      if (!existsSync(resourcePath)) {
+        return null;
+      }
 
       // Convert kebab-case to PascalCase: 'review' -> 'Review', 'my-widget' -> 'MyWidget'
-      const pascalName = kebabName
-        .split('-')
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join('');
+      const pascalName = toPascalCase(kebabName);
 
       return {
         componentName: `${pascalName}Resource`,
-        componentFile: file.replace('.tsx', ''),
+        componentFile: `${kebabName}-resource`,
         kebabName,
+        resourceDir: path.join(resourcesDir, kebabName),
         entry: `.tmp/index-${kebabName}.tsx`,
         output: `${kebabName}.js`,
         buildOutDir: path.join(buildDir, kebabName),
         distOutDir: path.join(distDir, kebabName),  // Final output: dist/{resource}/
       };
-    });
+    })
+    .filter(Boolean);
 
   if (resourceFiles.length === 0) {
-    console.error('Error: No resource files found in src/resources/');
-    console.error('Resource files should be named like: review-resource.tsx');
+    console.error('Error: No resource directories found in src/resources/');
+    console.error('Each resource should be a directory like: src/resources/review/review-resource.tsx');
     process.exit(1);
   }
 
@@ -136,7 +141,7 @@ export async function build(projectRoot = process.cwd()) {
 
   // Build all resources (but don't copy yet)
   for (let i = 0; i < resourceFiles.length; i++) {
-    const { componentName, componentFile, entry, output, buildOutDir } = resourceFiles[i];
+    const { componentName, componentFile, kebabName, entry, output, buildOutDir } = resourceFiles[i];
     console.log(`[${i + 1}/${resourceFiles.length}] Building ${output}...`);
 
     try {
@@ -147,7 +152,7 @@ export async function build(projectRoot = process.cwd()) {
 
       // Create entry file from template in temp directory
       const entryContent = template
-        .replace('// RESOURCE_IMPORT', `import { ${componentName} } from '../src/resources/${componentFile}';`)
+        .replace('// RESOURCE_IMPORT', `import { ${componentName} } from '../src/resources/${kebabName}/${componentFile}';`)
         .replace('// RESOURCE_MOUNT', `createRoot(root).render(<${componentName} />);`);
 
       const entryPath = path.join(projectRoot, entry);
@@ -201,7 +206,7 @@ export async function build(projectRoot = process.cwd()) {
   console.log('\nCopying built files to dist/...');
   const timestamp = Date.now().toString(36);
 
-  for (const { output, buildOutDir, distOutDir, kebabName, componentFile } of resourceFiles) {
+  for (const { output, buildOutDir, distOutDir, kebabName, componentFile, resourceDir } of resourceFiles) {
     // Create resource-specific output directory
     if (!existsSync(distOutDir)) {
       mkdirSync(distOutDir, { recursive: true });
@@ -225,7 +230,7 @@ export async function build(projectRoot = process.cwd()) {
     }
 
     // Copy and process resource metadata JSON file
-    const srcJson = path.join(resourcesDir, `${componentFile}.json`);
+    const srcJson = path.join(resourceDir, `${componentFile}.json`);
     const destJson = path.join(distOutDir, `${kebabName}.json`);
 
     if (existsSync(srcJson)) {
@@ -237,16 +242,14 @@ export async function build(projectRoot = process.cwd()) {
     }
 
     // Copy affiliated simulation files (matching {resource}-*-simulation.json pattern)
-    if (existsSync(simulationsDir)) {
-      const simulationFiles = readdirSync(simulationsDir)
-        .filter(file => file.startsWith(`${kebabName}-`) && file.endsWith('-simulation.json'));
+    const simulationFiles = readdirSync(resourceDir)
+      .filter(file => isSimulationFile(file, kebabName));
 
-      for (const simFile of simulationFiles) {
-        const srcSim = path.join(simulationsDir, simFile);
-        const destSim = path.join(distOutDir, simFile);
-        copyFileSync(srcSim, destSim);
-        console.log(`✓ Copied ${kebabName}/${simFile}`);
-      }
+    for (const simFile of simulationFiles) {
+      const srcSim = path.join(resourceDir, simFile);
+      const destSim = path.join(distOutDir, simFile);
+      copyFileSync(srcSim, destSim);
+      console.log(`✓ Copied ${kebabName}/${simFile}`);
     }
   }
 

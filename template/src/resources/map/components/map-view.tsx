@@ -2,7 +2,7 @@ import * as React from 'react';
 import mapboxgl from 'mapbox-gl';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import { useMaxHeight } from 'sunpeak';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 import type { Place } from './types';
 
 // Public Mapbox token for demo purposes

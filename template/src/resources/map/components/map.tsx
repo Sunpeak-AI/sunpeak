@@ -8,7 +8,7 @@ import {
 } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 import { PlaceList } from './place-list';
 import { PlaceCarousel } from './place-carousel';
 import { PlaceInspector } from './place-inspector';

@@ -6,6 +6,9 @@
  *
  * The glob calls themselves must remain in the template (Vite compile-time),
  * but all the processing logic lives here for easy updates across templates.
+ *
+ * Node.js utilities (findResourceDirs, isSimulationFile, etc.) can be used
+ * by CLI commands for build-time and runtime discovery.
  */
 
 import type { Simulation } from '../types/simulation.js';
@@ -76,7 +79,7 @@ type GlobModules = Record<string, unknown>;
  * Extracts components and exports them with PascalCase names.
  *
  * @example
- * const modules = import.meta.glob('./*-resource.tsx', { eager: true });
+ * const modules = import.meta.glob('./**\/*-resource.tsx', { eager: true });
  * export default createResourceExports(modules);
  */
 export function createResourceExports(modules: GlobModules): Record<string, React.ComponentType> {
@@ -102,31 +105,11 @@ export function createResourceExports(modules: GlobModules): Record<string, Reac
 }
 
 /**
- * Process simulation modules from import.meta.glob() result.
- * Builds a map of simulation key -> simulation data.
- *
- * @example
- * const modules = import.meta.glob('./*-simulation.json', { eager: true });
- * export const SIMULATIONS = createSimulationIndex(modules);
- */
-export function createSimulationIndex(modules: GlobModules): Record<string, unknown> {
-  return Object.fromEntries(
-    Object.entries(modules)
-      .map(([path, module]) => {
-        const key = extractSimulationKey(path);
-        if (!key) return null;
-        return [key, (module as { default: unknown }).default];
-      })
-      .filter((entry): entry is [string, unknown] => entry !== null)
-  );
-}
-
-/**
  * Build a resource metadata map from import.meta.glob() result.
  * Used for connecting simulations to their resource definitions.
  *
  * @example
- * const modules = import.meta.glob('../src/resources/*-resource.json', { eager: true });
+ * const modules = import.meta.glob('../src/resources/**\/*-resource.json', { eager: true });
  * const resourcesMap = buildResourceMap(modules);
  */
 export function buildResourceMap<T>(modules: GlobModules): Map<string, T> {
@@ -178,7 +161,7 @@ export function buildSimulations<TResource, TSimulation>(
     onMissingResource = (key, prefix) =>
       console.warn(
         `No matching resource found for simulation "${key}". ` +
-          `Expected a resource file like src/resources/${prefix}-resource.json`
+          `Expected a resource file like src/resources/${prefix}/${prefix}-resource.json`
       ),
   } = options;
 
@@ -207,7 +190,7 @@ export function buildSimulations<TResource, TSimulation>(
     if (!resourceComponent) {
       console.warn(
         `Resource component "${componentName}" not found for resource "${resourceKey}". ` +
-          `Make sure src/resources/${resourceKey}-resource.tsx exists with a default export.`
+          `Make sure src/resources/${resourceKey}/${resourceKey}-resource.tsx exists with a default export.`
       );
       continue;
     }
@@ -251,8 +234,8 @@ export interface BuildDevSimulationsOptions {
  *
  * @example
  * const simulations = buildDevSimulations({
- *   simulationModules: import.meta.glob('../src/simulations/*-simulation.json', { eager: true }),
- *   resourceModules: import.meta.glob('../src/resources/*-resource.json', { eager: true }),
+ *   simulationModules: import.meta.glob('../src/resources/**\/*-simulation.json', { eager: true }),
+ *   resourceModules: import.meta.glob('../src/resources/**\/*-resource.json', { eager: true }),
  *   resourceComponents: resourceComponents,
  * });
  */
@@ -279,4 +262,126 @@ export function buildDevSimulations(
       resourceComponent,
     }),
   });
+}
+
+// --- Node.js utilities for CLI commands ---
+// These utilities use standard Node.js APIs and can be imported by build/push/mcp commands.
+
+/**
+ * Information about a discovered resource directory
+ */
+export interface ResourceDirInfo {
+  /** Resource key (directory name), e.g., 'albums', 'carousel' */
+  key: string;
+  /** Full path to the resource directory */
+  dir: string;
+  /** Full path to the main resource file (tsx or json depending on context) */
+  resourcePath: string;
+}
+
+/**
+ * File system operations interface for dependency injection in tests
+ */
+export interface FsOps {
+  readdirSync: (
+    path: string,
+    options: { withFileTypes: true }
+  ) => Array<{ name: string; isDirectory: () => boolean }>;
+  existsSync: (path: string) => boolean;
+}
+
+/**
+ * Find all resource directories in a base directory.
+ * Each valid resource directory contains a file matching the expected pattern.
+ *
+ * @param baseDir - Base directory to scan (e.g., 'src/resources' or 'dist')
+ * @param filePattern - Function to generate expected filename from resource key
+ * @param fs - File system operations (for testing)
+ *
+ * @example
+ * // Find source resources (tsx files)
+ * const resources = findResourceDirs('src/resources', key => `${key}-resource.tsx`);
+ *
+ * @example
+ * // Find built resources (js files)
+ * const resources = findResourceDirs('dist', key => `${key}.js`);
+ */
+export function findResourceDirs(
+  baseDir: string,
+  filePattern: (key: string) => string,
+  fs: FsOps
+): ResourceDirInfo[] {
+  if (!fs.existsSync(baseDir)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(baseDir, { withFileTypes: true });
+
+  return entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => {
+      const key = entry.name;
+      const dir = `${baseDir}/${key}`;
+      const resourcePath = `${dir}/${filePattern(key)}`;
+
+      if (!fs.existsSync(resourcePath)) {
+        return null;
+      }
+
+      return { key, dir, resourcePath };
+    })
+    .filter((info): info is ResourceDirInfo => info !== null);
+}
+
+/**
+ * Check if a filename is a simulation file for a given resource.
+ * Matches pattern: {resourceKey}-*-simulation.json
+ *
+ * @example
+ * isSimulationFile('albums-show-simulation.json', 'albums') // true
+ * isSimulationFile('albums-show-simulation.json', 'carousel') // false
+ * isSimulationFile('albums-resource.json', 'albums') // false
+ */
+export function isSimulationFile(filename: string, resourceKey: string): boolean {
+  return filename.startsWith(`${resourceKey}-`) && filename.endsWith('-simulation.json');
+}
+
+/**
+ * Extract the simulation name from a simulation filename.
+ * Given "{resourceKey}-{name}-simulation.json", returns "{name}".
+ *
+ * @example
+ * extractSimulationName('albums-show-simulation.json', 'albums') // 'show'
+ * extractSimulationName('carousel-hero-simulation.json', 'carousel') // 'hero'
+ */
+export function extractSimulationName(filename: string, resourceKey: string): string {
+  return filename.replace(`${resourceKey}-`, '').replace('-simulation.json', '');
+}
+
+/**
+ * Find all simulation files in a resource directory.
+ *
+ * @param resourceDir - Path to the resource directory
+ * @param resourceKey - Resource key (e.g., 'albums')
+ * @param fs - File system operations (for testing)
+ * @returns Array of { filename, name } objects
+ */
+export function findSimulationFiles(
+  resourceDir: string,
+  resourceKey: string,
+  fs: Pick<FsOps, 'readdirSync' | 'existsSync'>
+): Array<{ filename: string; name: string; path: string }> {
+  if (!fs.existsSync(resourceDir)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(resourceDir, { withFileTypes: true });
+
+  return entries
+    .filter((entry) => !entry.isDirectory() && isSimulationFile(entry.name, resourceKey))
+    .map((entry) => ({
+      filename: entry.name,
+      name: extractSimulationName(entry.name, resourceKey),
+      path: `${resourceDir}/${entry.name}`,
+    }));
 }

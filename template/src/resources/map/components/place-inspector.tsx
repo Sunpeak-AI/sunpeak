@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { Avatar } from '@openai/apps-sdk-ui/components/Avatar';
 import { X, Star } from '@openai/apps-sdk-ui/components/Icon';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 import type { Place } from './types';
 
 export type PlaceInspectorProps = {

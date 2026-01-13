@@ -12,7 +12,7 @@ vi.mock('sunpeak', () => ({
 }));
 
 // Mock Albums component
-vi.mock('../components/album/albums', () => ({
+vi.mock('./components/albums', () => ({
   Albums: () => <div data-testid="albums-component">Albums Component</div>,
 }));
 

@@ -1,12 +1,38 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync, renameSync } from 'fs';
+import {
+  existsSync,
+  mkdirSync,
+  cpSync,
+  readFileSync,
+  writeFileSync,
+  renameSync,
+  readdirSync,
+} from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COMMANDS_DIR = join(__dirname, 'commands');
+
+/**
+ * Auto-discover available resources from template/src/resources directories.
+ * Each subdirectory containing a {name}-resource.tsx file is a valid resource.
+ */
+function discoverResources() {
+  const resourcesDir = join(__dirname, '..', 'template', 'src', 'resources');
+  if (!existsSync(resourcesDir)) {
+    return [];
+  }
+  return readdirSync(resourcesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .filter((entry) => {
+      const resourceFile = join(resourcesDir, entry.name, `${entry.name}-resource.tsx`);
+      return existsSync(resourceFile);
+    })
+    .map((entry) => entry.name);
+}
 
 function prompt(question) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
@@ -27,12 +53,10 @@ function checkPackageJson() {
   }
 }
 
-function parseResourcesInput(input) {
-  const VALID_RESOURCES = ['albums', 'carousel', 'map', 'review'];
-
+function parseResourcesInput(input, validResources) {
   // If no input, return all resources
   if (!input || input.trim() === '') {
-    return VALID_RESOURCES;
+    return validResources;
   }
 
   // Split by comma or space and trim
@@ -43,10 +67,10 @@ function parseResourcesInput(input) {
     .filter((s) => s.length > 0);
 
   // Validate tokens
-  const invalid = tokens.filter((t) => !VALID_RESOURCES.includes(t));
+  const invalid = tokens.filter((t) => !validResources.includes(t));
   if (invalid.length > 0) {
     console.error(`Error: Invalid resource(s): ${invalid.join(', ')}`);
-    console.error(`Valid resources are: ${VALID_RESOURCES.join(', ')}`);
+    console.error(`Valid resources are: ${validResources.join(', ')}`);
     process.exit(1);
   }
 
@@ -54,71 +78,14 @@ function parseResourcesInput(input) {
   return [...new Set(tokens)];
 }
 
-function updateIndexFiles(targetDir, selectedResources) {
-  // Map resource names to their component/export names
-  const resourceMap = {
-    albums: { component: 'album', resourceClass: 'AlbumsResource' },
-    carousel: { component: 'carousel', resourceClass: 'CarouselResource' },
-    map: { component: 'map', resourceClass: 'MapResource' },
-    review: { component: null, resourceClass: 'ReviewResource' },
-  };
-
-  // Update components/index.ts
-  const componentsIndexPath = join(targetDir, 'src', 'components', 'index.ts');
-  const componentExports = selectedResources
-    .map((r) => resourceMap[r].component)
-    .filter((comp) => comp !== null) // Filter out null components
-    .filter((v, i, a) => a.indexOf(v) === i) // Remove duplicates
-    .map((comp) => `export * from './${comp}';`)
-    .join('\n');
-  writeFileSync(componentsIndexPath, componentExports + '\n');
-
-  // Update resources/index.ts - must have default export for dev.tsx
-  const resourcesIndexPath = join(targetDir, 'src', 'resources', 'index.ts');
-  const resourceImports = selectedResources
-    .map((r) => `import { ${resourceMap[r].resourceClass} } from './${r}-resource';`)
-    .join('\n');
-  const resourceExportsObject = selectedResources
-    .map((r) => `  ${resourceMap[r].resourceClass},`)
-    .join('\n');
-  const resourcesContent = `${resourceImports}
-
-export default {
-${resourceExportsObject}
-};
-`;
-  writeFileSync(resourcesIndexPath, resourcesContent);
-
-  // Update simulations/index.ts - uses auto-discovery for JSON simulation files
-  const simulationsIndexPath = join(targetDir, 'src', 'simulations', 'index.ts');
-  const simulationsContent = `/**
- * Server-safe simulation configurations
- *
- * Auto-discovers all *-simulation.json files in this directory.
- * File naming: {resource}-{tool}-simulation.json (e.g., albums-show-simulation.json)
- *
- * This file can be safely imported in Node.js contexts (like MCP servers)
- * without causing issues with CSS imports or React components.
- */
-
-// Auto-discover all simulation JSON files
-const simulationModules = import.meta.glob('./*-simulation.json', { eager: true });
-
-// Build SIMULATIONS object from discovered files
-// Key is the full name without -simulation.json suffix (e.g., 'albums-show')
-export const SIMULATIONS = Object.fromEntries(
-  Object.entries(simulationModules).map(([path, module]) => {
-    // Extract simulation key from path: './albums-show-simulation.json' -> 'albums-show'
-    const match = path.match(/\\.\\/(.+)-simulation\\.json$/);
-    const key = match?.[1] ?? path;
-    return [key, (module as { default: unknown }).default];
-  })
-) as Record<string, unknown>;
-`;
-  writeFileSync(simulationsIndexPath, simulationsContent);
-}
-
 async function init(projectName, resourcesArg) {
+  // Discover available resources from template
+  const availableResources = discoverResources();
+  if (availableResources.length === 0) {
+    console.error('Error: No resources found in template/src/resources/');
+    process.exit(1);
+  }
+
   if (!projectName) {
     projectName = await prompt('☀️ 🏔️ Project name [my-app]: ');
     if (!projectName) {
@@ -138,10 +105,10 @@ async function init(projectName, resourcesArg) {
     console.log(`☀️ 🏔️ Resources: ${resourcesArg}`);
   } else {
     resourcesInput = await prompt(
-      '☀️ 🏔️ Resources (UIs) to include [albums, carousel, map, review]: '
+      `☀️ 🏔️ Resources (UIs) to include [${availableResources.join(', ')}]: `
     );
   }
-  const selectedResources = parseResourcesInput(resourcesInput);
+  const selectedResources = parseResourcesInput(resourcesInput, availableResources);
 
   const targetDir = join(process.cwd(), projectName);
 
@@ -156,13 +123,8 @@ async function init(projectName, resourcesArg) {
 
   mkdirSync(targetDir, { recursive: true });
 
-  // Map resource names to their component directory names
-  const resourceComponentMap = {
-    albums: 'album',
-    carousel: 'carousel',
-    map: 'map',
-    review: null, // Review doesn't have a component directory
-  };
+  // Filter resource directories based on selection
+  const excludedResources = availableResources.filter((r) => !selectedResources.includes(r));
 
   cpSync(templateDir, targetDir, {
     recursive: true,
@@ -174,31 +136,13 @@ async function init(projectName, resourcesArg) {
         return false;
       }
 
-      // Filter resource files based on selection
-      const VALID_RESOURCES = ['albums', 'carousel', 'map', 'review'];
-      const excludedResources = VALID_RESOURCES.filter((r) => !selectedResources.includes(r));
-
       for (const resource of excludedResources) {
-        // Skip resource files (tsx, test, and json metadata)
-        if (
-          name === `${resource}-resource.tsx` ||
-          name === `${resource}-resource.test.tsx` ||
-          name === `${resource}-resource.json`
-        ) {
-          return false;
-        }
-        // Skip simulation JSON files that start with the resource name
-        // e.g., albums-show-simulation.json, albums-edit-simulation.json
-        if (name.startsWith(`${resource}-`) && name.endsWith('-simulation.json')) {
+        // Skip entire resource directory: src/resources/{resource}/
+        if (src.includes('/resources/') && name === resource) {
           return false;
         }
         // Skip e2e test files for excluded resources
         if (src.includes('/tests/e2e/') && name === `${resource}.spec.ts`) {
-          return false;
-        }
-        // Skip component directories (map resource name to component dir name)
-        const componentDirName = resourceComponentMap[resource];
-        if (componentDirName && src.includes('/components/') && name === componentDirName) {
           return false;
         }
       }
@@ -233,9 +177,6 @@ async function init(projectName, resourcesArg) {
   }
 
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
-
-  // Update index.ts files based on selected resources
-  updateIndexFiles(targetDir, selectedResources);
 
   console.log(`
 Done! To get started:
@@ -399,7 +340,9 @@ function parseResourceArgs(args) {
 
     case 'help':
     case undefined:
-      console.log(`
+      {
+        const resources = discoverResources();
+        console.log(`
 ☀️ 🏔️ sunpeak - The ChatGPT App framework
 
 Install:
@@ -418,11 +361,12 @@ Usage:
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 
-  Resources: albums, carousel, map, review (comma/space separated)
-  Example: sunpeak new my-app "albums,carousel"
+  Resources: ${resources.join(', ')} (comma/space separated)
+  Example: sunpeak new my-app "${resources.slice(0, 2).join(',')}"
 
 For more information, visit: https://sunpeak.ai/
 `);
+      }
       break;
 
     default:

@@ -4,7 +4,7 @@ import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
 import { ArrowLeft, ArrowRight } from '@openai/apps-sdk-ui/components/Icon';
 import { useWidgetState, useDisplayMode } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 
 export interface AlbumCarouselState extends Record<string, unknown> {
   currentIndex?: number;

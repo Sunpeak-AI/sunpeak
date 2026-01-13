@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useSafeArea } from 'sunpeak';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 import { FilmStrip } from './film-strip';
 import type { Album } from './albums';
 

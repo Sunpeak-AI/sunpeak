@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Star } from '@openai/apps-sdk-ui/components/Icon';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 import type { Place } from './types';
 
 export type PlaceCardProps = {

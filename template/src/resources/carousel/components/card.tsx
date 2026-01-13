@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
-import { cn } from '../../lib/index';
+import { cn } from '../../../lib/index';
 
 export interface CardButtonProps {
   isPrimary?: boolean;
