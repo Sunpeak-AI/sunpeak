@@ -101,11 +101,11 @@ To add a new UI (MCP Resource), create a new directory under `src/resources/` wi
 
 ```
 src/resources/NAME/
-├── NAME-resource.tsx         # React component (required)
-├── NAME-resource.json        # Resource metadata (required)
-├── NAME-resource.test.tsx    # Unit tests (optional)
-├── NAME-TOOLNAME-simulation.json  # Simulation data (optional)
-└── components/               # UI components (optional)
+├── NAME-resource.tsx              # React component (required)
+├── NAME-resource.json             # Resource metadata (required)
+├── NAME-resource.test.tsx         # Unit tests (optional)
+├── NAME-SCENARIO-simulation.json  # Simulation data (optional)
+└── components/                    # UI components (optional)
 ```
 
 Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev` or `sunpeak mcp`.
