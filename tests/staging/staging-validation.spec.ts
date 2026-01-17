@@ -18,7 +18,7 @@ test.describe('Staging validation', () => {
     await expect(root).toBeAttached();
 
     // Check for header with text
-    const header = page.locator('header:has-text("SimGPT")');
+    const header = page.locator('header:has-text("sunpeak.ai")');
     await expect(header).toBeVisible();
 
     // Verify header styles are applied

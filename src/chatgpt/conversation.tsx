@@ -112,7 +112,7 @@ export function Conversation({
                   type="text"
                   name="userInput"
                   disabled
-                  placeholder="Message SimGPT"
+                  placeholder="Message sunpeak.ai"
                   className="w-full dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
                 />
               </div>
@@ -133,7 +133,7 @@ export function Conversation({
         className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40 w-full"
         style={{ maxWidth: containerWidth }}
       >
-        <span className="text-primary">SimGPT</span>
+        <span className="text-primary">sunpeak.ai</span>
       </header>
 
       {/* Conversation container with configurable width */}
@@ -242,7 +242,7 @@ export function Conversation({
                 type="text"
                 name="userInput"
                 disabled
-                placeholder="Message SimGPT"
+                placeholder="Message sunpeak.ai"
                 className="w-full dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
               />
             </div>
