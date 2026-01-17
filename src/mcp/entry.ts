@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Internal MCP server entry point
- * This is run by nodemon or directly to start the MCP server
+ * This is run by the mcp command to start the MCP server
  *
  * Auto-discovers simulations and resources by file naming convention:
  * - resources/{resource}/{resource}-{scenario}-simulation.json (e.g., resources/albums/albums-show-simulation.json)
@@ -56,6 +56,7 @@ async function startServer() {
           ...simulation,
           name: simulationKey,
           distPath: path.join(projectRoot, `dist/${resourceKey}/${resourceKey}.js`),
+          srcPath: `/src/resources/${resourceKey}/${resourceKey}-resource.tsx`,
           resource,
         });
       }
