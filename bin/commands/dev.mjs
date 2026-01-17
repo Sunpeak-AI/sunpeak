@@ -87,10 +87,40 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const isTemplate = basename(projectRoot) === 'template';
   const parentSrc = resolve(projectRoot, '../src');
 
+  // Import favicon from sunpeak library
+  let faviconBuffer;
+  if (isTemplate) {
+    // In workspace dev mode, import from local dist folder
+    const sunpeakMcp = await import(pathToFileURL(resolve(projectRoot, '../dist/mcp/index.js')).href);
+    faviconBuffer = sunpeakMcp.FAVICON_BUFFER;
+  } else {
+    // Import from installed sunpeak package
+    const sunpeakMcpPath = join(require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, ''), 'dist/mcp/index.js');
+    const sunpeakMcp = await import(pathToFileURL(sunpeakMcpPath).href);
+    faviconBuffer = sunpeakMcp.FAVICON_BUFFER;
+  }
+
+  // Vite plugin to serve the sunpeak favicon
+  const sunpeakFaviconPlugin = () => ({
+    name: 'sunpeak-favicon',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        if (req.url === '/favicon.ico') {
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Content-Length', faviconBuffer.length);
+          res.setHeader('Cache-Control', 'public, max-age=86400');
+          res.end(faviconBuffer);
+          return;
+        }
+        next();
+      });
+    },
+  });
+
   // Create and start Vite dev server programmatically
   const server = await createServer({
     root: projectRoot,
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), sunpeakFaviconPlugin()],
     resolve: {
       alias: {
         // In workspace dev mode, use local sunpeak source

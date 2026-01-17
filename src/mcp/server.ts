@@ -3,6 +3,8 @@ import { URL } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { FAVICON_BUFFER } from './favicon.js';
+
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import {
@@ -428,6 +430,36 @@ export function runMCPServer(config: MCPServerConfig): void {
         'Access-Control-Allow-Headers': 'content-type, ngrok-skip-browser-warning',
       });
       res.end();
+      return;
+    }
+
+    // Root path (ChatGPT checks this before fetching favicon)
+    if (req.method === 'GET' && url.pathname === '/') {
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<link rel="icon" type="image/png" href="/favicon.ico" />
+<title>Sunpeak MCP Server</title>
+</head>
+<body><h1>Sunpeak MCP Server</h1><p>Connect via <a href="/mcp">/mcp</a></p></body>
+</html>`);
+      return;
+    }
+
+    // Favicon endpoint (ChatGPT fetches this when connecting to an MCP server)
+    if (req.method === 'GET' && url.pathname === '/favicon.ico') {
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': FAVICON_BUFFER.length,
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(FAVICON_BUFFER);
       return;
     }
 
