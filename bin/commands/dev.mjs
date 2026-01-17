@@ -220,6 +220,17 @@ if (!Component) {
       server: {
         middlewareMode: true,
         allowedHosts: true,
+        watch: {
+          // Only watch files that affect the UI bundle (not JSON, tests, etc.)
+          // MCP resources reload on next tool call, not on file change
+          ignored: (filePath) => {
+            if (!filePath.includes('.')) return false; // Watch directories
+            if (/\.(tsx?|css)$/.test(filePath)) {
+              return /\.(test|spec)\.tsx?$/.test(filePath); // Ignore tests
+            }
+            return true; // Ignore everything else
+          },
+        },
       },
       optimizeDeps: {
         include: ['react', 'react-dom/client'],
