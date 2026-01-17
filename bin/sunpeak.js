@@ -343,6 +343,7 @@ Install:
 Usage:
   sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server + MCP endpoint
+    --no-begging           Suppress GitHub star message
   sunpeak build            Build resources
   sunpeak login            Log in to Sunpeak
   sunpeak logout           Log out of Sunpeak

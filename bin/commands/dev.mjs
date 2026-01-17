@@ -83,6 +83,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     port = parseInt(args[portArgIndex + 1]);
   }
 
+  // Parse --no-begging flag
+  const noBegging = args.includes('--no-begging');
+
   console.log(`Starting Vite dev server on port ${port}...`);
 
   // Check if we're in the sunpeak workspace (directory is named "template")
@@ -142,6 +145,12 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   await server.listen();
   server.printUrls();
   server.bindCLIShortcuts({ print: true });
+
+  // Print star-begging message unless --no-begging is set
+  if (!noBegging) {
+    // #FFB800 in 24-bit ANSI color
+    console.log('\n\n\x1b[38;2;255;184;0m\u2b50\ufe0f \u2192 \u2764\ufe0f  https://github.com/Sunpeak-AI/sunpeak\x1b[0m\n');
+  }
 
   // Discover simulations using sunpeak's discovery utilities
   const resourcesDir = join(projectRoot, 'src/resources');

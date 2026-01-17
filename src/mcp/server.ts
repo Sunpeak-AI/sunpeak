@@ -507,7 +507,6 @@ export function runMCPServer(config: MCPServerConfig): void {
   httpServer.listen(port, () => {
     console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
     console.log(`  SSE stream: GET http://localhost:${port}${ssePath}`);
-    console.log(`  Message post endpoint: POST http://localhost:${port}${postPath}?sessionId=...`);
     if (viteMode) {
       console.log(`  Vite HMR: enabled (source files served with hot reload)`);
     }
