@@ -8,7 +8,11 @@ export interface SimulationWithDist {
   // Unique identifier derived from the simulation filename (e.g., 'albums-show')
   name: string;
 
+  // Path to the built JS bundle (for production mode)
   distPath: string;
+
+  // Path to the source TSX file (for Vite dev mode)
+  srcPath?: string;
 
   // MCP Tool protocol - official Tool type from MCP SDK used in ListTools response
   tool: Tool;
@@ -30,4 +34,10 @@ export interface MCPServerConfig {
   version?: string;
   port?: number;
   simulations: SimulationWithDist[];
+  /**
+   * Vite dev server instance for HMR mode.
+   * When provided, resources are served as HTML that loads from Vite.
+   * When not provided, resources serve bundled JS (production mode).
+   */
+  viteServer?: unknown; // ViteDevServer type, kept as unknown to avoid hard dependency
 }
