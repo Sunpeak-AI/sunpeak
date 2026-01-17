@@ -187,9 +187,8 @@ Done! To get started:
 
 That's it! Your project commands:
 
-  sunpeak dev       # Start development server
+  sunpeak dev       # Start dev server + MCP endpoint
   sunpeak build     # Build for production
-  sunpeak mcp       # Start MCP server
   pnpm test         # Run tests
 
 See README.md for more details.
@@ -285,13 +284,6 @@ function parseResourceArgs(args) {
       }
       break;
 
-    case 'mcp':
-      {
-        const { mcp } = await import(join(COMMANDS_DIR, 'mcp.mjs'));
-        await mcp(process.cwd(), args);
-      }
-      break;
-
     case 'login':
       {
         const { login } = await import(join(COMMANDS_DIR, 'login.mjs'));
@@ -350,9 +342,8 @@ Install:
 
 Usage:
   sunpeak new [name] [resources]  Create a new project
-  sunpeak dev              Start dev server
+  sunpeak dev              Start dev server + MCP endpoint
   sunpeak build            Build resources
-  sunpeak mcp              Start MCP server
   sunpeak login            Log in to Sunpeak
   sunpeak logout           Log out of Sunpeak
   sunpeak push             Push resources to repository

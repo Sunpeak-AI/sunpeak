@@ -45,3 +45,7 @@ CLAUDE.md
 .temp
 .tmp
 tmp
+
+# Vite cache
+node_modules/.vite
+node_modules/.vite-mcp

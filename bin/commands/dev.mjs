@@ -1,6 +1,8 @@
 #!/usr/bin/env node
-import { existsSync } from 'fs';
-import { join, resolve, basename, dirname } from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
+const { existsSync, readFileSync } = fs;
+const { join, resolve, basename, dirname } = path;
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 
@@ -87,18 +89,20 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const isTemplate = basename(projectRoot) === 'template';
   const parentSrc = resolve(projectRoot, '../src');
 
-  // Import favicon from sunpeak library
-  let faviconBuffer;
+  // Import sunpeak modules (MCP server and discovery utilities)
+  let sunpeakMcp, sunpeak;
   if (isTemplate) {
     // In workspace dev mode, import from local dist folder
-    const sunpeakMcp = await import(pathToFileURL(resolve(projectRoot, '../dist/mcp/index.js')).href);
-    faviconBuffer = sunpeakMcp.FAVICON_BUFFER;
+    sunpeakMcp = await import(pathToFileURL(resolve(projectRoot, '../dist/mcp/index.js')).href);
+    sunpeak = await import(pathToFileURL(resolve(projectRoot, '../dist/index.js')).href);
   } else {
     // Import from installed sunpeak package
-    const sunpeakMcpPath = join(require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, ''), 'dist/mcp/index.js');
-    const sunpeakMcp = await import(pathToFileURL(sunpeakMcpPath).href);
-    faviconBuffer = sunpeakMcp.FAVICON_BUFFER;
+    const sunpeakBase = require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, '');
+    sunpeakMcp = await import(pathToFileURL(join(sunpeakBase, 'dist/mcp/index.js')).href);
+    sunpeak = await import(pathToFileURL(join(sunpeakBase, 'dist/index.js')).href);
   }
+  const { FAVICON_BUFFER: faviconBuffer, runMCPServer } = sunpeakMcp;
+  const { findResourceDirs, findSimulationFiles } = sunpeak;
 
   // Vite plugin to serve the sunpeak favicon
   const sunpeakFaviconPlugin = () => ({
@@ -139,16 +143,123 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   server.printUrls();
   server.bindCLIShortcuts({ print: true });
 
-  // Handle signals
-  process.on('SIGINT', async () => {
-    await server.close();
-    process.exit(0);
-  });
+  // Discover simulations using sunpeak's discovery utilities
+  const resourcesDir = join(projectRoot, 'src/resources');
+  const resourceDirs = findResourceDirs(resourcesDir, (key) => `${key}-resource.json`, fs);
 
-  process.on('SIGTERM', async () => {
-    await server.close();
-    process.exit(0);
-  });
+  const simulations = [];
+  for (const { key: resourceKey, dir: resourceDir, resourcePath } of resourceDirs) {
+    const resource = JSON.parse(readFileSync(resourcePath, 'utf-8'));
+    const simulationFiles = findSimulationFiles(resourceDir, resourceKey, fs);
+
+    for (const { filename, path: simPath } of simulationFiles) {
+      const simulationKey = filename.replace(/-simulation\.json$/, '');
+      const simulation = JSON.parse(readFileSync(simPath, 'utf-8'));
+
+      simulations.push({
+        ...simulation,
+        name: simulationKey,
+        distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.js`),
+        srcPath: `/src/resources/${resourceKey}/${resourceKey}-resource.tsx`,
+        resource,
+      });
+    }
+  }
+
+  // Start MCP server with its own Vite instance
+  if (simulations.length > 0) {
+    console.log(`\nStarting MCP server with ${simulations.length} simulation(s)...`);
+
+    // Virtual entry module plugin for MCP
+    const sunpeakEntryPlugin = () => ({
+      name: 'sunpeak-entry',
+      resolveId(id) {
+        if (id.startsWith('virtual:sunpeak-entry')) {
+          return id;
+        }
+      },
+      load(id) {
+        if (id.startsWith('virtual:sunpeak-entry')) {
+          const url = new URL(id.replace('virtual:sunpeak-entry', 'http://x'));
+          const srcPath = url.searchParams.get('src');
+          const componentName = url.searchParams.get('component');
+
+          if (!srcPath || !componentName) {
+            return 'console.error("Missing src or component param");';
+          }
+
+          return `
+import { createElement } from 'react';
+import { createRoot } from 'react-dom/client';
+import * as ResourceModule from '${srcPath}';
+
+const Component = ResourceModule.default || ResourceModule['${componentName}'];
+if (!Component) {
+  document.getElementById('root').innerHTML = '<pre style="color:red;padding:16px">Component not found: ${componentName}\\nExports: ' + Object.keys(ResourceModule).join(', ') + '</pre>';
+} else {
+  createRoot(document.getElementById('root')).render(createElement(Component));
+}
+`;
+        }
+      },
+    });
+
+    // Create Vite dev server in middleware mode for MCP
+    // Use separate cache directory to avoid conflicts with main dev server
+    const mcpViteServer = await createServer({
+      root: projectRoot,
+      cacheDir: 'node_modules/.vite-mcp',
+      plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
+      resolve: {
+        alias: {
+          ...(isTemplate && {
+            sunpeak: parentSrc,
+          }),
+        },
+      },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+      },
+      optimizeDeps: {
+        include: ['react', 'react-dom/client'],
+      },
+      appType: 'custom',
+    });
+
+    const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+    runMCPServer({
+      name: pkg.name || 'Sunpeak',
+      version: pkg.version || '0.1.0',
+      simulations,
+      port: 6766,
+      viteServer: mcpViteServer,
+    });
+
+    // Handle signals - close both servers
+    process.on('SIGINT', async () => {
+      await mcpViteServer.close();
+      await server.close();
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', async () => {
+      await mcpViteServer.close();
+      await server.close();
+      process.exit(0);
+    });
+  } else {
+    // No simulations - just handle signals for the dev server
+    process.on('SIGINT', async () => {
+      await server.close();
+      process.exit(0);
+    });
+
+    process.on('SIGTERM', async () => {
+      await server.close();
+      process.exit(0);
+    });
+  }
 }
 
 // Allow running directly

@@ -19,9 +19,8 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 # Core commands:
 pnpm test              # Run tests with Vitest.
 pnpm test:e2e          # Run end-to-end tests with Playwright.
-sunpeak dev            # Start development server.
+sunpeak dev            # Start dev server + MCP endpoint.
 sunpeak build          # Build all resources for production.
-sunpeak mcp            # Start MCP server for ChatGPT testing with mock data.
 
 # sunpeak repository (think ECR for ChatGPT Apps):
 sunpeak login          # Authenticate with the sunpeak repository.
@@ -45,11 +44,11 @@ The template includes a minimal test setup with Vitest. You can add additional t
 
 ## Testing in ChatGPT
 
-Test your app directly in ChatGPT using the built-in MCP server:
+Test your app directly in ChatGPT using the built-in MCP endpoint (starts automatically with `sunpeak dev`):
 
 ```bash
-# Start the MCP server (rebuilds and restarts on file changes).
-sunpeak mcp
+# Start the dev server + MCP endpoint.
+sunpeak dev
 
 # In another terminal, run a tunnel. For example:
 ngrok http 6766
@@ -59,7 +58,7 @@ You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGP
 
 Once your app is connected, send the name of the app and a tool, like `/sunpeak show review`, to ChatGPT.
 
-When you make changes to the UI, refresh your app in ChatGPT after the MCP server has finished rebuilding your app: `User > Settings > Apps & Connectors > My App > Refresh`
+When you make changes to the UI, refresh your app in ChatGPT after the dev server has finished rebuilding: `User > Settings > Apps & Connectors > My App > Refresh`
 
 ## Build & Deploy
 
@@ -108,7 +107,7 @@ src/resources/NAME/
 └── components/                    # UI components (optional)
 ```
 
-Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev` or `sunpeak mcp`.
+Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev`.
 
 ## Resources
 
