@@ -1,6 +1,6 @@
 # sunpeak-app
 
-A ChatGPT App UI built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
+A ChatGPT App built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
 
 For an initial overview of your new app and a detailed API reference, refer to the [documentation](https://docs.sunpeak.ai/template/project-structure).
 
@@ -32,15 +32,20 @@ The template includes a minimal test setup with Vitest. You can add additional t
 
 ## Project Structure
 
-- `src/resources/` - Directory containing all your MCP Resources (ChatGPT App UIs).
-  - Each resource is a subdirectory containing all files for that resource.
-  - Example: `src/resources/albums/` contains:
-    - `albums-resource.tsx` - The React component.
-    - `albums-resource.json` - Resource metadata (name, title, description, etc.).
-    - `albums-resource.test.tsx` - Unit tests for the resource.
-    - `albums-show-simulation.json` - Simulation data for testing.
-    - `components/` - UI components used by the resource.
-- `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource. Uses the ChatGPTSimulator to test your resources render properly with any state (tool calls, saved state, dark mode, pip display mode, etc.).
+Using a Review page as an example, sunpeak projects look like:
+
+```bash
+my-app/
+├── src/resources/
+│   └── review/
+│       ├── review-resource.tsx                 # Review UI component.
+│       └── review-resource.json                # Review UI MCP metadata.
+├── tests/simulations/
+│   └── review/
+│       ├── review-{scenario1}-simulation.json  # Mock state for testing.
+│       └── review-{scenario2}-simulation.json  # Mock state for testing.
+└── package.json
+```
 
 ## Testing in ChatGPT
 
@@ -71,15 +76,11 @@ This creates optimized builds in `dist/`, organized by resource:
 ```bash
 dist/
 ├── albums/
-│   ├── albums.js                     # Built resource component.
-│   ├── albums.json                   # Resource metadata.
-│   └── albums-show-simulation.json   # Resource mock data for testing.
+│   ├── albums.js             # Built resource component.
+│   └── albums.json           # Resource metadata.
 ├── review/
 │   ├── review.js
-│   ├── review.json
-│   ├── review-diff-simulation.json
-│   ├── review-post-simulation.json
-│   └── review-purchase-simulation.json
+│   └── review.json
 └── ...
 ```
 
@@ -87,7 +88,6 @@ Each resource folder contains:
 
 - **`.js` file**: Self-contained bundle with CSS inlined
 - **`.json` file**: Resource metadata with unique `uri` for cache-busting
-- **`*-simulation.json` files**: All affiliated simulation files for the resource. These are not needed for the production runtime, but are used in the sunpeak repository for testing.
 
 Host these files and reference them as resources in your production MCP server.
 Use the sunpeak resource repository for built-in resource hosting.
@@ -101,11 +101,12 @@ src/resources/NAME/
 ├── NAME-resource.tsx              # React component (required)
 ├── NAME-resource.json             # Resource metadata (required)
 ├── NAME-resource.test.tsx         # Unit tests (optional)
-├── NAME-SCENARIO-simulation.json  # Simulation data (optional)
 └── components/                    # UI components (optional)
 ```
 
-Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI. Create the simulation file if you want to preview your resource in `sunpeak dev`.
+Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI.
+
+Create the simulation file(s) in `tests/simulations/` if you want to preview your resource in `sunpeak dev`.
 
 ## Resources
 
