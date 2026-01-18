@@ -61,23 +61,24 @@ export const defaultDeps = {
 };
 
 /**
- * Find simulation files for a resource in its directory
- * Expects files matching: {resourceName}-*-simulation.json
+ * Find simulation files for a resource in the simulations directory
+ * Expects files in: tests/simulations/{resourceName}/{resourceName}-*-simulation.json
  * Returns array of parsed simulation objects
  */
-function findSimulations(resourceDir, resourceName, deps = defaultDeps) {
+function findSimulations(simulationsDir, resourceName, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
 
-  if (!d.existsSync(resourceDir)) {
+  const resourceSimDir = join(simulationsDir, resourceName);
+  if (!d.existsSync(resourceSimDir)) {
     return [];
   }
 
-  const entries = d.readdirSync(resourceDir);
+  const entries = d.readdirSync(resourceSimDir);
   const simulations = [];
 
   for (const entry of entries) {
     if (isSimulationFile(entry, resourceName)) {
-      const simPath = join(resourceDir, entry);
+      const simPath = join(resourceSimDir, entry);
       try {
         const simData = JSON.parse(d.readFileSync(simPath, 'utf-8'));
         const simName = extractSimulationName(entry, resourceName);
@@ -94,9 +95,10 @@ function findSimulations(resourceDir, resourceName, deps = defaultDeps) {
 /**
  * Find all resources in a directory
  * Expects folder structure: dist/{resource}/{resource}.js
+ * Simulations are loaded from tests/simulations/{resource}/
  * Returns array of { name, jsPath, metaPath, meta, simulations }
  */
-export function findResources(distDir, deps = defaultDeps) {
+export function findResources(distDir, simulationsDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
 
   if (!d.existsSync(distDir)) {
@@ -120,7 +122,7 @@ export function findResources(distDir, deps = defaultDeps) {
         } catch {
           d.console.warn(`Warning: Could not parse ${resourceName}.json`);
         }
-        const simulations = findSimulations(resourceDir, resourceName, d);
+        const simulations = findSimulations(simulationsDir, resourceName, d);
         resources.push({ name: resourceName, dir: resourceDir, jsPath, metaPath, meta, simulations });
       }
     }
@@ -132,9 +134,10 @@ export function findResources(distDir, deps = defaultDeps) {
 /**
  * Build a resource from a resource directory path
  * Expects structure: dir/{name}.js, dir/{name}.json
+ * Simulations are loaded from tests/simulations/{name}/
  * Returns { name, jsPath, metaPath, meta, simulations }
  */
-function buildResourceFromDir(resourceDir, deps = defaultDeps) {
+function buildResourceFromDir(resourceDir, simulationsDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
 
   // Remove trailing slash if present
@@ -167,7 +170,7 @@ function buildResourceFromDir(resourceDir, deps = defaultDeps) {
     d.console.warn(`Warning: Could not parse ${name}.json`);
   }
 
-  const simulations = findSimulations(dir, name, d);
+  const simulations = findSimulations(simulationsDir, name, d);
 
   return { name, jsPath, metaPath, meta, simulations };
 }
@@ -281,6 +284,7 @@ Usage:
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
   -t, --tag <name>               Tag to assign (can be specified multiple times)
+  --no-simulations               Skip pushing simulations, only push resources
   -h, --help                     Show this help message
 
 Arguments:
@@ -293,6 +297,7 @@ Examples:
   sunpeak push -r myorg/my-app   Push to "myorg/my-app" repository
   sunpeak push -t v1.0.0         Push with a version tag
   sunpeak push -t v1.0.0 -t prod Push with multiple tags
+  sunpeak push --no-simulations  Push resources without simulations
 `);
     return;
   }
@@ -314,10 +319,11 @@ Examples:
   }
 
   // Find resources - either a specific directory or all from dist directory
+  const simulationsDir = join(projectRoot, 'tests/simulations');
   let resources;
   if (options.dir) {
     // Push a single specific resource from directory
-    resources = [buildResourceFromDir(options.dir, d)];
+    resources = [buildResourceFromDir(options.dir, simulationsDir, d)];
   } else {
     // Default: find all resources in dist directory
     const distDir = join(projectRoot, 'dist');
@@ -327,7 +333,7 @@ Examples:
       d.process.exit(1);
     }
 
-    resources = findResources(distDir, d);
+    resources = findResources(distDir, simulationsDir, d);
     if (resources.length === 0) {
       d.console.error(`Error: No resources found in dist/`);
       d.console.error('Run "sunpeak build" first to build your resources.');
@@ -335,9 +341,19 @@ Examples:
     }
   }
 
+  // Clear simulations if --no-simulations flag is set
+  if (options.noSimulations) {
+    for (const resource of resources) {
+      resource.simulations = [];
+    }
+  }
+
   d.console.log(`Pushing ${resources.length} resource(s) to repository "${repository}"...`);
   if (options.tags && options.tags.length > 0) {
     d.console.log(`Tags: ${options.tags.join(', ')}`);
+  }
+  if (options.noSimulations) {
+    d.console.log('Simulations: skipped');
   }
   d.console.log();
 
@@ -354,6 +370,9 @@ Examples:
       successCount++;
     } catch (error) {
       d.console.error(`✗ Failed to push ${resource.name}: ${error.message}`);
+      if (error.message.includes('Uri must be unique')) {
+        d.console.error('  You are trying to push a build that has already been pushed.');
+      }
     }
   }
 
@@ -369,7 +388,7 @@ Examples:
 /**
  * Parse command line arguments
  */
-function parseArgs(args) {
+export function parseArgs(args) {
   const options = { tags: [] };
   let i = 0;
 
@@ -380,6 +399,8 @@ function parseArgs(args) {
       options.repository = args[++i];
     } else if (arg === '--tag' || arg === '-t') {
       options.tags.push(args[++i]);
+    } else if (arg === '--no-simulations') {
+      options.noSimulations = true;
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 sunpeak push - Push resources to the Sunpeak repository
@@ -390,6 +411,7 @@ Usage:
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
   -t, --tag <name>               Tag to assign (can be specified multiple times)
+  --no-simulations               Skip pushing simulations, only push resources
   -h, --help                     Show this help message
 
 Arguments:
@@ -402,6 +424,7 @@ Examples:
   sunpeak push -r myorg/my-app   Push to "myorg/my-app" repository
   sunpeak push -t v1.0.0         Push with a version tag
   sunpeak push -t v1.0.0 -t prod Push with multiple tags
+  sunpeak push --no-simulations  Push resources without simulations
 `);
       process.exit(0);
     } else if (!arg.startsWith('-')) {

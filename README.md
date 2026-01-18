@@ -57,22 +57,23 @@ sunpeak is an npm package that helps you build ChatGPT Apps (MCP Resources) whil
 
 ### The `sunpeak` framework (`./template`)
 
-Next.js for ChatGPT Apps. This templated npm package includes:
+Next.js for ChatGPT Apps. Using a Review page as an example, sunpeak projects look like:
 
 ```bash
 my-app/
-├── src/
-│   └── resources/
-│       └── review/                                # My-app's Review UI.
-│           ├── review-resource.tsx                # Review UI component.
-│           ├── review-resource.json               # Review UI MCP metadata.
-│           └── review-{scenario}-simulation.json  # Mock state for testing.
+├── src/resources/
+│   └── review/
+│       ├── review-resource.tsx                # Review UI component.
+│       ├── review-resource.json               # Review UI MCP metadata.
+│       └── review-{scenario}-simulation.json  # Mock state for testing.
+├── tests/e2e/
+│   └── review.spec.ts                         # End-to-end Review tests.
 └── package.json
 ```
 
 1. Project scaffold: Complete development setup with the sunpeak library.
 2. UI components: Production-ready components following ChatGPT design guidelines and using OpenAI apps-sdk-ui React components.
-3. Convention over configuration: Create UIs (resources) by simply creating a `src/resources/NAME/NAME-resource.tsx` React file and `src/resources/NAME/NAME-resource.json` metadata file.
+3. Convention over configuration: Create UIs (resources) by simply creating a `-resource.tsx` component file and `-resource.json` metadata file.
 
 ### The `sunpeak` CLI (`./bin`)
 

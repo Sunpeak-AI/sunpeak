@@ -58,8 +58,6 @@ You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGP
 
 Once your app is connected, send the name of the app and a tool, like `/sunpeak show review`, to ChatGPT.
 
-When you make changes to the UI, refresh your app in ChatGPT after the dev server has finished rebuilding: `User > Settings > Apps & Connectors > My App > Refresh`
-
 ## Build & Deploy
 
 Build your app for production:

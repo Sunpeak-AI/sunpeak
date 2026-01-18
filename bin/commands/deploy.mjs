@@ -28,6 +28,7 @@ Usage:
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
   -t, --tag <name>               Additional tag(s) to assign (always includes "prod")
+  --no-simulations               Skip pushing simulations, only push resources
   -h, --help                     Show this help message
 
 Arguments:
@@ -40,6 +41,7 @@ Examples:
   sunpeak deploy dist/carousel   Deploy a single resource
   sunpeak deploy -r myorg/my-app Deploy to "myorg/my-app" repository
   sunpeak deploy -t v1.0         Deploy with "prod" and "v1.0" tags
+  sunpeak deploy --no-simulations Deploy without simulations
 
 This command is equivalent to: sunpeak push --tag prod
 `);
@@ -75,7 +77,7 @@ This command is equivalent to: sunpeak push --tag prod
 /**
  * Parse command line arguments
  */
-function parseArgs(args) {
+export function parseArgs(args) {
   const options = { tags: [] };
   let i = 0;
 
@@ -86,6 +88,8 @@ function parseArgs(args) {
       options.repository = args[++i];
     } else if (arg === '--tag' || arg === '-t') {
       options.tags.push(args[++i]);
+    } else if (arg === '--no-simulations') {
+      options.noSimulations = true;
     } else if (arg === '--help' || arg === '-h') {
       console.log(`
 sunpeak deploy - Deploy resources to production (push with "prod" tag)
@@ -96,6 +100,7 @@ Usage:
 Options:
   -r, --repository <owner/repo>  Repository name (defaults to git remote origin)
   -t, --tag <name>               Additional tag(s) to assign (always includes "prod")
+  --no-simulations               Skip pushing simulations, only push resources
   -h, --help                     Show this help message
 
 Arguments:
@@ -108,6 +113,7 @@ Examples:
   sunpeak deploy dist/carousel   Deploy a single resource
   sunpeak deploy -r myorg/my-app Deploy to "myorg/my-app" repository
   sunpeak deploy -t v1.0         Deploy with "prod" and "v1.0" tags
+  sunpeak deploy --no-simulations Deploy without simulations
 
 This command is equivalent to: sunpeak push --tag prod
 `);

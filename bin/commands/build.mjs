@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'fs';
 import path from 'path';
-import { toPascalCase, isSimulationFile } from '../lib/patterns.mjs';
+import { toPascalCase } from '../lib/patterns.mjs';
 
 /**
  * Build all resources for a Sunpeak project
@@ -241,16 +241,6 @@ export async function build(projectRoot = process.cwd()) {
       process.exit(1);
     }
 
-    // Copy affiliated simulation files (matching {resource}-*-simulation.json pattern)
-    const simulationFiles = readdirSync(resourceDir)
-      .filter(file => isSimulationFile(file, kebabName));
-
-    for (const simFile of simulationFiles) {
-      const srcSim = path.join(resourceDir, simFile);
-      const destSim = path.join(distOutDir, simFile);
-      copyFileSync(srcSim, destSim);
-      console.log(`✓ Copied ${kebabName}/${simFile}`);
-    }
   }
 
   // Clean up temp and build directories

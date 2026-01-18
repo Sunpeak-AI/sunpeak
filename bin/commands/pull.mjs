@@ -216,7 +216,7 @@ Examples:
 /**
  * Parse command line arguments
  */
-function parseArgs(args) {
+export function parseArgs(args) {
   const options = {};
   let i = 0;
 

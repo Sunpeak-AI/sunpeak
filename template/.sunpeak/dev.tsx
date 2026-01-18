@@ -4,9 +4,9 @@
  * This file bootstraps the ChatGPT simulator for development
  *
  * Auto-discovers simulations and resources by file naming convention:
- * - resources/{resource}/{resource}-{scenario}-simulation.json (e.g., resources/albums/albums-show-simulation.json)
- * - resources/{resource}/{resource}-resource.json
- * - resources/{resource}/{Resource}Resource component (PascalCase)
+ * - tests/simulations/{resource}/{resource}-{scenario}-simulation.json
+ * - src/resources/{resource}/{resource}-resource.json
+ * - src/resources/{resource}/{Resource}Resource component (PascalCase)
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -16,7 +16,7 @@ import '../src/styles/globals.css';
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
-  simulationModules: import.meta.glob('../src/resources/*/*-simulation.json', { eager: true }),
+  simulationModules: import.meta.glob('../tests/simulations/*/*-simulation.json', { eager: true }),
   resourceModules: import.meta.glob('../src/resources/*/*-resource.json', { eager: true }),
   resourceComponents: resourceComponents as Record<string, React.ComponentType>,
 });

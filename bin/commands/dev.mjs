@@ -154,12 +154,14 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
   // Discover simulations using sunpeak's discovery utilities
   const resourcesDir = join(projectRoot, 'src/resources');
+  const simulationsDir = join(projectRoot, 'tests/simulations');
   const resourceDirs = findResourceDirs(resourcesDir, (key) => `${key}-resource.json`, fs);
 
   const simulations = [];
   for (const { key: resourceKey, dir: resourceDir, resourcePath } of resourceDirs) {
     const resource = JSON.parse(readFileSync(resourcePath, 'utf-8'));
-    const simulationFiles = findSimulationFiles(resourceDir, resourceKey, fs);
+    const resourceSimDir = join(simulationsDir, resourceKey);
+    const simulationFiles = findSimulationFiles(resourceSimDir, resourceKey, fs);
 
     for (const { filename, path: simPath } of simulationFiles) {
       const simulationKey = filename.replace(/-simulation\.json$/, '');

@@ -9,6 +9,7 @@ const importPush = () => import('../../bin/commands/push.mjs');
 const importPull = () => import('../../bin/commands/pull.mjs');
 const importDeploy = () => import('../../bin/commands/deploy.mjs');
 const importUpgrade = () => import('../../bin/commands/upgrade.mjs');
+const importNew = () => import('../../bin/commands/new.mjs');
 
 // Mock console for all tests
 const createMockConsole = () => ({
@@ -20,6 +21,14 @@ const createMockConsole = () => ({
 // Mock process for tests that call process.exit
 const createMockProcess = () => ({
   exit: vi.fn(),
+  cwd: () => '/test/project',
+});
+
+// Mock process that throws on exit (to stop execution in tests)
+const createThrowingMockProcess = () => ({
+  exit: vi.fn().mockImplementation((code: number) => {
+    throw new Error(`process.exit(${code})`);
+  }),
   cwd: () => '/test/project',
 });
 
@@ -429,6 +438,7 @@ describe('CLI Commands', () => {
           existsSync: (path: string) => {
             if (path.includes('dist')) return true;
             if (path.includes('widget')) return true;
+            if (path.includes('tests/simulations')) return true;
             return false;
           },
           readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
@@ -437,9 +447,9 @@ describe('CLI Commands', () => {
                 return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
               }
             }
-            // Return files including simulations
-            if (dirPath.endsWith('/widget')) {
-              return ['widget.js', 'widget.json', 'widget-show-simulation.json'];
+            // Return files in simulations directory
+            if (dirPath.endsWith('tests/simulations/widget')) {
+              return ['widget-show-simulation.json'];
             }
             return [];
           },
@@ -471,6 +481,80 @@ describe('CLI Commands', () => {
       expect(parsed[0].name).toBe('show');
       expect(parsed[0].userMessage).toBe('Test message');
       expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('1 simulation(s)'));
+    });
+
+    it('should skip simulations when --no-simulations is set', async () => {
+      const { push } = await importPush();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      const simulationData = {
+        userMessage: 'Test message',
+        tool: { name: 'test-tool', title: 'Test Tool' },
+        callToolResult: { structuredContent: { data: 'test' } },
+      };
+
+      let capturedFormData: FormData | null = null;
+      const mockFetch = vi
+        .fn()
+        .mockImplementation(async (_url: string, options: { body: FormData }) => {
+          capturedFormData = options.body;
+          return {
+            ok: true,
+            json: async () => ({ id: 'resource-123', tags: [] }),
+          };
+        });
+
+      await push(
+        '/test/project',
+        { repository: 'owner/repo', noSimulations: true },
+        {
+          loadCredentials: () => ({ access_token: 'test-token' }),
+          getGitRepoName: () => 'owner/repo',
+          existsSync: (path: string) => {
+            if (path.includes('dist')) return true;
+            if (path.includes('widget')) return true;
+            if (path.includes('tests/simulations')) return true;
+            return false;
+          },
+          readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
+            if (options?.withFileTypes) {
+              if (dirPath.endsWith('dist')) {
+                return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
+              }
+            }
+            // Return files in simulations directory
+            if (dirPath.endsWith('tests/simulations/widget')) {
+              return ['widget-show-simulation.json'];
+            }
+            return [];
+          },
+          readFileSync: (path: string) => {
+            if (path.endsWith('simulation.json')) {
+              return JSON.stringify(simulationData);
+            }
+            if (path.endsWith('.json')) {
+              return JSON.stringify({
+                uri: 'ui://widget',
+                name: 'widget',
+                title: 'Test Widget',
+              });
+            }
+            return 'console.log("test");';
+          },
+          fetch: mockFetch,
+          console: mockConsole,
+          process: mockProcess,
+          apiUrl: 'https://test.sunpeak.ai',
+        }
+      );
+
+      expect(capturedFormData).not.toBeNull();
+      // Simulations should NOT be included in the form data
+      const simulations = capturedFormData!.get('simulations');
+      expect(simulations).toBeNull();
+      expect(mockConsole.log).toHaveBeenCalledWith('Simulations: skipped');
+      expect(mockConsole.log).not.toHaveBeenCalledWith(expect.stringContaining('simulation(s)'));
     });
 
     it('should show help when requested', async () => {
@@ -723,7 +807,7 @@ describe('CLI Commands', () => {
     it('should return empty array when directory does not exist', async () => {
       const { findResources } = await importPush();
 
-      const result = findResources('/nonexistent', {
+      const result = findResources('/nonexistent', '/test/simulations', {
         existsSync: () => false,
       });
 
@@ -733,7 +817,7 @@ describe('CLI Commands', () => {
     it('should find resources with new folder structure', async () => {
       const { findResources } = await importPush();
 
-      const result = findResources('/test/dist', {
+      const result = findResources('/test/dist', '/test/simulations', {
         existsSync: (path: string) => {
           // New folder structure: dist/widget/widget.js, dist/widget/widget.json
           // Only widget folder has both .js and .json files
@@ -757,10 +841,7 @@ describe('CLI Commands', () => {
               ];
             }
           }
-          // Return files in resource directory (for simulation discovery)
-          if (dirPath.endsWith('/test/dist/widget')) {
-            return ['widget.js', 'widget.json'];
-          }
+          // Return files in simulation directory (for simulation discovery)
           return [];
         },
         readFileSync: () =>
@@ -788,12 +869,14 @@ describe('CLI Commands', () => {
         callToolResult: { structuredContent: {} },
       };
 
-      const result = findResources('/test/dist', {
+      const result = findResources('/test/dist', '/test/simulations', {
         existsSync: (path: string) => {
           if (path.endsWith('/test/dist')) return true;
           if (path.endsWith('/test/dist/widget')) return true;
           if (path.endsWith('/test/dist/widget/widget.js')) return true;
           if (path.endsWith('/test/dist/widget/widget.json')) return true;
+          // Simulations directory
+          if (path.endsWith('/test/simulations/widget')) return true;
           return false;
         },
         readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
@@ -802,14 +885,9 @@ describe('CLI Commands', () => {
               return [{ name: 'widget', isDirectory: () => true, isFile: () => false }];
             }
           }
-          // Return files in resource directory including simulation
-          if (dirPath.endsWith('/test/dist/widget')) {
-            return [
-              'widget.js',
-              'widget.json',
-              'widget-show-simulation.json',
-              'widget-demo-simulation.json',
-            ];
+          // Return files in simulations directory
+          if (dirPath.endsWith('/test/simulations/widget')) {
+            return ['widget-show-simulation.json', 'widget-demo-simulation.json'];
           }
           return [];
         },
@@ -830,6 +908,271 @@ describe('CLI Commands', () => {
       expect(result[0].simulations[0].name).toBe('show');
       expect(result[0].simulations[0].userMessage).toBe('Test message');
       expect(result[0].simulations[1].name).toBe('demo');
+    });
+  });
+
+  describe('new command', () => {
+    it('should error when no resources are discovered', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createThrowingMockProcess();
+
+      await expect(
+        init('my-project', 'carousel', {
+          discoverResources: () => [],
+          console: mockConsole,
+          process: mockProcess,
+        })
+      ).rejects.toThrow('process.exit(1)');
+
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Error: No resources found in template/src/resources/'
+      );
+    });
+
+    it('should error when project name is "template"', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createThrowingMockProcess();
+
+      await expect(
+        init('template', 'carousel', {
+          discoverResources: () => ['carousel', 'review'],
+          console: mockConsole,
+          process: mockProcess,
+        })
+      ).rejects.toThrow('process.exit(1)');
+
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Error: "template" is a reserved name. Please choose another name.'
+      );
+    });
+
+    it('should error when directory already exists', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createThrowingMockProcess();
+
+      await expect(
+        init('my-project', 'carousel', {
+          discoverResources: () => ['carousel', 'review'],
+          existsSync: (path: string) => path.includes('my-project'),
+          cwd: () => '/test',
+          console: mockConsole,
+          process: mockProcess,
+        })
+      ).rejects.toThrow('process.exit(1)');
+
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Error: Directory "my-project" already exists'
+      );
+    });
+
+    it('should prompt for project name if not provided', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createThrowingMockProcess();
+
+      await expect(
+        init(undefined, 'carousel', {
+          discoverResources: () => ['carousel', 'review'],
+          prompt: async () => 'prompted-name',
+          existsSync: (path: string) => path.includes('prompted-name'), // Target dir exists
+          cwd: () => '/test',
+          console: mockConsole,
+          process: mockProcess,
+        })
+      ).rejects.toThrow('process.exit(1)');
+
+      // Should have prompted and then failed on existing directory
+      expect(mockConsole.error).toHaveBeenCalledWith(
+        'Error: Directory "prompted-name" already exists'
+      );
+    });
+
+    it('should default to "my-app" when prompt returns empty', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createThrowingMockProcess();
+
+      await expect(
+        init(undefined, 'carousel', {
+          discoverResources: () => ['carousel', 'review'],
+          prompt: async () => '',
+          existsSync: (path: string) => path.includes('my-app'), // Target dir exists
+          cwd: () => '/test',
+          console: mockConsole,
+          process: mockProcess,
+        })
+      ).rejects.toThrow('process.exit(1)');
+
+      expect(mockConsole.error).toHaveBeenCalledWith('Error: Directory "my-app" already exists');
+    });
+
+    it('should create project with selected resources', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      let cpSyncFilter: ((src: string) => boolean) | null = null;
+      let writtenPkg: { name: string; dependencies?: { sunpeak?: string } } | null = null;
+      const renamedFiles: Array<{ from: string; to: string }> = [];
+
+      await init('my-project', 'carousel', {
+        discoverResources: () => ['carousel', 'review', 'map'],
+        existsSync: (path: string) => {
+          // Target dir doesn't exist, but dotfiles do
+          if (path === '/test/my-project') return false;
+          if (path.includes('_gitignore')) return true;
+          if (path.includes('_prettierignore')) return true;
+          if (path.includes('_prettierrc')) return true;
+          return false;
+        },
+        mkdirSync: vi.fn(),
+        cpSync: (_src: string, _dest: string, options: { filter: (src: string) => boolean }) => {
+          cpSyncFilter = options.filter;
+        },
+        readFileSync: (path: string) => {
+          if (path.includes('package.json') && path.includes('my-project')) {
+            return JSON.stringify({ name: 'template', dependencies: { sunpeak: 'workspace:*' } });
+          }
+          return JSON.stringify({ version: '1.0.0' });
+        },
+        writeFileSync: (_path: string, content: string) => {
+          writtenPkg = JSON.parse(content);
+        },
+        renameSync: (from: string, to: string) => {
+          renamedFiles.push({ from, to });
+        },
+        cwd: () => '/test',
+        templateDir: '/template',
+        rootPkgPath: '/root/package.json',
+        console: mockConsole,
+        process: mockProcess,
+      });
+
+      // Verify filter excludes non-selected resources
+      expect(cpSyncFilter).not.toBeNull();
+      expect(cpSyncFilter!('/template/src/resources/carousel')).toBe(true);
+      expect(cpSyncFilter!('/template/src/resources/review')).toBe(false);
+      expect(cpSyncFilter!('/template/src/resources/map')).toBe(false);
+
+      // Verify filter excludes simulations for non-selected resources
+      expect(cpSyncFilter!('/template/tests/simulations/carousel')).toBe(true);
+      expect(cpSyncFilter!('/template/tests/simulations/review')).toBe(false);
+      expect(cpSyncFilter!('/template/tests/simulations/map')).toBe(false);
+
+      // Verify filter excludes e2e tests for non-selected resources
+      expect(cpSyncFilter!('/template/tests/e2e/carousel.spec.ts')).toBe(true);
+      expect(cpSyncFilter!('/template/tests/e2e/review.spec.ts')).toBe(false);
+      expect(cpSyncFilter!('/template/tests/e2e/map.spec.ts')).toBe(false);
+
+      // Verify filter always excludes node_modules and lock file
+      expect(cpSyncFilter!('/template/node_modules')).toBe(false);
+      expect(cpSyncFilter!('/template/pnpm-lock.yaml')).toBe(false);
+
+      // Verify package.json was updated
+      expect(writtenPkg).not.toBeNull();
+      expect(writtenPkg!.name).toBe('my-project');
+      expect(writtenPkg!.dependencies?.sunpeak).toBe('^1.0.0');
+
+      // Verify dotfiles were renamed
+      expect(renamedFiles).toContainEqual({
+        from: '/test/my-project/_gitignore',
+        to: '/test/my-project/.gitignore',
+      });
+
+      // Verify success message
+      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('Done! To get started'));
+    });
+
+    it('should include all resources when none specified', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      let cpSyncFilter: ((src: string) => boolean) | null = null;
+
+      await init('my-project', '', {
+        discoverResources: () => ['carousel', 'review'],
+        prompt: async () => '', // Empty input means "all resources"
+        existsSync: () => false,
+        mkdirSync: vi.fn(),
+        cpSync: (_src: string, _dest: string, options: { filter: (src: string) => boolean }) => {
+          cpSyncFilter = options.filter;
+        },
+        readFileSync: () => JSON.stringify({ version: '1.0.0', name: 'test' }),
+        writeFileSync: vi.fn(),
+        renameSync: vi.fn(),
+        cwd: () => '/test',
+        templateDir: '/template',
+        rootPkgPath: '/root/package.json',
+        console: mockConsole,
+        process: mockProcess,
+      });
+
+      // All resources should be included
+      expect(cpSyncFilter).not.toBeNull();
+      expect(cpSyncFilter!('/template/src/resources/carousel')).toBe(true);
+      expect(cpSyncFilter!('/template/src/resources/review')).toBe(true);
+    });
+  });
+
+  describe('parseResourcesInput', () => {
+    it('should return all resources when input is empty', async () => {
+      const { parseResourcesInput } = await importNew();
+
+      const result = parseResourcesInput('', ['carousel', 'review', 'map']);
+      expect(result).toEqual(['carousel', 'review', 'map']);
+    });
+
+    it('should parse comma-separated resources', async () => {
+      const { parseResourcesInput } = await importNew();
+
+      const result = parseResourcesInput('carousel,review', ['carousel', 'review', 'map']);
+      expect(result).toEqual(['carousel', 'review']);
+    });
+
+    it('should parse space-separated resources', async () => {
+      const { parseResourcesInput } = await importNew();
+
+      const result = parseResourcesInput('carousel review', ['carousel', 'review', 'map']);
+      expect(result).toEqual(['carousel', 'review']);
+    });
+
+    it('should handle mixed separators', async () => {
+      const { parseResourcesInput } = await importNew();
+
+      const result = parseResourcesInput('carousel, review map', ['carousel', 'review', 'map']);
+      expect(result).toEqual(['carousel', 'review', 'map']);
+    });
+
+    it('should deduplicate resources', async () => {
+      const { parseResourcesInput } = await importNew();
+
+      const result = parseResourcesInput('carousel,carousel,review', ['carousel', 'review', 'map']);
+      expect(result).toEqual(['carousel', 'review']);
+    });
+
+    it('should be case-insensitive', async () => {
+      const { parseResourcesInput } = await importNew();
+
+      const result = parseResourcesInput('CAROUSEL,Review', ['carousel', 'review', 'map']);
+      expect(result).toEqual(['carousel', 'review']);
+    });
+
+    it('should error on invalid resources', async () => {
+      const { parseResourcesInput } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+
+      parseResourcesInput('carousel,invalid', ['carousel', 'review'], {
+        console: mockConsole,
+        process: mockProcess,
+      });
+
+      expect(mockConsole.error).toHaveBeenCalledWith('Error: Invalid resource(s): invalid');
+      expect(mockProcess.exit).toHaveBeenCalledWith(1);
     });
   });
 
