@@ -131,9 +131,9 @@ MCP metadata for your UI. Version your resource metadata alongside the resource 
 
 This is just an official [MCP Resource object](https://modelcontextprotocol.io/specification/2025-11-25/server/resources#resource).
 
-```json
+```jsonc
+// src/resources/review-resource.json
 {
-  // src/resources/review-resource.json
   "name": "review",
   "title": "Review",
   "description": "Visualize and review a proposed set of changes or actions",
@@ -141,9 +141,9 @@ This is just an official [MCP Resource object](https://modelcontextprotocol.io/s
   "_meta": {
     "openai/widgetDomain": "https://sunpeak.ai",
     "openai/widgetCSP": {
-      "resource_domains": ["https://cdn.openai.com"]
-    }
-  }
+      "resource_domains": ["https://cdn.openai.com"],
+    },
+  },
 }
 ```
 
@@ -155,12 +155,12 @@ Simulation files let you define key App states for development, automated testin
 
 Simulation files contain an [official MCP Tool object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool) and an [official MCP CallToolResult object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content). ChatGPT state (like light/dark mode) is not set on the simulation, but rather on the sunpeak `ChatGPTSimulator` itself via UI, props, or URL params.
 
-```json
+```jsonc
+// tests/simulations/review-diff-simulation.json
 {
-  // tests/simulations/review-diff-simulation.json
   "userMessage": "Refactor the authentication module", // Simulator styling.
+  // Official MCP Tool object.
   "tool": {
-    // Official MCP Tool object.
     "name": "diff-review",
     "description": "Show a review dialog for a proposed code diff",
     "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
@@ -170,16 +170,16 @@ Simulation files contain an [official MCP Tool object](https://modelcontextproto
       "openai/toolInvocation/invoking": "Preparing changes",
       "openai/toolInvocation/invoked": "Changes ready for review",
       "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
-    }
+      "openai/resultCanProduceWidget": true,
+    },
   },
+  // Official MCP CallToolResult object.
   "callToolResult": {
-    // Official MCP CallToolResult object.
     "structuredContent": {
       // ...
     },
-    "_meta": {}
-  }
+    "_meta": {},
+  },
 }
 ```
 
