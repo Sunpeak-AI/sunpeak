@@ -32,8 +32,10 @@ jobs:
 
       - name: Run validation
         run: pnpm validate
+        working-directory: packages/sunpeak
         env:
           CI: true
 
       - name: Publish to npm
         run: pnpm publish --access public --no-git-checks --provenance
+        working-directory: packages/sunpeak

@@ -7,7 +7,7 @@ node_modules
 dist
 build
 *.tsbuildinfo
-template/pnpm-lock.yaml
+**/template/pnpm-lock.yaml
 
 # Testing
 coverage

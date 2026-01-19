@@ -1,10 +1,18 @@
-name: CI
+name: sunpeak-ci
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'packages/sunpeak/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
   pull_request:
     branches: [main]
+    paths:
+      - 'packages/sunpeak/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
 
 jobs:
   ci:
@@ -30,6 +38,7 @@ jobs:
 
       - name: Run validation
         run: pnpm validate
+        working-directory: packages/sunpeak
         env:
           CI: true
 
@@ -40,11 +49,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           # Bump patch version
+          cd packages/sunpeak
           NEW_VERSION=$(pnpm version patch --no-git-tag-version | tail -n 1)
           NEW_VERSION=${NEW_VERSION#v}
+          cd ../..
 
           # Commit and tag
-          git add package.json
+          git add packages/sunpeak/package.json
           git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
           git tag v$NEW_VERSION
 

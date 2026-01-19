@@ -19,10 +19,11 @@ const colors = {
   reset: '\x1b[0m',
 };
 
-// Get repo root
+// Get repo root and package root
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const REPO_ROOT = join(__dirname, '..');
+const PACKAGE_ROOT = join(__dirname, '..');
+const REPO_ROOT = join(__dirname, '..', '..', '..');
 
 // Helper functions
 function printSection(text) {
@@ -51,11 +52,12 @@ function runCommand(command, cwd) {
 
 // Main testing flow
 console.log(`${colors.yellow}Starting local testing for Sunpeak...${colors.reset}`);
-console.log(`Repository root: ${REPO_ROOT}\n`);
+console.log(`Repository root: ${REPO_ROOT}`);
+console.log(`Package root: ${PACKAGE_ROOT}\n`);
 
 try {
-  // Root level tests
-  printSection('ROOT LEVEL TESTS');
+  // Package level tests
+  printSection('PACKAGE LEVEL TESTS');
 
   console.log('Running: pnpm install');
   if (!runCommand('pnpm install', REPO_ROOT)) {
@@ -65,32 +67,32 @@ try {
   printSuccess('pnpm install');
 
   console.log('\nRunning: pnpm format');
-  if (!runCommand('pnpm format', REPO_ROOT)) {
+  if (!runCommand('pnpm format', PACKAGE_ROOT)) {
     throw new Error('pnpm format failed');
   }
   printSuccess('pnpm format');
 
   console.log('\nRunning: pnpm lint');
-  if (!runCommand('pnpm lint', REPO_ROOT)) {
+  if (!runCommand('pnpm lint', PACKAGE_ROOT)) {
     throw new Error('pnpm lint failed');
   }
   printSuccess('pnpm lint');
 
   console.log('\nRunning: pnpm build');
-  if (!runCommand('pnpm build', REPO_ROOT)) {
+  if (!runCommand('pnpm build', PACKAGE_ROOT)) {
     throw new Error('pnpm build failed');
   }
   console.log()
   printSuccess('pnpm build');
 
   console.log('\nRunning: pnpm typecheck');
-  if (!runCommand('pnpm typecheck', REPO_ROOT)) {
+  if (!runCommand('pnpm typecheck', PACKAGE_ROOT)) {
     throw new Error('pnpm typecheck failed');
   }
   printSuccess('pnpm typecheck');
 
   console.log('\nRunning: pnpm test');
-  if (!runCommand('pnpm test', REPO_ROOT)) {
+  if (!runCommand('pnpm test', PACKAGE_ROOT)) {
     throw new Error('pnpm test failed');
   }
   printSuccess('pnpm test');
@@ -98,7 +100,7 @@ try {
   // Template level tests
   printSection('TEMPLATE LEVEL TESTS');
 
-  const templateDir = join(REPO_ROOT, 'template');
+  const templateDir = join(PACKAGE_ROOT, 'template');
 
   console.log('Running: pnpm install (template)');
   if (!runCommand('pnpm install', templateDir)) {
@@ -152,7 +154,7 @@ try {
   printSuccess('Created temp directory');
 
   console.log('\nRunning: sunpeak new test-app review');
-  if (!runCommand(`node ${join(REPO_ROOT, 'bin', 'sunpeak.js')} new test-app review`, tmpDir)) {
+  if (!runCommand(`node ${join(PACKAGE_ROOT, 'bin', 'sunpeak.js')} new test-app review`, tmpDir)) {
     throw new Error('sunpeak new failed');
   }
   printSuccess('sunpeak new test-app review');
@@ -160,7 +162,7 @@ try {
   console.log('\nLinking local sunpeak package...');
   const testPkgPath = join(testProjectDir, 'package.json');
   const testPkg = JSON.parse(readFileSync(testPkgPath, 'utf-8'));
-  testPkg.dependencies.sunpeak = `file:${REPO_ROOT}`;
+  testPkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
   writeFileSync(testPkgPath, JSON.stringify(testPkg, null, 2) + '\n');
   printSuccess('Linked local sunpeak package');
 
@@ -179,7 +181,7 @@ try {
   console.log('\nRunning: Playwright test (test-app)');
 
   // Copy staging templates from tests/staging directory
-  const stagingDir = join(REPO_ROOT, 'tests', 'staging');
+  const stagingDir = join(PACKAGE_ROOT, 'tests', 'staging');
   const testFileContent = readFileSync(join(stagingDir, 'staging-validation.spec.ts'), 'utf-8');
   const playwrightConfigContent = readFileSync(join(stagingDir, 'staging-playwright.config.ts'), 'utf-8');
 
