@@ -202,6 +202,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
           return `
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
+import '/src/styles/globals.css';
 import * as ResourceModule from '${srcPath}';
 
 const Component = ResourceModule.default || ResourceModule['${componentName}'];
