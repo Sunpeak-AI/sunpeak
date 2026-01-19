@@ -1,0 +1,134 @@
+---
+title: "Map"
+description: "An interactive map with points of interest, location data, and detailed inspector view."
+---
+
+## Overview
+
+`Map` is a production-ready map resource included in the sunpeak framework. It displays pizza restaurants on an interactive map with list and carousel views, switching between inline and fullscreen display modes for different browsing experiences.
+
+The resource retrieves place data from `useWidgetProps()` and manages selection state with `useWidgetState()`.
+
+## Data Structure
+
+### MapData
+
+The resource expects data in the following format via `useWidgetProps()`:
+
+```tsx
+interface MapData {
+  places: Place[]
+}
+
+interface Place {
+  id: string
+  name: string
+  coords: [number, number]
+  description: string
+  city: string
+  rating: number
+  price: string
+  thumbnail: string
+}
+```
+
+<ResponseField name="places" type="Place[]" required>
+  Array of place objects to display on the map and in lists.
+</ResponseField>
+
+<ResponseField name="places[].id" type="string" required>
+  Unique identifier for the place.
+</ResponseField>
+
+<ResponseField name="places[].name" type="string" required>
+  Restaurant name displayed in cards and on the map.
+</ResponseField>
+
+<ResponseField name="places[].coords" type="[number, number]" required>
+  Geographic coordinates as `[longitude, latitude]` for map positioning.
+</ResponseField>
+
+<ResponseField name="places[].description" type="string" required>
+  Brief description of the restaurant and its offerings.
+</ResponseField>
+
+<ResponseField name="places[].city" type="string" required>
+  Neighborhood or city area where the restaurant is located.
+</ResponseField>
+
+<ResponseField name="places[].rating" type="number" required>
+  Restaurant rating, typically on a scale of 1-5.
+</ResponseField>
+
+<ResponseField name="places[].price" type="string" required>
+  Price range indicator (e.g., "$", "$$", "$$$").
+</ResponseField>
+
+<ResponseField name="places[].thumbnail" type="string" required>
+  URL to the restaurant's thumbnail image.
+</ResponseField>
+
+## Display Modes
+
+The Map resource has two display modes:
+
+### Inline Mode (Default)
+
+Displays a map view with a bottom carousel of place cards. Features include:
+- Interactive map with place markers.
+- Horizontal scrolling carousel at the bottom.
+- Fullscreen button in the top-right corner.
+- Fixed height of 480px.
+
+### Fullscreen Mode
+
+When the user clicks the fullscreen button or selects a place, the resource:
+1. Requests fullscreen mode via `useWidgetAPI()`.
+2. Displays a sidebar list of places (desktop).
+3. Shows a detailed inspector panel when a place is selected.
+4. Includes suggestion chips for filtering (desktop only).
+5. Adjusts height based on available screen space.
+
+## State Management
+
+The resource uses `useWidgetState` to persist the selected place across sessions:
+
+```tsx
+interface MapState {
+  selectedPlaceId?: string | null
+}
+```
+
+When transitioning from inline to fullscreen mode, the selection is cleared to provide a fresh browsing experience.
+
+## Features
+
+### Interactive Map
+
+Displays an interactive map powered by Mapbox with clickable place markers and smooth pan/zoom controls.
+
+### Multiple View Modes
+
+Adapts the interface based on display mode:
+- **Inline**: Bottom carousel for quick browsing
+- **Fullscreen**: Sidebar list with detailed inspector panel
+
+### Place Selection
+
+Clicking a place in the carousel, list, or map updates the selected place and displays detailed information in fullscreen mode.
+
+### Safe Area Support
+
+Respects device safe areas using `useSafeArea()` to ensure proper padding on devices with notches or rounded corners.
+
+### Height Constraints
+
+Uses `useMaxHeight()` to adapt to available screen space and prevent overflow.
+
+## Common Use Cases
+
+- Restaurant finders
+- Location-based service discovery
+- Store locators
+- Venue browsing with geographic context
+- Point-of-interest exploration

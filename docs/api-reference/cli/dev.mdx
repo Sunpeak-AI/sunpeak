@@ -1,0 +1,106 @@
+---
+title: "sunpeak dev"
+description: "Run the ChatGPT simulator and MCP server with HMR."
+---
+
+## Overview
+
+The `sunpeak dev` command starts a local development server with a built-in ChatGPT simulator and MCP server, allowing you to develop and test your MCP Resources both locally and with the real ChatGPT.
+
+```bash
+sunpeak dev
+```
+
+
+## Features
+
+### Hot Module Reload (HMR)
+
+The dev server uses Vite's hot reload technology for instant feedback:
+
+- Component changes reflect immediately without full page refresh
+- State is preserved across updates when possible
+- CSS updates apply instantly
+- **MCP server also supports HMR** - no more cache issues or manual refreshes in ChatGPT
+
+### ChatGPT Simulator
+
+Access the simulator at `http://localhost:6767` to:
+
+- Test your MCP Resources in a ChatGPT-like environment
+- Simulate tool calls and responses
+- Preview your UI components with realistic styling
+- Iterate quickly without needing a tunnel or ChatGPT connection
+
+### MCP Server
+
+The dev server also runs an MCP server on port `6766` for testing with the real ChatGPT:
+
+- Serves your widgets to ChatGPT via MCP
+- Automatically rebuilds when you make changes
+- Uses unique URIs to cache-bust ChatGPT's aggressive caching
+
+### Automatic Discovery
+
+The dev server automatically discovers and loads:
+
+- All resource folders from `src/resources/{name}/`
+- All simulations from `tests/simulations/{name}/` (`{name}-{scenario}-simulation.json`)
+
+No manual configuration or entry point files needed!
+
+## Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--port <number>` | `-p` | Port for the simulator (default: 6767, also respects `PORT` env var) |
+
+## Configuration
+
+### Ports
+
+Default simulator port: `6767`
+Default MCP server port: `6766`
+
+## Usage
+
+```bash
+sunpeak dev
+```
+
+Or with a custom port:
+
+```bash
+sunpeak dev --port 3000
+```
+
+## When to Use
+
+Use `sunpeak dev` for:
+
+- Local component development with the ChatGPT simulator
+- Testing with real ChatGPT via the integrated MCP server
+- Rapid iteration with hot reload in either context
+
+<Warning>
+The dev server is for development only. For production, use `sunpeak build` to create optimized bundles.
+</Warning>
+
+## Connecting to ChatGPT
+
+To test with the real ChatGPT, expose the MCP server with a tunnel:
+
+```bash
+# In another terminal, run a tunnel
+ngrok http 6766
+```
+
+Then connect the tunnel URL at the `/mcp` path (e.g., `https://your-subdomain.ngrok.io/mcp`) from ChatGPT **in developer mode**: `User > Settings > Apps & Connectors > Create`.
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak build" icon="hammer" href="/api-reference/cli/build">
+    Build production bundles
+  </Card>
+</CardGroup>

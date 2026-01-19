@@ -1,0 +1,56 @@
+---
+title: "sunpeak logout"
+description: "Log out from Sunpeak and clear stored credentials."
+---
+
+## Overview
+
+The `sunpeak logout` command logs you out of your Sunpeak account by revoking your access token and removing stored credentials.
+
+```bash
+sunpeak logout
+```
+
+## What Happens
+
+When you run `sunpeak logout`:
+
+1. The access token is revoked on the Sunpeak server
+2. Local credentials are deleted from `~/.sunpeak/credentials.json`
+3. You'll need to run `sunpeak login` again to use authenticated commands
+
+```bash
+$ sunpeak logout
+Logging out...
+✓ Successfully logged out of Sunpeak.
+```
+
+## Not Logged In
+
+If you're not currently logged in:
+
+```bash
+$ sunpeak logout
+Not logged in.
+```
+
+## Usage
+
+```bash
+sunpeak logout
+```
+
+<Note>
+No additional options are required.
+</Note>
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak login" icon="right-to-bracket" href="/api-reference/cli/login">
+    Log in to Sunpeak
+  </Card>
+  <Card horizontal title="sunpeak push" icon="arrow-up-from-bracket" href="/api-reference/cli/push">
+    Push resources to Sunpeak
+  </Card>
+</CardGroup>

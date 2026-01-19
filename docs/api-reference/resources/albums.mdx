@@ -1,0 +1,110 @@
+---
+title: "Albums"
+description: "A photo album viewer with carousel display and fullscreen viewing capability."
+---
+
+## Overview
+
+`Albums` is a production-ready album viewer resource included in the sunpeak framework. It displays photo albums in a carousel layout with the ability to open albums in fullscreen mode for detailed photo browsing. The component automatically switches between inline and fullscreen display modes.
+
+The resource retrieves album data from `useWidgetProps()` and manages selection state with `useWidgetState()`.
+
+## Data Structure
+
+### AlbumsData
+
+The resource expects data in the following format via `useWidgetProps()`:
+
+```tsx
+interface AlbumsData {
+  albums: Album[]
+}
+
+interface Album {
+  id: string
+  title: string
+  cover: string
+  photos: Array<{
+    id: string
+    title: string
+    url: string
+  }>
+}
+```
+
+<ResponseField name="albums" type="Album[]" required>
+  Array of album objects to display.
+</ResponseField>
+
+<ResponseField name="albums[].id" type="string" required>
+  Unique identifier for the album.
+</ResponseField>
+
+<ResponseField name="albums[].title" type="string" required>
+  Album title displayed on the album card.
+</ResponseField>
+
+<ResponseField name="albums[].cover" type="string" required>
+  URL to the album cover image.
+</ResponseField>
+
+<ResponseField name="albums[].photos" type="Photo[]" required>
+  Array of photos in the album.
+</ResponseField>
+
+<ResponseField name="albums[].photos[].id" type="string" required>
+  Unique identifier for the photo.
+</ResponseField>
+
+<ResponseField name="albums[].photos[].title" type="string" required>
+  Photo title or caption.
+</ResponseField>
+
+<ResponseField name="albums[].photos[].url" type="string" required>
+  URL to the full-resolution photo.
+</ResponseField>
+
+## Display Modes
+
+The Albums resource has two display modes:
+
+### Inline Mode (Default)
+
+Displays albums in a horizontal scrolling carousel with album cards showing the cover image and photo count.
+
+### Fullscreen Mode
+
+When a user selects an album, the resource:
+1. Sets the selected album ID in widget state using `useWidgetState()`.
+2. Requests fullscreen mode via `useWidgetAPI()`.
+3. Displays a fullscreen photo viewer with:
+   - Film strip navigation (desktop only).
+   - Large centered photo display.
+   - Automatic selection reset when switching albums.
+
+## State Management
+
+The resource uses `useWidgetState` to persist the selected album across sessions:
+
+```tsx
+interface AlbumsState {
+  selectedAlbumId?: string | null
+}
+```
+
+## Features
+
+### Safe Area Support
+
+Respects device safe areas using `useSafeArea()` to ensure proper padding on devices with notches or rounded corners.
+
+### Height Constraints
+
+Uses `useMaxHeight()` to adapt to available screen space and prevent overflow.
+
+## Common Use Cases
+
+- Photo gallery applications
+- Portfolio viewers
+- Image collection browsing
+- Media library interfaces

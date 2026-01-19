@@ -1,0 +1,54 @@
+---
+title: "useToolResponseMetadata"
+description: "Access metadata from tool responses."
+---
+
+## Overview
+
+The `useToolResponseMetadata` hook provides access to metadata returned from MCP tool responses.
+
+## Import
+
+```tsx
+import { useToolResponseMetadata } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useToolResponseMetadata<T = Record<string, unknown>>(): T | null
+```
+
+## Parameters
+
+<ResponseField name="T" type="type parameter">
+  Optional TypeScript type for the metadata.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="T | null">
+  The tool response metadata object, or `null` if not available.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useToolResponseMetadata } from 'sunpeak';
+
+interface ResponseMetadata {
+  timestamp: string;
+  cached: boolean;
+}
+
+function DataWidget() {
+  const metadata = useToolResponseMetadata<ResponseMetadata>();
+
+  return (
+    <div>
+      {metadata?.cached && <span>Cached result</span>}
+      {metadata?.timestamp && <time>{metadata.timestamp}</time>}
+    </div>
+  );
+}
+```

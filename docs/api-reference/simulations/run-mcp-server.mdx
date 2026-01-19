@@ -1,0 +1,153 @@
+---
+title: "runMCPServer"
+description: "Serve your widgets to ChatGPT via the Model Context Protocol."
+---
+
+## Overview
+
+The `runMCPServer` function creates an MCP server that serves your built widgets to ChatGPT. It's designed for local development and testing against the real ChatGPT platform.
+
+<Warning>
+This server is for **local development only**. For production, create your own MCP server that returns your published widget URL as a resource. See the [Deployment Guide](/guides/deployment).
+</Warning>
+
+## Quick Start
+
+<Tabs>
+  <Tab title="Framework">
+    The sunpeak framework handles MCP server configuration automatically:
+
+    ```bash
+    sunpeak dev
+    ```
+
+    This starts the ChatGPT simulator and an MCP server with Hot Module Reload.
+    The MCP server discovers simulations from `tests/simulations/{name}/` and serves the widgets with automatic rebuilding.
+  </Tab>
+  <Tab title="Library">
+    For custom setups, configure the MCP server manually:
+
+    ```typescript
+    import { runMCPServer } from 'sunpeak/mcp';
+    import path from 'path';
+    import { fileURLToPath } from 'url';
+    import exampleResource from '../src/resources/example/example-resource.json';
+    import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
+
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    const simulations = [{
+      ...exampleSimulation,
+      resource: exampleResource,
+      distPath: path.resolve(__dirname, '../dist/example/example.js'),
+    }];
+
+    runMCPServer({
+      name: 'My App',
+      version: '0.1.0',
+      simulations,
+      port: 6766,
+    });
+    ```
+  </Tab>
+</Tabs>
+
+## Connecting to ChatGPT
+
+Once your MCP server is running:
+
+<Steps>
+  <Step title="Run a tunnel">
+    Expose your local server with a tunnel:
+
+    ```bash
+    ngrok http 6766
+    ```
+
+    Copy the forwarding URL (e.g., `https://abc123.ngrok.io`).
+  </Step>
+
+  <Step title="Connect to ChatGPT">
+    Open ChatGPT **in developer mode** and connect your app:
+
+    1. Go to `User > Settings > Apps & Connectors > Create`.
+    2. Enter your tunnel URL with the `/mcp` path: `https://abc123.ngrok.io/mcp`.
+    3. Complete the connection flow.
+  </Step>
+
+  <Step title="Test your widget">
+    Send a message that triggers your tool (e.g., "show albums") to see your widget in ChatGPT.
+
+    <Warning>
+      ChatGPT caches UIs aggressively. The sunpeak MCP server serves resources at unique URIs to cache-bust, but you need to manually **Refresh** your app from the settings modal after changes.
+    </Warning>
+  </Step>
+</Steps>
+
+## Configuration Options
+
+### MCPServerConfig
+
+<ResponseField name="name" type="string" default="sunpeak-app">
+  MCP server name displayed in ChatGPT.
+</ResponseField>
+
+<ResponseField name="version" type="string" default="0.1.0">
+  MCP server version.
+</ResponseField>
+
+<ResponseField name="port" type="number" default="6766">
+  Server port. Can also be set via the `PORT` environment variable.
+</ResponseField>
+
+<ResponseField name="simulations" type="SimulationWithDist[]" required>
+  Array of simulations with built widget paths. Each simulation must include:
+
+  - `distPath` (string, required) - Path to the built widget JavaScript file
+  - `tool` (Tool, required) - MCP Tool definition
+  - `resource` (Resource, required) - MCP Resource definition
+  - `callToolResult` (CallToolResult, optional) - Mock response data
+
+  See [Simulation](/api-reference/simulations/simulation) for the full interface.
+</ResponseField>
+
+## Server Endpoints
+
+The MCP server exposes:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/mcp` | GET | SSE stream for MCP communication |
+| `/mcp/messages` | POST | Message endpoint for client requests |
+
+## How It Works
+
+The server creates MCP Tools and Resources from your simulations:
+
+1. **Tools** - One per simulation, using the `tool` definition. When called, returns `callToolResult.structuredContent`.
+2. **Resources** - One per simulation, containing the built widget HTML/JavaScript from `distPath`.
+
+Your widget accesses the mock data via runtime hooks:
+
+```typescript
+import { useWidgetProps, useToolResponseMetadata } from 'sunpeak';
+
+function MyWidget() {
+  // Data from callToolResult.structuredContent
+  const props = useWidgetProps<{ items: string[] }>();
+
+  // Metadata from callToolResult._meta
+  const meta = useToolResponseMetadata();
+
+  return <div>{props.items.map(item => <p key={item}>{item}</p>)}</div>;
+}
+```
+
+## See Also
+
+<Card horizontal title="MCP Server Guide" icon="server" href="/library/mcp-server">
+  Step-by-step guide for connecting to ChatGPT.
+</Card>
+<Card horizontal title="Simulation" icon="code" href="/api-reference/simulations/simulation">
+  Complete simulation interface documentation.
+</Card>

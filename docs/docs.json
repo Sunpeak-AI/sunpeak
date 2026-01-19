@@ -1,0 +1,167 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "maple",
+  "name": "sunpeak",
+  "colors": {
+    "primary": "#1A1F36",
+    "light": "#FFB800",
+    "dark": "#1A1F36"
+  },
+  "favicon": "/favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "index",
+              "quickstart",
+              "add-to-existing-project"
+            ]
+          },
+          {
+            "group": "sunpeak Library",
+            "pages": [
+              "library/runtime-apis",
+              "library/chatgpt-simulator",
+              "library/mcp-server"
+            ]
+          },
+          {
+            "group": "sunpeak Framework",
+            "pages": [
+              "template/project-scaffold",
+              "template/ui-components"
+            ]
+          },
+          {
+            "group": "sunpeak CLI",
+            "pages": [
+              "cli/cli-overview",
+              "cli/lifecycle"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/testing",
+              "guides/deployment"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "links"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "CLI",
+            "pages": [
+              "api-reference/cli/new",
+              "api-reference/cli/dev",
+              "api-reference/cli/build",
+              "api-reference/cli/login",
+              "api-reference/cli/logout",
+              "api-reference/cli/push",
+              "api-reference/cli/pull",
+              "api-reference/cli/deploy",
+              "api-reference/cli/upgrade"
+            ]
+          },
+          {
+            "group": "Simulations",
+            "pages": [
+              "api-reference/simulations/simulation",
+              "api-reference/simulations/chatgpt-simulator",
+              "api-reference/simulations/run-mcp-server"
+            ]
+          },
+          {
+            "group": "Resource Library",
+            "pages": [
+              "api-reference/resources/albums",
+              "api-reference/resources/carousel",
+              "api-reference/resources/map",
+              "api-reference/resources/review"
+            ]
+          },
+          {
+            "group": "Hooks",
+            "pages": [
+              "api-reference/hooks/use-display-mode",
+              "api-reference/hooks/use-is-mobile",
+              "api-reference/hooks/use-locale",
+              "api-reference/hooks/use-max-height",
+              "api-reference/hooks/use-safe-area",
+              "api-reference/hooks/use-theme",
+              "api-reference/hooks/use-tool-input",
+              "api-reference/hooks/use-tool-response-metadata",
+              "api-reference/hooks/use-user-agent",
+              "api-reference/hooks/use-view",
+              "api-reference/hooks/use-widget-api",
+              "api-reference/hooks/use-widget-global",
+              "api-reference/hooks/use-widget-props",
+              "api-reference/hooks/use-widget-state"
+            ]
+          }
+        ]
+      }
+    ],
+    "global": {
+      "anchors": [
+        {
+          "anchor": "GitHub",
+          "href": "https://github.com/Sunpeak-AI/sunpeak",
+          "icon": "github"
+        },
+        {
+          "anchor": "npm",
+          "href": "https://www.npmjs.com/package/sunpeak",
+          "icon": "box"
+        },
+        {
+          "anchor": "sunpeak.ai",
+          "href": "https://sunpeak.ai",
+          "icon": "globe"
+        }
+      ]
+    }
+  },
+  "logo": {
+    "light": "/logo/light.svg",
+    "dark": "/logo/dark.svg"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Source",
+        "href": "https://github.com/Sunpeak-AI/sunpeak-docs"
+      }
+    ]
+  },
+  "contextual": {
+    "options": [
+     "copy",
+     "view",
+     "chatgpt",
+     "claude",
+     "perplexity",
+     "mcp",
+     "cursor",
+     "vscode"
+   ]
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/Sunpeak-AI/sunpeak",
+      "website": "https://sunpeak.ai"
+    }
+  }
+}

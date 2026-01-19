@@ -1,0 +1,104 @@
+---
+title: "Carousel"
+description: "A horizontal scrolling carousel for displaying multiple cards with navigation arrows and smooth transitions."
+---
+
+## Overview
+
+`Carousel` is a production-ready carousel resource included in the sunpeak framework. It displays places or items in a horizontal scrolling carousel with card components, featuring navigation arrows, edge gradients, and interactive buttons.
+
+The resource retrieves place data from `useWidgetProps()` and adapts button sizes based on device capabilities.
+
+## Data Structure
+
+### CarouselData
+
+The resource expects data in the following format via `useWidgetProps()`:
+
+```tsx
+interface CarouselData {
+  places: CarouselCard[]
+}
+
+interface CarouselCard {
+  id: string
+  name: string
+  rating: number
+  category: string
+  location: string
+  image: string
+  description: string
+}
+```
+
+<ResponseField name="places" type="CarouselCard[]" required>
+  Array of place objects to display in the carousel.
+</ResponseField>
+
+<ResponseField name="places[].id" type="string" required>
+  Unique identifier for the place.
+</ResponseField>
+
+<ResponseField name="places[].name" type="string" required>
+  Place name displayed in the card header.
+</ResponseField>
+
+<ResponseField name="places[].rating" type="number" required>
+  Rating value displayed in the metadata.
+</ResponseField>
+
+<ResponseField name="places[].category" type="string" required>
+  Category type displayed in the metadata.
+</ResponseField>
+
+<ResponseField name="places[].location" type="string" required>
+  Location displayed in the metadata.
+</ResponseField>
+
+<ResponseField name="places[].image" type="string" required>
+  URL to the place image.
+</ResponseField>
+
+<ResponseField name="places[].description" type="string" required>
+  Description text displayed in the card body.
+</ResponseField>
+
+## Features
+
+### Carousel Navigation
+
+Displays cards in a horizontal scrolling carousel with:
+- Navigation arrows for browsing
+- Edge gradients to indicate more content
+- Smooth scroll transitions
+- Configurable card width (220px default)
+- 16px gap between cards
+
+### Interactive Cards
+
+Each card includes:
+- Image display with alt text
+- Header with place name
+- Metadata showing rating, category, and location
+- Description text
+- Two action buttons (Visit and Learn More)
+
+### Responsive Button Sizing
+
+The resource detects touch capabilities using `useUserAgent()` and automatically adjusts button sizes for easier interaction on touch devices.
+
+### Safe Area Support
+
+Respects device safe areas using `useSafeArea()` to ensure proper padding on devices with notches or rounded corners.
+
+### Height Constraints
+
+Uses `useMaxHeight()` to adapt to available screen space and prevent overflow.
+
+## Common Use Cases
+
+- Product galleries
+- Place recommendations
+- Restaurant or venue listings
+- Travel destination browsing
+- Service provider showcases

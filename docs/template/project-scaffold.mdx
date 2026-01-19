@@ -1,0 +1,69 @@
+---
+title: "Project Scaffold"
+description: "Understanding your sunpeak project structure."
+---
+
+import ProjectStructure from '/snippets/project-structure.mdx';
+import Examples from '/snippets/examples.mdx';
+
+## Overview
+
+When you create a new project with `sunpeak new`, the sunpeak framework gives you a minimal, convention-based project structure with everything needed for ChatGPT widget development.
+
+<ProjectStructure />
+
+## Key Files & Directories
+
+- `src/resources/` - Directory containing all your MCP Resources (ChatGPT App UIs).
+    - Each resource lives in its own folder: `src/resources/{name}/`
+    - Each folder contains:
+        - `{name}-resource.tsx` - The React component (built to `dist/{name}/{name}.js`)
+        - `{name}-resource.json` - Metadata (name, title, description, etc.)
+        - `components/` - Optional subfolder for resource-specific components
+- `tests/simulations/` - Directory containing simulation files for local development and testing.
+    - Each resource's simulations live in their own folder: `tests/simulations/{name}/`
+    - Simulation files follow the naming convention: `{name}-{scenario}-simulation.json`
+- `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource.
+    Uses the ChatGPTSimulator to test your resources render properly with any state (tool calls, saved state, dark mode, pip display mode, etc.).
+
+<Note>
+No entry point files needed! The framework automatically discovers your simulations and resources using conventions.
+</Note>
+
+<Examples />
+
+## Included Tooling
+
+The template includes minimal, essential tooling:
+
+### Vite
+
+Fast build tool with hot-reload (HMR) for instant development feedback. The framework owns the dev server configuration - just run `sunpeak dev`.
+
+### Tailwind CSS 4
+
+Utility-first CSS framework for rapid UI development. Pre-configured via Vite plugin.
+Required for [@openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui), which is also configured out-of-the-box.
+
+### TypeScript
+
+Type safety with TypeScript 5. Configured via `tsconfig.json`.
+
+### Vitest (Unit Tests)
+
+Vite-native testing framework for component testing. Run with `pnpm test`.
+
+### Playwright (E2E Tests)
+
+End-to-end testing against the ChatGPT Simulator. Tests live in `tests/e2e/`. Run with `pnpm test:e2e`.
+
+### Add Your Own Tooling
+
+The template is intentionally minimal. Add your preferred tools as needed:
+- **Linting**: ESLint
+- **Formatting**: Prettier
+- **Type checking**: Run `tsc --noEmit` as a script
+
+<Card horizontal title="sunpeak CLI API Reference" icon="code" href="/api-reference/cli/new">
+  All sunpeak CLI commands and configurations.
+</Card>

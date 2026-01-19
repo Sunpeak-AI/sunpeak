@@ -1,0 +1,184 @@
+---
+title: "ChatGPTSimulator"
+description: "API reference for the ChatGPTSimulator component."
+---
+
+import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
+
+## Overview
+
+The `ChatGPTSimulator` component provides a local development environment that replicates ChatGPT's widget runtime.
+
+## Import
+
+```tsx
+import 'sunpeak/style.css'; // Required to style the simulator.
+import { ChatGPTSimulator } from 'sunpeak';
+```
+
+## Basic Usage
+
+<ChatGPTSimulator />
+
+## Props
+
+<ResponseField name="simulations" type="Record<string, Simulation>">
+  Object mapping simulation names to their definitions. See
+  [Simulation API Reference](/api-reference/simulations/simulation) for details.
+</ResponseField>
+
+<ResponseField name="appName" type="string" default="Sunpeak App">
+  Name of the app displayed in the simulator UI.
+</ResponseField>
+
+<ResponseField name="appIcon" type="string">
+  Optional icon (emoji) displayed in the simulator UI.
+</ResponseField>
+
+<ResponseField name="children" type="React.ReactNode">
+  Optional children to render when no simulations are selected.
+</ResponseField>
+
+## URL Parameters
+
+The ChatGPT Simulator supports URL parameters for configuring the initial state. This is especially useful for automated testing and sharing specific configurations.
+
+### Supported Parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `simulation` | `string` | First simulation | Simulation name to load |
+| `theme` | `'light' \| 'dark'` | `'dark'` | Color theme |
+| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | `'inline'` | Widget display mode |
+| `locale` | `string` | `'en-US'` | Locale for i18n |
+| `maxHeight` | `number` | `600` | Max height in PiP mode |
+| `deviceType` | `'mobile' \| 'tablet' \| 'desktop' \| 'unknown'` | `'desktop'` | Device type |
+| `hover` | `'true' \| 'false'` | `'true'` | Hover capability |
+| `touch` | `'true' \| 'false'` | `'false'` | Touch capability |
+| `safeAreaTop` | `number` | `0` | Top safe area inset |
+| `safeAreaBottom` | `number` | `0` | Bottom safe area inset |
+| `safeAreaLeft` | `number` | `0` | Left safe area inset |
+| `safeAreaRight` | `number` | `0` | Right safe area inset |
+| `viewMode` | `'modal' \| 'default'` | - | View mode |
+
+### Example URLs
+
+```
+# Load albums simulation in light mode
+http://localhost:5173/?simulation=albums-show&theme=light
+
+# Fullscreen dark mode
+http://localhost:5173/?simulation=review-diff&theme=dark&displayMode=fullscreen
+
+# Mobile simulation with touch
+http://localhost:5173/?simulation=map-show&deviceType=mobile&touch=true&hover=false
+```
+
+## createSimulatorUrl
+
+For type-safe URL generation in tests, use the `createSimulatorUrl` utility from `sunpeak/chatgpt`:
+
+### Import
+
+```typescript
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
+```
+
+### Usage
+
+```typescript
+// Basic usage
+createSimulatorUrl({ simulation: 'albums-show', theme: 'light' })
+// Returns: '/?simulation=albums-show&theme=light'
+
+// With display mode
+createSimulatorUrl({
+  simulation: 'review-diff',
+  theme: 'dark',
+  displayMode: 'fullscreen',
+})
+// Returns: '/?simulation=review-diff&theme=dark&displayMode=fullscreen'
+
+// With device simulation
+createSimulatorUrl({
+  simulation: 'map-show',
+  deviceType: 'mobile',
+  touch: true,
+  hover: false,
+})
+// Returns: '/?simulation=map-show&deviceType=mobile&touch=true&hover=false'
+
+// With safe area insets (for notch simulation)
+createSimulatorUrl({
+  simulation: 'carousel-show',
+  safeAreaTop: 44,
+  safeAreaBottom: 34,
+})
+// Returns: '/?simulation=carousel-show&safeAreaTop=44&safeAreaBottom=34'
+```
+
+### SimulatorUrlParams Interface
+
+```typescript
+interface SimulatorUrlParams {
+  simulation?: string;
+  theme?: 'light' | 'dark';
+  displayMode?: 'inline' | 'pip' | 'fullscreen';
+  locale?: string;
+  maxHeight?: number;
+  deviceType?: 'mobile' | 'tablet' | 'desktop' | 'unknown';
+  hover?: boolean;
+  touch?: boolean;
+  safeAreaTop?: number;
+  safeAreaBottom?: number;
+  safeAreaLeft?: number;
+  safeAreaRight?: number;
+  viewMode?: 'modal' | 'default';
+}
+```
+
+### E2E Testing Example
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
+
+test.describe('Albums Resource', () => {
+  test('should render in light mode', async ({ page }) => {
+    await page.goto(createSimulatorUrl({
+      simulation: 'albums-show',
+      theme: 'light',
+    }));
+
+    const albumCard = page.locator('button:has-text("Summer Slice")');
+    await expect(albumCard).toBeVisible();
+  });
+
+  test('should render in fullscreen dark mode', async ({ page }) => {
+    await page.goto(createSimulatorUrl({
+      simulation: 'albums-show',
+      theme: 'dark',
+      displayMode: 'fullscreen',
+    }));
+
+    // Verify fullscreen behavior
+    const expandButton = page.locator('button[aria-label="Enter fullscreen"]');
+    await expect(expandButton).not.toBeVisible();
+  });
+});
+```
+
+## Sidebar Controls
+
+The simulator sidebar provides interactive controls for:
+
+- **Simulation**: Select which simulation to display
+- **Simulation Width**: Toggle between mobile (375px, 425px), tablet (768px), and full width (1024px)
+- **Theme**: Toggle between light and dark themes
+- **Display Mode**: Switch between inline, PiP, and fullscreen modes
+- **Locale**: Set the locale string
+- **Max Height**: Configure PiP mode height
+- **User Agent**: Configure device type and capabilities (hover, touch)
+- **Safe Area Insets**: Configure safe area insets for notch simulation
+- **View Mode**: Toggle between default and modal views
+- **JSON Editors**: Edit tool input, output, metadata, and widget state directly

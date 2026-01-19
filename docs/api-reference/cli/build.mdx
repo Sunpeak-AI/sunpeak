@@ -1,0 +1,110 @@
+---
+title: "sunpeak build"
+description: "Build optimized production bundles for deployment."
+---
+
+## Overview
+
+The `sunpeak build` command creates optimized, production-ready JavaScript bundles for your MCP Resources. Each Resource file is built as a separate, standalone bundle.
+
+```bash
+sunpeak build
+```
+
+
+## Output
+
+The build process creates:
+
+- **Minified JavaScript** - Optimized and compressed for minimal file size
+- **CSS extraction** - Unused Tailwind styles removed automatically
+- **Asset optimization** - Static assets with hashed filenames for caching
+- **Source maps** - For debugging production issues
+
+### Output Directory
+
+```
+dist/
+├── search/
+│   ├── search.js                        # Built resource bundle
+│   └── search.json                      # Resource metadata with generated URI
+├── calendar/
+│   ├── calendar.js
+│   └── calendar.json
+```
+
+Each resource folder from `src/resources/{name}/` is built to `dist/{name}/`, containing the JS bundle and metadata. Simulation files are not included in the build output.
+
+## Automatic Discovery
+
+The build automatically discovers and builds all resource folders:
+
+```
+src/resources/{name}/{name}-resource.tsx
+```
+
+For example:
+- `src/resources/search/` → `dist/search/search.js` + `dist/search/search.json`
+- `src/resources/calendar/` → `dist/calendar/calendar.js` + `dist/calendar/calendar.json`
+
+### Metadata JSON Files
+
+The build copies each source `*-resource.json` file to the dist directory and adds a generated `uri` field:
+
+```json
+{
+  "name": "search",
+  "title": "Search Widget",
+  "description": "A search interface",
+  "mimeType": "text/html+skybridge",
+  "uri": "ui://search-mjdoy6rs",
+  "_meta": { ... }
+}
+```
+
+The `uri` is generated using the resource name and a build timestamp for cache invalidation.
+
+<Note>
+No entry point configuration needed! The framework handles discovery automatically.
+</Note>
+
+## Build Optimizations
+
+### Tree Shaking
+
+Unused code is automatically removed from the bundle:
+
+```tsx
+// Only the imported components are included in the bundle
+import { Card, Button } from 'sunpeak';
+```
+
+### Code Splitting
+
+Each Resource is built as a separate bundle:
+
+- Reduces initial load time
+- Allows independent updates
+- Improves caching
+
+### CSS Purging
+
+Tailwind CSS automatically removes unused utility classes:
+
+- Only classes actually used in your components are included
+- Significantly reduces CSS file size
+- No manual configuration required
+
+## Usage
+
+```bash
+sunpeak build
+```
+
+## Deployment
+
+After building, deploy the `dist/` directory to any static hosting service:
+
+<Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
+  Learn how to deploy your built widgets to production.
+</Card>

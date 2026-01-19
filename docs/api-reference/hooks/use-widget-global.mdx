@@ -1,0 +1,55 @@
+---
+title: "useWidgetGlobal"
+description: "Low-level hook to access widget runtime globals."
+---
+
+## Overview
+
+The `useWidgetGlobal` hook provides access to individual global properties from the widget runtime. This is a low-level hook that other convenience hooks are built upon.
+
+## Import
+
+```tsx
+import { useWidgetGlobal } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useWidgetGlobal<K extends keyof WidgetGlobals>(
+  key: K
+): WidgetGlobals[K] | null
+```
+
+## Parameters
+
+<ResponseField name="key" type="string" required>
+  The global property key to read (e.g., `'theme'`, `'locale'`, `'maxHeight'`).
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="WidgetGlobals[K] | null">
+  The current value of the global property, or `null` if not available. Automatically updates when the value changes.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useWidgetGlobal } from 'sunpeak';
+
+function MyWidget() {
+  const theme = useWidgetGlobal('theme');
+  const locale = useWidgetGlobal('locale');
+
+  return (
+    <div>
+      Theme: {theme}, Locale: {locale}
+    </div>
+  );
+}
+```
+
+<Info>
+Most developers should use the convenience hooks like `useTheme()`, `useLocale()`, etc. instead of calling `useWidgetGlobal()` directly.
+</Info>

@@ -1,0 +1,83 @@
+---
+title: "sunpeak login"
+description: "Authenticate with Sunpeak to push and pull resources."
+---
+
+## Overview
+
+The `sunpeak login` command authenticates you with your Sunpeak account using a secure browser-based flow. This is required before using `sunpeak push`, `sunpeak pull`, or `sunpeak deploy`.
+
+```bash
+sunpeak login
+```
+
+## How It Works
+
+The login command uses the OAuth 2.0 Device Authorization flow:
+
+1. Opens your browser to the Sunpeak authentication page
+2. Displays a code if the browser doesn't open automatically
+3. Waits for you to complete authentication in the browser
+4. Securely stores your credentials locally
+
+```bash
+$ sunpeak login
+Starting device authorization flow...
+
+Opening browser for authentication...
+
+If the browser didn't open, visit: https://app.sunpeak.ai/oauth/device
+And enter code: ABCD-1234
+
+Waiting for authorization...
+
+✓ Successfully logged in to Sunpeak!
+```
+
+## Credential Storage
+
+Credentials are stored securely in your home directory:
+
+```
+~/.sunpeak/credentials.json
+```
+
+The file is created with restricted permissions (readable only by you).
+
+## Session Management
+
+- Credentials persist between terminal sessions
+- Run `sunpeak logout` to clear stored credentials
+- If already logged in, the command will notify you
+
+```bash
+$ sunpeak login
+Already logged in. Run "sunpeak logout" first to switch accounts.
+```
+
+## Usage
+
+```bash
+sunpeak login
+```
+
+<Note>
+No additional options are required. The command handles the entire authentication flow automatically.
+</Note>
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak logout" icon="right-from-bracket" href="/api-reference/cli/logout">
+    Log out from Sunpeak
+  </Card>
+  <Card horizontal title="sunpeak push" icon="arrow-up-from-bracket" href="/api-reference/cli/push">
+    Push resources to Sunpeak
+  </Card>
+  <Card horizontal title="sunpeak pull" icon="arrow-down-to-bracket" href="/api-reference/cli/pull">
+    Pull resources from Sunpeak
+  </Card>
+  <Card horizontal title="sunpeak deploy" icon="rocket" href="/api-reference/cli/deploy">
+    Deploy to production
+  </Card>
+</CardGroup>

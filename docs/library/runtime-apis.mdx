@@ -1,0 +1,81 @@
+---
+title: "Runtime APIs"
+description: "Strongly typed, multi-platform APIs."
+---
+
+## Overview
+
+sunpeak provides a multi-platform runtime abstraction layer that helps you build
+components once and deploy them across different AI chat platforms like
+ChatGPT, Gemini, and Claude.
+
+## Why Multi-Platform?
+
+<Card horizontal title="Write Once, Deploy Everywhere" icon="recycle">
+  Build your component logic once, run it on multiple platforms without rewriting.
+</Card>
+
+<Card horizontal title="Consistent Developer Experience" icon="code">
+  Same React hooks and patterns across all platforms.
+</Card>
+
+<Card horizontal title="Future-Proof" icon="shield">
+  Automatically support new platforms as they emerge.
+</Card>
+
+<Card horizontal title="Easy Migration" icon="arrow-right-arrow-left">
+  Switch platforms without major code changes.
+</Card>
+
+## React Hooks
+
+sunpeak provides access to the entire platform runtime API via platform-agnostic React hooks.
+
+Here is an example component using some of these hooks:
+
+```tsx
+import { useTheme, useDisplayMode, useWidgetState } from 'sunpeak';
+
+function MyComponentResource() {
+  const theme = useTheme();                    // 'light' | 'dark'
+  const displayMode = useDisplayMode();        // 'mobile' | 'tablet' | 'desktop'
+  const [data, setData] = useWidgetState('key', defaultValue);
+
+  return <div className={displayMode === 'mobile' ? 'w-full' : 'w-1/2'}>...</div>;
+}
+```
+
+### Widget API
+
+One of these hooks, the `useWidgetAPI`, provides methods for interacting with the
+platform runtime, including calling MCP tools, sending messages,
+and controlling the platform display.
+
+```tsx
+import { useWidgetAPI } from 'sunpeak';
+
+function MyComponentResource() {
+  const api = useWidgetAPI();
+
+  const handleAction = async () => {
+    if (api) {
+      // Call an MCP tool.
+      const result = await api.callTool('my-tool', { arg: 'value' });
+
+      // Send a follow-up message.
+      await api.sendFollowUpMessage({ prompt: 'Continue the conversation' });
+
+      // Open an external URL.
+      await api.openExternal({ href: 'https://sunpeak.ai' });
+    }
+  };
+
+  return <button onClick={handleAction}>Interact with Platform</button>;
+}
+```
+
+## Dive Deeper
+
+<Card horizontal title="Runtime API Reference" icon="code" href="/api-reference/hooks/use-display-mode">
+  All hooks provided by sunpeak.
+</Card>

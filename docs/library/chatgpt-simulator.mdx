@@ -1,0 +1,152 @@
+---
+title: "ChatGPT Simulator"
+description: "React component replicating ChatGPT's runtime."
+---
+
+import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
+
+<img
+  src="https://d10djik02wlf6x.cloudfront.net/chatgpt-simulator.png"
+  alt="ChatGPT Simulator"
+/>
+
+## Overview
+
+The ChatGPT Simulator is a local development environment that replicates ChatGPT's widget runtime.
+
+## Why Use the Simulator?
+
+<Card horizontal title="Instant Feedback" icon="rotate">
+  See changes immediately with hot module replacement. No more constantly reloading ChatGPT.
+</Card>
+<Card horizontal title="Visualize Design Variations" icon="palette">
+  Toggle between light/dark themes, mobile/tablet/desktop views, and other platform states.
+</Card>
+<Card horizontal title="Testing" icon="flask">
+  Perform manual and automated tests locally. Create CI/CD integration and regression tests.
+</Card>
+<Card horizontal title="No Deployment Needed" icon="desktop">
+  Develop locally without setting up MCP servers.
+</Card>
+
+## Quick Start
+
+If you set up your project via the sunpeak framework, the simulator is already set up!
+Simply run it with:
+
+```bash
+sunpeak dev
+```
+
+<Note>
+To configure the simulator manually, see [Add to Existing Project](/add-to-existing-project).
+</Note>
+
+## Simulations
+
+Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state.
+
+<Tip>
+Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
+</Tip>
+
+<Tabs>
+  <Tab title="Framework (JSON)">
+    In the sunpeak framework, simulations are **JSON files** that live in `tests/simulations/`.
+
+    Simulations live in `tests/simulations/{name}/`:
+
+    ```json
+    // tests/simulations/example/example-show-simulation.json
+    {
+      "userMessage": "Show me an example",
+      "tool": {
+        "name": "show-example",
+        "description": "Show an example simulation",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+        "title": "Show Example",
+        "annotations": { "readOnlyHint": true },
+        "_meta": {
+          "openai/toolInvocation/invoking": "Loading example",
+          "openai/toolInvocation/invoked": "Example loaded",
+          "openai/widgetAccessible": true,
+          "openai/resultCanProduceWidget": true
+        }
+      },
+      "callToolResult": {
+        "structuredContent": null,
+        "_meta": {}
+      }
+    }
+    ```
+
+    The resource component (`src/resources/example/example-resource.tsx`) and metadata (`src/resources/example/example-resource.json`) are automatically linked based on matching folder names.
+
+    <Note>
+    For library users not using the framework, see the [Simulation API Reference](/api-reference/simulations/simulation) for creating simulations programmatically in TypeScript.
+    </Note>
+
+    See [Framework Simulations](/api-reference/simulations/simulation) for the complete JSON schema and conventions.
+  </Tab>
+  <Tab title="Library (TypeScript)">
+    When using the library directly, create simulations as TypeScript objects:
+
+    ```typescript
+    import type { Simulation } from 'sunpeak';
+    import { AlbumsResource } from './resources/albums';
+
+    const simulations: Record<string, Simulation> = {
+      'albums-show': {
+        name: 'albums-show',
+        resourceComponent: AlbumsResource,
+        tool: { name: 'show-albums', description: '...', inputSchema: {} },
+        resource: { name: 'albums', uri: 'resource://albums', mimeType: 'text/html+skybridge' },
+        callToolResult: { structuredContent: { albums: [] } },
+      },
+    };
+    ```
+
+    See [Simulation API Reference](/api-reference/simulations/simulation) for the complete TypeScript interface.
+  </Tab>
+</Tabs>
+
+
+Simulations can be passed into:
+
+<AccordionGroup>
+  <Accordion title="ChatGPTSimulator - for local testing">
+    The `ChatGPTSimulator` component provides a local development environment that replicates ChatGPT's widget runtime.
+
+    <ChatGPTSimulator />
+
+    [View ChatGPTSimulator API Reference](/api-reference/simulations/chatgpt-simulator)
+  </Accordion>
+
+  <Accordion title="runMCPServer - for platform testing">
+    The `runMCPServer` function serves your simulations to ChatGPT via the Model Context Protocol.
+
+    ```bash
+    # Framework - dev server includes MCP server with HMR
+    sunpeak dev
+
+    # Library - see runMCPServer API Reference for manual setup
+    ```
+
+    See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server) for configuration options and connecting to ChatGPT.
+
+
+    [View MCP Server API Reference](/api-reference/simulations/run-mcp-server)
+  </Accordion>
+</AccordionGroup>
+
+## Dive Deeper
+
+<Card horizontal title="Framework Simulations" icon="folder" href="/api-reference/simulations/simulation">
+  JSON-based simulations with auto-discovery for framework users.
+</Card>
+<Card horizontal title="Simulation API Reference" icon="code" href="/api-reference/simulations/simulation">
+  TypeScript interface for library users.
+</Card>
+<Card horizontal title="ChatGPTSimulator API Reference" icon="desktop" href="/api-reference/simulations/chatgpt-simulator">
+  Full component documentation and configuration options.
+</Card>

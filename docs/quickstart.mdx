@@ -1,0 +1,95 @@
+---
+title: "Quickstart"
+description: "Create your first ChatGPT App UI with sunpeak."
+---
+
+## New projects
+
+<Steps>
+  <Step title="Install sunpeak">
+    **Requirements**: Node.js 20+
+
+    Install sunpeak globally:
+
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm add -g sunpeak
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm install -g sunpeak
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn global add sunpeak
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Create a project">
+    Create a new project:
+
+    ```bash
+    sunpeak new my-app
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Navigate to your project and install dependencies:
+
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        cd my-app
+        pnpm install
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        cd my-app
+        npm install
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        cd my-app
+        yarn install
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+
+  <Step title="Develop locally">
+    Run the development server:
+
+    ```bash
+    sunpeak dev
+    ```
+
+    This starts:
+    - The ChatGPT simulator at `http://localhost:6767` for local development
+    - An MCP server at `http://localhost:6766` for testing with real ChatGPT
+
+    <Tip>Both servers support Hot Module Reload - your changes reflect instantly!</Tip>
+  </Step>
+
+  <Step title="Test in ChatGPT">
+    Run a tunnel to allow ChatGPT to connect to your local MCP server:
+
+    ```bash
+    # In another terminal, run a tunnel. For example:
+    ngrok http 6766
+    ```
+
+    You can then connect to the tunnel `Forwarding URL` at the `/mcp` path (e.g. `https://your-random-subdomain.ngrok-free.dev/mcp`) from ChatGPT
+    **in developer mode**: `User > Settings > Apps & Connectors > Create`.
+  </Step>
+</Steps>
+
+<Card horizontal title="Project Scaffold" icon="page" href="/template/project-scaffold">
+  Explore your new ChatGPT App project.
+</Card>

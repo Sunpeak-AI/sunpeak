@@ -1,0 +1,97 @@
+---
+title: "sunpeak new"
+description: "Create a new project with the sunpeak framework."
+---
+
+## Overview
+
+The `sunpeak new` command creates a new sunpeak project with a minimal, convention-based structure for building ChatGPT App UIs (MCP Resources).
+
+```bash
+sunpeak new
+```
+
+<Tip>
+Install sunpeak globally first:
+
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm add -g sunpeak
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm install -g sunpeak
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn global add sunpeak
+    ```
+  </Tab>
+</Tabs>
+</Tip>
+
+## Usage
+
+Create a new project interactively:
+
+```bash
+sunpeak new
+```
+
+Or specify a project name:
+
+```bash
+sunpeak new my-app
+```
+
+Or specify both project name and resources to include:
+
+```bash
+sunpeak new my-app review,carousel
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `projectName` | Name of the project directory (optional, prompts if not provided) |
+| `resources` | Comma or space-separated list of resources to include (optional, prompts if not provided) |
+
+## What Gets Created
+
+The framework includes:
+
+- **Convention-based structure** - MCP Resources auto-discovered from `src/resources/{name}/`
+- **Simulations in tests/** - Simulation JSON files live in `tests/simulations/{name}/`
+- **Pre-configured tooling** - Vite, TypeScript, Tailwind CSS 4, Vitest
+- **Development scripts** - Ready-to-use `dev`, `build`, `mcp`, and `test` commands
+- **Example components** - Sample MCP Resources to get started quickly
+
+## Project Structure
+
+```
+my-app/
+├── src/resources/
+│   └── review/
+│       ├── review-resource.tsx
+│       └── review-resource.json
+├── tests/simulations/
+│   └── review/
+│       └── review-{scenario}-simulation.json
+└── package.json
+```
+
+## Next Steps
+
+After creating your project:
+
+1. Install dependencies: `pnpm install`
+2. Start the dev server: `sunpeak dev`
+3. Open `http://localhost:6767` to see the ChatGPT simulator
+
+<Card horizontal title="Project Scaffold" icon="folder-tree" href="/template/project-scaffold">
+  Learn more about the project structure and available commands.
+</Card>

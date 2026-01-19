@@ -1,0 +1,61 @@
+---
+title: "Overview"
+description: "Quickstart, build, test, and ship your ChatGPT App locally with the sunpeak ChatGPT App framework."
+---
+
+import ProjectStructure from '/snippets/project-structure.mdx';
+import Examples from '/snippets/examples.mdx';
+
+<Info>
+**Definitions**: The UI of a ChatGPT App is an MCP Resource.
+We will use these terms interchangeably. More on MCP [here](library/mcp-server).
+</Info>
+
+<Tip>
+This documentation is available via MCP at https://docs.sunpeak.ai/mcp, use it in your coding agent!
+</Tip>
+
+<video
+  src="https://d10djik02wlf6x.cloudfront.net/sunpeak-demo-prod.mp4"
+  autoPlay
+  muted
+  loop
+  playsInline
+  controls
+  className="w-full aspect-video rounded-xl"
+></video>
+
+## Overview
+
+sunpeak is an npm package that helps you build ChatGPT Apps (MCP Resources) while keeping your MCP server client-agnostic. sunpeak consists of:
+
+### The sunpeak Library
+
+1. **[Runtime APIs](/library/runtime-apis)**: Strongly typed APIs for interacting with the ChatGPT runtime, **architected to support future platforms** (Gemini, Claude, etc.).
+2. **[ChatGPT Simulator](/library/chatgpt-simulator)**: React component replicating ChatGPT's runtime to **test Apps locally and automatically**.
+3. **[MCP Server](/library/mcp-server)**: Serve Resources with mock data to the real ChatGPT with HMR (**no more cache issues or 5-click manual refreshes**).
+
+### The sunpeak Framework
+
+Next.js for ChatGPT Apps. Using a Review page as an example, sunpeak projects look like:
+
+<ProjectStructure />
+
+1. **[Project Scaffold](/template/project-scaffold)**: Complete development setup with the sunpeak library.
+2. **[UI Components](/template/ui-components)**: Production-ready components following ChatGPT design guidelines and using OpenAI apps-sdk-ui React components.
+3. **Convention over configuration**:
+   - Create UIs by creating a `-resource.tsx` component file ([example](#resource-component)) and `-resource.json` MCP metadata file ([example](#resource-mcp-metadata)).
+   - Create test state (simulations) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file ([example](#simulation)).
+
+### The sunpeak CLI
+
+Commands for managing ChatGPT Apps. Includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/). The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server while also providing a hosted runtime to collaborate, demo, and share your ChatGPT Apps.
+
+Think Docker Hub for ChatGPT Apps:
+
+1. Tag your app builds with version numbers and environment names (like `v1.0.0` and `prod`)
+2. `push` built Apps to a central location
+3. `pull` built Apps to be run in different environments, like your production MCP server.
+4. Share your fully-functional demo Apps with teammates, prospects, and strangers!
+
+<Examples />

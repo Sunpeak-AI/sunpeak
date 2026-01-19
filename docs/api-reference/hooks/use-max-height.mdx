@@ -1,0 +1,42 @@
+---
+title: "useMaxHeight"
+description: "Get the maximum height constraint for the widget."
+---
+
+## Overview
+
+The `useMaxHeight` hook returns the maximum height constraint (in pixels) for the widget, if one is set by the platform.
+
+## Import
+
+```tsx
+import { useMaxHeight } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useMaxHeight(): number | null
+```
+
+## Returns
+
+<ResponseField name="return" type="number | null">
+  The maximum height in pixels, or `null` if no constraint is set.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useMaxHeight } from 'sunpeak';
+
+function MyWidget() {
+  const maxHeight = useMaxHeight();
+
+  return (
+    <div style={{ maxHeight: maxHeight ? `${maxHeight}px` : 'none', overflow: 'auto' }}>
+      Content that respects height constraints
+    </div>
+  );
+}
+```

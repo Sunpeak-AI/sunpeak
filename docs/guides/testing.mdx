@@ -1,0 +1,276 @@
+---
+title: "Testing"
+description: "Testing and validation in sunpeak projects."
+---
+
+## Overview
+
+sunpeak supports both unit testing and end-to-end testing against the ChatGPT Simulator. The setup differs depending on whether you're using the full framework or just the library.
+
+<Tabs>
+  <Tab title="Framework">
+    The sunpeak framework includes pre-configured testing out of the box.
+
+    **TL;DR**: Run `pnpm test` for unit tests and `pnpm test:e2e` for end-to-end tests.
+
+    ## Testing Commands
+
+    <ResponseField name="pnpm test" type="command">
+      Run unit tests with Vitest.
+    </ResponseField>
+
+    <ResponseField name="pnpm test:e2e" type="command">
+      Run end-to-end tests with Playwright against the ChatGPT Simulator.
+    </ResponseField>
+
+    ## Unit Testing
+
+    The framework uses [Vitest](https://vitest.dev/) with configuration in `vitest.config.ts`. The test environment includes:
+
+    - **jsdom**: Browser-like environment for React component testing
+    - **@testing-library/react**: For rendering and testing components
+    - **@testing-library/jest-dom**: Additional matchers for assertions
+
+    All configuration is in `src/test/setup.ts`.
+
+    ## End-to-End Testing
+
+    E2E tests use [Playwright](https://playwright.dev/) and are located in `tests/e2e/` with the naming convention `*.spec.ts`.
+
+    The dev server runs automatically when you execute `pnpm test:e2e`—Playwright starts it before running tests.
+
+    ```bash
+    # Run all e2e tests
+    pnpm test:e2e
+
+    # Run with UI mode for debugging
+    pnpm test:e2e --ui
+
+    # Run a specific test file
+    pnpm test:e2e tests/e2e/albums.spec.ts
+    ```
+  </Tab>
+  <Tab title="Library">
+    When using the sunpeak library directly, you'll need to set up testing yourself.
+
+    ## Unit Testing Setup
+
+    Install your preferred test runner. We recommend Vitest:
+
+    ```bash
+    pnpm add -D vitest jsdom @testing-library/react @testing-library/jest-dom
+    ```
+
+    Configure `vitest.config.ts`:
+
+    ```typescript
+    import { defineConfig } from 'vitest/config';
+    import react from '@vitejs/plugin-react';
+
+    export default defineConfig({
+      plugins: [react()],
+      test: {
+        environment: 'jsdom',
+        setupFiles: ['./src/test/setup.ts'],
+      },
+    });
+    ```
+
+    ## End-to-End Testing Setup
+
+    Install Playwright:
+
+    ```bash
+    pnpm add -D @playwright/test
+    npx playwright install
+    ```
+
+    Configure `playwright.config.ts`:
+
+    ```typescript
+    import { defineConfig } from '@playwright/test';
+
+    export default defineConfig({
+      testDir: './tests/e2e',
+      webServer: {
+        command: 'pnpm dev', // Your dev server command
+        port: 5173,
+        reuseExistingServer: !process.env.CI,
+      },
+    });
+    ```
+
+    You'll need to ensure your dev server serves the `ChatGPTSimulator` component at a known URL for Playwright to test against.
+  </Tab>
+</Tabs>
+
+## Writing E2E Tests
+
+Use the `createSimulatorUrl` utility to generate type-safe URLs for e2e tests:
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
+
+test('should render in light mode', async ({ page }) => {
+  await page.goto(createSimulatorUrl({
+    simulation: 'albums-show',
+    theme: 'light',
+  }));
+
+  const albumCard = page.locator('button:has-text("Summer Slice")');
+  await expect(albumCard).toBeVisible();
+});
+
+test('should render in fullscreen mode', async ({ page }) => {
+  await page.goto(createSimulatorUrl({
+    simulation: 'albums-show',
+    theme: 'dark',
+    displayMode: 'fullscreen',
+  }));
+
+  // Test fullscreen-specific behavior
+});
+```
+
+### URL Parameters
+
+The `createSimulatorUrl` function accepts parameters for configuring theme, display mode, device type, safe area insets, and more. See the [ChatGPTSimulator API Reference](/api-reference/simulations/chatgpt-simulator#createsimulatorurl) for the complete list.
+
+### Example E2E Test Structure
+
+A typical e2e test file tests a resource across different modes:
+
+```typescript
+import { test, expect } from '@playwright/test';
+import { createSimulatorUrl } from 'sunpeak/chatgpt';
+
+test.describe('Albums Resource', () => {
+  test.describe('Light Mode', () => {
+    test('should render album cards with correct styles', async ({ page }) => {
+      await page.goto(createSimulatorUrl({
+        simulation: 'albums-show',
+        theme: 'light',
+      }));
+
+      const albumCard = page.locator('button:has-text("Summer Slice")');
+      await expect(albumCard).toBeVisible();
+
+      // Verify styles
+      const styles = await albumCard.evaluate((el) => {
+        const computed = window.getComputedStyle(el);
+        return {
+          cursor: computed.cursor,
+          borderRadius: computed.borderRadius,
+        };
+      });
+
+      expect(styles.cursor).toBe('pointer');
+      expect(styles.borderRadius).toBe('12px');
+    });
+  });
+
+  test.describe('Dark Mode', () => {
+    test('should render with dark theme', async ({ page }) => {
+      await page.goto(createSimulatorUrl({
+        simulation: 'albums-show',
+        theme: 'dark',
+      }));
+
+      // Test dark mode specific behavior
+    });
+  });
+
+  test.describe('Fullscreen Mode', () => {
+    test('should render in fullscreen', async ({ page }) => {
+      await page.goto(createSimulatorUrl({
+        simulation: 'albums-show',
+        theme: 'light',
+        displayMode: 'fullscreen',
+      }));
+
+      // Test fullscreen specific behavior
+    });
+  });
+});
+```
+
+## Testing Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep tests simple">
+    Test one thing per test case. Clear tests are maintainable tests.
+  </Accordion>
+
+  <Accordion title="Use meaningful test descriptions">
+    ```tsx
+    // Good
+    it('displays error message when API fails', () => {})
+
+    // Bad
+    it('test 1', () => {})
+    ```
+  </Accordion>
+
+  <Accordion title="Test user-facing behavior">
+    Test what users see and interact with, not implementation details:
+    ```tsx
+    // Good
+    expect(screen.getByText('Submit')).toBeInTheDocument();
+
+    // Bad
+    expect(component.props.buttonLabel).toBe('Submit');
+    ```
+  </Accordion>
+
+  <Accordion title="Test across themes and display modes">
+    Use `createSimulatorUrl` to test your resources in different configurations:
+    - Light and dark themes
+    - Inline, PiP, and fullscreen display modes
+    - Different device types (mobile, tablet, desktop)
+  </Accordion>
+
+  <Accordion title="Clean up after tests">
+    Use `afterEach` to reset state between tests:
+    ```tsx
+    afterEach(() => {
+      // Clean up mocks, reset state, etc.
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Additional Quality Tools (Optional)
+
+<AccordionGroup>
+  <Accordion title="Linting (ESLint)">
+    ```bash
+    pnpm add -D eslint @typescript-eslint/eslint-plugin
+    ```
+    Add `"lint": "eslint . --ext .ts,.tsx"` to package.json scripts.
+  </Accordion>
+
+  <Accordion title="Type Checking">
+    TypeScript is already installed. Add to package.json scripts:
+    ```json
+    "typecheck": "tsc --noEmit"
+    ```
+  </Accordion>
+
+  <Accordion title="Formatting (Prettier)">
+    ```bash
+    pnpm add -D prettier
+    ```
+    Add `"format": "prettier --write ."` to package.json scripts.
+  </Accordion>
+</AccordionGroup>
+
+## Dive Deeper
+
+<Card horizontal title="Vitest Docs" icon="link" href="https://vitest.dev/">
+  Learn more about Vitest for unit testing.
+</Card>
+
+<Card horizontal title="Playwright Docs" icon="link" href="https://playwright.dev/">
+  Learn more about Playwright for end-to-end testing.
+</Card>

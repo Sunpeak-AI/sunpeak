@@ -1,0 +1,46 @@
+---
+title: "useDisplayMode"
+description: "Hook for detecting the widget's display mode."
+---
+
+## Overview
+
+The `useDisplayMode` hook returns the current display mode of the widget.
+
+## Import
+
+```tsx
+import { useDisplayMode } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useDisplayMode(): 'pip' | 'inline' | 'fullscreen' | null
+```
+
+## Returns
+
+<ResponseField name="return" type="'pip' | 'inline' | 'fullscreen' | null">
+  The current display mode:
+  - `'pip'` - Picture-in-picture mode.
+  - `'inline'` - Inline mode within the chat.
+  - `'fullscreen'` - Fullscreen mode.
+  - `null` - Display mode not available.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useDisplayMode } from 'sunpeak';
+
+function MyWidget() {
+  const displayMode = useDisplayMode();
+
+  return (
+    <div>
+      Display mode: {displayMode}
+    </div>
+  );
+}
+```

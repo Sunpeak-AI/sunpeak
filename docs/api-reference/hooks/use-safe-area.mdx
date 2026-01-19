@@ -1,0 +1,56 @@
+---
+title: "useSafeArea"
+description: "Get safe area insets for the widget."
+---
+
+## Overview
+
+The `useSafeArea` hook returns the safe area insets, which define the areas of the screen that are not obscured by notches, rounded corners, or system UI.
+
+## Import
+
+```tsx
+import { useSafeArea } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useSafeArea(): SafeArea | null
+```
+
+## Returns
+
+<ResponseField name="return" type="SafeArea | null">
+  A `SafeArea` object with `insets` property, or `null` if not available.
+
+  ```tsx
+  {
+    insets: {
+      top: number;
+      bottom: number;
+      left: number;
+      right: number;
+    }
+  }
+  ```
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useSafeArea } from 'sunpeak';
+
+function MyWidget() {
+  const safeArea = useSafeArea();
+
+  return (
+    <div style={{
+      paddingTop: safeArea?.insets.top || 0,
+      paddingBottom: safeArea?.insets.bottom || 0,
+    }}>
+      Content respects safe areas
+    </div>
+  );
+}
+```

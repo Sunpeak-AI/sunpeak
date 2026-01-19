@@ -1,0 +1,71 @@
+---
+title: "UI Components"
+description: "Production-ready components in the framework."
+---
+
+## Overview
+
+The sunpeak framework includes pre-built MCP resources in your project's `src/resources/` directory. Each resource lives in its own folder with its component, metadata, and related components.
+
+These components are built on [@openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui)
+and follow ChatGPT's design guidelines.
+
+## Resources
+
+Resources (from MCP) are top-level components that can be simulated or shipped to production.
+
+Each resource lives in its own folder under `src/resources/{name}/`:
+- `{name}-resource.tsx` - The React component (built to `dist/{name}/{name}.js`)
+- `{name}-resource.json` - Metadata (name, title, description, etc.)
+- `components/` - Optional resource-specific components
+
+Simulation files live separately in `tests/simulations/{name}/`.
+
+See the [Resource Library API Reference](/api-reference/resources/albums) for
+all pre-packaged sunpeak resources.
+
+## High-Level Components
+
+Sunpeak resources are built out of higher-level components that live alongside each resource in `src/resources/{name}/components/`.
+
+### Customization
+
+These components are included in your project source code, so you can modify them to fit your needs:
+
+- **Edit directly**: Components are in each resource's `components/` folder.
+- **Add variants**: Extend with new props or styles.
+- **Create new components**: Use these as templates.
+
+### Design Principles
+
+All components follow (and are required to follow) ChatGPT's design guidelines:
+
+<Card horizontal title="Theme Support" icon="palette">
+  Automatic light/dark theme adaptation.
+</Card>
+
+<Card horizontal title="Responsive" icon="mobile">
+  Works on mobile, tablet, and desktop.
+</Card>
+
+<Card horizontal title="Accessible" icon="universal-access">
+  WCAG 2.1 AA compliant.
+</Card>
+
+<Card horizontal title="Simple" icon="check">
+   UI reduced to the absolute minimum to support the context.
+</Card>
+
+## Low-Level Components
+
+Beyond the framework components, you can use any component from `@openai/apps-sdk-ui`:
+
+```tsx
+import { Button, Input, Select } from '@openai/apps-sdk-ui/components';
+```
+
+See the [OpenAI apps-sdk-ui documentation](https://openai.github.io/apps-sdk-ui/) for the full low-level component library.
+
+<Card horizontal title="Component Library API Reference" icon="code" href="/api-reference/resources/albums">
+  All components provided by sunpeak.
+</Card>

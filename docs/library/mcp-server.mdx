@@ -1,0 +1,55 @@
+---
+title: "MCP Server"
+description: "Serve your widgets to the real ChatGPT platform."
+---
+
+<img
+  src="https://d10djik02wlf6x.cloudfront.net/chatgpt-counter.png"
+  alt="ChatGPT production screenshot"
+/>
+
+## Overview
+
+The MCP (Model Context Protocol) server lets you serve your simulations to ChatGPT. Once running, ChatGPT can discover and render your widgets.
+
+sunpeak includes an MCP server implementation that serves your widgets out-of-the-box.
+
+## What is MCP?
+
+MCP is the protocol ChatGPT uses to communicate with your servers. It handles:
+
+- Resource & Tool registration and discovery
+- Tool invocation and state synchronization
+
+<Info>
+Learn more in the [Model Context Protocol documentation](https://modelcontextprotocol.io/).
+</Info>
+
+## Quick Start
+
+<Tabs>
+  <Tab title="Framework">
+    Start the development server:
+
+    ```bash
+    sunpeak dev
+    ```
+
+    This starts both the ChatGPT simulator and an MCP server with Hot Module Reload.
+    The MCP server runs on port `6766` and serves your resources with automatic rebuilding.
+  </Tab>
+  <Tab title="Library">
+    Configure the MCP server manually. See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server) for setup instructions.
+  </Tab>
+</Tabs>
+
+Then connect to ChatGPT using a tunnel. See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server#connecting-to-chatgpt) for the full connection flow.
+
+## Dive Deeper
+
+<Card horizontal title="runMCPServer API Reference" icon="code" href="/api-reference/simulations/run-mcp-server">
+  Complete configuration options and ChatGPT connection guide.
+</Card>
+<Card horizontal title="Simulation API Reference" icon="code" href="/api-reference/simulations/simulation">
+  Complete simulation documentation.
+</Card>

@@ -1,0 +1,133 @@
+---
+title: "Deployment"
+description: "Deploy your ChatGPT widget to production."
+---
+
+## Deploy to Sunpeak
+
+Deploy your widget using the Sunpeak CLI.
+
+<Steps>
+  <Step title="Login to Sunpeak">
+    Authenticate with your Sunpeak account:
+
+    ```bash
+    sunpeak login
+    ```
+
+    This opens your browser for authentication. You only need to do this once.
+  </Step>
+
+  <Step title="Build and deploy">
+    Build your widget and deploy to production:
+
+    ```bash
+    sunpeak build
+    sunpeak deploy
+    ```
+
+    The `deploy` command pushes your built resources with the `prod` tag,
+    so that they can be easily pulled and served by your production MCP server.
+  </Step>
+</Steps>
+
+### Version Management
+
+Use tags to manage different versions of your resources:
+
+```bash
+# Push and tag all resources as staging
+sunpeak push --tag staging
+
+# Push and tag all resources as version 1.2.0
+sunpeak push --tag v1.2.0
+
+# Push with multiple tags
+sunpeak push --tag v1.2.0 --tag latest
+
+# Push a single resource
+sunpeak push dist/search.js --tag v1.2.0
+```
+
+<Info>
+Resource names must be unique within a repository. If you push a resource with a name that already exists, it will update the existing resource.
+</Info>
+
+---
+
+## Production MCP Server
+
+Your production MCP server pulls resources from Sunpeak at startup using `sunpeak pull`. This ensures your server always serves the latest deployed version.
+
+### Pulling Resources at Startup
+
+Run `sunpeak pull` before starting your MCP server to download your production resources:
+
+```bash
+sunpeak pull -r myorg/my-app -t prod -o ./resources
+```
+
+This downloads all resources tagged `prod` to the `./resources` directory:
+
+```
+resources/
+├── search.js      # JavaScript bundle
+├── search.json    # Resource metadata (includes URI)
+├── dashboard.js
+└── dashboard.json
+```
+
+### Example Startup Script
+
+Add a startup script to your production MCP server's `package.json`:
+
+```json
+{
+  "scripts": {
+    "start": "sunpeak pull -r myorg/my-app -t prod -o ./resources && node server.js"
+  }
+}
+```
+
+Or use a shell script for more control:
+
+```bash
+#!/bin/bash
+# start.sh
+
+# Pull latest production resources
+sunpeak pull -r myorg/my-app -t prod -o ./resources
+
+# Start the MCP server
+node server.js
+```
+
+<Info>
+Your production server needs Sunpeak credentials. Run `sunpeak login` on the server, or set the `SUNPEAK_ACCESS_TOKEN` environment variable with a valid token.
+</Info>
+
+### Serving Pulled Resources
+
+Your MCP server reads the pulled `.js` and `.json` files to serve resources. The metadata JSON contains the resource URI and other properties needed by ChatGPT:
+
+```typescript
+import { readFileSync, readdirSync } from 'fs';
+import { join } from 'path';
+
+// Load all resources from the pulled directory
+const resourceDir = './resources';
+const files = readdirSync(resourceDir).filter(f => f.endsWith('.json'));
+
+const resources = files.map(jsonFile => {
+  const name = jsonFile.replace('.json', '');
+  const meta = JSON.parse(readFileSync(join(resourceDir, jsonFile), 'utf-8'));
+  const js = readFileSync(join(resourceDir, `${name}.js`), 'utf-8');
+  return { name, meta, js };
+});
+```
+
+---
+
+## Publish to ChatGPT
+
+Publish your app to ChatGPT via the [OpenAI Platform](https://platform.openai.com/apps-manage).

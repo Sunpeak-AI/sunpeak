@@ -1,0 +1,315 @@
+---
+title: "Add to Existing Project"
+description: "Integrate sunpeak into your existing React application."
+---
+
+## Overview
+
+If you already have a React project and want to use sunpeak for runtime APIs or testing,
+you can integrate the sunpeak library directly without using the framework.
+
+<Info>
+**Starting from scratch?** Use [Quickstart](/quickstart) for the recommended ChatGPT App creation experience.
+</Info>
+
+## Prerequisites
+
+Your existing project needs:
+
+<CardGroup cols={3}>
+  <Card horizontal title="React" icon="react">
+    Version 19
+  </Card>
+  <Card horizontal title="Node.js" icon="node-js">
+    Version 20 or higher
+  </Card>
+  <Card horizontal title="Build Tool" icon="wrench">
+    Vite recommended
+  </Card>
+</CardGroup>
+
+## Installation Steps
+
+<Steps>
+  <Step title="Install sunpeak">
+    Add sunpeak to your project dependencies:
+
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm add sunpeak
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm install sunpeak
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn add sunpeak
+        ```
+      </Tab>
+    </Tabs>
+
+    If you only want to use sunpeak simulation and testing functionality (without the runtime APIs),
+    you can add sunpeak to `devDependencies` instead.
+  </Step>
+
+  <Step title="Install styles (Tailwind)">
+    sunpeak requires Tailwind CSS 4. If you don't have it installed:
+
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm add -D tailwindcss@next @tailwindcss/vite@next
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm install --save-dev tailwindcss@next @tailwindcss/vite@next
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn add -D tailwindcss@next @tailwindcss/vite@next
+        ```
+      </Tab>
+    </Tabs>
+
+    Configure Tailwind in your build config, if it isn't set up already:
+
+    <Tabs>
+      <Tab title="Vite">
+        ```ts
+        // vite.config.ts
+        import { defineConfig } from 'vite';
+        import react from '@vitejs/plugin-react';
+        import tailwindcss from '@tailwindcss/vite';
+
+        export default defineConfig({
+          plugins: [react(), tailwindcss()],
+        });
+        ```
+      </Tab>
+      <Tab title="Webpack">
+        ```js
+        // webpack.config.js
+        module.exports = {
+          module: {
+            rules: [
+              {
+                test: /\.css$/,
+                use: ['style-loader', 'css-loader', 'postcss-loader'],
+              },
+            ],
+          },
+        };
+        ```
+
+        ```js
+        // postcss.config.js
+        module.exports = {
+          plugins: {
+            tailwindcss: {},
+            autoprefixer: {},
+          },
+        };
+        ```
+      </Tab>
+    </Tabs>
+
+    Import Tailwind and ChatGPT styles to your CSS entrypoint:
+
+    ```css
+    @import "tailwindcss";
+    @import "@openai/apps-sdk-ui/css";
+
+    /* Scan simulator source files for Tailwind classes */
+    @source "./**/*.{ts,tsx}";
+
+    /* Required for Tailwind to find class references in Apps SDK UI components. */
+    @source "../node_modules/@openai/apps-sdk-ui";
+
+    /* Configure dark mode to use data-theme attribute (OpenAI SDK standard) */
+    @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+```
+  </Step>
+
+  <Step title="Create resource and simulation files">
+    Create a resource folder with metadata. Each resource lives in its own folder:
+
+    ```json
+    // src/resources/example/example-resource.json
+    {
+      "name": "example",
+      "title": "Example",
+      "description": "My example component",
+      "mimeType": "text/html+skybridge",
+      "_meta": {
+        "openai/widgetDomain": "https://example.com",
+        "openai/widgetCSP": {
+          "connect_domains": [],
+          "resource_domains": []
+        }
+      }
+    }
+    ```
+
+    Create a simulation JSON file in `tests/simulations/`:
+
+    ```json
+    // tests/simulations/example/example-show-simulation.json
+    {
+      "userMessage": "Show me an example",
+      "tool": {
+        "name": "show-example",
+        "description": "Show an example widget",
+        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+        "title": "Show Example",
+        "annotations": { "readOnlyHint": true },
+        "_meta": {
+          "openai/widgetAccessible": true,
+          "openai/resultCanProduceWidget": true
+        }
+      },
+      "callToolResult": {
+        "structuredContent": { "message": "Hello from simulation!" },
+        "_meta": {}
+      }
+    }
+    ```
+  </Step>
+
+  <Step title="Wire up the simulator">
+    Create an entrypoint file (like `dev/main.tsx`) where you want to run your simulator:
+
+    ```tsx
+    import { StrictMode } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { ChatGPTSimulator } from 'sunpeak';
+    import { MyComponent } from '../src/components/MyComponent';
+    import exampleResource from '../src/resources/example/example-resource.json';
+    import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
+    import '../src/styles/globals.css';
+
+    // Combine simulation with resource and component
+    const simulations = [{
+      ...exampleSimulation,
+      resource: exampleResource,
+      resourceComponent: MyComponent,
+    }];
+
+    createRoot(document.getElementById('root')!).render(
+      <StrictMode>
+        <ChatGPTSimulator
+          simulations={simulations}
+          appName="My App"
+          appIcon="🌄"
+        />
+      </StrictMode>
+    );
+    ```
+
+    Add a script to run your simulation dev server (`package.json`):
+    ```json
+    "scripts": {
+      "dev": "vite --port 6767"
+    }
+    ```
+
+    Run your local development server:
+
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm dev
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm run dev
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn dev
+        ```
+      </Tab>
+    </Tabs>
+
+    <Warning>
+    Only use the simulator in development. For production, export your component directly.
+    </Warning>
+  </Step>
+
+  <Step title="Wire up the MCP server">
+    Create an MCP server file (like `mcp/server.ts`) to serve your built widgets to ChatGPT:
+
+    ```typescript
+    import { runMCPServer } from 'sunpeak/mcp';
+    import path from 'path';
+    import { fileURLToPath } from 'url';
+    import exampleResource from '../src/resources/example/example-resource.json';
+    import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
+
+    const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+    // Combine simulation with resource and distPath for MCP server
+    const simulations = [{
+      ...exampleSimulation,
+      resource: exampleResource,
+      distPath: path.resolve(__dirname, '../dist/example/example.js'),
+    }];
+
+    runMCPServer({
+      name: 'My App',
+      version: '0.1.0',
+      simulations,
+      port: 6766,
+    });
+    ```
+
+    Add scripts to build and run your MCP server (`package.json`):
+    ```json
+    "scripts": {
+      "build": "vite build",
+      "mcp": "tsx mcp/server.ts"
+    }
+    ```
+
+    Build your app and start the MCP server:
+
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm build
+        pnpm mcp
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm run build
+        npm run mcp
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn build
+        yarn mcp
+        ```
+      </Tab>
+    </Tabs>
+
+    See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server) for configuration options and connecting to ChatGPT via tunnel.
+  </Step>
+</Steps>
+
+## Need the Full Framework?
+
+Often, it's easier to just copy your existing components into a new project initiated with the sunpeak framework.
+
+The framework comes pre-configured for local and platform testing with pre-built components
+and automatic discovery of simulations and resources.
+
+See [Quickstart](/quickstart) to get started.

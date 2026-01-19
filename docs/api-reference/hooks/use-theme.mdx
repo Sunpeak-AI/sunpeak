@@ -1,0 +1,42 @@
+---
+title: "useTheme"
+description: "Hook for detecting ChatGPT's theme."
+---
+
+## Overview
+
+The `useTheme` hook detects and returns the current ChatGPT theme (light or dark).
+
+## Import
+
+```tsx
+import { useTheme } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useTheme(): 'light' | 'dark' | null
+```
+
+## Returns
+
+<ResponseField name="return" type="'light' | 'dark' | null">
+  The current ChatGPT theme, or `null` if not available.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useTheme } from 'sunpeak';
+
+function MyWidget() {
+  const theme = useTheme();
+
+  return (
+    <div className={theme === 'dark' ? 'dark-mode' : 'light-mode'}>
+      Current theme: {theme}
+    </div>
+  );
+}
+```

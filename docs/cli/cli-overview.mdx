@@ -1,0 +1,73 @@
+---
+title: "CLI Overview"
+description: "Commands for managing ChatGPT Apps."
+---
+
+## Overview
+
+The sunpeak CLI provides commands for managing ChatGPT Apps.
+It includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/)
+(ECR for ChatGPT Apps).
+
+<img
+  src="https://d10djik02wlf6x.cloudfront.net/blog/storybook-for-chatgpt-apps.png"
+  alt="sunpeak Resource Repository"
+/>
+
+The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server:
+
+<Card horizontal title="Version Tagging" icon="tag">
+  Tag your app builds with version numbers and environment names (like `v1.0.0` and `prod`).
+</Card>
+
+<Card horizontal title="Centralized Storage" icon="cloud-arrow-up">
+  `push` built Apps to a central location accessible by your team and CI/CD pipelines.
+</Card>
+
+<Card horizontal title="Flexible Deployment" icon="cloud-arrow-down">
+  `pull` built Apps to be run in different environments (staging, production, etc.).
+</Card>
+
+<Card horizontal title="Demo Apps" icon="mask">
+  Hosted runtime to collaborate, and share your ChatGPT Apps with teammates, prospects, and strangers!
+</Card>
+
+## Commands
+
+The CLI includes commands for both local development and repository operations:
+
+### Local Development
+
+| Command | Description |
+|---------|-------------|
+| `sunpeak new` | Create a new sunpeak project |
+| `sunpeak dev` | Start the development server (includes simulator and MCP server) |
+| `sunpeak build` | Build production bundles |
+
+### Repository Operations
+
+| Command | Description |
+|---------|-------------|
+| `sunpeak login` | Authenticate with your Sunpeak account |
+| `sunpeak logout` | Log out and clear stored credentials |
+| `sunpeak push` | Push built resources to the repository |
+| `sunpeak pull` | Pull resources by tag from the repository |
+| `sunpeak deploy` | Deploy resources to production |
+
+<Note>
+The CLI is included when you install sunpeak. No separate installation required!
+</Note>
+
+## Why decouple Apps & MCP servers?
+ChatGPT Apps are built on MCP servers, but your UI resources don't need to live alongside your server code. Decoupling them provides:
+
+1. **Generic MCP servers**: Keep your production MCP server largely client agnostic
+2. **Remove JavaScript**: If your server is in Python (or any other language), keep React and JavaScript out of your server.
+3. **Independent lifecycles**: Clearly indicate which code changes and version tags require ChatGPT App submission reviews and which are entirely MCP server-side
+4. **Team collaboration**: Designers and frontend devs can push UI changes without touching server infrastructure and vice versa
+
+## Dive Deeper
+
+<Card horizontal title="CLI API Reference" icon="terminal" href="/api-reference/cli/new">
+  Detailed documentation for all CLI commands.
+</Card>

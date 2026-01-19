@@ -1,0 +1,42 @@
+---
+title: "useIsMobile"
+description: "Detect if the viewport is mobile-sized."
+---
+
+## Overview
+
+The `useIsMobile` hook detects if the current viewport width is below the mobile breakpoint (768px).
+
+## Import
+
+```tsx
+import { useIsMobile } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useIsMobile(): boolean
+```
+
+## Returns
+
+<ResponseField name="return" type="boolean">
+  `true` if viewport width is less than 768px, `false` otherwise.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useIsMobile } from 'sunpeak';
+
+function MyWidget() {
+  const isMobile = useIsMobile();
+
+  return (
+    <div className={isMobile ? 'mobile-layout' : 'desktop-layout'}>
+      {isMobile ? 'Mobile view' : 'Desktop view'}
+    </div>
+  );
+}
+```

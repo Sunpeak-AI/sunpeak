@@ -1,0 +1,94 @@
+---
+title: "sunpeak upgrade"
+description: "Check for and install sunpeak updates."
+---
+
+## Overview
+
+The `sunpeak upgrade` command checks for new versions of sunpeak and optionally upgrades to the latest version.
+
+```bash
+sunpeak upgrade
+```
+
+## How It Works
+
+The upgrade command:
+
+1. Checks your currently installed version
+2. Fetches the latest version from npm
+3. Compares versions and reports if an update is available
+4. Automatically upgrades using your package manager (unless `--check` is specified)
+
+```bash
+$ sunpeak upgrade
+Current version: 0.11.0
+Latest version: 0.12.1
+
+Upgrading sunpeak...
+✓ Successfully upgraded to 0.12.1
+```
+
+## Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--check` | `-c` | Check for updates without installing |
+| `--help` | `-h` | Show help message |
+
+## Usage Examples
+
+### Upgrade to Latest
+
+```bash
+sunpeak upgrade
+```
+
+### Check for Updates Only
+
+See if a new version is available without installing:
+
+```bash
+sunpeak upgrade --check
+```
+
+```bash
+$ sunpeak upgrade --check
+Current version: 0.11.0
+Latest version: 0.12.1
+
+A new version is available! Run "sunpeak upgrade" to update.
+```
+
+## Package Manager Detection
+
+The command automatically detects and uses your package manager:
+
+- **pnpm** - `pnpm add -g sunpeak`
+- **npm** - `npm install -g sunpeak`
+- **yarn** - `yarn global add sunpeak`
+
+If automatic upgrade fails, manual upgrade instructions are displayed.
+
+## Already Up to Date
+
+If you're already on the latest version:
+
+```bash
+$ sunpeak upgrade
+Current version: 0.12.1
+Latest version: 0.12.1
+
+✓ You're already on the latest version!
+```
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak new" icon="folder-plus" href="/api-reference/cli/new">
+    Create a new project
+  </Card>
+  <Card horizontal title="sunpeak dev" icon="play" href="/api-reference/cli/dev">
+    Start development server
+  </Card>
+</CardGroup>

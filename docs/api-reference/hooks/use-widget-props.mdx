@@ -1,0 +1,66 @@
+---
+title: "useWidgetProps"
+description: "Access tool output as widget props."
+---
+
+## Overview
+
+The `useWidgetProps` hook provides access to the tool output data as props for your widget, with optional default values.
+
+## Import
+
+```tsx
+import { useWidgetProps } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useWidgetProps<T = Record<string, unknown>>(
+  defaultState?: T | (() => T)
+): T
+```
+
+## Parameters
+
+<ResponseField name="defaultState" type="T | (() => T)">
+  Optional default value or function that returns default value.
+</ResponseField>
+
+<ResponseField name="T" type="type parameter">
+  TypeScript type for the props.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="T">
+  The tool output as props, or the default value if not available.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useWidgetProps } from 'sunpeak';
+
+interface WeatherData {
+  temperature: number;
+  condition: string;
+  city: string;
+}
+
+function WeatherWidget() {
+  const weather = useWidgetProps<WeatherData>({
+    temperature: 0,
+    condition: 'Unknown',
+    city: 'Loading...',
+  });
+
+  return (
+    <div>
+      <h2>{weather.city}</h2>
+      <p>{weather.temperature}°F</p>
+      <p>{weather.condition}</p>
+    </div>
+  );
+}
+```

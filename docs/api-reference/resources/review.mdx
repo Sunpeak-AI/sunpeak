@@ -1,0 +1,210 @@
+---
+title: "Review"
+description: "A flexible review dialog for confirmations across purchase reviews, code changes, social media posts, bookings, and more."
+---
+
+## Overview
+
+`Review` is a production-ready review resource included in the sunpeak framework. It provides a flexible confirmation dialog that adapts to various use cases including purchase reviews, code change approvals, social media post previews, booking confirmations, and generic action reviews.
+
+The resource uses `useWidgetProps()` for configuration data and `useWidgetState()` to persist the user's decision across sessions.
+
+## Data Structure
+
+### ReviewData
+
+The resource expects data in the following format via `useWidgetProps()`:
+
+```tsx
+interface ReviewData {
+  title: string
+  description?: string
+  sections?: Section[]
+  alerts?: Alert[]
+  acceptLabel?: string
+  rejectLabel?: string
+  acceptDanger?: boolean
+  acceptedMessage?: string
+  rejectedMessage?: string
+  reviewTool?: ReviewTool
+}
+```
+
+<ResponseField name="title" type="string" required>
+  Main title displayed in the header.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional description displayed below the title.
+</ResponseField>
+
+<ResponseField name="sections" type="Section[]">
+  Content sections to display. See Section Types below.
+</ResponseField>
+
+<ResponseField name="alerts" type="Alert[]">
+  Alert messages to display at the top of the content area.
+</ResponseField>
+
+<ResponseField name="acceptLabel" type="string" default="Confirm">
+  Label for the accept/confirm button.
+</ResponseField>
+
+<ResponseField name="rejectLabel" type="string" default="Cancel">
+  Label for the reject/cancel button.
+</ResponseField>
+
+<ResponseField name="acceptDanger" type="boolean" default={false}>
+  Use danger styling for the accept button (for destructive actions).
+</ResponseField>
+
+<ResponseField name="acceptedMessage" type="string" default="Confirmed">
+  Message shown after the user accepts.
+</ResponseField>
+
+<ResponseField name="rejectedMessage" type="string" default="Cancelled">
+  Message shown after the user rejects.
+</ResponseField>
+
+<ResponseField name="reviewTool" type="ReviewTool">
+  Optional tool configuration to call when the user makes a decision.
+</ResponseField>
+
+### Section Types
+
+Sections support multiple display types for different content:
+
+```tsx
+interface Section {
+  title?: string
+  type: 'details' | 'items' | 'changes' | 'preview' | 'summary'
+  content: Detail[] | Item[] | Change[] | string
+}
+```
+
+#### Details Section
+
+Key-value pairs for displaying structured information:
+
+```tsx
+interface Detail {
+  label: string
+  value: string
+  sublabel?: string
+  emphasis?: boolean
+}
+```
+
+#### Items Section
+
+Items with optional images and metadata (for purchases, lists):
+
+```tsx
+interface Item {
+  id: string
+  title: string
+  subtitle?: string
+  image?: string
+  value?: string
+  badge?: string
+}
+```
+
+#### Changes Section
+
+Code or file change entries with type indicators:
+
+```tsx
+interface Change {
+  id: string
+  type: 'create' | 'modify' | 'delete' | 'action'
+  path?: string
+  description: string
+  details?: string
+}
+```
+
+#### Preview Section
+
+Simple text content display (content is a string).
+
+#### Summary Section
+
+Compact key-value display, typically used for totals (uses Detail[] format).
+
+### Alert Types
+
+```tsx
+interface Alert {
+  type: 'info' | 'warning' | 'error' | 'success'
+  message: string
+}
+```
+
+### ReviewTool
+
+Configure a tool call to execute when the user makes a decision:
+
+```tsx
+interface ReviewTool {
+  name: string
+  arguments?: Record<string, unknown>
+}
+```
+
+## State Management
+
+The resource uses `useWidgetState` to persist the user's decision:
+
+```tsx
+interface ReviewState {
+  decision?: 'accepted' | 'rejected' | null
+  decidedAt?: string | null
+}
+```
+
+Once a decision is made, the UI updates to show the result with a timestamp.
+
+## Features
+
+### Flexible Content Sections
+
+Supports five section types that can be combined:
+- **Details**: Key-value pairs with optional emphasis
+- **Items**: Card-style list with images and badges
+- **Changes**: Code-review style change indicators
+- **Preview**: Text content preview
+- **Summary**: Compact totals display
+
+### Alert Banners
+
+Display contextual alerts with four severity levels:
+- **Info**: Blue styling for informational messages
+- **Warning**: Yellow styling for cautions
+- **Error**: Red styling for problems
+- **Success**: Green styling for positive confirmations
+
+### Fullscreen Support
+
+Includes a fullscreen toggle button using `useDisplayMode()` and `useWidgetAPI()` for expanded viewing of complex reviews.
+
+### Responsive Button Sizing
+
+Detects touch capabilities using `useUserAgent()` and automatically adjusts button sizes for easier interaction on touch devices.
+
+### Safe Area Support
+
+Respects device safe areas using `useSafeArea()` to ensure proper padding on devices with notches or rounded corners.
+
+### Height Constraints
+
+Uses `useMaxHeight()` to adapt to available screen space and prevent overflow.
+
+## Common Use Cases
+
+- Purchase confirmations with item lists and totals
+- Code change reviews with file diffs
+- Social media post previews before publishing
+- Booking confirmations with date and price details
+- Generic approve/reject workflows
+- Destructive action confirmations (with danger styling)
