@@ -58,7 +58,7 @@ To add `sunpeak` to an existing project, refer to the [documentation](https://do
 
 ### The `sunpeak` framework
 
-Next.js for ChatGPT Apps. Using a Review page as an example, `sunpeak` projects look like:
+Next.js for ChatGPT Apps. Using an example App `my-app` with a `Review` UI (MCP resource), `sunpeak` projects look like:
 
 ```bash
 my-app/
@@ -76,7 +76,7 @@ my-app/
 1. Project scaffold: Complete development setup with the `sunpeak` library.
 2. UI components: Production-ready components following ChatGPT design guidelines and using OpenAI `apps-sdk-ui` React components.
 3. Convention over configuration:
-   1. Create UIs by creating a `-resource.tsx` component file ([example](#resource-component)) and `-resource.json` MCP metadata file ([example](#resource-mcp-metadata)).
+   1. Create a UI by creating a `-resource.tsx` component file ([example](#resource-component)) and `-resource.json` MCP metadata file ([example](#resource-mcp-metadata)).
    2. Create test state (`Simulation`s) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file. ([example](#simulation))
 
 ### The `sunpeak` CLI
@@ -94,38 +94,68 @@ Think Docker Hub for ChatGPT Apps:
 </div>
 
 1. Tag your app builds with version numbers and environment names (like `v1.0.0` and `prod`)
-2. `push` built Apps to a central location
-3. `pull` built Apps to be run in different environments, like your production MCP server.
+2. `sunpeak push` built Apps to a central location
+3. `sunpeak pull` built Apps to be run in different environments, like your production MCP server.
 4. Share your fully-functional demo Apps with teammates, prospects, and strangers!
 
-## Example
+## Example App
 
 Example `Resource`, `Simulation`, and testing file (using `ChatGPTSimulator`) for an MCP resource called "Review".
 
 ### `Resource` Component
+
+```bash
+my-app/
+├── src/resources/
+│   └── review/
+│       ├── review-resource.tsx   # This one!
+│       └── review-resource.json
+```
 
 React component (`.tsx`) defining a UI (MCP resource) in your ChatGPT App.
 
 ```tsx
 // src/resources/review-resource.tsx
 
-import { Card } from './components';
+import { useWidgetProps, useWidgetState } from 'sunpeak';
+import { Button } from '@openai/apps-sdk-ui/components/Button';
 
 export function ReviewResource() {
+  const data = useWidgetProps<{ title: string; changes: string[] }>();
+  const [state, setState] = useWidgetState<{ decision: string | null }>(() => ({
+    decision: null,
+  }));
+
   return (
-    <Card
-      title="Lady Bird Lake"
-      metadata="⭐ 4.5 • Austin, TX"
-      button1={{ children: 'Visit', isPrimary: true, onClick: () => {} }}
-      button2={{ children: 'Learn More', onClick: () => {} }}
-    >
-      Scenic lake perfect for kayaking, paddleboarding, and trails.
-    </Card>
+    <div>
+      <h1>{data.title}</h1>
+      <ul>
+        {data.changes.map((change, i) => (
+          <li key={i}>{change}</li>
+        ))}
+      </ul>
+      {state.decision ? (
+        <p>{state.decision === 'approved' ? 'Approved!' : 'Rejected'}</p>
+      ) : (
+        <>
+          <Button onClick={() => setState({ decision: 'approved' })}>Approve</Button>
+          <Button onClick={() => setState({ decision: 'rejected' })}>Reject</Button>
+        </>
+      )}
+    </div>
   );
 }
 ```
 
 ### `Resource` MCP Metadata
+
+```bash
+my-app/
+├── src/resources/
+│   └── review/
+│       ├── review-resource.tsx
+│       └── review-resource.json  # This one!
+```
 
 MCP metadata (`.json`) for your UI. Version your resource metadata alongside the resource itself.
 
@@ -149,6 +179,13 @@ This is just an official [MCP resource object](https://modelcontextprotocol.io/s
 ```
 
 ### `Simulation`
+
+```bash
+├── tests/simulations/
+│   └── review/
+│       ├── review-{scenario1}-simulation.json  # These!
+│       └── review-{scenario2}-simulation.json  # These!
+```
 
 `sunpeak` testing object (`.json`) defining key App-owned states.
 
@@ -177,6 +214,7 @@ Testing a ChatGPT App requires setting a lot of state: state in your **backend**
   // Official MCP CallToolResult object.
   "callToolResult": {
     "structuredContent": {
+      "title": "Refactor Authentication Module",
       // ...
     },
     "_meta": {},
@@ -189,6 +227,12 @@ Testing a ChatGPT App requires setting a lot of state: state in your **backend**
 ```
 
 ### `ChatGPTSimulator`
+
+```bash
+├── tests/e2e/
+│   └── review.spec.ts # This! (not pictured above for simplicity)
+└── package.json
+```
 
 The `ChatGPTSimulator` allows you to set **ChatGPT state** (like light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
 
@@ -203,22 +247,17 @@ import { createSimulatorUrl } from 'sunpeak/chatgpt';
 test.describe('Review Resource', () => {
   test.describe('Light Mode', () => {
     test('should render review title with correct styles', async ({ page }) => {
-      params = { simulation: 'review-diff', theme: 'light' } // Set sim & ChatGPT state
+      params = { simulation: 'review-diff', theme: 'light' } // Set sim & ChatGPT state.
       await page.goto(createSimulatorUrl(params));
       await page.waitForLoadState('networkidle');
 
       const title = page.locator('h1:has-text("Refactor Authentication Module")');
       await expect(title).toBeVisible();
 
-      const styles = await title.evaluate((el) => {
-        const computed = window.getComputedStyle(el);
-        return {
-          fontWeight: computed.fontWeight,
-        };
-      });
+      const color = await title.evaluate((el) => window.getComputedStyle(el).color);
 
-      // Should render semibold (600)
-      expect(parseInt(styles.fontWeight)).toBeGreaterThanOrEqual(600);
+      // Light mode should render dark text.
+      expect(color).toBe('rgb(13, 13, 13)');
     });
   });
 });
