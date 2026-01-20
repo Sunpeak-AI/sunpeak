@@ -191,6 +191,7 @@ export function ChatGPTSimulator({
         mock.setWidgetStateExternal(selectedSim.widgetState);
       }
       mock.toolOutput = selectedSim.callToolResult?.structuredContent ?? null;
+      mock.toolResponseMetadata = selectedSim.callToolResult?._meta ?? null;
     }
   }, [selectedSimulationName, selectedSim, mock]);
 
