@@ -1,10 +1,48 @@
 #!/usr/bin/env node
-import { build as viteBuild } from 'vite';
-import react from '@vitejs/plugin-react';
-import tailwindcss from '@tailwindcss/vite';
 import { existsSync, rmSync, readdirSync, readFileSync, writeFileSync, mkdirSync, copyFileSync, unlinkSync } from 'fs';
 import path from 'path';
+import { createRequire } from 'module';
+import { pathToFileURL } from 'url';
 import { toPascalCase } from '../lib/patterns.mjs';
+
+/**
+ * Resolve the ESM entry point for a package from a specific project directory.
+ * This avoids the CJS deprecation warning from packages like Vite.
+ */
+function resolveEsmEntry(require, packageName) {
+  // First resolve to find where the package is located
+  const resolvedPath = require.resolve(packageName);
+
+  // Walk up to find the package's package.json
+  let dir = path.dirname(resolvedPath);
+  while (dir !== path.dirname(dir)) {
+    const pkgJsonPath = path.join(dir, 'package.json');
+    if (existsSync(pkgJsonPath)) {
+      const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+      if (pkg.name === packageName) {
+        // Found the package.json, look for ESM entry in exports
+        const exports = pkg.exports;
+        if (exports?.['.']?.import) {
+          const importEntry = exports['.'].import;
+          // Handle nested conditions like { types, default }
+          const esmPath = typeof importEntry === 'string' ? importEntry : importEntry.default;
+          if (esmPath) {
+            return pathToFileURL(path.join(dir, esmPath)).href;
+          }
+        }
+        // Fallback to module field
+        if (pkg.module) {
+          return pathToFileURL(path.join(dir, pkg.module)).href;
+        }
+        break;
+      }
+    }
+    dir = path.dirname(dir);
+  }
+
+  // Fallback to resolved path (may be CJS)
+  return pathToFileURL(resolvedPath).href;
+}
 
 /**
  * Build all resources for a Sunpeak project
@@ -45,6 +83,31 @@ export async function build(projectRoot = process.cwd()) {
     console.error('Expected location: ' + templateFile);
     console.error('\nThis file is the template entry point for building resources.');
     console.error('If you have moved or renamed it, you may need to use a custom build script.');
+    process.exit(1);
+  }
+
+  // Import vite and plugins from the user's project (not from sunpeak's node_modules)
+  // This allows sunpeak to work when installed globally
+  // We resolve to ESM entry points to avoid the CJS deprecation warning from Vite
+  const require = createRequire(path.join(projectRoot, 'package.json'));
+  let viteBuild, react, tailwindcss;
+  try {
+    const [viteModule, reactModule, tailwindModule] = await Promise.all([
+      import(resolveEsmEntry(require, 'vite')),
+      import(resolveEsmEntry(require, '@vitejs/plugin-react')),
+      import(resolveEsmEntry(require, '@tailwindcss/vite')),
+    ]);
+    viteBuild = viteModule.build;
+    react = reactModule.default;
+    tailwindcss = tailwindModule.default;
+  } catch (error) {
+    console.error('Error: Could not load build dependencies from your project.');
+    console.error('\nMake sure you have these packages installed in your project:');
+    console.error('  - vite');
+    console.error('  - @vitejs/plugin-react');
+    console.error('  - @tailwindcss/vite');
+    console.error('\nRun: npm install -D vite @vitejs/plugin-react @tailwindcss/vite');
+    console.error('\nOriginal error:', error.message);
     process.exit(1);
   }
 
