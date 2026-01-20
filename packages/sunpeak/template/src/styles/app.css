@@ -1,0 +1,12 @@
+/* User-specific Tailwind configuration and custom styles */
+
+/* Scan app-specific source files for Tailwind classes */
+@source "../**/*.{ts,tsx}";
+
+/* Required for Tailwind to find class references in Apps SDK UI components. */
+@source "../../node_modules/@openai/apps-sdk-ui";
+
+/* Configure dark mode to use data-theme attribute (OpenAI SDK standard) */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* Add your custom styles below */

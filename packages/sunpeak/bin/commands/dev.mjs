@@ -182,6 +182,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     console.log(`\nStarting MCP server with ${simulations.length} simulation(s)...`);
 
     // Virtual entry module plugin for MCP
+    // Import sunpeak styles directly via JS to avoid CSS @import alias issues with Lightning CSS.
+    // Then import app.css for user's @source directives and custom styles (no sunpeak import).
+    const sunpeakStylePath = isTemplate ? `${parentSrc}/style.css` : 'sunpeak/style.css';
+
     const sunpeakEntryPlugin = () => ({
       name: 'sunpeak-entry',
       resolveId(id) {
@@ -202,7 +206,8 @@ export async function dev(projectRoot = process.cwd(), args = []) {
           return `
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-import '/src/styles/globals.css';
+import '${sunpeakStylePath}';
+import '/src/styles/app.css';
 import * as ResourceModule from '${srcPath}';
 
 const Component = ResourceModule.default || ResourceModule['${componentName}'];
