@@ -19,7 +19,7 @@ test.describe('Review Resource', () => {
         };
       });
 
-      // Should be semibold (600)
+      // Should render semibold (600)
       expect(parseInt(styles.fontWeight)).toBeGreaterThanOrEqual(600);
     });
 
