@@ -98,9 +98,17 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // Import sunpeak modules (MCP server and discovery utilities)
   let sunpeakMcp, sunpeak;
   if (isTemplate) {
-    // In workspace dev mode, import from local dist folder
-    sunpeakMcp = await import(pathToFileURL(resolve(projectRoot, '../dist/mcp/index.js')).href);
-    sunpeak = await import(pathToFileURL(resolve(projectRoot, '../dist/index.js')).href);
+    // In workspace dev mode, use Vite to load TypeScript source directly
+    // Import from specific modules to avoid pulling in React components
+    const loaderServer = await createServer({
+      root: resolve(projectRoot, '..'),
+      server: { middlewareMode: true },
+      appType: 'custom',
+      logLevel: 'silent',
+    });
+    sunpeakMcp = await loaderServer.ssrLoadModule('./src/mcp/index.ts');
+    sunpeak = await loaderServer.ssrLoadModule('./src/lib/index.ts');
+    await loaderServer.close();
   } else {
     // Import from installed sunpeak package
     const sunpeakBase = require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, '');

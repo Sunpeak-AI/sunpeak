@@ -48,7 +48,7 @@
   ],
   "scripts": {
     "build": "vite build",
-    "dev": "pnpm --filter my-sunpeak-app dev",
+    "dev": "pnpm -C template dev",
     "format": "prettier --write --list-different \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
