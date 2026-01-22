@@ -247,7 +247,7 @@ import { createSimulatorUrl } from 'sunpeak/chatgpt';
 test.describe('Review Resource', () => {
   test.describe('Light Mode', () => {
     test('should render review title with correct styles', async ({ page }) => {
-      params = { simulation: 'review-diff', theme: 'light' } // Set sim & ChatGPT state.
+      params = { simulation: 'review-diff', theme: 'light' }; // Set sim & ChatGPT state.
       await page.goto(createSimulatorUrl(params));
       await page.waitForLoadState('networkidle');
 

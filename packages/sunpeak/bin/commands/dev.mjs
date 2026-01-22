@@ -86,6 +86,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // Parse --no-begging flag
   const noBegging = args.includes('--no-begging');
 
+  // Parse --prod-mcp flag (serve production build files over MCP instead of Vite HMR)
+  const prodMcp = args.includes('--prod-mcp');
+
   console.log(`Starting Vite dev server on port ${port}...`);
 
   // Check if we're in the sunpeak workspace (directory is named "template")
@@ -177,37 +180,41 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     }
   }
 
-  // Start MCP server with its own Vite instance
+  // Start MCP server with its own Vite instance (unless --prod-mcp is set)
   if (simulations.length > 0) {
-    console.log(`\nStarting MCP server with ${simulations.length} simulation(s)...`);
+    const mcpMode = prodMcp ? 'production build' : 'Vite HMR';
+    console.log(`\nStarting MCP server with ${simulations.length} simulation(s) (${mcpMode})...`);
 
-    // Virtual entry module plugin for MCP
-    // For internal dev (template): Import sunpeak styles directly via JS to avoid CSS @import
-    // alias issues with Lightning CSS, then import app.css for user customizations.
-    // For external users: Import OpenAI SDK CSS directly (ensures Tailwind processes @theme static),
-    // then import globals.css for user's Tailwind config and custom styles.
-    const styleImports = isTemplate
-      ? `import '${parentSrc}/style.css';\nimport '/src/styles/app.css';`
-      : `import '@openai/apps-sdk-ui/css';\nimport '/src/styles/globals.css';`;
+    let mcpViteServer = null;
 
-    const sunpeakEntryPlugin = () => ({
-      name: 'sunpeak-entry',
-      resolveId(id) {
-        if (id.startsWith('virtual:sunpeak-entry')) {
-          return id;
-        }
-      },
-      load(id) {
-        if (id.startsWith('virtual:sunpeak-entry')) {
-          const url = new URL(id.replace('virtual:sunpeak-entry', 'http://x'));
-          const srcPath = url.searchParams.get('src');
-          const componentName = url.searchParams.get('component');
+    if (!prodMcp) {
+      // Virtual entry module plugin for MCP
+      // For internal dev (template): Import sunpeak styles directly via JS to avoid CSS @import
+      // alias issues with Lightning CSS, then import app.css for user customizations.
+      // For external users: Import OpenAI SDK CSS directly (ensures Tailwind processes @theme static),
+      // then import globals.css for user's Tailwind config and custom styles.
+      const styleImports = isTemplate
+        ? `import '${parentSrc}/style.css';\nimport '/src/styles/app.css';`
+        : `import '@openai/apps-sdk-ui/css';\nimport '/src/styles/globals.css';`;
 
-          if (!srcPath || !componentName) {
-            return 'console.error("Missing src or component param");';
+      const sunpeakEntryPlugin = () => ({
+        name: 'sunpeak-entry',
+        resolveId(id) {
+          if (id.startsWith('virtual:sunpeak-entry')) {
+            return id;
           }
+        },
+        load(id) {
+          if (id.startsWith('virtual:sunpeak-entry')) {
+            const url = new URL(id.replace('virtual:sunpeak-entry', 'http://x'));
+            const srcPath = url.searchParams.get('src');
+            const componentName = url.searchParams.get('component');
 
-          return `
+            if (!srcPath || !componentName) {
+              return 'console.error("Missing src or component param");';
+            }
+
+            return `
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 ${styleImports}
@@ -220,43 +227,44 @@ if (!Component) {
   createRoot(document.getElementById('root')).render(createElement(Component));
 }
 `;
-        }
-      },
-    });
-
-    // Create Vite dev server in middleware mode for MCP
-    // Use separate cache directory to avoid conflicts with main dev server
-    const mcpViteServer = await createServer({
-      root: projectRoot,
-      cacheDir: 'node_modules/.vite-mcp',
-      plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
-      resolve: {
-        alias: {
-          ...(isTemplate && {
-            sunpeak: parentSrc,
-          }),
+          }
         },
-      },
-      server: {
-        middlewareMode: true,
-        allowedHosts: true,
-        watch: {
-          // Only watch files that affect the UI bundle (not JSON, tests, etc.)
-          // MCP resources reload on next tool call, not on file change
-          ignored: (filePath) => {
-            if (!filePath.includes('.')) return false; // Watch directories
-            if (/\.(tsx?|css)$/.test(filePath)) {
-              return /\.(test|spec)\.tsx?$/.test(filePath); // Ignore tests
-            }
-            return true; // Ignore everything else
+      });
+
+      // Create Vite dev server in middleware mode for MCP
+      // Use separate cache directory to avoid conflicts with main dev server
+      mcpViteServer = await createServer({
+        root: projectRoot,
+        cacheDir: 'node_modules/.vite-mcp',
+        plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
+        resolve: {
+          alias: {
+            ...(isTemplate && {
+              sunpeak: parentSrc,
+            }),
           },
         },
-      },
-      optimizeDeps: {
-        include: ['react', 'react-dom/client'],
-      },
-      appType: 'custom',
-    });
+        server: {
+          middlewareMode: true,
+          allowedHosts: true,
+          watch: {
+            // Only watch files that affect the UI bundle (not JSON, tests, etc.)
+            // MCP resources reload on next tool call, not on file change
+            ignored: (filePath) => {
+              if (!filePath.includes('.')) return false; // Watch directories
+              if (/\.(tsx?|css)$/.test(filePath)) {
+                return /\.(test|spec)\.tsx?$/.test(filePath); // Ignore tests
+              }
+              return true; // Ignore everything else
+            },
+          },
+        },
+        optimizeDeps: {
+          include: ['react', 'react-dom/client'],
+        },
+        appType: 'custom',
+      });
+    }
 
     const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
     runMCPServer({
@@ -264,18 +272,18 @@ if (!Component) {
       version: pkg.version || '0.1.0',
       simulations,
       port: 6766,
-      viteServer: mcpViteServer,
+      ...(mcpViteServer && { viteServer: mcpViteServer }),
     });
 
     // Handle signals - close both servers
     process.on('SIGINT', async () => {
-      await mcpViteServer.close();
+      if (mcpViteServer) await mcpViteServer.close();
       await server.close();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
-      await mcpViteServer.close();
+      if (mcpViteServer) await mcpViteServer.close();
       await server.close();
       process.exit(0);
     });
