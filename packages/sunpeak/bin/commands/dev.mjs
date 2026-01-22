@@ -189,14 +189,6 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
     if (!prodMcp) {
       // Virtual entry module plugin for MCP
-      // For internal dev (template): Import sunpeak styles directly via JS to avoid CSS @import
-      // alias issues with Lightning CSS, then import app.css for user customizations.
-      // For external users: Import OpenAI SDK CSS directly (ensures Tailwind processes @theme static),
-      // then import globals.css for user's Tailwind config and custom styles.
-      const styleImports = isTemplate
-        ? `import '${parentSrc}/style.css';\nimport '/src/styles/app.css';`
-        : `import '@openai/apps-sdk-ui/css';\nimport '/src/styles/globals.css';`;
-
       const sunpeakEntryPlugin = () => ({
         name: 'sunpeak-entry',
         resolveId(id) {
@@ -217,7 +209,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
             return `
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
-${styleImports}
+import '/src/styles/globals.css';
 import * as ResourceModule from '${srcPath}';
 
 const Component = ResourceModule.default || ResourceModule['${componentName}'];
