@@ -4,7 +4,7 @@ import dts from 'vite-plugin-dts';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { builtinModules } from 'module';
-import { copyFileSync, mkdirSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 
 // Node.js built-in modules to externalize
 const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
@@ -19,15 +19,18 @@ export default defineConfig({
       outDir: 'dist',
       rollupTypes: false,
     }),
-    // Copy chatgpt CSS to dist for separate import
+    // Merge Tailwind setup + bundled component styles into single CSS file
     {
-      name: 'copy-chatgpt-css',
+      name: 'merge-chatgpt-css',
       closeBundle() {
         mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
-        copyFileSync(
-          resolve(__dirname, 'src/chatgpt/globals.css'),
-          resolve(__dirname, 'dist/chatgpt/globals.css')
-        );
+        // Read Tailwind setup (directives processed by consuming app)
+        const globalsCss = readFileSync(resolve(__dirname, 'src/chatgpt/globals.css'), 'utf-8');
+        // Read pre-compiled component styles (CSS modules from SDK)
+        const styleCss = readFileSync(resolve(__dirname, 'dist/style.css'), 'utf-8');
+        // Merge into single file
+        const merged = `${globalsCss}\n/* Bundled component styles */\n${styleCss}`;
+        writeFileSync(resolve(__dirname, 'dist/chatgpt/globals.css'), merged);
       },
     },
   ],
