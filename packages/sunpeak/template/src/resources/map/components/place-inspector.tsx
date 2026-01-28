@@ -14,17 +14,17 @@ export type PlaceInspectorProps = {
 const REVIEWS = [
   {
     user: 'Leo M.',
-    avatar: 'https://persistent.oaistatic.com/pizzaz/user1.png',
+    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop',
     text: 'Fantastic crust and balanced toppings. The marinara is spot on!',
   },
   {
     user: 'Priya S.',
-    avatar: 'https://persistent.oaistatic.com/pizzaz/user2.png',
+    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
     text: 'Cozy vibe and friendly staff. Quick service on a Friday night.',
   },
   {
     user: 'Maya R.',
-    avatar: 'https://persistent.oaistatic.com/pizzaz/user3.png',
+    avatar: 'https://images.unsplash.com/photo-1759197332955-f6bf401a45bf?w=100&h=100&fit=crop',
     text: 'Great for sharing. Will definitely come back with friends.',
   },
 ];

@@ -24,7 +24,7 @@
           "city": "North Beach",
           "rating": 4.8,
           "price": "$$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-1.png"
+          "thumbnail": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=400&fit=crop"
         },
         {
           "id": "midnight-marinara",
@@ -34,7 +34,7 @@
           "city": "North Beach",
           "rating": 4.6,
           "price": "$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-2.png"
+          "thumbnail": "https://images.unsplash.com/photo-1664309641932-0e03e0771b97?w=400&h=400&fit=crop"
         },
         {
           "id": "cinder-oven-co",
@@ -44,7 +44,7 @@
           "city": "Mission",
           "rating": 4.5,
           "price": "$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-3.png"
+          "thumbnail": "https://images.unsplash.com/photo-1663610561489-3fbc54a0e606?w=400&h=400&fit=crop"
         },
         {
           "id": "neon-crust-works",
@@ -54,7 +54,7 @@
           "city": "Alamo Square",
           "rating": 4.5,
           "price": "$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-6.png"
+          "thumbnail": "https://images.unsplash.com/photo-1731156639378-1b3170abb35d?w=400&h=400&fit=crop"
         },
         {
           "id": "luna-pie-collective",
@@ -64,7 +64,7 @@
           "city": "North Beach",
           "rating": 4.6,
           "price": "$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-4.png"
+          "thumbnail": "https://images.unsplash.com/photo-1695606392964-008c4bbdf354?w=400&h=400&fit=crop"
         },
         {
           "id": "bricklight-deep-dish",
@@ -74,7 +74,7 @@
           "city": "North Beach",
           "rating": 4.4,
           "price": "$$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-5.png"
+          "thumbnail": "https://images.unsplash.com/photo-1600628421060-939639517883?w=400&h=400&fit=crop"
         },
         {
           "id": "garden-ember-pies",
@@ -84,7 +84,7 @@
           "city": "Lower Haight",
           "rating": 4.4,
           "price": "$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-1.png"
+          "thumbnail": "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=400&fit=crop"
         },
         {
           "id": "atlas-fire-pizzeria",
@@ -94,7 +94,7 @@
           "city": "Nob Hill",
           "rating": 4.6,
           "price": "$$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-2.png"
+          "thumbnail": "https://images.unsplash.com/photo-1664309641932-0e03e0771b97?w=400&h=400&fit=crop"
         },
         {
           "id": "circuit-slice-garage",
@@ -104,7 +104,7 @@
           "city": "SoMa",
           "rating": 4.5,
           "price": "$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-3.png"
+          "thumbnail": "https://images.unsplash.com/photo-1663610561489-3fbc54a0e606?w=400&h=400&fit=crop"
         },
         {
           "id": "velvet-mozza-lounge",
@@ -114,7 +114,7 @@
           "city": "Yerba Buena",
           "rating": 4.3,
           "price": "$$",
-          "thumbnail": "https://persistent.oaistatic.com/pizzaz/pizzaz-6.png"
+          "thumbnail": "https://images.unsplash.com/photo-1731156639378-1b3170abb35d?w=400&h=400&fit=crop"
         }
       ]
     },
