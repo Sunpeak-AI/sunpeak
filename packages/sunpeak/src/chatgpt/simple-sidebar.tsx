@@ -139,7 +139,7 @@ interface SidebarControlProps {
 export function SidebarControl({ label, children }: SidebarControlProps) {
   return (
     <div className="space-y-1">
-      <label className="text-[10px] font-medium text-secondary leading-tight">{label}</label>
+      <span className="text-[10px] font-medium text-secondary leading-tight">{label}</span>
       {children}
     </div>
   );
