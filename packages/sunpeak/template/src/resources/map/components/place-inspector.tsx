@@ -14,17 +14,17 @@ export type PlaceInspectorProps = {
 const REVIEWS = [
   {
     user: 'Leo M.',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=100&h=100&fit=crop',
+    avatar: 'https://cdn.sunpeak.ai/demo/user1.jpeg',
     text: 'Fantastic crust and balanced toppings. The marinara is spot on!',
   },
   {
     user: 'Priya S.',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&h=100&fit=crop',
+    avatar: 'https://cdn.sunpeak.ai/demo/user2.jpeg',
     text: 'Cozy vibe and friendly staff. Quick service on a Friday night.',
   },
   {
     user: 'Maya R.',
-    avatar: 'https://images.unsplash.com/photo-1759197332955-f6bf401a45bf?w=100&h=100&fit=crop',
+    avatar: 'https://cdn.sunpeak.ai/demo/user3.jpeg',
     text: 'Great for sharing. Will definitely come back with friends.',
   },
 ];

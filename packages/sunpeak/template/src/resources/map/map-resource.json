@@ -8,7 +8,7 @@
     "openai/widgetCSP": {
       "connect_domains": ["https://api.mapbox.com", "https://events.mapbox.com"],
       "resource_domains": [
-        "https://images.unsplash.com",
+        "https://cdn.sunpeak.ai",
         "https://cdn.openai.com",
         "https://api.mapbox.com",
         "https://events.mapbox.com"

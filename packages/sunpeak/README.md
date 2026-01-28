@@ -1,7 +1,7 @@
 <div align="center">
   <a href="https://sunpeak.ai">
     <picture>
-      <img alt="Sunpeak logo" src="https://d10djik02wlf6x.cloudfront.net/sunpeak-github.svg">
+      <img alt="Sunpeak logo" src="https://cdn.sunpeak.ai/sunpeak-github.svg">
     </picture>
   </a>
 </div>
@@ -21,7 +21,7 @@ Local-first ChatGPT App framework.
 Quickstart, build, test, and ship your ChatGPT App!
 
 [Demo (Hosted)](https://sunpeak.ai/#simulator) ~
-[Demo (Video)](https://d10djik02wlf6x.cloudfront.net/sunpeak-demo-prod.mp4) ~
+[Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
 [Discord (NEW)](https://discord.gg/FB2QNXqRnw) ~
 [Documentation](https://docs.sunpeak.ai/) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak) ~
@@ -30,7 +30,7 @@ Quickstart, build, test, and ship your ChatGPT App!
 <div align="center">
   <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
     <picture>
-      <img alt="ChatGPT Simulator" src="https://d10djik02wlf6x.cloudfront.net/chatgpt-simulator.png">
+      <img alt="ChatGPT Simulator" src="https://cdn.sunpeak.ai/chatgpt-simulator.png">
     </picture>
   </a>
 </div>
@@ -88,7 +88,7 @@ Think Docker Hub for ChatGPT Apps:
 <div align="center">
   <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
     <picture>
-      <img alt="ChatGPT Resource Repository" src="https://d10djik02wlf6x.cloudfront.net/blog/storybook-for-chatgpt-apps.png">
+      <img alt="ChatGPT Resource Repository" src="https://cdn.sunpeak.ai/blog/storybook-for-chatgpt-apps.png">
     </picture>
   </a>
 </div>

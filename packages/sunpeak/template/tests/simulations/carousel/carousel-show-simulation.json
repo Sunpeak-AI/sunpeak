@@ -22,7 +22,7 @@
           "rating": 4.5,
           "category": "Waterfront",
           "location": "Austin",
-          "image": "https://images.unsplash.com/photo-1520950237264-dfe336995c34?w=400&h=400&fit=crop",
+          "image": "https://cdn.sunpeak.ai/demo/austin1.jpeg",
           "description": "Scenic lake perfect for kayaking, paddleboarding, and trails."
         },
         {
@@ -31,7 +31,7 @@
           "rating": 4.8,
           "category": "Historic Site",
           "location": "Austin",
-          "image": "https://images.unsplash.com/photo-1664231978322-4d0b45c7027b?w=400&h=400&fit=crop",
+          "image": "https://cdn.sunpeak.ai/demo/austin2.jpeg",
           "description": "Stunning capitol building with free tours and beautiful grounds."
         },
         {
@@ -40,7 +40,7 @@
           "rating": 4.7,
           "category": "Architecture",
           "location": "Austin",
-          "image": "https://images.unsplash.com/photo-1583097090970-4d3b940ea1a0?w=400&h=400&fit=crop",
+          "image": "https://cdn.sunpeak.ai/demo/austin3.jpeg",
           "description": "Century-old performance and movie theatre in the heart of downtown Austin."
         },
         {
@@ -49,7 +49,7 @@
           "rating": 4.7,
           "category": "Park",
           "location": "Austin",
-          "image": "https://images.unsplash.com/photo-1563828568124-f800803ba13c?w=400&h=400&fit=crop",
+          "image": "https://cdn.sunpeak.ai/demo/austin4.jpeg",
           "description": "Popular park with trails, sports fields, and Barton Springs Pool."
         },
         {
@@ -58,7 +58,7 @@
           "rating": 4.6,
           "category": "Landmark",
           "location": "Austin",
-          "image": "https://images.unsplash.com/photo-1588993608283-7f0eda4438be?w=400&h=400&fit=crop",
+          "image": "https://cdn.sunpeak.ai/demo/austin5.jpeg",
           "description": "Vibrant street with unique shops, restaurants, and live music."
         }
       ]

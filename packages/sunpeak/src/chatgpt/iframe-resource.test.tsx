@@ -490,13 +490,13 @@ describe('IframeResource Security', () => {
     it('adds custom resource domains to img-src and font-src', () => {
       const csp = generateCSP(
         {
-          resource_domains: ['https://images.unsplash.com', 'https://cdn.openai.com'],
+          resource_domains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
         },
         'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
 
       expect(csp).toContain('img-src');
-      expect(csp).toContain('https://images.unsplash.com');
+      expect(csp).toContain('https://cdn.sunpeak.ai');
       expect(csp).toContain('https://cdn.openai.com');
       expect(csp).toContain('font-src');
     });
