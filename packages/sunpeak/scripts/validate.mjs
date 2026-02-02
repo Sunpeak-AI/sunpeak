@@ -167,7 +167,7 @@ try {
   printSuccess('Linked local sunpeak package');
 
   console.log('\nRunning: pnpm install (test-app)');
-  if (!runCommand('pnpm install', testProjectDir)) {
+  if (!runCommand('pnpm install --no-frozen-lockfile', testProjectDir)) {
     throw new Error('pnpm install failed in test-app');
   }
   printSuccess('pnpm install (test-app)');
