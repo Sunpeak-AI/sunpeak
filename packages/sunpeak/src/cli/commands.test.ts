@@ -1020,6 +1020,7 @@ describe('CLI Commands', () => {
 
       await init('my-project', 'carousel', {
         discoverResources: () => ['carousel', 'review', 'map'],
+        detectPackageManager: () => 'pnpm',
         existsSync: (path: string) => {
           // Target dir doesn't exist, but dotfiles do
           if (path === '/test/my-project') return false;
@@ -1044,6 +1045,7 @@ describe('CLI Commands', () => {
         renameSync: (from: string, to: string) => {
           renamedFiles.push({ from, to });
         },
+        execSync: vi.fn(),
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',
@@ -1095,6 +1097,7 @@ describe('CLI Commands', () => {
 
       await init('my-project', '', {
         discoverResources: () => ['carousel', 'review'],
+        detectPackageManager: () => 'npm',
         prompt: async () => '', // Empty input means "all resources"
         existsSync: () => false,
         mkdirSync: vi.fn(),
@@ -1104,6 +1107,7 @@ describe('CLI Commands', () => {
         readFileSync: () => JSON.stringify({ version: '1.0.0', name: 'test' }),
         writeFileSync: vi.fn(),
         renameSync: vi.fn(),
+        execSync: vi.fn(),
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',

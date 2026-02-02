@@ -58,7 +58,7 @@ Assuming `pwd` is this root sunpeak repo folder, run:
 pnpm update -g sunpeak
 rm -rf ../tmp && mkdir ../tmp && cd ../tmp
 sunpeak new my-app && cd my-app
-pnpm install && sunpeak build && pnpm test && sunpeak dev
+sunpeak build && pnpm test && sunpeak dev
 ```
 
 ## Coding Guidance

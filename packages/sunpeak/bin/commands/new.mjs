@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync, renameSync 
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
 import { createInterface } from 'readline';
+import { execSync } from 'child_process';
 import { discoverResources } from '../lib/patterns.mjs';
+import { detectPackageManager } from '../utils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -27,12 +29,14 @@ function defaultPrompt(question) {
  */
 export const defaultDeps = {
   discoverResources,
+  detectPackageManager,
   existsSync,
   mkdirSync,
   cpSync,
   readFileSync,
   writeFileSync,
   renameSync,
+  execSync,
   prompt: defaultPrompt,
   console,
   process,
@@ -184,18 +188,29 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
 
   d.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
+  // Detect package manager and run install
+  const pm = d.detectPackageManager();
+  d.console.log(`☀️ 🏔️ Installing dependencies with ${pm}...`);
+
+  try {
+    d.execSync(`${pm} install`, { cwd: targetDir, stdio: 'inherit' });
+  } catch {
+    d.console.error(`\nInstall failed. You can try running "${pm} install" manually in the project directory.`);
+  }
+
+  const runCmd = pm === 'npm' ? 'npm run' : pm;
+
   d.console.log(`
 Done! To get started:
 
   cd ${projectName}
-  pnpm install
   sunpeak dev
 
 That's it! Your project commands:
 
   sunpeak dev       # Start dev server + MCP endpoint
   sunpeak build     # Build for production
-  pnpm test         # Run tests
+  ${runCmd} test         # Run tests
 
 See README.md for more details.
 `);

@@ -7,7 +7,6 @@ For an initial overview of your new app and a detailed API reference, refer to t
 ## Quickstart
 
 ```bash
-pnpm install
 sunpeak dev
 ```
 

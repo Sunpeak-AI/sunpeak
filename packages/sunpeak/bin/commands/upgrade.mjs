@@ -1,8 +1,9 @@
 #!/usr/bin/env node
-import { execSync, spawn } from 'child_process';
+import { spawn } from 'child_process';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import { detectPackageManager } from '../utils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -45,34 +46,6 @@ function compareVersions(a, b) {
 }
 
 /**
- * Detect which package manager is being used
- */
-function detectPackageManagerImpl() {
-  // Check npm_config_user_agent first (set by npm/pnpm/yarn when running scripts)
-  const userAgent = process.env.npm_config_user_agent || '';
-  if (userAgent.includes('pnpm')) return 'pnpm';
-  if (userAgent.includes('yarn')) return 'yarn';
-  if (userAgent.includes('npm')) return 'npm';
-
-  // Fallback: check if commands exist
-  try {
-    execSync('pnpm --version', { stdio: 'ignore' });
-    return 'pnpm';
-  } catch {
-    // pnpm not available
-  }
-
-  try {
-    execSync('yarn --version', { stdio: 'ignore' });
-    return 'yarn';
-  } catch {
-    // yarn not available
-  }
-
-  return 'npm';
-}
-
-/**
  * Run the upgrade command
  */
 function runUpgradeImpl(packageManager, packageName = 'sunpeak') {
@@ -110,7 +83,7 @@ function runUpgradeImpl(packageManager, packageName = 'sunpeak') {
 export const defaultDeps = {
   getCurrentVersion: getCurrentVersionImpl,
   fetchLatestVersion: fetchLatestVersionImpl,
-  detectPackageManager: detectPackageManagerImpl,
+  detectPackageManager,
   runUpgrade: runUpgradeImpl,
   console,
   process,
