@@ -1,9 +1,23 @@
 {
-  "userMessage": "Show me popular places to visit in Austin Texas",
+  "userMessage": "Show me popular places to visit in Austin Texas.",
   "tool": {
     "name": "show-carousel",
     "description": "Show popular places to visit",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string", "description": "City name to search for places" },
+        "state": { "type": "string", "description": "State or region" },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Filter by categories (e.g., parks, restaurants, landmarks)"
+        },
+        "limit": { "type": "number", "description": "Maximum number of places to return" }
+      },
+      "required": ["city"],
+      "additionalProperties": false
+    },
     "title": "Show Carousel",
     "annotations": { "readOnlyHint": true },
     "_meta": {
@@ -11,6 +25,15 @@
       "openai/toolInvocation/invoked": "Carousel loaded",
       "openai/widgetAccessible": true,
       "openai/resultCanProduceWidget": true
+    }
+  },
+  "callToolRequestParams": {
+    "name": "show-carousel",
+    "arguments": {
+      "city": "Austin",
+      "state": "Texas",
+      "categories": ["landmarks", "parks", "historic sites"],
+      "limit": 5
     }
   },
   "callToolResult": {

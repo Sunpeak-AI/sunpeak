@@ -1,9 +1,30 @@
 {
-  "userMessage": "I'd like to refactor the authentication module",
+  "userMessage": "Refactor the authentication module to use JWT tokens instead of sessions.",
   "tool": {
     "name": "review-diff",
     "description": "Show a review dialog for a proposed code diff",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "changesetId": { "type": "string", "description": "Unique identifier for the changeset" },
+        "title": { "type": "string", "description": "Title describing the changes" },
+        "description": {
+          "type": "string",
+          "description": "Detailed description of what the changes accomplish"
+        },
+        "files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "List of file paths affected by this change"
+        },
+        "runMigrations": {
+          "type": "boolean",
+          "description": "Whether to run database migrations as part of the change"
+        }
+      },
+      "required": ["changesetId", "title"],
+      "additionalProperties": false
+    },
     "title": "Diff Review",
     "annotations": { "readOnlyHint": false },
     "_meta": {
@@ -11,6 +32,21 @@
       "openai/toolInvocation/invoked": "Changes ready for review",
       "openai/widgetAccessible": true,
       "openai/resultCanProduceWidget": true
+    }
+  },
+  "callToolRequestParams": {
+    "name": "review-diff",
+    "arguments": {
+      "changesetId": "cs_789",
+      "title": "Refactor Authentication Module",
+      "description": "Update the authentication system to use JWT tokens instead of session-based auth",
+      "files": [
+        "src/lib/jwt.ts",
+        "src/middleware/auth.ts",
+        "src/routes/login.ts",
+        "src/lib/session.ts"
+      ],
+      "runMigrations": true
     }
   },
   "callToolResult": {

@@ -1,9 +1,37 @@
 {
-  "userMessage": "I want to buy these items",
+  "userMessage": "Buy some wireless headphones, a USB-C cable, and a clear iPhone case.",
   "tool": {
     "name": "review-purchase",
     "description": "Review a purchase before completing the transaction",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "cartId": { "type": "string", "description": "Shopping cart identifier" },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "quantity": { "type": "number" }
+            }
+          },
+          "description": "List of items to purchase"
+        },
+        "shippingAddressId": {
+          "type": "string",
+          "description": "ID of the saved shipping address"
+        },
+        "shippingMethod": {
+          "type": "string",
+          "enum": ["standard", "express", "overnight"],
+          "description": "Shipping speed"
+        },
+        "paymentMethodId": { "type": "string", "description": "ID of the saved payment method" }
+      },
+      "required": ["items"],
+      "additionalProperties": false
+    },
     "title": "Review Purchase",
     "annotations": { "readOnlyHint": false },
     "_meta": {
@@ -11,6 +39,20 @@
       "openai/toolInvocation/invoked": "Order ready for review",
       "openai/widgetAccessible": true,
       "openai/resultCanProduceWidget": true
+    }
+  },
+  "callToolRequestParams": {
+    "name": "review-purchase",
+    "arguments": {
+      "cartId": "cart_abc123",
+      "items": [
+        { "productId": "prod_headphones_001", "quantity": 1 },
+        { "productId": "prod_usbc_cable_002", "quantity": 1 },
+        { "productId": "prod_iphone_case_003", "quantity": 1 }
+      ],
+      "shippingAddressId": "addr_home_456",
+      "shippingMethod": "standard",
+      "paymentMethodId": "pm_visa_789"
     }
   },
   "callToolResult": {

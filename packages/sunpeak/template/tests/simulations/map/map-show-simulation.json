@@ -1,9 +1,34 @@
 {
-  "userMessage": "Find pizza near me",
+  "userMessage": "Where's the best pizza in San Francisco?",
   "tool": {
     "name": "show-map",
     "description": "Show the map",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Search query for places (e.g., pizza, coffee, restaurants)"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          },
+          "description": "Center location for the search"
+        },
+        "radius": { "type": "number", "description": "Search radius in miles" },
+        "minRating": { "type": "number", "description": "Minimum rating filter (1-5)" },
+        "priceRange": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["$", "$$", "$$$", "$$$$"] },
+          "description": "Price range filter"
+        }
+      },
+      "required": ["query"],
+      "additionalProperties": false
+    },
     "title": "Show Map",
     "annotations": { "readOnlyHint": true },
     "_meta": {
@@ -11,6 +36,16 @@
       "openai/toolInvocation/invoked": "Found pizza places",
       "openai/widgetAccessible": true,
       "openai/resultCanProduceWidget": true
+    }
+  },
+  "callToolRequestParams": {
+    "name": "show-map",
+    "arguments": {
+      "query": "pizza",
+      "location": { "lat": 37.7749, "lng": -122.4194 },
+      "radius": 5,
+      "minRating": 4.0,
+      "priceRange": ["$", "$$", "$$$"]
     }
   },
   "callToolResult": {

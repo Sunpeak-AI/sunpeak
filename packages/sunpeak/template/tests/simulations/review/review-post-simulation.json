@@ -1,9 +1,36 @@
 {
-  "userMessage": "Post this to my social media",
+  "userMessage": "Write a launch announcement for X and LinkedIn.",
   "tool": {
     "name": "review-post",
     "description": "Review a social media post before publishing",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "content": { "type": "string", "description": "The text content of the post" },
+        "platforms": {
+          "type": "array",
+          "items": { "type": "string", "enum": ["x", "linkedin", "facebook", "instagram"] },
+          "description": "Social media platforms to post to"
+        },
+        "schedule": {
+          "type": "string",
+          "enum": ["now", "scheduled"],
+          "description": "When to publish the post"
+        },
+        "scheduledTime": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp for scheduled posts"
+        },
+        "visibility": {
+          "type": "string",
+          "enum": ["public", "connections", "private"],
+          "description": "Post visibility setting"
+        }
+      },
+      "required": ["content", "platforms"],
+      "additionalProperties": false
+    },
     "title": "Review Post",
     "annotations": { "readOnlyHint": false },
     "_meta": {
@@ -11,6 +38,15 @@
       "openai/toolInvocation/invoked": "Post ready for review",
       "openai/widgetAccessible": true,
       "openai/resultCanProduceWidget": true
+    }
+  },
+  "callToolRequestParams": {
+    "name": "review-post",
+    "arguments": {
+      "content": "Just shipped a major update to our app! 🚀\n\nNew features include:\n• Dark mode support\n• Faster load times\n• Bug fixes and improvements\n\nThanks to everyone who provided feedback. You all are amazing! 💪\n\n#ProductUpdate #TechNews #Startup",
+      "platforms": ["x", "linkedin"],
+      "schedule": "now",
+      "visibility": "public"
     }
   },
   "callToolResult": {

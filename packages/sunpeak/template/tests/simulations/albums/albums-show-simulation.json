@@ -1,9 +1,23 @@
 {
-  "userMessage": "Show me my pizza blog photos",
+  "userMessage": "Show me photos from my Austin pizza tour.",
   "tool": {
     "name": "show-albums",
     "description": "Show photo albums",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "category": {
+          "type": "string",
+          "description": "Filter albums by category (e.g., travel, food, family)"
+        },
+        "search": {
+          "type": "string",
+          "description": "Search term to filter albums by title or description"
+        },
+        "limit": { "type": "number", "description": "Maximum number of albums to return" }
+      },
+      "additionalProperties": false
+    },
     "title": "Show Albums",
     "annotations": { "readOnlyHint": true },
     "_meta": {
@@ -11,6 +25,14 @@
       "openai/toolInvocation/invoked": "Album loaded",
       "openai/widgetAccessible": true,
       "openai/resultCanProduceWidget": true
+    }
+  },
+  "callToolRequestParams": {
+    "name": "show-albums",
+    "arguments": {
+      "category": "food",
+      "search": "Austin pizza tour",
+      "limit": 10
     }
   },
   "callToolResult": {
