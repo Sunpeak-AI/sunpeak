@@ -1,5 +1,7 @@
-import { useWidgetGlobal } from './use-widget-global';
+import { useHostContext } from './use-host-context';
+import type { App } from '@modelcontextprotocol/ext-apps';
 
-export const useLocale = (): string | null => {
-  return useWidgetGlobal('locale');
-};
+export function useLocale(app: App | null): string {
+  const context = useHostContext(app);
+  return context?.locale ?? 'en-US';
+}

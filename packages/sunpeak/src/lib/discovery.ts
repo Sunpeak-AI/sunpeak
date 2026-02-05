@@ -252,15 +252,25 @@ export function buildDevSimulations(
     simulationModules,
     resourcesMap,
     resourceComponents,
-    createSimulation: (simulationKey, simulationData, resource, resourceComponent) => ({
-      ...(simulationData as Omit<Simulation, 'name' | 'resourceComponent' | 'resource'>),
-      name: simulationKey,
-      resource: {
-        uri: `ui://${resource.name}`,
-        ...resource,
-      },
-      resourceComponent,
-    }),
+    createSimulation: (simulationKey, simulationData, resource, resourceComponent) => {
+      // Get the component name for the resource URL
+      const resourceKey = findResourceKey(simulationKey, Array.from(resourcesMap.keys()));
+      const componentName = resourceKey ? getComponentName(resourceKey) : '';
+
+      return {
+        ...(simulationData as Omit<Simulation, 'name' | 'resourceUrl' | 'resource'>),
+        name: simulationKey,
+        resource: {
+          uri: `ui://${resource.name}`,
+          ...resource,
+        },
+        // Generate URL to the resource loader with component name as query param
+        resourceUrl: `/.sunpeak/resource-loader.html?component=${componentName}`,
+        // Keep resourceComponent for backwards compatibility during transition
+        // but it won't be used by the simulator anymore
+        _resourceComponent: resourceComponent,
+      } as Simulation;
+    },
   });
 }
 

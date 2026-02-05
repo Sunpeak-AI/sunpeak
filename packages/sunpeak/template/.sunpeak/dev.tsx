@@ -10,9 +10,11 @@
  */
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { ChatGPTSimulator, buildDevSimulations } from 'sunpeak';
+import { chatgpt } from 'sunpeak';
 import resourceComponents from '../src/resources';
 import '../src/styles/globals.css';
+
+const { ChatGPTSimulator, buildDevSimulations } = chatgpt;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({

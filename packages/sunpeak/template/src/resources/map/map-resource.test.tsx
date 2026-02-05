@@ -3,15 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MapResource } from './map-resource';
 
 // Mock sunpeak hooks
-let mockSafeArea: { insets: { top: number; bottom: number; left: number; right: number } } | null =
-  {
-    insets: { top: 0, bottom: 0, left: 0, right: 0 },
-  };
-let mockMaxHeight: number | null = 600;
+let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+let mockViewport: { maxHeight: number } | null = { maxHeight: 600 };
 
 vi.mock('sunpeak', () => ({
+  useApp: () => ({ app: null, isConnected: true, error: null }),
   useSafeArea: () => mockSafeArea,
-  useMaxHeight: () => mockMaxHeight,
+  useViewport: () => mockViewport,
 }));
 
 // Mock the Map component
@@ -22,8 +20,8 @@ vi.mock('./components/map', () => ({
 describe('MapResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
-    mockMaxHeight = 600;
+    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+    mockViewport = { maxHeight: 600 };
   });
 
   it('renders the Map component', () => {
@@ -33,7 +31,7 @@ describe('MapResource', () => {
   });
 
   it('respects safe area insets', () => {
-    mockSafeArea = { insets: { top: 20, bottom: 30, left: 10, right: 15 } };
+    mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
 
     const { container } = render(<MapResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -47,7 +45,7 @@ describe('MapResource', () => {
   });
 
   it('respects maxHeight constraint', () => {
-    mockMaxHeight = 400;
+    mockViewport = { maxHeight: 400 };
 
     const { container } = render(<MapResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -57,8 +55,8 @@ describe('MapResource', () => {
     });
   });
 
-  it('handles null safe area', () => {
-    mockSafeArea = null;
+  it('handles zero safe area insets', () => {
+    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
 
     const { container } = render(<MapResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -71,25 +69,13 @@ describe('MapResource', () => {
     });
   });
 
-  it('handles null maxHeight', () => {
-    mockMaxHeight = null;
+  it('handles null viewport', () => {
+    mockViewport = null;
 
     const { container } = render(<MapResource />);
     const mainDiv = container.firstChild as HTMLElement;
 
     // maxHeight should not be set when null
     expect(mainDiv.style.maxHeight).toBe('');
-  });
-
-  it('forwards ref to the container div', () => {
-    const ref = vi.fn();
-    render(<MapResource ref={ref} />);
-
-    expect(ref).toHaveBeenCalled();
-    expect(ref.mock.calls[0][0]).toBeInstanceOf(HTMLDivElement);
-  });
-
-  it('has the correct displayName', () => {
-    expect(MapResource.displayName).toBe('MapResource');
   });
 });

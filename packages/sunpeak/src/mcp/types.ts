@@ -1,4 +1,4 @@
-import type { Resource, Tool, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+import type { Resource, Tool } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Simulation configuration for MCP server.
@@ -21,8 +21,12 @@ export interface SimulationWithDist {
   // Loaded from resources/NAME-resource.json where NAME is the simulation key.
   resource: Resource;
 
-  // Official CallToolResult from the MCP SDK, data for CallTool response
-  callToolResult?: CallToolResult;
+  // Tool result data for CallTool response
+  toolResult?: {
+    content?: Array<{ type: string; text: string }>;
+    structuredContent?: unknown;
+    isError?: boolean;
+  };
 }
 
 /**

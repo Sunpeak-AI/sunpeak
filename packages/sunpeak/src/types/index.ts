@@ -1,8 +1,2 @@
-// Generic runtime types (provider-agnostic)
+// Generic runtime types (cross-platform, MCP Apps SDK types)
 export * from './runtime';
-
-// Simulation types
-export * from './simulation';
-
-// ChatGPT simulator types
-export * from '../chatgpt/chatgpt-simulator-types';

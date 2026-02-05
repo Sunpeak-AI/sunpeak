@@ -1,11 +1,6 @@
 import * as React from 'react';
-import {
-  useWidgetState,
-  useDisplayMode,
-  useWidgetAPI,
-  useWidgetProps,
-  useMaxHeight,
-} from 'sunpeak';
+import { useAppState, useDisplayMode, useToolData, useViewport } from 'sunpeak';
+import type { App } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
 import { cn } from '../../../lib/index';
@@ -15,51 +10,51 @@ import { PlaceInspector } from './place-inspector';
 import { MapView } from './map-view';
 import type { Place, MapData } from './types';
 
-export interface MapState extends Record<string, unknown> {
-  selectedPlaceId?: string | null;
+interface MapState {
+  selectedPlaceId: string | null;
 }
 
 export type MapProps = {
+  app: App | null;
   className?: string;
 };
 
-export const Map = React.forwardRef<HTMLDivElement, MapProps>(({ className }, ref) => {
-  const data = useWidgetProps<MapData>(() => ({ places: [] }));
-  const [widgetState, setWidgetState] = useWidgetState<MapState>(() => ({
+export function Map({ app, className }: MapProps) {
+  const { output } = useToolData<unknown, MapData>(app, undefined, { places: [] });
+  const [state, setState] = useAppState<MapState>(app, {
     selectedPlaceId: null,
-  }));
-  const displayMode = useDisplayMode();
-  const api = useWidgetAPI();
-  const maxHeight = useMaxHeight();
+  });
+  const displayMode = useDisplayMode(app);
+  const viewport = useViewport(app);
 
-  const places = data.places || [];
-  const selectedPlace = places.find((place: Place) => place.id === widgetState?.selectedPlaceId);
+  const maxHeight = viewport?.maxHeight ?? null;
+  const places = output?.places ?? [];
+  const selectedPlace = places.find((place: Place) => place.id === state.selectedPlaceId);
   const isFullscreen = displayMode === 'fullscreen';
 
   const handleSelectPlace = React.useCallback(
     (place: Place) => {
-      setWidgetState((prev) => ({ ...prev, selectedPlaceId: place.id }));
+      setState((prev) => ({ ...prev, selectedPlaceId: place.id }));
     },
-    [setWidgetState]
+    [setState]
   );
 
   const handleCloseInspector = React.useCallback(() => {
-    setWidgetState((prev) => ({ ...prev, selectedPlaceId: null }));
-  }, [setWidgetState]);
+    setState((prev) => ({ ...prev, selectedPlaceId: null }));
+  }, [setState]);
 
   const handleRequestFullscreen = React.useCallback(() => {
     // Clear selection when entering fullscreen from embedded mode
-    if (widgetState?.selectedPlaceId) {
-      setWidgetState((prev) => ({ ...prev, selectedPlaceId: null }));
+    if (state.selectedPlaceId) {
+      setState((prev) => ({ ...prev, selectedPlaceId: null }));
     }
-    api?.requestDisplayMode?.({ mode: 'fullscreen' });
-  }, [api, widgetState?.selectedPlaceId, setWidgetState]);
+    app?.requestDisplayMode({ mode: 'fullscreen' });
+  }, [app, state.selectedPlaceId, setState]);
 
   const containerHeight = isFullscreen ? (maxHeight ?? 600) - 40 : 480;
 
   return (
     <div
-      ref={ref}
       className={cn('relative antialiased w-full overflow-hidden', className)}
       style={{
         height: containerHeight,
@@ -93,7 +88,7 @@ export const Map = React.forwardRef<HTMLDivElement, MapProps>(({ className }, re
         {isFullscreen && (
           <PlaceList
             places={places}
-            selectedId={widgetState?.selectedPlaceId ?? null}
+            selectedId={state.selectedPlaceId}
             onSelect={handleSelectPlace}
           />
         )}
@@ -102,7 +97,7 @@ export const Map = React.forwardRef<HTMLDivElement, MapProps>(({ className }, re
         {!isFullscreen && (
           <PlaceCarousel
             places={places}
-            selectedId={widgetState?.selectedPlaceId ?? null}
+            selectedId={state.selectedPlaceId}
             onSelect={handleSelectPlace}
           />
         )}
@@ -118,6 +113,7 @@ export const Map = React.forwardRef<HTMLDivElement, MapProps>(({ className }, re
           selectedPlace={selectedPlace ?? null}
           isFullscreen={isFullscreen}
           onSelectPlace={handleSelectPlace}
+          maxHeight={maxHeight}
         />
 
         {/* Suggestion chips - only in fullscreen */}
@@ -141,5 +137,4 @@ export const Map = React.forwardRef<HTMLDivElement, MapProps>(({ className }, re
       </div>
     </div>
   );
-});
-Map.displayName = 'Map';
+}

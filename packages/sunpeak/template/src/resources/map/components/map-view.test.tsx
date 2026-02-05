@@ -28,11 +28,6 @@ vi.mock('mapbox-gl', () => ({
   },
 }));
 
-// Mock sunpeak hook
-vi.mock('sunpeak', () => ({
-  useMaxHeight: vi.fn().mockReturnValue(600),
-}));
-
 describe('MapView', () => {
   const mockPlaces: Place[] = [
     {

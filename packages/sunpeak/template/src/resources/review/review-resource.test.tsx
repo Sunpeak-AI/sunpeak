@@ -3,36 +3,38 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ReviewResource } from './review-resource';
 
 // Mock sunpeak hooks
-const mockSetWidgetState = vi.fn();
+const mockSetState = vi.fn();
 const mockRequestDisplayMode = vi.fn();
 
-let mockWidgetData: Record<string, unknown> = { title: 'Test Review' };
-let mockWidgetState: Record<string, unknown> = { decision: null, decidedAt: null };
-let mockSafeArea: { insets: { top: number; bottom: number; left: number; right: number } } | null =
-  {
-    insets: { top: 0, bottom: 0, left: 0, right: 0 },
-  };
-let mockMaxHeight: number | null = 600;
-let mockUserAgent: {
-  device: { type: 'desktop' | 'mobile' | 'tablet' | 'unknown' };
-  capabilities: { hover: boolean; touch: boolean };
+let mockToolOutput: Record<string, unknown> = { title: 'Test Review' };
+let mockState: Record<string, unknown> = { decision: null, decidedAt: null };
+let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+let mockViewport: { maxHeight: number } | null = { maxHeight: 600 };
+let mockHostContext: {
+  deviceCapabilities?: { hover: boolean; touch: boolean };
 } | null = {
-  device: { type: 'desktop' },
-  capabilities: { hover: true, touch: false },
+  deviceCapabilities: { hover: true, touch: false },
 };
 let mockDisplayMode: 'inline' | 'fullscreen' = 'inline';
 
+const mockApp = {
+  requestDisplayMode: mockRequestDisplayMode,
+};
+
 vi.mock('sunpeak', () => ({
-  useWidgetProps: (defaultFn: () => Record<string, unknown>) => {
-    const defaults = defaultFn();
-    return { ...defaults, ...mockWidgetData };
-  },
-  useWidgetState: () => [mockWidgetState, mockSetWidgetState],
+  useApp: () => ({ app: mockApp, isConnected: true, error: null }),
+  useToolData: (_app: unknown, _defaultInput: unknown, defaultOutput: Record<string, unknown>) => ({
+    output: { ...defaultOutput, ...mockToolOutput },
+    input: null,
+    inputPartial: null,
+    isError: false,
+    isLoading: false,
+  }),
   useSafeArea: () => mockSafeArea,
-  useMaxHeight: () => mockMaxHeight,
-  useUserAgent: () => mockUserAgent,
+  useViewport: () => mockViewport,
+  useHostContext: () => mockHostContext,
   useDisplayMode: () => mockDisplayMode,
-  useWidgetAPI: () => ({ requestDisplayMode: mockRequestDisplayMode }),
+  useAppState: () => [mockState, mockSetState],
 }));
 
 // Mock Button component
@@ -79,17 +81,17 @@ vi.mock('@openai/apps-sdk-ui/components/Icon', () => ({
 describe('ReviewResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWidgetData = { title: 'Test Review' };
-    mockWidgetState = { decision: null, decidedAt: null };
-    mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
-    mockMaxHeight = 600;
-    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
+    mockToolOutput = { title: 'Test Review' };
+    mockState = { decision: null, decidedAt: null };
+    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+    mockViewport = { maxHeight: 600 };
+    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
     mockDisplayMode = 'inline';
   });
 
   describe('Basic Rendering', () => {
     it('renders with title', () => {
-      mockWidgetData = { title: 'Confirm Purchase' };
+      mockToolOutput = { title: 'Confirm Purchase' };
 
       render(<ReviewResource />);
 
@@ -97,7 +99,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders with description', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         description: 'Please review the following items',
       };
@@ -108,15 +110,11 @@ describe('ReviewResource', () => {
     });
 
     it('renders loading when no sections', () => {
-      mockWidgetData = { title: 'Test', sections: [] };
+      mockToolOutput = { title: 'Test', sections: [] };
 
       render(<ReviewResource />);
 
       expect(screen.getByText('Loading...')).toBeInTheDocument();
-    });
-
-    it('has the correct displayName', () => {
-      expect(ReviewResource.displayName).toBe('ReviewResource');
     });
   });
 
@@ -129,7 +127,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders custom button labels', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         acceptLabel: 'Approve',
         rejectLabel: 'Decline',
@@ -141,13 +139,13 @@ describe('ReviewResource', () => {
       expect(screen.getByText('Decline')).toBeInTheDocument();
     });
 
-    it('calls setWidgetState with accepted decision when accept clicked', () => {
+    it('calls setState with accepted decision when accept clicked', () => {
       render(<ReviewResource />);
 
       const acceptButton = screen.getByText('Confirm');
       fireEvent.click(acceptButton);
 
-      expect(mockSetWidgetState).toHaveBeenCalledWith(
+      expect(mockSetState).toHaveBeenCalledWith(
         expect.objectContaining({
           decision: 'accepted',
           decidedAt: expect.any(String),
@@ -155,13 +153,13 @@ describe('ReviewResource', () => {
       );
     });
 
-    it('calls setWidgetState with rejected decision when reject clicked', () => {
+    it('calls setState with rejected decision when reject clicked', () => {
       render(<ReviewResource />);
 
       const rejectButton = screen.getByText('Cancel');
       fireEvent.click(rejectButton);
 
-      expect(mockSetWidgetState).toHaveBeenCalledWith(
+      expect(mockSetState).toHaveBeenCalledWith(
         expect.objectContaining({
           decision: 'rejected',
           decidedAt: expect.any(String),
@@ -170,7 +168,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders danger styling for accept button when acceptDanger is true', () => {
-      mockWidgetData = { title: 'Test', acceptDanger: true };
+      mockToolOutput = { title: 'Test', acceptDanger: true };
 
       render(<ReviewResource />);
 
@@ -188,7 +186,7 @@ describe('ReviewResource', () => {
 
   describe('Decision State', () => {
     it('shows accepted message after accepting', () => {
-      mockWidgetState = { decision: 'accepted', decidedAt: '2024-01-01T00:00:00.000Z' };
+      mockState = { decision: 'accepted', decidedAt: '2024-01-01T00:00:00.000Z' };
 
       render(<ReviewResource />);
 
@@ -197,7 +195,7 @@ describe('ReviewResource', () => {
     });
 
     it('shows rejected message after rejecting', () => {
-      mockWidgetState = { decision: 'rejected', decidedAt: '2024-01-01T00:00:00.000Z' };
+      mockState = { decision: 'rejected', decidedAt: '2024-01-01T00:00:00.000Z' };
 
       render(<ReviewResource />);
 
@@ -206,8 +204,8 @@ describe('ReviewResource', () => {
     });
 
     it('shows custom accepted message', () => {
-      mockWidgetData = { title: 'Test', acceptedMessage: 'Order Placed!' };
-      mockWidgetState = { decision: 'accepted', decidedAt: '2024-01-01T00:00:00.000Z' };
+      mockToolOutput = { title: 'Test', acceptedMessage: 'Order Placed!' };
+      mockState = { decision: 'accepted', decidedAt: '2024-01-01T00:00:00.000Z' };
 
       render(<ReviewResource />);
 
@@ -215,8 +213,8 @@ describe('ReviewResource', () => {
     });
 
     it('shows custom rejected message', () => {
-      mockWidgetData = { title: 'Test', rejectedMessage: 'Order Cancelled' };
-      mockWidgetState = { decision: 'rejected', decidedAt: '2024-01-01T00:00:00.000Z' };
+      mockToolOutput = { title: 'Test', rejectedMessage: 'Order Cancelled' };
+      mockState = { decision: 'rejected', decidedAt: '2024-01-01T00:00:00.000Z' };
 
       render(<ReviewResource />);
 
@@ -224,7 +222,7 @@ describe('ReviewResource', () => {
     });
 
     it('shows decidedAt timestamp', () => {
-      mockWidgetState = { decision: 'accepted', decidedAt: '2024-01-15T10:30:00.000Z' };
+      mockState = { decision: 'accepted', decidedAt: '2024-01-15T10:30:00.000Z' };
 
       render(<ReviewResource />);
 
@@ -236,7 +234,7 @@ describe('ReviewResource', () => {
 
   describe('Sections', () => {
     it('renders details section', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         sections: [
           {
@@ -260,7 +258,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders items section', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         sections: [
           {
@@ -284,7 +282,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders changes section', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         sections: [
           {
@@ -309,7 +307,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders preview section', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         sections: [
           {
@@ -329,7 +327,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders summary section', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         sections: [
           {
@@ -353,7 +351,7 @@ describe('ReviewResource', () => {
 
   describe('Alerts', () => {
     it('renders info alert', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         alerts: [{ type: 'info', message: 'This is informational' }],
       };
@@ -364,7 +362,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders warning alert', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         alerts: [{ type: 'warning', message: 'Please review carefully' }],
       };
@@ -375,7 +373,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders error alert', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         alerts: [{ type: 'error', message: 'Something went wrong' }],
       };
@@ -386,7 +384,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders success alert', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         alerts: [{ type: 'success', message: 'All checks passed' }],
       };
@@ -397,7 +395,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders multiple alerts', () => {
-      mockWidgetData = {
+      mockToolOutput = {
         title: 'Test',
         alerts: [
           { type: 'warning', message: 'Warning message' },
@@ -414,7 +412,7 @@ describe('ReviewResource', () => {
 
   describe('Safe Area and Layout', () => {
     it('respects safe area insets', () => {
-      mockSafeArea = { insets: { top: 20, bottom: 30, left: 10, right: 15 } };
+      mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
 
       const { container } = render(<ReviewResource />);
       const mainDiv = container.firstChild as HTMLElement;
@@ -428,7 +426,7 @@ describe('ReviewResource', () => {
     });
 
     it('respects maxHeight constraint', () => {
-      mockMaxHeight = 400;
+      mockViewport = { maxHeight: 400 };
 
       const { container } = render(<ReviewResource />);
       const mainDiv = container.firstChild as HTMLElement;
@@ -438,8 +436,8 @@ describe('ReviewResource', () => {
       });
     });
 
-    it('handles null safe area', () => {
-      mockSafeArea = null;
+    it('handles null host context', () => {
+      mockHostContext = null;
 
       const { container } = render(<ReviewResource />);
       const mainDiv = container.firstChild as HTMLElement;
@@ -452,8 +450,8 @@ describe('ReviewResource', () => {
       });
     });
 
-    it('handles null maxHeight', () => {
-      mockMaxHeight = null;
+    it('handles null viewport', () => {
+      mockViewport = null;
 
       const { container } = render(<ReviewResource />);
       const mainDiv = container.firstChild as HTMLElement;
@@ -464,7 +462,7 @@ describe('ReviewResource', () => {
 
   describe('Touch Device Support', () => {
     it('renders larger buttons for touch devices', () => {
-      mockUserAgent = { device: { type: 'mobile' }, capabilities: { hover: false, touch: true } };
+      mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
 
       render(<ReviewResource />);
 
@@ -476,7 +474,7 @@ describe('ReviewResource', () => {
     });
 
     it('renders standard buttons for non-touch devices', () => {
-      mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
+      mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
 
       render(<ReviewResource />);
 
@@ -487,8 +485,8 @@ describe('ReviewResource', () => {
       expect(rejectButton).toHaveAttribute('data-size', 'md');
     });
 
-    it('handles null userAgent gracefully', () => {
-      mockUserAgent = null;
+    it('handles null host context gracefully', () => {
+      mockHostContext = null;
 
       render(<ReviewResource />);
 
@@ -523,16 +521,6 @@ describe('ReviewResource', () => {
       fireEvent.click(expandButton);
 
       expect(mockRequestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' });
-    });
-  });
-
-  describe('Ref Forwarding', () => {
-    it('forwards ref to the container div', () => {
-      const ref = vi.fn();
-      render(<ReviewResource ref={ref} />);
-
-      expect(ref).toHaveBeenCalled();
-      expect(ref.mock.calls[0][0]).toBeInstanceOf(HTMLDivElement);
     });
   });
 });

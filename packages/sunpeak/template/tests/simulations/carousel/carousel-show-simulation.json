@@ -21,22 +21,16 @@
     "title": "Show Carousel",
     "annotations": { "readOnlyHint": true },
     "_meta": {
-      "openai/toolInvocation/invoking": "Loading carousel",
-      "openai/toolInvocation/invoked": "Carousel loaded",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
+      "ui": { "visibility": ["model", "app"] }
     }
   },
-  "callToolRequestParams": {
-    "name": "show-carousel",
-    "arguments": {
-      "city": "Austin",
-      "state": "Texas",
-      "categories": ["landmarks", "parks", "historic sites"],
-      "limit": 5
-    }
+  "toolInput": {
+    "city": "Austin",
+    "state": "Texas",
+    "categories": ["landmarks", "parks", "historic sites"],
+    "limit": 5
   },
-  "callToolResult": {
+  "toolResult": {
     "structuredContent": {
       "places": [
         {
@@ -85,7 +79,6 @@
           "description": "Vibrant street with unique shops, restaurants, and live music."
         }
       ]
-    },
-    "_meta": {}
+    }
   }
 }

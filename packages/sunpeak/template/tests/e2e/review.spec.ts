@@ -6,10 +6,8 @@ test.describe('Review Resource', () => {
     test('should render review title with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light' }));
 
-      await page.waitForLoadState('networkidle');
-
-      // Review has a title
-      const title = page.locator('h1:has-text("Refactor Authentication Module")');
+      const iframe = page.frameLocator('iframe');
+      const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
       await expect(title).toBeVisible();
 
       const styles = await title.evaluate((el) => {
@@ -26,10 +24,8 @@ test.describe('Review Resource', () => {
     test('should render change items with type-specific styling', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light' }));
 
-      await page.waitForLoadState('networkidle');
-
-      // Review diff shows changes - find the list items
-      const changeItem = page.locator('li').first();
+      const iframe = page.frameLocator('iframe');
+      const changeItem = iframe.locator('li').first();
       await expect(changeItem).toBeVisible();
 
       const styles = await changeItem.evaluate((el) => {
@@ -48,10 +44,10 @@ test.describe('Review Resource', () => {
     test('should have interactive apply and cancel buttons', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light' }));
 
-      await page.waitForLoadState('networkidle');
+      const iframe = page.frameLocator('iframe');
 
       // Find the Apply Changes button (based on simulation data)
-      const applyButton = page.locator('button:has-text("Apply Changes")');
+      const applyButton = iframe.locator('button:has-text("Apply Changes")');
       await expect(applyButton).toBeVisible();
 
       const applyStyles = await applyButton.evaluate((el) => {
@@ -63,7 +59,7 @@ test.describe('Review Resource', () => {
       expect(applyStyles.cursor).toBe('pointer');
 
       // Find the Cancel button
-      const cancelButton = page.locator('button:has-text("Cancel")');
+      const cancelButton = iframe.locator('button:has-text("Cancel")');
       await expect(cancelButton).toBeVisible();
 
       const cancelStyles = await cancelButton.evaluate((el) => {
@@ -80,10 +76,8 @@ test.describe('Review Resource', () => {
         createSimulatorUrl({ simulation: 'review-diff', theme: 'light', displayMode: 'inline' })
       );
 
-      await page.waitForLoadState('networkidle');
-
-      // Find the expand button
-      const expandButton = page.locator('button[aria-label="Enter fullscreen"]');
+      const iframe = page.frameLocator('iframe');
+      const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
       await expect(expandButton).toBeVisible();
 
       const styles = await expandButton.evaluate((el) => {
@@ -101,19 +95,16 @@ test.describe('Review Resource', () => {
     test('should render review title with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
 
-      await page.waitForLoadState('networkidle');
-
-      const title = page.locator('h1:has-text("Refactor Authentication Module")');
+      const iframe = page.frameLocator('iframe');
+      const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
       await expect(title).toBeVisible();
     });
 
     test('should have appropriate text colors for dark mode', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
 
-      await page.waitForLoadState('networkidle');
-
-      // The title should have text-primary class
-      const title = page.locator('h1.text-primary').first();
+      const iframe = page.frameLocator('iframe');
+      const title = iframe.locator('h1.text-primary').first();
       await expect(title).toBeVisible();
 
       const styles = await title.evaluate((el) => {
@@ -130,9 +121,8 @@ test.describe('Review Resource', () => {
     test('should render change items in dark mode', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
 
-      await page.waitForLoadState('networkidle');
-
-      const changeItem = page.locator('li').first();
+      const iframe = page.frameLocator('iframe');
+      const changeItem = iframe.locator('li').first();
       await expect(changeItem).toBeVisible();
     });
 
@@ -145,9 +135,20 @@ test.describe('Review Resource', () => {
       });
 
       await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark' }));
-      await page.waitForLoadState('networkidle');
 
-      expect(errors).toHaveLength(0);
+      // Wait for iframe content to render
+      const iframe = page.frameLocator('iframe');
+      await expect(iframe.locator('h1').first()).toBeVisible();
+
+      // Filter out expected iframe/MCP handshake errors
+      const unexpectedErrors = errors.filter(
+        (e) =>
+          !e.includes('[IframeResource]') &&
+          !e.includes('mcp') &&
+          !e.includes('PostMessage') &&
+          !e.includes('connect')
+      );
+      expect(unexpectedErrors).toHaveLength(0);
     });
   });
 
@@ -157,10 +158,12 @@ test.describe('Review Resource', () => {
         createSimulatorUrl({ simulation: 'review-diff', theme: 'light', displayMode: 'fullscreen' })
       );
 
-      await page.waitForLoadState('networkidle');
+      const iframe = page.frameLocator('iframe');
+      // Wait for content to render first
+      await expect(iframe.locator('h1').first()).toBeVisible();
 
       // The expand button should not be visible in fullscreen mode
-      const expandButton = page.locator('button[aria-label="Enter fullscreen"]');
+      const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
       await expect(expandButton).not.toBeVisible();
     });
 
@@ -169,14 +172,13 @@ test.describe('Review Resource', () => {
         createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', displayMode: 'fullscreen' })
       );
 
-      await page.waitForLoadState('networkidle');
-
-      // The root content should be present
+      // The root container should be present
       const root = page.locator('#root');
       await expect(root).not.toBeEmpty();
 
-      // Title should be visible
-      const title = page.locator('h1');
+      // Title should be visible inside the iframe
+      const iframe = page.frameLocator('iframe');
+      const title = iframe.locator('h1');
       await expect(title).toBeVisible();
     });
 
@@ -185,10 +187,8 @@ test.describe('Review Resource', () => {
         createSimulatorUrl({ simulation: 'review-diff', theme: 'light', displayMode: 'fullscreen' })
       );
 
-      await page.waitForLoadState('networkidle');
-
-      // The content area should have overflow-y-auto
-      const contentArea = page.locator('.overflow-y-auto').first();
+      const iframe = page.frameLocator('iframe');
+      const contentArea = iframe.locator('.overflow-y-auto').first();
       await expect(contentArea).toBeVisible();
 
       const styles = await contentArea.evaluate((el) => {

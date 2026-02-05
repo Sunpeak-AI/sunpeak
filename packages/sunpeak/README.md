@@ -16,9 +16,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript&label=ts&color=FFB800&logoColor=white&labelColor=1A1F36)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&label=react&color=FFB800&logoColor=white&labelColor=1A1F36)](https://reactjs.org/)
 
-Local-first ChatGPT App framework.
+Local-first MCP Apps framework.
 
-Quickstart, build, test, and ship your ChatGPT App!
+Quickstart, build, test, and ship your MCP App!
 
 [Demo (Hosted)](https://sunpeak.ai/simulator) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
@@ -48,17 +48,17 @@ To add `sunpeak` to an existing project, refer to the [documentation](https://do
 
 ## Overview
 
-`sunpeak` is an npm package that helps you build ChatGPT Apps (MCP resources) while keeping your MCP server client-agnostic. `sunpeak` consists of:
+`sunpeak` is an npm package that helps you build MCP Apps (interactive UI resources) while keeping your MCP server client-agnostic. Built on the [MCP Apps SDK](https://github.com/anthropics/mcp-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:
 
 ### The `sunpeak` library
 
-1. Runtime APIs: Strongly typed APIs for interacting with the ChatGPT runtime, **architected to support future platforms** (Gemini, Claude, etc.).
+1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`), **architected to support multiple platforms** (ChatGPT, Claude, etc.).
 2. ChatGPT simulator: React component replicating ChatGPT's runtime to **test Apps locally and automatically** via UI, props, or URL parameters.
 3. MCP server: Serve Resources with mock data to the real ChatGPT with HMR (**no more cache issues or 5-click manual refreshes**).
 
 ### The `sunpeak` framework
 
-Next.js for ChatGPT Apps. Using an example App `my-app` with a `Review` UI (MCP resource), `sunpeak` projects look like:
+Next.js for MCP Apps. Using an example App `my-app` with a `Review` UI (MCP resource), `sunpeak` projects look like:
 
 ```bash
 my-app/
@@ -81,9 +81,9 @@ my-app/
 
 ### The `sunpeak` CLI
 
-Commands for managing ChatGPT Apps. Includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/). The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server while also providing a hosted runtime to collaborate, demo, and share your ChatGPT Apps.
+Commands for managing MCP Apps. Includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/). The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server while also providing a hosted runtime to collaborate, demo, and share your MCP Apps.
 
-Think Docker Hub for ChatGPT Apps:
+Think Docker Hub for MCP Apps:
 
 <div align="center">
   <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
@@ -112,19 +112,18 @@ my-app/
 │       └── review-resource.json
 ```
 
-React component (`.tsx`) defining a UI (MCP resource) in your ChatGPT App.
+React component (`.tsx`) defining a UI (MCP resource) in your MCP App.
 
 ```tsx
 // src/resources/review-resource.tsx
 
-import { useWidgetProps, useWidgetState } from 'sunpeak';
+import { useApp, useToolData, useAppState } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 
 export function ReviewResource() {
-  const data = useWidgetProps<{ title: string; changes: string[] }>();
-  const [state, setState] = useWidgetState<{ decision: string | null }>(() => ({
-    decision: null,
-  }));
+  const { app } = useApp({ appInfo: { name: 'review', version: '1.0.0' } });
+  const { structuredContent: data } = useToolData<{ title: string; changes: string[] }>(app);
+  const [state, setState] = useAppState<{ decision: string | null }>(app, { decision: null });
 
   return (
     <div>
@@ -168,11 +167,13 @@ This is just an official [MCP resource object](https://modelcontextprotocol.io/s
   "name": "review",
   "title": "Review",
   "description": "Visualize and review a proposed set of changes or actions",
-  "mimeType": "text/html+skybridge",
+  "mimeType": "text/html;profile=mcp-app",
   "_meta": {
-    "openai/widgetDomain": "https://sunpeak.ai",
-    "openai/widgetCSP": {
-      "resource_domains": ["https://cdn.openai.com"],
+    "ui": {
+      "domain": "https://sunpeak.ai",
+      "csp": {
+        "resourceDomains": ["https://cdn.openai.com"],
+      },
     },
   },
 }
@@ -189,9 +190,9 @@ This is just an official [MCP resource object](https://modelcontextprotocol.io/s
 
 `sunpeak` testing object (`.json`) defining key App-owned states.
 
-Testing a ChatGPT App requires setting a lot of state: state in your **backend**, **MCP tools**, **stored widget runtime**, and ChatGPT itself.
+Testing an MCP App requires setting a lot of state: state in your **backend**, **MCP tools**, and the **host runtime**.
 
-`Simulation` files contain an [official MCP tool object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool), an [official MCP CallToolResult object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content), and a [sunpeak widgetState object](https://docs.sunpeak.ai/api-reference/hooks/use-widget-state) so you can define **backend**, **tool**, and **stored widget runtime** states for testing.
+`Simulation` files contain an [official MCP tool object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool), `toolInput` (the arguments sent to CallTool), and `toolResult` (the [CallToolResult](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content) response) so you can define **backend**, **tool**, and **runtime** states for testing.
 
 ```jsonc
 // tests/simulations/review-diff-simulation.json
@@ -205,23 +206,20 @@ Testing a ChatGPT App requires setting a lot of state: state in your **backend**
     "title": "Diff Review",
     "annotations": { "readOnlyHint": false },
     "_meta": {
-      "openai/toolInvocation/invoking": "Preparing changes",
-      "openai/toolInvocation/invoked": "Changes ready for review",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true,
+      "ui": { "visibility": ["model", "app"] },
     },
   },
-  // Official MCP CallToolResult object.
-  "callToolResult": {
+  // Tool input arguments (sent to CallTool).
+  "toolInput": {
+    "changesetId": "cs_789",
+    "title": "Refactor Authentication Module",
+  },
+  // Tool result data (CallToolResult response).
+  "toolResult": {
     "structuredContent": {
       "title": "Refactor Authentication Module",
       // ...
     },
-    "_meta": {},
-  },
-  // Initial widget state object (persisted in ChatGPT).
-  "widgetState": {
-    // ...
   },
 }
 ```
@@ -234,7 +232,7 @@ Testing a ChatGPT App requires setting a lot of state: state in your **backend**
 └── package.json
 ```
 
-The `ChatGPTSimulator` allows you to set **ChatGPT state** (like light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
+The `ChatGPTSimulator` allows you to set **host state** (like light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
 
 Using the `ChatGPTSimulator` and `Simulation`s, you can test all possible App states locally and automatically!
 
@@ -247,11 +245,12 @@ import { createSimulatorUrl } from 'sunpeak/chatgpt';
 test.describe('Review Resource', () => {
   test.describe('Light Mode', () => {
     test('should render review title with correct styles', async ({ page }) => {
-      params = { simulation: 'review-diff', theme: 'light' }; // Set sim & ChatGPT state.
+      const params = { simulation: 'review-diff', theme: 'light' }; // Set sim & host state.
       await page.goto(createSimulatorUrl(params));
-      await page.waitForLoadState('networkidle');
 
-      const title = page.locator('h1:has-text("Refactor Authentication Module")');
+      // Resource content renders inside an iframe
+      const iframe = page.frameLocator('iframe');
+      const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
       await expect(title).toBeVisible();
 
       const color = await title.evaluate((el) => window.getComputedStyle(el).color);
@@ -265,8 +264,8 @@ test.describe('Review Resource', () => {
 
 ## Resources
 
+- [MCP Apps SDK](https://github.com/anthropics/mcp-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
-- [ChatGPT Apps SDK window.openai Reference](https://developers.openai.com/apps-sdk/build/mcp-server#understand-the-windowopenai-widget-runtime)
 - [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)
 - [ChatGPT Apps SDK UI Documentation](https://openai.github.io/apps-sdk-ui/)

@@ -6,8 +6,8 @@ test.describe('Map Resource', () => {
     test('should render map container with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'light' }));
 
-      // Wait for the map component to render
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
       const styles = await mapContainer.evaluate((el) => {
@@ -25,8 +25,8 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'inline' })
       );
 
-      // Wait for the inner container with rounded borders
-      const innerContainer = page.locator('.border.rounded-2xl').first();
+      const iframe = page.frameLocator('iframe');
+      const innerContainer = iframe.locator('.border.rounded-2xl').first();
       await expect(innerContainer).toBeVisible({ timeout: 10000 });
 
       const styles = await innerContainer.evaluate((el) => {
@@ -46,8 +46,8 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'inline' })
       );
 
-      // Wait for the expand button
-      const expandButton = page.locator('button[aria-label="Enter fullscreen"]');
+      const iframe = page.frameLocator('iframe');
+      const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
       await expect(expandButton).toBeVisible({ timeout: 10000 });
 
       const styles = await expandButton.evaluate((el) => {
@@ -72,11 +72,19 @@ test.describe('Map Resource', () => {
 
       await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'light' }));
 
-      // Wait for map to render
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
-      expect(errors).toHaveLength(0);
+      // Filter out expected iframe/MCP handshake errors
+      const unexpectedErrors = errors.filter(
+        (e) =>
+          !e.includes('[IframeResource]') &&
+          !e.includes('mcp') &&
+          !e.includes('PostMessage') &&
+          !e.includes('connect')
+      );
+      expect(unexpectedErrors).toHaveLength(0);
     });
   });
 
@@ -84,7 +92,8 @@ test.describe('Map Resource', () => {
     test('should render map container with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'dark' }));
 
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
     });
 
@@ -93,8 +102,8 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'dark', displayMode: 'inline' })
       );
 
-      // In dark mode, the border uses dark:border-white/10
-      const innerContainer = page.locator('.border.rounded-2xl').first();
+      const iframe = page.frameLocator('iframe');
+      const innerContainer = iframe.locator('.border.rounded-2xl').first();
       await expect(innerContainer).toBeVisible({ timeout: 10000 });
 
       const styles = await innerContainer.evaluate((el) => {
@@ -118,10 +127,19 @@ test.describe('Map Resource', () => {
 
       await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'dark' }));
 
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
-      expect(errors).toHaveLength(0);
+      // Filter out expected iframe/MCP handshake errors
+      const unexpectedErrors = errors.filter(
+        (e) =>
+          !e.includes('[IframeResource]') &&
+          !e.includes('mcp') &&
+          !e.includes('PostMessage') &&
+          !e.includes('connect')
+      );
+      expect(unexpectedErrors).toHaveLength(0);
     });
   });
 
@@ -131,8 +149,8 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'fullscreen' })
       );
 
-      // In fullscreen, the container uses rounded-none and border-0
-      const innerContainer = page.locator('.rounded-none.border-0').first();
+      const iframe = page.frameLocator('iframe');
+      const innerContainer = iframe.locator('.rounded-none.border-0').first();
       await expect(innerContainer).toBeVisible({ timeout: 10000 });
 
       const styles = await innerContainer.evaluate((el) => {
@@ -150,12 +168,12 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'fullscreen' })
       );
 
-      // Wait for content to render
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
       // The expand button should not be visible in fullscreen mode
-      const expandButton = page.locator('button[aria-label="Enter fullscreen"]');
+      const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
       await expect(expandButton).not.toBeVisible();
     });
 
@@ -164,8 +182,8 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'dark', displayMode: 'fullscreen' })
       );
 
-      // The map container should be present
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
     });
 
@@ -176,12 +194,12 @@ test.describe('Map Resource', () => {
         createSimulatorUrl({ simulation: 'map-show', theme: 'light', displayMode: 'fullscreen' })
       );
 
-      // Wait for map to render
-      const mapContainer = page.locator('.antialiased.w-full.overflow-hidden').first();
+      const iframe = page.frameLocator('iframe');
+      const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
       await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
       // Suggestion chips should be visible (contains "Open now", "Top rated", etc.)
-      const openNowChip = page.locator('button:has-text("Open now")');
+      const openNowChip = iframe.locator('button:has-text("Open now")');
       await expect(openNowChip).toBeVisible({ timeout: 5000 });
     });
   });

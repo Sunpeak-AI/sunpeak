@@ -28,28 +28,22 @@
     "title": "Diff Review",
     "annotations": { "readOnlyHint": false },
     "_meta": {
-      "openai/toolInvocation/invoking": "Preparing changes",
-      "openai/toolInvocation/invoked": "Changes ready for review",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
+      "ui": { "visibility": ["model", "app"] }
     }
   },
-  "callToolRequestParams": {
-    "name": "review-diff",
-    "arguments": {
-      "changesetId": "cs_789",
-      "title": "Refactor Authentication Module",
-      "description": "Update the authentication system to use JWT tokens instead of session-based auth",
-      "files": [
-        "src/lib/jwt.ts",
-        "src/middleware/auth.ts",
-        "src/routes/login.ts",
-        "src/lib/session.ts"
-      ],
-      "runMigrations": true
-    }
+  "toolInput": {
+    "changesetId": "cs_789",
+    "title": "Refactor Authentication Module",
+    "description": "Update the authentication system to use JWT tokens instead of session-based auth",
+    "files": [
+      "src/lib/jwt.ts",
+      "src/middleware/auth.ts",
+      "src/routes/login.ts",
+      "src/lib/session.ts"
+    ],
+    "runMigrations": true
   },
-  "callToolResult": {
+  "toolResult": {
     "structuredContent": {
       "title": "Refactor Authentication Module",
       "description": "The following changes will update the authentication system to use JWT tokens instead of session-based auth.",
@@ -110,7 +104,6 @@
           ]
         }
       }
-    },
-    "_meta": {}
+    }
   }
 }

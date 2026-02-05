@@ -35,27 +35,21 @@
     "title": "Review Purchase",
     "annotations": { "readOnlyHint": false },
     "_meta": {
-      "openai/toolInvocation/invoking": "Preparing order",
-      "openai/toolInvocation/invoked": "Order ready for review",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
+      "ui": { "visibility": ["model", "app"] }
     }
   },
-  "callToolRequestParams": {
-    "name": "review-purchase",
-    "arguments": {
-      "cartId": "cart_abc123",
-      "items": [
-        { "productId": "prod_headphones_001", "quantity": 1 },
-        { "productId": "prod_usbc_cable_002", "quantity": 1 },
-        { "productId": "prod_iphone_case_003", "quantity": 1 }
-      ],
-      "shippingAddressId": "addr_home_456",
-      "shippingMethod": "standard",
-      "paymentMethodId": "pm_visa_789"
-    }
+  "toolInput": {
+    "cartId": "cart_abc123",
+    "items": [
+      { "productId": "prod_headphones_001", "quantity": 1 },
+      { "productId": "prod_usbc_cable_002", "quantity": 1 },
+      { "productId": "prod_iphone_case_003", "quantity": 1 }
+    ],
+    "shippingAddressId": "addr_home_456",
+    "shippingMethod": "standard",
+    "paymentMethodId": "pm_visa_789"
   },
-  "callToolResult": {
+  "toolResult": {
     "structuredContent": {
       "title": "Confirm Your Order",
       "description": "Please review your order before completing the purchase.",
@@ -124,7 +118,6 @@
           "total": 127.65
         }
       }
-    },
-    "_meta": {}
+    }
   }
 }

@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useSafeArea, useMaxHeight } from 'sunpeak';
+import { useApp, useSafeArea, useViewport } from 'sunpeak';
 import { Map } from './components/map';
 
 /**
@@ -9,24 +8,27 @@ import { Map } from './components/map';
  * place listings, and detailed inspector view.
  * Can be dropped into any production environment without changes.
  */
-export const MapResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const safeArea = useSafeArea();
-  const maxHeight = useMaxHeight();
+export function MapResource() {
+  const { app } = useApp({
+    appInfo: { name: 'MapResource', version: '1.0.0' },
+    capabilities: {},
+  });
+
+  const safeArea = useSafeArea(app);
+  const viewport = useViewport(app);
 
   return (
     <div
-      ref={ref}
       className="h-full"
       style={{
-        paddingTop: `${safeArea?.insets.top ?? 0}px`,
-        paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,
-        paddingLeft: `${safeArea?.insets.left ?? 0}px`,
-        paddingRight: `${safeArea?.insets.right ?? 0}px`,
-        maxHeight: maxHeight ?? undefined,
+        paddingTop: `${safeArea.top}px`,
+        paddingBottom: `${safeArea.bottom}px`,
+        paddingLeft: `${safeArea.left}px`,
+        paddingRight: `${safeArea.right}px`,
+        maxHeight: viewport?.maxHeight ?? undefined,
       }}
     >
-      <Map />
+      <Map app={app} />
     </div>
   );
-});
-MapResource.displayName = 'MapResource';
+}

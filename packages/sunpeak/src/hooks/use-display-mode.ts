@@ -1,6 +1,7 @@
-import { useWidgetGlobal } from './use-widget-global';
-import type { DisplayMode } from '../types';
+import { useHostContext } from './use-host-context';
+import type { App, McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
 
-export const useDisplayMode = (): DisplayMode | null => {
-  return useWidgetGlobal('displayMode');
-};
+export function useDisplayMode(app: App | null): McpUiDisplayMode {
+  const context = useHostContext(app);
+  return context?.displayMode ?? 'inline';
+}

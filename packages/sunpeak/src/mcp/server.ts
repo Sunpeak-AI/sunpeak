@@ -5,19 +5,13 @@ import path from 'node:path';
 
 import { FAVICON_BUFFER } from './favicon.js';
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import {
-  CallToolRequestSchema,
-  ListResourcesRequestSchema,
-  ListToolsRequestSchema,
-  ReadResourceRequestSchema,
-  type CallToolRequest,
-  type ListResourcesRequest,
-  type ListToolsRequest,
-  type ReadResourceRequest,
-} from '@modelcontextprotocol/sdk/types.js';
-import { z } from 'zod';
+  registerAppTool,
+  registerAppResource,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
 
 import { type MCPServerConfig, type SimulationWithDist } from './types.js';
 
@@ -137,28 +131,32 @@ const HMR_WS_URL = 'ws://localhost:24678';
 
 /**
  * Inject localhost URLs into CSP for Vite dev mode.
- * Adds resource_domains for script loading and connect_domains for HMR WebSocket.
+ * Uses MCP Apps metadata format: _meta.ui.csp.resourceDomains/connectDomains
  */
 function injectViteCSP(existingMeta: Record<string, unknown> | undefined): Record<string, unknown> {
   const meta = existingMeta ?? {};
-  const widgetCSP = (meta['openai/widgetCSP'] as Record<string, unknown>) ?? {};
+  const ui = (meta.ui as Record<string, unknown>) ?? {};
+  const csp = (ui.csp as Record<string, unknown>) ?? {};
 
-  const existingResourceDomains = (widgetCSP['resource_domains'] as string[]) ?? [];
+  const existingResourceDomains = (csp.resourceDomains as string[]) ?? [];
   const resourceDomains = existingResourceDomains.includes(DEV_SERVER_URL)
     ? existingResourceDomains
     : [...existingResourceDomains, DEV_SERVER_URL];
 
-  const existingConnectDomains = (widgetCSP['connect_domains'] as string[]) ?? [];
+  const existingConnectDomains = (csp.connectDomains as string[]) ?? [];
   const connectDomains = existingConnectDomains.includes(HMR_WS_URL)
     ? existingConnectDomains
     : [...existingConnectDomains, HMR_WS_URL];
 
   return {
     ...meta,
-    'openai/widgetCSP': {
-      ...widgetCSP,
-      resource_domains: resourceDomains,
-      connect_domains: connectDomains,
+    ui: {
+      ...ui,
+      csp: {
+        ...csp,
+        resourceDomains,
+        connectDomains,
+      },
     },
   };
 }
@@ -167,153 +165,113 @@ function createAppServer(
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
   viteMode: boolean
-): Server {
+): McpServer {
   const { name = 'sunpeak-app', version = '0.1.0' } = config;
-
-  const toolInputParser = z.object({});
 
   // Generate fallback timestamp for resources without URIs (dev mode)
   const devTimestamp = Date.now().toString(36);
 
-  // Build resources with URIs (use existing URI or generate one for dev mode)
-  const resources = simulations.map((simulation) => {
+  const mcpServer = new McpServer(
+    { name, version },
+    { capabilities: { resources: {}, tools: {} } }
+  );
+
+  // Track registered resource URIs to avoid duplicate registration
+  // (multiple simulations can share the same resource, e.g. review-diff and review-post)
+  const registeredResources = new Set<string>();
+
+  // Register each simulation's tool and resource using ext-apps helpers
+  for (const simulation of simulations) {
     const resource = simulation.resource;
-    const uri = (resource.uri as string) ?? `ui://${resource.name as string}-${devTimestamp}`;
-    return { ...resource, uri };
-  });
-
-  // Build tools with outputTemplate URIs from resources
-  const tools = simulations.map((simulation, index) => {
     const tool = simulation.tool;
-    const meta = tool._meta as Record<string, unknown> | undefined;
+    const toolResult = simulation.toolResult ?? { structuredContent: null };
 
-    return {
-      ...tool,
-      _meta: {
-        ...(meta ?? {}),
-        'openai/outputTemplate': resources[index].uri,
-      },
-    };
-  });
+    // Generate URI if not provided (dev mode)
+    const uri = (resource.uri as string) ?? `ui://${resource.name as string}-${devTimestamp}`;
+    const resourceMeta = (resource._meta as Record<string, unknown>) ?? {};
+    const toolMeta = (tool._meta as Record<string, unknown>) ?? {};
 
-  // Create maps for quick lookup of tool call data
-  const toolCallDataMap = new Map(
-    simulations.map((simulation) => [
-      simulation.tool.name,
-      simulation.callToolResult ?? { structuredContent: null, _meta: {} },
-    ])
-  );
+    // Register the resource using ext-apps helper (only once per URI)
+    // This sets RESOURCE_MIME_TYPE automatically
+    if (!registeredResources.has(uri)) {
+      registeredResources.add(uri);
+      registerAppResource(
+        mcpServer,
+        resource.name as string,
+        uri,
+        {
+          description: resource.description as string | undefined,
+          _meta: viteMode ? { ui: injectViteCSP(resourceMeta)?.ui } : resourceMeta,
+        },
+        async () => {
+          const content = getResourceHtml(simulation, viteMode);
+          const sizeKB = (content.length / 1024).toFixed(1);
+          console.log(`[MCP] ReadResource: ${uri} → ${sizeKB}KB${viteMode ? ' (vite)' : ''}`);
 
-  // Map resource URI to simulation for content lookup
-  const uriToSimulation = new Map(
-    resources.map((resource, index) => [resource.uri, simulations[index]])
-  );
+          return {
+            contents: [
+              {
+                uri,
+                mimeType: RESOURCE_MIME_TYPE,
+                text: content,
+                _meta: viteMode ? injectViteCSP(resourceMeta) : resourceMeta,
+              },
+            ],
+          };
+        }
+      );
+    }
 
-  const resourceMetaMap = new Map(
-    resources.map((resource, index) => [
-      resource.uri,
+    // Register the tool using ext-apps helper
+    // This normalizes the ui/resourceUri metadata automatically
+    // Note: inputSchema from simulation is JSON Schema, not Zod, so we omit it here
+    // (simulation mode doesn't validate inputs - just logs what was called)
+    registerAppTool(
+      mcpServer,
+      tool.name as string,
       {
-        resource,
-        _meta: (simulations[index].resource as { _meta?: Record<string, unknown> })._meta,
+        description: tool.description as string | undefined,
+        _meta: {
+          ...toolMeta,
+          ui: { resourceUri: uri },
+        },
       },
-    ])
+      async (extra) => {
+        // Access arguments from request context (no inputSchema = no parsed args)
+        const args =
+          (extra as { request?: { params?: { arguments?: Record<string, unknown> } } }).request
+            ?.params?.arguments ?? {};
+        const argKeys = Object.keys(args);
+        const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
+        const hasStructuredContent = toolResult?.structuredContent != null;
+
+        console.log(
+          `[MCP] CallTool: ${tool.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
+        );
+
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `Rendered ${tool.description}!`,
+            },
+          ],
+          structuredContent:
+            (toolResult?.structuredContent as Record<string, unknown>) ?? undefined,
+        };
+      }
+    );
+  }
+
+  console.log(
+    `[MCP] Registered ${simulations.length} tool(s) and resource(s)${viteMode ? ' (vite mode)' : ''}`
   );
 
-  const server = new Server(
-    {
-      name,
-      version,
-    },
-    {
-      capabilities: {
-        resources: {},
-        tools: {},
-      },
-    }
-  );
-
-  server.setRequestHandler(ListResourcesRequestSchema, async (_request: ListResourcesRequest) => {
-    console.log(
-      `[MCP] ListResources → ${resources.length} resource(s)${viteMode ? ' (vite mode)' : ''}`
-    );
-
-    if (viteMode) {
-      const resourcesWithCsp = resources.map((resource) => ({
-        ...resource,
-        _meta: injectViteCSP(resource._meta as Record<string, unknown> | undefined),
-      }));
-      return { resources: resourcesWithCsp };
-    }
-
-    return { resources };
-  });
-
-  server.setRequestHandler(ReadResourceRequestSchema, async (request: ReadResourceRequest) => {
-    const requestedUri = request.params.uri;
-    const simulation = uriToSimulation.get(requestedUri);
-    const meta = resourceMetaMap.get(requestedUri);
-
-    if (!simulation || !meta) {
-      throw new Error(`Unknown resource: ${requestedUri}`);
-    }
-
-    const content = getResourceHtml(simulation, viteMode);
-    const sizeKB = (content.length / 1024).toFixed(1);
-    console.log(`[MCP] ReadResource: ${requestedUri} → ${sizeKB}KB${viteMode ? ' (vite)' : ''}`);
-
-    return {
-      contents: [
-        {
-          uri: meta.resource.uri,
-          mimeType: meta.resource.mimeType,
-          text: content,
-          _meta: viteMode ? injectViteCSP(meta._meta) : meta._meta,
-        },
-      ],
-    };
-  });
-
-  server.setRequestHandler(ListToolsRequestSchema, async (_request: ListToolsRequest) => {
-    console.log(`[MCP] ListTools → ${tools.length} tool(s)`);
-    return { tools };
-  });
-
-  server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest) => {
-    const args = request.params.arguments ?? {};
-    const argKeys = Object.keys(args);
-    const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
-
-    const simulation = simulations.find((s) => s.tool.name === request.params.name);
-    if (!simulation) {
-      throw new Error(`Simulation not found: ${request.params.name}`);
-    }
-
-    const toolCallData = toolCallDataMap.get(request.params.name);
-
-    toolInputParser.parse(args);
-
-    const hasStructuredContent = toolCallData?.structuredContent != null;
-    console.log(
-      `[MCP] CallTool: ${request.params.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
-    );
-
-    return {
-      content: [
-        {
-          type: 'text',
-          text: `Rendered ${simulation.tool.description}!`,
-        },
-      ],
-      structuredContent: toolCallData?.structuredContent ?? undefined,
-      _meta: toolCallData?._meta ?? {},
-    };
-  });
-
-  return server;
+  return mcpServer;
 }
 
 type SessionRecord = {
-  server: Server;
+  server: McpServer;
   transport: SSEServerTransport;
 };
 

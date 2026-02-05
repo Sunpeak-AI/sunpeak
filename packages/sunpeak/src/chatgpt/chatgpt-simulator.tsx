@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   SimpleSidebar,
   SidebarControl,
@@ -11,29 +11,22 @@ import {
   SidebarToggle,
 } from './simple-sidebar';
 import { Conversation } from './conversation';
-import { initMockOpenAI } from './mock-openai';
+import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
-import {
-  useTheme,
-  useDisplayMode,
-  useLocale,
-  useMaxHeight,
-  useUserAgent,
-  useSafeArea,
-  useView,
-  useToolInput,
-  useWidgetGlobal,
-  useToolResponseMetadata,
-  useWidgetProps,
-} from '../hooks';
-import { resetProviderCache } from '../providers';
-import type { Theme, DisplayMode, DeviceType, ViewMode } from '../types';
+import type {
+  McpUiHostContext,
+  McpUiDisplayMode,
+  McpUiTheme,
+} from '@modelcontextprotocol/ext-apps';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ScreenWidth } from './chatgpt-simulator-types';
 import type { Simulation } from '../types/simulation';
-import type { UserAgent, SafeArea, View } from '../types';
 
-const DEFAULT_THEME: Theme = 'dark';
-const DEFAULT_DISPLAY_MODE: DisplayMode = 'inline';
+type Platform = NonNullable<McpUiHostContext['platform']>;
+
+const DEFAULT_THEME: McpUiTheme = 'dark';
+const DEFAULT_DISPLAY_MODE: McpUiDisplayMode = 'inline';
+const DEFAULT_PLATFORM: Platform = 'desktop';
 
 interface ChatGPTSimulatorProps {
   children?: React.ReactNode;
@@ -50,78 +43,78 @@ interface ChatGPTSimulatorProps {
  * - displayMode: 'inline' | 'pip' | 'fullscreen'
  * - locale: e.g., 'en-US'
  * - maxHeight: number (for pip mode)
- * - deviceType: 'mobile' | 'tablet' | 'desktop' | 'unknown'
+ * - deviceType: 'mobile' | 'tablet' | 'desktop' → maps to platform
  * - hover: 'true' | 'false'
  * - touch: 'true' | 'false'
  * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
- * - viewMode: 'modal' | null
  */
 function parseUrlParams(): {
   simulation?: string;
-  theme?: Theme;
-  displayMode?: DisplayMode;
+  theme?: McpUiTheme;
+  displayMode?: McpUiDisplayMode;
   locale?: string;
-  maxHeight?: number;
-  userAgent?: UserAgent;
-  safeArea?: SafeArea;
-  view?: View | null;
+  containerMaxHeight?: number;
+  platform?: Platform;
+  deviceCapabilities?: { hover?: boolean; touch?: boolean };
+  safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
 } {
   if (typeof window === 'undefined') return {};
 
   const params = new URLSearchParams(window.location.search);
 
   const simulation = params.get('simulation') ?? undefined;
-  const theme = params.get('theme') as Theme | null;
-  const displayMode = params.get('displayMode') as DisplayMode | null;
+  const theme = params.get('theme') as McpUiTheme | null;
+  const displayMode = params.get('displayMode') as McpUiDisplayMode | null;
   const locale = params.get('locale');
   const maxHeightParam = params.get('maxHeight');
-  const maxHeight = maxHeightParam ? Number(maxHeightParam) : undefined;
+  const containerMaxHeight = maxHeightParam ? Number(maxHeightParam) : undefined;
 
-  // UserAgent params
-  const deviceType = params.get('deviceType') as DeviceType | null;
+  // Map deviceType param to MCP Apps platform
+  const deviceType = params.get('deviceType');
+  let platform: Platform | undefined;
+  if (deviceType === 'mobile' || deviceType === 'tablet') {
+    platform = 'mobile';
+  } else if (deviceType === 'desktop') {
+    platform = 'desktop';
+  } else if (deviceType) {
+    platform = 'web';
+  }
+
+  // Device capabilities
   const hoverParam = params.get('hover');
   const touchParam = params.get('touch');
-  const hasUserAgentParams = deviceType || hoverParam || touchParam;
-  const userAgent: UserAgent | undefined = hasUserAgentParams
+  const hasCapParams = hoverParam || touchParam;
+  const deviceCapabilities = hasCapParams
     ? {
-        device: { type: deviceType ?? 'desktop' },
-        capabilities: {
-          hover: hoverParam === 'false' ? false : true,
-          touch: touchParam === 'true' ? true : false,
-        },
+        hover: hoverParam === 'false' ? false : true,
+        touch: touchParam === 'true' ? true : false,
       }
     : undefined;
 
-  // SafeArea params
+  // Safe area insets
   const safeAreaTop = params.get('safeAreaTop');
   const safeAreaBottom = params.get('safeAreaBottom');
   const safeAreaLeft = params.get('safeAreaLeft');
   const safeAreaRight = params.get('safeAreaRight');
   const hasSafeAreaParams = safeAreaTop || safeAreaBottom || safeAreaLeft || safeAreaRight;
-  const safeArea: SafeArea | undefined = hasSafeAreaParams
+  const safeAreaInsets = hasSafeAreaParams
     ? {
-        insets: {
-          top: safeAreaTop ? Number(safeAreaTop) : 0,
-          bottom: safeAreaBottom ? Number(safeAreaBottom) : 0,
-          left: safeAreaLeft ? Number(safeAreaLeft) : 0,
-          right: safeAreaRight ? Number(safeAreaRight) : 0,
-        },
+        top: safeAreaTop ? Number(safeAreaTop) : 0,
+        bottom: safeAreaBottom ? Number(safeAreaBottom) : 0,
+        left: safeAreaLeft ? Number(safeAreaLeft) : 0,
+        right: safeAreaRight ? Number(safeAreaRight) : 0,
       }
     : undefined;
-
-  // View params
-  const viewMode = params.get('viewMode') as ViewMode | null;
-  const view: View | null | undefined = viewMode ? { mode: viewMode } : undefined;
 
   return {
     simulation,
     theme: theme ?? undefined,
     displayMode: displayMode ?? undefined,
     locale: locale ?? undefined,
-    maxHeight,
-    userAgent,
-    safeArea,
-    view,
+    containerMaxHeight,
+    platform,
+    deviceCapabilities,
+    safeAreaInsets,
   };
 }
 
@@ -131,179 +124,146 @@ export function ChatGPTSimulator({
   appName = 'Sunpeak',
   appIcon,
 }: ChatGPTSimulatorProps) {
-  // Get simulation names for iteration
   const simulationNames = Object.keys(simulations);
-  // Parse URL params once on mount
   const urlParams = useMemo(() => parseUrlParams(), []);
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
 
-  // Helper to check if current width is mobile
   const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
 
-  // Find initial simulation name from URL param (e.g., ?simulation=albums-show)
+  // Find initial simulation from URL params
   const initialSimulationName = useMemo(() => {
     const defaultName = simulationNames[0] ?? '';
     if (!urlParams.simulation) return defaultName;
     return urlParams.simulation in simulations ? urlParams.simulation : defaultName;
   }, [urlParams.simulation, simulations, simulationNames]);
 
-  // Track selected simulation by name
   const [selectedSimulationName, setSelectedSimulationName] =
     React.useState<string>(initialSimulationName);
 
-  // Get the selected simulation
   const selectedSim = simulations[selectedSimulationName];
 
-  // Extract metadata from the selected simulation
-  const userMessage = selectedSim?.userMessage;
+  // ── Host context state ──────────────────────────────────────────
 
-  // Create mock once and keep it stable - never recreate it
-  // Initial values come from URL params
-  const mock = useMemo(
-    () =>
-      initMockOpenAI({
-        theme: urlParams.theme ?? DEFAULT_THEME,
-        displayMode: urlParams.displayMode ?? DEFAULT_DISPLAY_MODE,
-        locale: urlParams.locale,
-        maxHeight: urlParams.maxHeight,
-        userAgent: urlParams.userAgent,
-        safeArea: urlParams.safeArea,
-        view: urlParams.view,
-      }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- only initialize once
-    []
+  const [theme, setTheme] = useState<McpUiTheme>(urlParams.theme ?? DEFAULT_THEME);
+  const [displayMode, _setDisplayMode] = useState<McpUiDisplayMode>(
+    urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
+  );
+  const [locale, setLocale] = useState(urlParams.locale ?? 'en-US');
+  const [containerMaxHeight, setContainerMaxHeight] = useState(urlParams.containerMaxHeight ?? 480);
+  const [platform, setPlatform] = useState<Platform>(urlParams.platform ?? DEFAULT_PLATFORM);
+  const [hover, setHover] = useState(urlParams.deviceCapabilities?.hover ?? true);
+  const [touch, setTouch] = useState(urlParams.deviceCapabilities?.touch ?? false);
+  const [safeAreaInsets, setSafeAreaInsets] = useState(
+    urlParams.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
   );
 
-  // Ensure window.openai is set before children render on every render cycle
-  // This handles React Strict Mode where cleanup deletes window.openai but useMemo returns cached mock
-  if (typeof window !== 'undefined') {
-    (window as unknown as { openai: typeof mock }).openai = mock;
-    resetProviderCache();
-  }
-
-  // Update simulation-specific values when simulation changes
-  useEffect(() => {
-    if (selectedSim) {
-      mock.toolInput = selectedSim.callToolRequestParams?.arguments ?? {};
-      // Only override widget state if simulation explicitly defines one
-      // Otherwise, let the component set its own initial state via useWidgetState
-      if (selectedSim.widgetState !== undefined) {
-        mock.setWidgetStateExternal(selectedSim.widgetState);
-      }
-      mock.toolOutput = selectedSim.callToolResult?.structuredContent ?? null;
-      mock.toolResponseMetadata = selectedSim.callToolResult?._meta ?? null;
+  // Display mode setter that respects mobile width constraints
+  const setDisplayMode = (mode: McpUiDisplayMode) => {
+    if (isMobileWidth(screenWidth) && mode === 'pip') {
+      _setDisplayMode('fullscreen');
+    } else {
+      _setDisplayMode(mode);
     }
-  }, [selectedSimulationName, selectedSim, mock]);
+  };
 
-  // Read all globals from window.openai (same as widget code would)
-  const theme = useTheme() ?? DEFAULT_THEME;
-  const displayMode = useDisplayMode() ?? DEFAULT_DISPLAY_MODE;
-  const locale = useLocale() ?? 'en-US';
-  const maxHeight = useMaxHeight() ?? 600;
-  const userAgent = useUserAgent();
-  const safeArea = useSafeArea();
-  const view = useView();
-  const toolInput = useToolInput();
-  const widgetState = useWidgetGlobal('widgetState');
-  const toolResponseMetadata = useToolResponseMetadata();
-  const toolOutput = useWidgetProps();
-
-  // Local state for JSON editing
-  const [toolInputJson, setToolInputJson] = useState(() =>
-    JSON.stringify(toolInput ?? {}, null, 2)
-  );
-  const [toolOutputJson, setToolOutputJson] = useState(() =>
-    JSON.stringify(toolOutput ?? null, null, 2)
-  );
-  const [toolResponseMetadataJson, setToolResponseMetadataJson] = useState(() =>
-    JSON.stringify(toolResponseMetadata ?? null, null, 2)
-  );
-  const [widgetStateJson, setWidgetStateJson] = useState(() =>
-    JSON.stringify(widgetState ?? null, null, 2)
-  );
-  const [viewParamsJson, setViewParamsJson] = useState(() =>
-    JSON.stringify(view?.params ?? {}, null, 2)
+  // Track which display mode the iframe has confirmed rendering.
+  // Content is hidden when displayMode !== readyDisplayMode (transition in progress).
+  // Initialized to displayMode so there's no transition on first render.
+  const [readyDisplayMode, setReadyDisplayMode] = useState<McpUiDisplayMode>(
+    urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
   );
 
-  // Track which fields are being edited to prevent reset loops
+  const handleDisplayModeReady = useCallback((mode: string) => {
+    setReadyDisplayMode(mode as McpUiDisplayMode);
+  }, []);
+
+  // Build host context from state
+  const hostContext = useMemo<McpUiHostContext>(
+    () => ({
+      theme,
+      displayMode,
+      locale,
+      platform,
+      deviceCapabilities: { hover, touch },
+      safeAreaInsets,
+      ...(displayMode === 'pip' ? { containerDimensions: { maxHeight: containerMaxHeight } } : {}),
+    }),
+    [theme, displayMode, locale, platform, hover, touch, safeAreaInsets, containerMaxHeight]
+  );
+
+  // ── Tool data state ─────────────────────────────────────────────
+
+  // Parsed tool data (sent to host/iframe)
+  const [toolInput, setToolInput] = useState<Record<string, unknown>>(
+    () => selectedSim?.toolInput ?? {}
+  );
+  const [toolResult, setToolResult] = useState<CallToolResult | undefined>(
+    () => selectedSim?.toolResult as CallToolResult | undefined
+  );
+
+  // Editable JSON strings for sidebar
+  const [toolInputJson, setToolInputJson] = useState(() => JSON.stringify(toolInput, null, 2));
+  const [toolResultJson, setToolResultJson] = useState(() =>
+    JSON.stringify(toolResult ?? null, null, 2)
+  );
+
+  // Model context - bidirectional: shows what app sends, editable to inject state back
+  // When edited, gets merged into toolResult.structuredContent to send to app
+  const [modelContextJson, setModelContextJson] = useState<string>('null');
+  const [modelContext, setModelContext] = useState<Record<string, unknown> | null>(null);
+
+  // Track which field is being edited to prevent reset loops
   const [editingField, setEditingField] = useState<string | null>(null);
 
   // JSON validation errors
   const [toolInputError, setToolInputError] = useState('');
-  const [toolOutputError, setToolOutputError] = useState('');
-  const [toolResponseMetadataError, setToolResponseMetadataError] = useState('');
-  const [widgetStateError, setWidgetStateError] = useState('');
-  const [viewParamsError, setViewParamsError] = useState('');
+  const [toolResultError, setToolResultError] = useState('');
+  const [modelContextError, setModelContextError] = useState('');
 
-  // Emit update events when mock changes to update sidebar controls
+  // Reset tool data when simulation changes
+  // Note: editingField is intentionally NOT in deps - we check it inside to guard
+  // against overwriting user edits, but we don't want changes to editingField
+  // to trigger a re-run (which would reset values when editing ends)
   useEffect(() => {
-    if (mock) {
-      mock.emitUpdate({
-        theme: mock.theme,
-        displayMode: mock.displayMode,
-        userAgent: mock.userAgent,
-        locale: mock.locale,
-        maxHeight: mock.maxHeight,
-        safeArea: mock.safeArea,
-        view: mock.view,
-        toolInput: mock.toolInput,
-        toolOutput: mock.toolOutput,
-        toolResponseMetadata: mock.toolResponseMetadata,
-        widgetState: mock.widgetState,
-      });
-    }
-  }, [mock]);
-
-  useEffect(() => {
-    return () => {
-      if (typeof window !== 'undefined') {
-        delete (window as unknown as { openai?: unknown }).openai;
-      }
-    };
-  }, []);
-
-  // Disallow PiP on mobile widths - switch to fullscreen
-  useEffect(() => {
-    if (isMobileWidth(screenWidth) && displayMode === 'pip') {
-      mock.setDisplayMode('fullscreen');
-    }
-  }, [screenWidth, displayMode, mock]);
-
-  // Reset JSON strings when simulation changes or props change
-  // Only update fields that aren't currently being edited to prevent overwriting user input
-  // This syncs external state (from mock) into local editing state, which is a valid use of effects
-  useEffect(() => {
+    const newInput = selectedSim?.toolInput ?? {};
+    const newResult = (selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
+    setToolInput(newInput);
+    setToolResult(newResult);
     if (editingField !== 'toolInput') {
-      setToolInputJson(JSON.stringify(toolInput ?? {}, null, 2));
+      setToolInputJson(JSON.stringify(newInput, null, 2));
       setToolInputError('');
     }
-    if (editingField !== 'toolOutput') {
-      setToolOutputJson(JSON.stringify(toolOutput ?? null, null, 2));
-      setToolOutputError('');
+    if (editingField !== 'toolResult') {
+      setToolResultJson(JSON.stringify(newResult ?? null, null, 2));
+      setToolResultError('');
     }
-    if (editingField !== 'toolResponseMetadata') {
-      setToolResponseMetadataJson(JSON.stringify(toolResponseMetadata ?? null, null, 2));
-      setToolResponseMetadataError('');
+    if (editingField !== 'modelContext') {
+      setModelContextJson('null');
+      setModelContext(null);
+      setModelContextError('');
     }
-    if (editingField !== 'widgetState') {
-      setWidgetStateJson(JSON.stringify(widgetState ?? null, null, 2));
-      setWidgetStateError('');
-    }
-    if (editingField !== 'viewParams') {
-      setViewParamsJson(JSON.stringify(view?.params ?? {}, null, 2));
-      setViewParamsError('');
-    }
-  }, [
-    selectedSimulationName,
-    toolInput,
-    toolOutput,
-    toolResponseMetadata,
-    widgetState,
-    view?.params,
-    editingField,
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSimulationName, selectedSim]);
 
-  // Helper to validate JSON while typing (doesn't update mock)
+  // Disallow PiP on mobile widths
+  useEffect(() => {
+    if (isMobileWidth(screenWidth) && displayMode === 'pip') {
+      _setDisplayMode('fullscreen');
+    }
+  }, [screenWidth, displayMode]);
+
+  // ── Host callbacks ──────────────────────────────────────────────
+
+  const handleDisplayModeChange = (mode: McpUiDisplayMode) => {
+    setDisplayMode(mode);
+  };
+
+  const handleUpdateModelContext = (content: unknown[], structuredContent?: unknown) => {
+    setModelContextJson(JSON.stringify(structuredContent ?? content, null, 2));
+  };
+
+  // ── JSON helpers ────────────────────────────────────────────────
+
   const validateJSON = (
     json: string,
     setJson: (value: string) => void,
@@ -311,16 +271,13 @@ export function ChatGPTSimulator({
   ) => {
     setJson(json);
     try {
-      if (json.trim() !== '') {
-        JSON.parse(json);
-      }
+      if (json.trim() !== '') JSON.parse(json);
       setError('');
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Invalid JSON');
     }
   };
 
-  // Helper to commit JSON changes on blur (updates mock)
   const commitJSON = (
     json: string,
     setError: (error: string) => void,
@@ -337,10 +294,87 @@ export function ChatGPTSimulator({
     }
   };
 
-  // Determine what to render: prefer React component over iframe script (for better dev experience)
-  const SelectedComponent = selectedSim?.resourceComponent;
-  const iframeScriptSrc = !SelectedComponent ? selectedSim?.resourceScript : undefined;
-  const content = SelectedComponent ? <SelectedComponent /> : children;
+  // ── Content rendering ───────────────────────────────────────────
+
+  // Merge modelContext into toolResult.structuredContent when sending to app
+  // This simulates a host that round-trips app state (like ChatGPT's widgetState)
+  const effectiveToolResult = useMemo((): CallToolResult | undefined => {
+    if (!toolResult && !modelContext) return undefined;
+    if (!modelContext) return toolResult;
+
+    // Merge modelContext into structuredContent
+    const baseResult = toolResult ?? { content: [] };
+    const baseStructured = (baseResult.structuredContent as Record<string, unknown>) ?? {};
+    return {
+      ...baseResult,
+      structuredContent: { ...baseStructured, ...modelContext },
+    };
+  }, [toolResult, modelContext]);
+
+  // Get resource URL (dev mode) or script URL (production)
+  const resourceUrl = selectedSim?.resourceUrl;
+  const resourceScript = selectedSim?.resourceScript;
+
+  // Extract CSP from resource metadata (supports both old and new format)
+  const resourceMeta = selectedSim?.resource._meta as Record<string, unknown> | undefined;
+  const resourceUi = resourceMeta?.ui as
+    | { csp?: { connectDomains?: string[]; resourceDomains?: string[] }; domain?: string }
+    | undefined;
+  // Fall back to old OpenAI format for backward compat
+  const csp =
+    resourceUi?.csp ??
+    (resourceMeta?.['openai/widgetCSP'] as
+      | { connectDomains?: string[]; resourceDomains?: string[] }
+      | undefined);
+
+  // Build content based on rendering mode
+  // All rendering goes through IframeResource for consistent behavior with ChatGPT
+  const hasIframeContent = !!(resourceUrl || resourceScript);
+
+  // Content is transitioning when the display mode has changed but the iframe
+  // hasn't yet confirmed it has rendered with the new mode.
+  // For non-iframe content (children), there's no async rendering so no transition.
+  const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
+
+  let content: React.ReactNode;
+  if (resourceUrl) {
+    // Dev mode: load HTML page directly (supports Vite HMR)
+    content = (
+      <IframeResource
+        src={resourceUrl}
+        hostContext={hostContext}
+        toolInput={toolInput}
+        toolResult={effectiveToolResult}
+        hostOptions={{
+          onDisplayModeChange: handleDisplayModeChange,
+          onUpdateModelContext: handleUpdateModelContext,
+        }}
+        onDisplayModeReady={handleDisplayModeReady}
+        debugInjectState={modelContext}
+        className="h-full w-full"
+      />
+    );
+  } else if (resourceScript) {
+    // Production mode: generate HTML wrapper for script
+    content = (
+      <IframeResource
+        scriptSrc={resourceScript}
+        hostContext={hostContext}
+        toolInput={toolInput}
+        toolResult={effectiveToolResult}
+        csp={csp}
+        hostOptions={{
+          onDisplayModeChange: handleDisplayModeChange,
+          onUpdateModelContext: handleUpdateModelContext,
+        }}
+        onDisplayModeReady={handleDisplayModeReady}
+        debugInjectState={modelContext}
+        className="h-full w-full"
+      />
+    );
+  } else {
+    content = children;
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -351,13 +385,7 @@ export function ChatGPTSimulator({
               <SidebarControl label="Simulation">
                 <SidebarSelect
                   value={selectedSimulationName}
-                  onChange={(value) => {
-                    // Reset widget state synchronously before switching so the new component
-                    // can set its own initial state via useWidgetState
-                    const newSim = simulations[value];
-                    mock.setWidgetStateExternal(newSim?.widgetState ?? null);
-                    setSelectedSimulationName(value);
-                  }}
+                  onChange={(value) => setSelectedSimulationName(value)}
                   options={simulationNames.map((name) => {
                     const sim = simulations[name];
                     const resourceTitle =
@@ -385,12 +413,12 @@ export function ChatGPTSimulator({
               />
             </SidebarControl>
 
-            <SidebarCollapsibleControl label="Runtime Globals" defaultCollapsed={false}>
+            <SidebarCollapsibleControl label="Host Context" defaultCollapsed={false}>
               <div className="space-y-2">
                 <SidebarControl label="Theme">
                   <SidebarToggle
                     value={theme}
-                    onChange={(value) => mock.setTheme(value as Theme)}
+                    onChange={(value) => setTheme(value as McpUiTheme)}
                     options={[
                       { value: 'light', label: 'Light' },
                       { value: 'dark', label: 'Dark' },
@@ -401,15 +429,7 @@ export function ChatGPTSimulator({
                 <SidebarControl label="Display Mode">
                   <SidebarToggle
                     value={displayMode}
-                    onChange={(value) => {
-                      const newMode = value as DisplayMode;
-                      // Disallow PiP on mobile widths - switch to fullscreen instead
-                      if (isMobileWidth(screenWidth) && newMode === 'pip') {
-                        mock.setDisplayMode('fullscreen');
-                      } else {
-                        mock.setDisplayMode(newMode);
-                      }
-                    }}
+                    onChange={(value) => setDisplayMode(value as McpUiDisplayMode)}
                     options={[
                       { value: 'inline', label: 'Inline' },
                       { value: 'pip', label: 'PiP' },
@@ -422,7 +442,7 @@ export function ChatGPTSimulator({
                   <SidebarControl label="Locale">
                     <SidebarInput
                       value={locale}
-                      onChange={(value) => mock.setLocale(value)}
+                      onChange={(value) => setLocale(value)}
                       placeholder="e.g. en-US"
                     />
                   </SidebarControl>
@@ -431,11 +451,13 @@ export function ChatGPTSimulator({
                     <SidebarInput
                       type="number"
                       value={
-                        displayMode === 'pip' && maxHeight !== undefined ? String(maxHeight) : ''
+                        displayMode === 'pip' && containerMaxHeight !== undefined
+                          ? String(containerMaxHeight)
+                          : ''
                       }
                       onChange={(value) => {
                         if (displayMode === 'pip') {
-                          mock.setMaxHeight(value ? Number(value) : 480);
+                          setContainerMaxHeight(value ? Number(value) : 480);
                         }
                       }}
                       placeholder={displayMode === 'pip' ? '480' : '-'}
@@ -444,74 +466,37 @@ export function ChatGPTSimulator({
                   </SidebarControl>
                 </div>
 
-                <SidebarControl label="User Agent - Device">
+                <SidebarControl label="Platform">
                   <SidebarSelect
-                    value={userAgent?.device.type ?? 'desktop'}
+                    value={platform}
                     onChange={(value) => {
-                      const deviceType = value as DeviceType;
-                      // Set appropriate default capabilities based on device type
-                      let capabilities;
-                      switch (deviceType) {
-                        case 'mobile':
-                          capabilities = { hover: false, touch: true };
-                          break;
-                        case 'tablet':
-                          capabilities = { hover: false, touch: true };
-                          break;
-                        case 'desktop':
-                          capabilities = { hover: true, touch: false };
-                          break;
-                        case 'unknown':
-                        default:
-                          capabilities = { hover: true, touch: false };
-                          break;
+                      const p = value as Platform;
+                      setPlatform(p);
+                      // Set appropriate default capabilities based on platform
+                      if (p === 'mobile') {
+                        setHover(false);
+                        setTouch(true);
+                      } else if (p === 'desktop') {
+                        setHover(true);
+                        setTouch(false);
+                      } else {
+                        setHover(true);
+                        setTouch(false);
                       }
-                      mock.setUserAgent({
-                        ...userAgent,
-                        device: { type: deviceType },
-                        capabilities,
-                      });
                     }}
                     options={[
                       { value: 'mobile', label: 'Mobile' },
-                      { value: 'tablet', label: 'Tablet' },
                       { value: 'desktop', label: 'Desktop' },
-                      { value: 'unknown', label: 'Unknown' },
+                      { value: 'web', label: 'Web' },
                     ]}
                   />
                 </SidebarControl>
 
                 <div className="pl-4">
-                  <SidebarControl label="Capabilities">
+                  <SidebarControl label="Device Capabilities">
                     <div className="flex gap-2">
-                      <SidebarCheckbox
-                        checked={userAgent?.capabilities.hover ?? true}
-                        onChange={(checked) =>
-                          mock.setUserAgent({
-                            ...userAgent,
-                            device: userAgent?.device ?? { type: 'desktop' },
-                            capabilities: {
-                              hover: checked,
-                              touch: userAgent?.capabilities.touch ?? false,
-                            },
-                          })
-                        }
-                        label="Hover"
-                      />
-                      <SidebarCheckbox
-                        checked={userAgent?.capabilities.touch ?? false}
-                        onChange={(checked) =>
-                          mock.setUserAgent({
-                            ...userAgent,
-                            device: userAgent?.device ?? { type: 'desktop' },
-                            capabilities: {
-                              hover: userAgent?.capabilities.hover ?? true,
-                              touch: checked,
-                            },
-                          })
-                        }
-                        label="Touch"
-                      />
+                      <SidebarCheckbox checked={hover} onChange={setHover} label="Hover" />
+                      <SidebarCheckbox checked={touch} onChange={setTouch} label="Touch" />
                     </div>
                   </SidebarControl>
                 </div>
@@ -519,134 +504,63 @@ export function ChatGPTSimulator({
                 <SidebarControl label="Safe Area Insets">
                   <div className="grid grid-cols-4 gap-1">
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">↑</span>
+                      <span className="text-[10px] text-secondary">&uarr;</span>
                       <SidebarInput
                         type="number"
-                        value={String(safeArea?.insets.top ?? 0)}
+                        value={String(safeAreaInsets.top)}
                         onChange={(value) =>
-                          mock.setSafeArea({
-                            insets: {
-                              ...safeArea?.insets,
-                              top: Number(value),
-                              bottom: safeArea?.insets.bottom ?? 0,
-                              left: safeArea?.insets.left ?? 0,
-                              right: safeArea?.insets.right ?? 0,
-                            },
-                          })
+                          setSafeAreaInsets((prev) => ({ ...prev, top: Number(value) }))
                         }
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">↓</span>
+                      <span className="text-[10px] text-secondary">&darr;</span>
                       <SidebarInput
                         type="number"
-                        value={String(safeArea?.insets.bottom ?? 0)}
+                        value={String(safeAreaInsets.bottom)}
                         onChange={(value) =>
-                          mock.setSafeArea({
-                            insets: {
-                              ...safeArea?.insets,
-                              top: safeArea?.insets.top ?? 0,
-                              bottom: Number(value),
-                              left: safeArea?.insets.left ?? 0,
-                              right: safeArea?.insets.right ?? 0,
-                            },
-                          })
+                          setSafeAreaInsets((prev) => ({ ...prev, bottom: Number(value) }))
                         }
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">←</span>
+                      <span className="text-[10px] text-secondary">&larr;</span>
                       <SidebarInput
                         type="number"
-                        value={String(safeArea?.insets.left ?? 0)}
+                        value={String(safeAreaInsets.left)}
                         onChange={(value) =>
-                          mock.setSafeArea({
-                            insets: {
-                              ...safeArea?.insets,
-                              top: safeArea?.insets.top ?? 0,
-                              bottom: safeArea?.insets.bottom ?? 0,
-                              left: Number(value),
-                              right: safeArea?.insets.right ?? 0,
-                            },
-                          })
+                          setSafeAreaInsets((prev) => ({ ...prev, left: Number(value) }))
                         }
                       />
                     </div>
                     <div className="flex items-center gap-0.5">
-                      <span className="text-[10px] text-secondary">→</span>
+                      <span className="text-[10px] text-secondary">&rarr;</span>
                       <SidebarInput
                         type="number"
-                        value={String(safeArea?.insets.right ?? 0)}
+                        value={String(safeAreaInsets.right)}
                         onChange={(value) =>
-                          mock.setSafeArea({
-                            insets: {
-                              ...safeArea?.insets,
-                              top: safeArea?.insets.top ?? 0,
-                              bottom: safeArea?.insets.bottom ?? 0,
-                              left: safeArea?.insets.left ?? 0,
-                              right: Number(value),
-                            },
-                          })
+                          setSafeAreaInsets((prev) => ({ ...prev, right: Number(value) }))
                         }
                       />
                     </div>
                   </div>
                 </SidebarControl>
-
-                <SidebarControl label="View Mode">
-                  <SidebarSelect
-                    value={view?.mode ?? 'default'}
-                    onChange={(value) =>
-                      mock.setView(
-                        value === 'default'
-                          ? null
-                          : {
-                              mode: value as ViewMode,
-                              params: view?.params,
-                            }
-                      )
-                    }
-                    options={[
-                      { value: 'default', label: 'Default (null)' },
-                      { value: 'modal', label: 'Modal' },
-                    ]}
-                  />
-                </SidebarControl>
-
-                {view && view.mode !== 'default' && (
-                  <SidebarControl label="View Params (JSON)">
-                    <SidebarTextarea
-                      value={viewParamsJson}
-                      onChange={(json) => validateJSON(json, setViewParamsJson, setViewParamsError)}
-                      onFocus={() => setEditingField('viewParams')}
-                      onBlur={() =>
-                        commitJSON(viewParamsJson, setViewParamsError, (parsed) => {
-                          if (view) {
-                            mock.setView({ ...view, params: parsed ?? undefined });
-                          }
-                        })
-                      }
-                      error={viewParamsError}
-                      maxRows={2}
-                    />
-                  </SidebarControl>
-                )}
-
-                <SidebarCollapsibleControl label="Widget State (JSON)" defaultCollapsed={false}>
-                  <SidebarTextarea
-                    value={widgetStateJson}
-                    onChange={(json) => validateJSON(json, setWidgetStateJson, setWidgetStateError)}
-                    onFocus={() => setEditingField('widgetState')}
-                    onBlur={() =>
-                      commitJSON(widgetStateJson, setWidgetStateError, (parsed) =>
-                        mock.setWidgetStateExternal(parsed)
-                      )
-                    }
-                    error={widgetStateError}
-                    maxRows={8}
-                  />
-                </SidebarCollapsibleControl>
               </div>
+            </SidebarCollapsibleControl>
+
+            <SidebarCollapsibleControl label="App Context" defaultCollapsed>
+              <SidebarTextarea
+                value={modelContextJson}
+                onChange={(json) => validateJSON(json, setModelContextJson, setModelContextError)}
+                onFocus={() => setEditingField('modelContext')}
+                onBlur={() =>
+                  commitJSON(modelContextJson, setModelContextError, (parsed) => {
+                    setModelContext(parsed as Record<string, unknown> | null);
+                  })
+                }
+                error={modelContextError}
+                maxRows={8}
+              />
             </SidebarCollapsibleControl>
 
             <SidebarCollapsibleControl label="Tool Input (JSON)">
@@ -656,7 +570,7 @@ export function ChatGPTSimulator({
                 onFocus={() => setEditingField('toolInput')}
                 onBlur={() =>
                   commitJSON(toolInputJson, setToolInputError, (parsed) =>
-                    mock.setToolInput(parsed ?? {})
+                    setToolInput((parsed as Record<string, unknown>) ?? {})
                   )
                 }
                 error={toolInputError}
@@ -664,34 +578,27 @@ export function ChatGPTSimulator({
               />
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Tool Output (JSON)">
+            <SidebarCollapsibleControl label="Tool Result (JSON)">
               <SidebarTextarea
-                value={toolOutputJson}
-                onChange={(json) => validateJSON(json, setToolOutputJson, setToolOutputError)}
-                onFocus={() => setEditingField('toolOutput')}
+                value={toolResultJson}
+                onChange={(json) => validateJSON(json, setToolResultJson, setToolResultError)}
+                onFocus={() => setEditingField('toolResult')}
                 onBlur={() =>
-                  commitJSON(toolOutputJson, setToolOutputError, (parsed) =>
-                    mock.setToolOutput(parsed)
-                  )
+                  commitJSON(toolResultJson, setToolResultError, (parsed) => {
+                    if (parsed === null) {
+                      setToolResult(undefined);
+                    } else {
+                      // Wrap raw object as structuredContent in a CallToolResult
+                      const result = parsed as Record<string, unknown>;
+                      if ('content' in result || 'structuredContent' in result) {
+                        setToolResult(result as CallToolResult);
+                      } else {
+                        setToolResult({ content: [], structuredContent: result });
+                      }
+                    }
+                  })
                 }
-                error={toolOutputError}
-                maxRows={8}
-              />
-            </SidebarCollapsibleControl>
-
-            <SidebarCollapsibleControl label="Tool Response Metadata (JSON)">
-              <SidebarTextarea
-                value={toolResponseMetadataJson}
-                onChange={(json) =>
-                  validateJSON(json, setToolResponseMetadataJson, setToolResponseMetadataError)
-                }
-                onFocus={() => setEditingField('toolResponseMetadata')}
-                onBlur={() =>
-                  commitJSON(toolResponseMetadataJson, setToolResponseMetadataError, (parsed) =>
-                    mock.setToolResponseMetadata(parsed)
-                  )
-                }
-                error={toolResponseMetadataError}
+                error={toolResultError}
                 maxRows={8}
               />
             </SidebarCollapsibleControl>
@@ -700,11 +607,13 @@ export function ChatGPTSimulator({
       >
         <Conversation
           screenWidth={screenWidth}
+          displayMode={displayMode}
+          platform={platform}
+          onRequestDisplayMode={handleDisplayModeChange}
           appName={appName}
           appIcon={appIcon}
-          userMessage={userMessage}
-          resourceMeta={selectedSim?.resource._meta as Record<string, unknown> | undefined}
-          iframeScriptSrc={iframeScriptSrc}
+          userMessage={selectedSim?.userMessage}
+          isTransitioning={isTransitioning}
           key={selectedSimulationName}
         >
           {content}

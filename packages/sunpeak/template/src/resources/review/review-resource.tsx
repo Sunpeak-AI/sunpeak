@@ -1,12 +1,12 @@
 import * as React from 'react';
 import {
-  useWidgetProps,
-  useWidgetState,
+  useApp,
+  useAppState,
+  useToolData,
   useSafeArea,
-  useMaxHeight,
-  useUserAgent,
+  useViewport,
+  useHostContext,
   useDisplayMode,
-  useWidgetAPI,
 } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
@@ -83,7 +83,7 @@ interface ReviewTool {
   arguments?: Record<string, unknown>;
 }
 
-interface ReviewData extends Record<string, unknown> {
+interface ReviewData {
   /** Main title */
   title: string;
   /** Optional description below title */
@@ -106,9 +106,9 @@ interface ReviewData extends Record<string, unknown> {
   reviewTool?: ReviewTool;
 }
 
-interface ReviewState extends Record<string, unknown> {
-  decision?: 'accepted' | 'rejected' | null;
-  decidedAt?: string | null;
+interface ReviewState {
+  decision: 'accepted' | 'rejected' | null;
+  decidedAt: string | null;
 }
 
 // ============================================================================
@@ -118,15 +118,15 @@ interface ReviewState extends Record<string, unknown> {
 const changeTypeConfig = {
   create: { icon: '+', color: '#16a34a', bg: '#f0fdf4' },
   modify: { icon: '~', color: '#ca8a04', bg: '#fefce8' },
-  delete: { icon: '−', color: '#dc2626', bg: '#fef2f2' },
-  action: { icon: '→', color: '#2563eb', bg: '#eff6ff' },
+  delete: { icon: '\u2212', color: '#dc2626', bg: '#fef2f2' },
+  action: { icon: '\u2192', color: '#2563eb', bg: '#eff6ff' },
 };
 
 const alertTypeConfig = {
-  info: { icon: 'ℹ', bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af' },
-  warning: { icon: '⚠', bg: '#fefce8', border: '#fde047', text: '#a16207' },
-  error: { icon: '✕', bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
-  success: { icon: '✓', bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
+  info: { icon: '\u2139', bg: '#eff6ff', border: '#bfdbfe', text: '#1e40af' },
+  warning: { icon: '\u26A0', bg: '#fefce8', border: '#fde047', text: '#a16207' },
+  error: { icon: '\u2715', bg: '#fef2f2', border: '#fecaca', text: '#b91c1c' },
+  success: { icon: '\u2713', bg: '#f0fdf4', border: '#bbf7d0', text: '#15803d' },
 };
 
 function DetailsSection({ content }: { content: Detail[] }) {
@@ -250,7 +250,7 @@ function SummarySection({ content }: { content: Detail[] }) {
   );
 }
 
-function Section({ section }: { section: Section }) {
+function SectionRenderer({ section }: { section: Section }) {
   const renderContent = () => {
     switch (section.type) {
       case 'details':
@@ -306,34 +306,39 @@ function AlertBanner({ alert }: { alert: Alert }) {
 // Main Component
 // ============================================================================
 
-export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const data = useWidgetProps<ReviewData>(() => ({
+export function ReviewResource() {
+  const { app } = useApp({
+    appInfo: { name: 'ReviewResource', version: '1.0.0' },
+    capabilities: {},
+  });
+
+  const { output } = useToolData<unknown, ReviewData>(app, undefined, {
     title: 'Review',
     sections: [],
-  }));
+  });
 
-  const [widgetState, setWidgetState] = useWidgetState<ReviewState>(() => ({
+  const [state, setState] = useAppState<ReviewState>(app, {
     decision: null,
     decidedAt: null,
-  }));
+  });
 
-  const safeArea = useSafeArea();
-  const maxHeight = useMaxHeight();
-  const userAgent = useUserAgent();
-  const displayMode = useDisplayMode();
-  const api = useWidgetAPI();
+  const safeArea = useSafeArea(app);
+  const viewport = useViewport(app);
+  const context = useHostContext(app);
+  const displayMode = useDisplayMode(app);
 
-  const hasTouch = userAgent?.capabilities.touch ?? false;
-  const decision = widgetState?.decision ?? null;
+  const hasTouch = context?.deviceCapabilities?.touch ?? false;
+  const decision = state.decision ?? null;
   const isFullscreen = displayMode === 'fullscreen';
+  const data = output ?? { title: 'Review', sections: [] as Section[] };
 
   const handleRequestFullscreen = () => {
-    api?.requestDisplayMode?.({ mode: 'fullscreen' });
+    app?.requestDisplayMode({ mode: 'fullscreen' });
   };
 
   const handleAccept = () => {
     const decidedAt = new Date().toISOString();
-    setWidgetState({
+    setState({
       decision: 'accepted',
       decidedAt,
     });
@@ -353,7 +358,7 @@ export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
 
   const handleReject = () => {
     const decidedAt = new Date().toISOString();
-    setWidgetState({
+    setState({
       decision: 'rejected',
       decidedAt,
     });
@@ -380,14 +385,13 @@ export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
 
   return (
     <div
-      ref={ref}
       className="flex flex-col"
       style={{
-        paddingTop: `${safeArea?.insets.top ?? 0}px`,
-        paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,
-        paddingLeft: `${safeArea?.insets.left ?? 0}px`,
-        paddingRight: `${safeArea?.insets.right ?? 0}px`,
-        maxHeight: maxHeight ?? undefined,
+        paddingTop: `${safeArea.top}px`,
+        paddingBottom: `${safeArea.bottom}px`,
+        paddingLeft: `${safeArea.left}px`,
+        paddingRight: `${safeArea.right}px`,
+        maxHeight: viewport?.maxHeight ?? undefined,
       }}
     >
       {/* Header */}
@@ -432,7 +436,7 @@ export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
             <span>Loading...</span>
           </div>
         ) : (
-          sections.map((section, i) => <Section key={i} section={section} />)
+          sections.map((section, i) => <SectionRenderer key={i} section={section} />)
         )}
       </div>
 
@@ -465,14 +469,14 @@ export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
               className="flex items-center justify-center gap-2"
               style={{ color: decision === 'accepted' ? '#16a34a' : '#dc2626' }}
             >
-              <span className="text-lg">{decision === 'accepted' ? '✓' : '✗'}</span>
+              <span className="text-lg">{decision === 'accepted' ? '\u2713' : '\u2717'}</span>
               <span className="font-medium">
                 {decision === 'accepted' ? acceptedMessage : rejectedMessage}
               </span>
             </div>
-            {widgetState?.decidedAt && (
+            {state.decidedAt && (
               <span className="text-xs text-secondary">
-                {new Date(widgetState.decidedAt).toLocaleString()}
+                {new Date(state.decidedAt).toLocaleString()}
               </span>
             )}
           </div>
@@ -480,5 +484,4 @@ export const ReviewResource = React.forwardRef<HTMLDivElement>((_props, ref) => 
       </div>
     </div>
   );
-});
-ReviewResource.displayName = 'ReviewResource';
+}

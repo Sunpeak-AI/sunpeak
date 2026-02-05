@@ -13,6 +13,6 @@ export interface Place {
   thumbnail: string;
 }
 
-export interface MapData extends Record<string, unknown> {
+export interface MapData {
   places: Place[];
 }

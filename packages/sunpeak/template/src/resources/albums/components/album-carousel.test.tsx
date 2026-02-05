@@ -2,14 +2,6 @@ import { render } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AlbumCarousel } from './album-carousel';
 
-const mockUseDisplayMode = vi.fn(() => 'inline');
-
-// Mock sunpeak hooks
-vi.mock('sunpeak', () => ({
-  useWidgetState: vi.fn(() => [{ currentIndex: 0 }, vi.fn()]),
-  useDisplayMode: () => mockUseDisplayMode(),
-}));
-
 // Mock embla-carousel-react
 vi.mock('embla-carousel-react', () => ({
   default: vi.fn(() => [vi.fn(), null]),
@@ -22,7 +14,7 @@ vi.mock('embla-carousel-wheel-gestures', () => ({
 
 describe('AlbumCarousel', () => {
   beforeEach(() => {
-    mockUseDisplayMode.mockReturnValue('inline');
+    vi.clearAllMocks();
   });
 
   it('renders all children with correct card width', () => {
@@ -45,10 +37,9 @@ describe('AlbumCarousel', () => {
   });
 
   it('handles cardWidth object with inline/fullscreen modes', () => {
-    // Test inline mode
-    mockUseDisplayMode.mockReturnValue('inline');
+    // Test inline mode (default)
     const { container: inlineContainer } = render(
-      <AlbumCarousel cardWidth={{ inline: 250, fullscreen: 400 }}>
+      <AlbumCarousel cardWidth={{ inline: 250, fullscreen: 400 }} displayMode="inline">
         <div>Card 1</div>
       </AlbumCarousel>
     );
@@ -57,9 +48,8 @@ describe('AlbumCarousel', () => {
     expect(cardContainer.style.minWidth).toBe('250px');
 
     // Test fullscreen mode
-    mockUseDisplayMode.mockReturnValue('fullscreen');
     const { container: fullscreenContainer } = render(
-      <AlbumCarousel cardWidth={{ inline: 250, fullscreen: 400 }}>
+      <AlbumCarousel cardWidth={{ inline: 250, fullscreen: 400 }} displayMode="fullscreen">
         <div>Card 1</div>
       </AlbumCarousel>
     );

@@ -1,5 +1,11 @@
-import * as React from 'react';
-import { useWidgetProps, useSafeArea, useMaxHeight, useUserAgent } from 'sunpeak';
+import {
+  useApp,
+  useToolData,
+  useSafeArea,
+  useViewport,
+  useHostContext,
+  useDisplayMode,
+} from 'sunpeak';
 import { Carousel, Card } from './components';
 
 /**
@@ -19,37 +25,49 @@ interface CarouselCard {
   description: string;
 }
 
-interface CarouselData extends Record<string, unknown> {
+interface CarouselData {
   places: CarouselCard[];
 }
 
-export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) => {
-  const data = useWidgetProps<CarouselData>(() => ({ places: [] }));
-  const safeArea = useSafeArea();
-  const maxHeight = useMaxHeight();
-  const userAgent = useUserAgent();
+export function CarouselResource() {
+  const { app } = useApp({
+    appInfo: { name: 'CarouselResource', version: '1.0.0' },
+    capabilities: {},
+  });
 
-  const hasTouch = userAgent?.capabilities.touch ?? false;
+  const { output } = useToolData<unknown, CarouselData>(app, undefined, { places: [] });
+  const safeArea = useSafeArea(app);
+  const viewport = useViewport(app);
+  const context = useHostContext(app);
+  const displayMode = useDisplayMode(app);
+
+  const hasTouch = context?.deviceCapabilities?.touch ?? false;
+  const places = output?.places ?? [];
 
   return (
     <div
-      ref={ref}
       style={{
-        paddingTop: `${safeArea?.insets.top ?? 0}px`,
-        paddingBottom: `${safeArea?.insets.bottom ?? 0}px`,
-        paddingLeft: `${safeArea?.insets.left ?? 0}px`,
-        paddingRight: `${safeArea?.insets.right ?? 0}px`,
-        maxHeight: maxHeight ?? undefined,
+        paddingTop: `${safeArea.top}px`,
+        paddingBottom: `${safeArea.bottom}px`,
+        paddingLeft: `${safeArea.left}px`,
+        paddingRight: `${safeArea.right}px`,
+        maxHeight: viewport?.maxHeight ?? undefined,
       }}
     >
-      <Carousel gap={16} showArrows={true} showEdgeGradients={true} cardWidth={220}>
-        {(data.places || []).map((place: CarouselCard) => (
+      <Carousel
+        gap={16}
+        showArrows={true}
+        showEdgeGradients={true}
+        cardWidth={220}
+        displayMode={displayMode}
+      >
+        {places.map((place: CarouselCard) => (
           <Card
             key={place.id}
             image={place.image}
             imageAlt={place.name}
             header={place.name}
-            metadata={`⭐ ${place.rating} • ${place.category} • ${place.location}`}
+            metadata={`\u2B50 ${place.rating} \u2022 ${place.category} \u2022 ${place.location}`}
             buttonSize={hasTouch ? 'md' : 'sm'}
             button1={{
               isPrimary: true,
@@ -68,5 +86,4 @@ export const CarouselResource = React.forwardRef<HTMLDivElement>((_props, ref) =
       </Carousel>
     </div>
   );
-});
-CarouselResource.displayName = 'CarouselResource';
+}

@@ -1,3 +1,6 @@
+// Generic utilities (cross-platform)
 export { cn } from './utils';
 export * from './media-queries';
-export * from './discovery';
+
+// Development/build utilities (used in templates, not platform-specific)
+export { createResourceExports, buildResourceMap } from './discovery';

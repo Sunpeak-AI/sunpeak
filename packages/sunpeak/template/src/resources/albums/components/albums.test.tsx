@@ -1,25 +1,33 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Albums, type AlbumsData } from './albums';
+import type { App } from '@modelcontextprotocol/ext-apps';
 
 // Mock sunpeak hooks
-const mockSetWidgetState = vi.fn();
+const mockSetState = vi.fn();
 const mockRequestDisplayMode = vi.fn();
-let mockWidgetData: AlbumsData = { albums: [] };
-let mockUserAgent: {
-  device: { type: 'desktop' | 'mobile' | 'tablet' | 'unknown' };
-  capabilities: { hover: boolean; touch: boolean };
-} = {
-  device: { type: 'desktop' },
-  capabilities: { hover: true, touch: false },
+let mockToolOutput: AlbumsData = { albums: [] };
+let mockHostContext: {
+  deviceCapabilities?: { hover: boolean; touch: boolean };
+} | null = {
+  deviceCapabilities: { hover: true, touch: false },
 };
 
+const mockApp = {
+  requestDisplayMode: mockRequestDisplayMode,
+} as unknown as App;
+
 vi.mock('sunpeak', () => ({
-  useWidgetProps: () => mockWidgetData,
-  useWidgetState: () => [{ selectedAlbumId: null }, mockSetWidgetState],
-  useDisplayMode: () => 'default',
-  useWidgetAPI: () => ({ requestDisplayMode: mockRequestDisplayMode }),
-  useUserAgent: () => mockUserAgent,
+  useToolData: () => ({
+    output: mockToolOutput,
+    input: null,
+    inputPartial: null,
+    isError: false,
+    isLoading: false,
+  }),
+  useDisplayMode: () => 'inline',
+  useHostContext: () => mockHostContext,
+  useAppState: () => [{ selectedAlbumId: null }, mockSetState],
 }));
 
 // Mock child components to simplify testing
@@ -69,12 +77,12 @@ describe('Albums', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWidgetData = { albums: mockAlbums };
-    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
+    mockToolOutput = { albums: mockAlbums };
+    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
   });
 
   it('renders Carousel with all albums in default mode', () => {
-    render(<Albums />);
+    render(<Albums app={mockApp} />);
 
     // Should render carousel
     expect(screen.getByTestId('carousel')).toBeInTheDocument();
@@ -84,29 +92,29 @@ describe('Albums', () => {
     expect(screen.getByText('City Trip')).toBeInTheDocument();
   });
 
-  it('calls setWidgetState and requestDisplayMode when album is selected', () => {
-    render(<Albums />);
+  it('calls setState and requestDisplayMode when album is selected', () => {
+    render(<Albums app={mockApp} />);
 
     // Find and click the first album
     const firstAlbum = screen.getByText('Summer Vacation').closest('button')!;
     fireEvent.click(firstAlbum);
 
-    // Should update widget state with selected album ID using function updater
-    expect(mockSetWidgetState).toHaveBeenCalledTimes(1);
-    const updateFn = mockSetWidgetState.mock.calls[0][0];
+    // Should update state with selected album ID using function updater
+    expect(mockSetState).toHaveBeenCalledTimes(1);
+    const updateFn = mockSetState.mock.calls[0][0];
     expect(typeof updateFn).toBe('function');
     // Test the updater function
-    const result = updateFn({ currentIndex: 0 });
-    expect(result).toEqual({ currentIndex: 0, selectedAlbumId: 'album-1' });
+    const result = updateFn({ selectedAlbumId: null });
+    expect(result).toEqual({ selectedAlbumId: 'album-1' });
 
     // Should request fullscreen mode
     expect(mockRequestDisplayMode).toHaveBeenCalledWith({ mode: 'fullscreen' });
   });
 
   it('renders empty carousel when no albums provided', () => {
-    mockWidgetData = { albums: [] };
+    mockToolOutput = { albums: [] };
 
-    const { container } = render(<Albums />);
+    const { container } = render(<Albums app={mockApp} />);
 
     // Should render carousel (even if empty)
     expect(screen.getByTestId('carousel')).toBeInTheDocument();
@@ -117,9 +125,9 @@ describe('Albums', () => {
   });
 
   it('passes larger button size for touch devices', () => {
-    mockUserAgent = { device: { type: 'mobile' }, capabilities: { hover: false, touch: true } };
+    mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
 
-    render(<Albums />);
+    render(<Albums app={mockApp} />);
 
     const albumButtons = screen.getAllByRole('button');
     albumButtons.forEach((button) => {
@@ -128,9 +136,9 @@ describe('Albums', () => {
   });
 
   it('passes standard button size for non-touch devices', () => {
-    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
+    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
 
-    render(<Albums />);
+    render(<Albums app={mockApp} />);
 
     const albumButtons = screen.getAllByRole('button');
     albumButtons.forEach((button) => {

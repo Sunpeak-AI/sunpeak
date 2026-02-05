@@ -35,7 +35,6 @@ lerna-debug.log*
 .playwright-mcp/*
 !.vscode/extensions.json
 .idea
-CLAUDE.md
 .DS_Store
 *.suo
 *.ntvs*

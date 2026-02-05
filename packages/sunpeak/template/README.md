@@ -1,6 +1,6 @@
 # sunpeak-app
 
-A ChatGPT App built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
+An MCP App built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
 
 For an initial overview of your new app and a detailed API reference, refer to the [documentation](https://docs.sunpeak.ai/template/project-structure).
 
@@ -21,7 +21,7 @@ pnpm test:e2e          # Run end-to-end tests with Playwright.
 sunpeak dev            # Start dev server + MCP endpoint.
 sunpeak build          # Build all resources for production.
 
-# sunpeak repository (think ECR for ChatGPT Apps):
+# sunpeak repository (think ECR for MCP Apps):
 sunpeak login          # Authenticate with the sunpeak repository.
 sunpeak push           # Push built resources to the sunpeak repository.
 sunpeak pull           # Pull built resources from the sunpeak repository (for your prod MCP server).
@@ -110,6 +110,7 @@ Create the simulation file(s) in `tests/simulations/` if you want to preview you
 ## Resources
 
 - [sunpeak](https://github.com/Sunpeak-AI/sunpeak)
+- [MCP Apps SDK](https://github.com/anthropics/mcp-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK UI Documentation](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
 - [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)

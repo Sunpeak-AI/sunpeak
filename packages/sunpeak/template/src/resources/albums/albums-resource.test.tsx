@@ -3,12 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AlbumsResource } from './albums-resource';
 
 // Mock sunpeak hooks
-let mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
-let mockMaxHeight = 600;
+let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+let mockViewport: { maxHeight: number } | null = { maxHeight: 600 };
 
 vi.mock('sunpeak', () => ({
+  useApp: () => ({ app: null, isConnected: true, error: null }),
   useSafeArea: () => mockSafeArea,
-  useMaxHeight: () => mockMaxHeight,
+  useViewport: () => mockViewport,
 }));
 
 // Mock Albums component
@@ -19,8 +20,8 @@ vi.mock('./components/albums', () => ({
 describe('AlbumsResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
-    mockMaxHeight = 600;
+    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+    mockViewport = { maxHeight: 600 };
   });
 
   it('renders Albums component', () => {
@@ -31,7 +32,7 @@ describe('AlbumsResource', () => {
   });
 
   it('respects safe area insets', () => {
-    mockSafeArea = { insets: { top: 20, bottom: 30, left: 10, right: 15 } };
+    mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
 
     const { container } = render(<AlbumsResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -45,7 +46,7 @@ describe('AlbumsResource', () => {
   });
 
   it('respects maxHeight constraint', () => {
-    mockMaxHeight = 800;
+    mockViewport = { maxHeight: 800 };
 
     const { container } = render(<AlbumsResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -56,7 +57,7 @@ describe('AlbumsResource', () => {
   });
 
   it('applies zero safe area insets when not provided', () => {
-    mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
+    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
 
     const { container } = render(<AlbumsResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -69,13 +70,13 @@ describe('AlbumsResource', () => {
     });
   });
 
-  it('handles undefined maxHeight gracefully', () => {
-    mockMaxHeight = undefined as unknown as number;
+  it('handles null viewport gracefully', () => {
+    mockViewport = null;
 
     const { container } = render(<AlbumsResource />);
     const mainDiv = container.firstChild as HTMLElement;
 
-    // maxHeight should not be set when undefined
+    // maxHeight should not be set when viewport is null
     expect(mainDiv.style.maxHeight).toBe('');
   });
 });

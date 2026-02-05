@@ -1,27 +1,11 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IframeResource, _testExports } from './iframe-resource';
-import { initMockOpenAI } from './mock-openai';
 
-const {
-  escapeHtml,
-  isAllowedScriptSrc,
-  generateBridgeScript,
-  generateCSP,
-  generateScriptHtml,
-  ALLOWED_SCRIPT_ORIGINS,
-  ALLOWED_PARENT_ORIGINS,
-} = _testExports;
+const { escapeHtml, isAllowedScriptSrc, generateCSP, generateScriptHtml, ALLOWED_SCRIPT_ORIGINS } =
+  _testExports;
 
 describe('IframeResource', () => {
-  beforeEach(() => {
-    initMockOpenAI({ theme: 'dark', displayMode: 'inline' });
-  });
-
-  afterEach(() => {
-    delete (window as unknown as { openai?: unknown }).openai;
-  });
-
   it('renders an iframe with srcDoc', () => {
     render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
@@ -45,15 +29,14 @@ describe('IframeResource', () => {
     expect(srcDoc).toContain('<!DOCTYPE html>');
   });
 
-  it('injects bridge script into the generated HTML', () => {
+  it('does not inject a bridge script (MCP Apps SDK handles communication)', () => {
     render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    expect(srcDoc).toContain('window.openai');
-    expect(srcDoc).toContain('openai:ready');
-    expect(srcDoc).toContain('openai:set_globals');
+    // No window.openai bridge script — the app uses MCP Apps SDK directly
+    expect(srcDoc).not.toContain('window.openai');
   });
 
   it('sets appropriate sandbox attributes', () => {
@@ -70,11 +53,9 @@ describe('IframeResource', () => {
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const allow = iframe.getAttribute('allow');
-    // Allowed APIs (matching ChatGPT)
     expect(allow).toContain('local-network-access *');
     expect(allow).toContain('microphone *');
     expect(allow).toContain('midi *');
-    // Denied APIs
     expect(allow).toContain("camera 'none'");
     expect(allow).toContain("geolocation 'none'");
     expect(allow).toContain("usb 'none'");
@@ -99,11 +80,14 @@ describe('IframeResource', () => {
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     expect(iframe.style.width).toBe('100%');
-    expect(iframe.style.height).toBe('100%');
+    // Uses minHeight instead of height to allow auto-resize based on content
+    expect(iframe.style.minHeight).toBe('200px');
   });
 
   it('includes theme in generated HTML', () => {
-    render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
+    render(
+      <IframeResource scriptSrc="/dist/carousel/carousel.js" hostContext={{ theme: 'dark' }} />
+    );
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
@@ -125,13 +109,7 @@ describe('IframeResource Security', () => {
   let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    initMockOpenAI({ theme: 'dark', displayMode: 'inline' });
     consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-  });
-
-  afterEach(() => {
-    delete (window as unknown as { openai?: unknown }).openai;
-    consoleErrorSpy.mockRestore();
   });
 
   // Helper to get srcDoc content from rendered iframe
@@ -172,11 +150,8 @@ describe('IframeResource Security', () => {
     it('handles combined attack vectors', () => {
       const malicious = `"><img src=x onerror="alert('xss')"><"`;
       const escaped = escapeHtml(malicious);
-      // Tags are escaped so they won't be parsed as HTML
       expect(escaped).not.toContain('<img');
       expect(escaped).toContain('&lt;img');
-      // The word 'onerror' is still present but as text, not an attribute
-      // The important thing is the < and > are escaped so no tag is created
       expect(escaped).toBe(
         `&quot;&gt;&lt;img src=x onerror=&quot;alert(&#39;xss&#39;)&quot;&gt;&lt;&quot;`
       );
@@ -185,13 +160,11 @@ describe('IframeResource Security', () => {
 
   describe('XSS Prevention - Component Integration', () => {
     it('escapes malicious scriptSrc in generated HTML', () => {
-      // Use a relative path (which passes validation) with XSS payload
       const malicious = '/dist/"></script><script>alert("xss")</script><script x=".js';
       render(<IframeResource scriptSrc={malicious} />);
 
       const srcDoc = getSrcDoc();
 
-      // The malicious script tags should be escaped, not executable
       expect(srcDoc).not.toContain('><script>alert');
       expect(srcDoc).toContain('&lt;script&gt;');
     });
@@ -202,7 +175,6 @@ describe('IframeResource Security', () => {
 
       const srcDoc = getSrcDoc();
 
-      // Should show error page for disallowed origin
       expect(srcDoc).toContain('Script source not allowed');
     });
 
@@ -309,76 +281,6 @@ describe('IframeResource Security', () => {
     });
   });
 
-  describe('Message Origin Validation - Bridge Script', () => {
-    it('includes origin validation in bridge script', () => {
-      const bridgeScript = generateBridgeScript(['https://sunpeak.ai']);
-
-      expect(bridgeScript).toContain('isAllowedOrigin');
-      expect(bridgeScript).toContain('allowedOrigins');
-      expect(bridgeScript).toContain('https://sunpeak.ai');
-    });
-
-    it('includes all allowed parent origins', () => {
-      const bridgeScript = generateBridgeScript(ALLOWED_PARENT_ORIGINS);
-
-      expect(bridgeScript).toContain('https://sandbox.sunpeakai.com');
-      expect(bridgeScript).toContain('http://localhost');
-    });
-
-    it('rejects messages from untrusted origins', () => {
-      const bridgeScript = generateBridgeScript(['https://sunpeak.ai']);
-
-      // The script should log a warning for untrusted origins
-      expect(bridgeScript).toContain('Rejected message from untrusted origin');
-    });
-
-    it('rejects null origin (no longer accepted for security)', () => {
-      const bridgeScript = generateBridgeScript(['https://sunpeak.ai']);
-
-      // Null origin is no longer accepted - MessageChannel provides security instead
-      expect(bridgeScript).not.toContain("origin === 'null'");
-      expect(bridgeScript).toContain('We no longer accept');
-    });
-
-    it('validates message source is parent window', () => {
-      const bridgeScript = generateBridgeScript(['https://sunpeak.ai']);
-
-      // Should check that event.source === window.parent
-      expect(bridgeScript).toContain('event.source !== window.parent');
-      expect(bridgeScript).toContain('Rejected message from non-parent source');
-    });
-
-    it('handles localhost with any port', () => {
-      const bridgeScript = generateBridgeScript(['http://localhost']);
-
-      // Should contain port-agnostic localhost handling
-      expect(bridgeScript).toContain('localhost');
-      expect(bridgeScript).toContain('hostname');
-    });
-  });
-
-  describe('PostMessage Security - Message Handling', () => {
-    it('validates message structure before processing', () => {
-      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
-
-      const srcDoc = getSrcDoc();
-
-      // Bridge script should check for valid message structure (via MessagePort now)
-      expect(srcDoc).toContain('data.type');
-      expect(srcDoc).toContain("data.type === 'openai:init'");
-    });
-
-    it('only processes known message types', () => {
-      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
-
-      const srcDoc = getSrcDoc();
-
-      // Should only handle openai: prefixed messages
-      expect(srcDoc).toContain('openai:init');
-      expect(srcDoc).toContain('openai:update');
-    });
-  });
-
   describe('Iframe Sandbox Restrictions', () => {
     it('has sandbox permissions matching ChatGPT iframe model', () => {
       render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
@@ -386,13 +288,11 @@ describe('IframeResource Security', () => {
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const sandbox = iframe.getAttribute('sandbox');
 
-      // Allowed (matching ChatGPT)
       expect(sandbox).toContain('allow-scripts');
       expect(sandbox).toContain('allow-same-origin');
       expect(sandbox).toContain('allow-forms');
       expect(sandbox).toContain('allow-popups');
       expect(sandbox).toContain('allow-popups-to-escape-sandbox');
-      // Still denied
       expect(sandbox).not.toContain('allow-top-navigation');
     });
 
@@ -402,12 +302,10 @@ describe('IframeResource Security', () => {
       const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
       const allow = iframe.getAttribute('allow');
 
-      // Allowed APIs (matching ChatGPT)
       expect(allow).toContain('local-network-access *');
       expect(allow).toContain('microphone *');
       expect(allow).toContain('midi *');
 
-      // Denied APIs
       const deniedAPIs = [
         'camera',
         'geolocation',
@@ -439,15 +337,6 @@ describe('IframeResource Security', () => {
       expect(ALLOWED_SCRIPT_ORIGINS).toContain('http://localhost');
       expect(ALLOWED_SCRIPT_ORIGINS).toContain('https://localhost');
     });
-
-    it('ALLOWED_PARENT_ORIGINS contains sandbox.sunpeakai.com', () => {
-      expect(ALLOWED_PARENT_ORIGINS).toContain('https://sandbox.sunpeakai.com');
-    });
-
-    it('ALLOWED_PARENT_ORIGINS contains localhost for development', () => {
-      expect(ALLOWED_PARENT_ORIGINS).toContain('http://localhost');
-      expect(ALLOWED_PARENT_ORIGINS).toContain('https://localhost');
-    });
   });
 
   describe('Content Security Policy - generateCSP', () => {
@@ -478,7 +367,7 @@ describe('IframeResource Security', () => {
     it('adds custom connect domains to connect-src', () => {
       const csp = generateCSP(
         {
-          connect_domains: ['https://api.mapbox.com', 'https://events.mapbox.com'],
+          connectDomains: ['https://api.mapbox.com', 'https://events.mapbox.com'],
         },
         'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
@@ -490,7 +379,7 @@ describe('IframeResource Security', () => {
     it('adds custom resource domains to img-src and font-src', () => {
       const csp = generateCSP(
         {
-          resource_domains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
+          resourceDomains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
         },
         'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
@@ -537,7 +426,6 @@ describe('IframeResource Security', () => {
       const srcDoc = getSrcDoc();
 
       expect(srcDoc).toContain('http-equiv="Content-Security-Policy"');
-      // Single quotes are HTML-escaped in the content attribute
       expect(srcDoc).toContain('default-src &#39;self&#39;');
     });
 
@@ -546,8 +434,8 @@ describe('IframeResource Security', () => {
         <IframeResource
           scriptSrc="/dist/carousel/carousel.js"
           csp={{
-            connect_domains: ['https://api.example.com'],
-            resource_domains: ['https://images.example.com'],
+            connectDomains: ['https://api.example.com'],
+            resourceDomains: ['https://images.example.com'],
           }}
         />
       );
@@ -556,57 +444,6 @@ describe('IframeResource Security', () => {
 
       expect(srcDoc).toContain('https://api.example.com');
       expect(srcDoc).toContain('https://images.example.com');
-    });
-  });
-
-  describe('MessageChannel Security', () => {
-    it('uses MessageChannel for communication instead of postMessage(*)', () => {
-      const bridgeScript = generateBridgeScript(['https://app.sunpeak.ai']);
-
-      // Should use MessagePort for sending messages
-      expect(bridgeScript).toContain('messagePort');
-      expect(bridgeScript).toContain('sendToParent');
-      expect(bridgeScript).toContain('messagePort.postMessage');
-    });
-
-    it('handles handshake with port transfer', () => {
-      const bridgeScript = generateBridgeScript(['https://app.sunpeak.ai']);
-
-      // Should listen for handshake and store transferred port
-      expect(bridgeScript).toContain('openai:handshake');
-      expect(bridgeScript).toContain('event.ports');
-      expect(bridgeScript).toContain('messagePort = event.ports[0]');
-    });
-
-    it('queues messages until port is ready', () => {
-      const bridgeScript = generateBridgeScript(['https://app.sunpeak.ai']);
-
-      // Should queue messages if port not ready
-      expect(bridgeScript).toContain('messageQueue');
-      expect(bridgeScript).toContain('flushMessageQueue');
-    });
-
-    it('confirms handshake completion', () => {
-      const bridgeScript = generateBridgeScript(['https://app.sunpeak.ai']);
-
-      // Should send confirmation after handshake
-      expect(bridgeScript).toContain('openai:handshake_complete');
-    });
-
-    it('only uses postMessage for ready signal and height updates', () => {
-      render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
-
-      const srcDoc = getSrcDoc();
-
-      // postMessage to '*' is only used for:
-      // 1. Initial ready signal (required for handshake)
-      // 2. Height updates (for immediate responsiveness, validated on parent)
-      const postMessageStarMatches = srcDoc.match(/postMessage\([^)]+,\s*'\*'\)/g) || [];
-      expect(postMessageStarMatches.length).toBe(2);
-      expect(postMessageStarMatches.some((m) => m.includes('openai:ready'))).toBe(true);
-      expect(postMessageStarMatches.some((m) => m.includes('openai:notifyIntrinsicHeight'))).toBe(
-        true
-      );
     });
   });
 
@@ -619,7 +456,6 @@ describe('IframeResource Security', () => {
       );
 
       expect(html).toContain('http-equiv="Content-Security-Policy"');
-      // Single quotes are HTML-escaped for security in the content attribute
       expect(html).toContain('content="default-src &#39;self&#39;"');
     });
 
@@ -627,7 +463,6 @@ describe('IframeResource Security', () => {
       const maliciousCSP = '"><script>alert("xss")</script>';
       const html = generateScriptHtml('https://example.com/script.js', 'dark', maliciousCSP);
 
-      // Should be escaped
       expect(html).not.toContain('><script>alert');
       expect(html).toContain('&lt;script&gt;');
     });

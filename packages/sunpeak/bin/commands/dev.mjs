@@ -96,10 +96,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const parentSrc = resolve(projectRoot, '../src');
 
   // Import sunpeak modules (MCP server and discovery utilities)
-  let sunpeakMcp, sunpeak;
+  // Use discovery-cli which only exports Node.js-safe utilities (no React components)
+  let sunpeakMcp, sunpeakDiscovery;
   if (isTemplate) {
     // In workspace dev mode, use Vite to load TypeScript source directly
-    // Import from specific modules to avoid pulling in React components
     const loaderServer = await createServer({
       root: resolve(projectRoot, '..'),
       server: { middlewareMode: true },
@@ -107,16 +107,16 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       logLevel: 'silent',
     });
     sunpeakMcp = await loaderServer.ssrLoadModule('./src/mcp/index.ts');
-    sunpeak = await loaderServer.ssrLoadModule('./src/lib/index.ts');
+    sunpeakDiscovery = await loaderServer.ssrLoadModule('./src/lib/discovery-cli.ts');
     await loaderServer.close();
   } else {
     // Import from installed sunpeak package
     const sunpeakBase = require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, '');
     sunpeakMcp = await import(pathToFileURL(join(sunpeakBase, 'dist/mcp/index.js')).href);
-    sunpeak = await import(pathToFileURL(join(sunpeakBase, 'dist/index.js')).href);
+    sunpeakDiscovery = await import(pathToFileURL(join(sunpeakBase, 'dist/lib/discovery-cli.js')).href);
   }
   const { FAVICON_BUFFER: faviconBuffer, runMCPServer } = sunpeakMcp;
-  const { findResourceDirs, findSimulationFiles } = sunpeak;
+  const { findResourceDirs, findSimulationFiles } = sunpeakDiscovery;
 
   // Vite plugin to serve the sunpeak favicon
   const sunpeakFaviconPlugin = () => ({

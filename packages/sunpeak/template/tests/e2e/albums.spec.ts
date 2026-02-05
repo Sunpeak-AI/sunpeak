@@ -6,7 +6,8 @@ test.describe('Albums Resource', () => {
     test('should render album cards with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'light' }));
 
-      const albumCard = page.locator('button:has-text("Summer Slice")');
+      const iframe = page.frameLocator('iframe');
+      const albumCard = iframe.locator('button:has-text("Summer Slice")');
       await expect(albumCard).toBeVisible();
 
       // Verify album card unique styles
@@ -25,11 +26,12 @@ test.describe('Albums Resource', () => {
     test('should have album image with correct aspect ratio', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'light' }));
 
-      const albumImage = page.locator('button:has-text("Summer Slice") img').first();
+      const iframe = page.frameLocator('iframe');
+      const albumImage = iframe.locator('button:has-text("Summer Slice") img').first();
       await expect(albumImage).toBeVisible();
 
       // Verify aspect-[4/3] container
-      const imageContainer = page.locator('button:has-text("Summer Slice") .aspect-\\[4\\/3\\]');
+      const imageContainer = iframe.locator('button:has-text("Summer Slice") .aspect-\\[4\\/3\\]');
       await expect(imageContainer).toBeVisible();
 
       const containerStyles = await imageContainer.evaluate((el) => {
@@ -49,7 +51,8 @@ test.describe('Albums Resource', () => {
     test('should render album cards with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'dark' }));
 
-      const albumCard = page.locator('button:has-text("Summer Slice")');
+      const iframe = page.frameLocator('iframe');
+      const albumCard = iframe.locator('button:has-text("Summer Slice")');
       await expect(albumCard).toBeVisible();
 
       const styles = await albumCard.evaluate((el) => {
@@ -67,7 +70,8 @@ test.describe('Albums Resource', () => {
     test('should have text with appropriate contrast', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'dark' }));
 
-      const albumTitle = page.locator('button:has-text("Summer Slice") .text-primary').first();
+      const iframe = page.frameLocator('iframe');
+      const albumTitle = iframe.locator('button:has-text("Summer Slice") .text-primary').first();
       await expect(albumTitle).toBeVisible();
 
       // In dark mode, text-primary should be light colored for contrast
@@ -102,7 +106,8 @@ test.describe('Albums Resource', () => {
         createSimulatorUrl({ simulation: 'albums-show', theme: 'dark', displayMode: 'fullscreen' })
       );
 
-      const albumCard = page.locator('button:has-text("Summer Slice")');
+      const iframe = page.frameLocator('iframe');
+      const albumCard = iframe.locator('button:has-text("Summer Slice")');
       await expect(albumCard).toBeVisible();
 
       const styles = await albumCard.evaluate((el) => {

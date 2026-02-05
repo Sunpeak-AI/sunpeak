@@ -13,22 +13,29 @@ interface Place {
   description: string;
 }
 
-let mockWidgetData: { places: Place[] } = { places: [] };
-let mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
-let mockMaxHeight = 600;
-let mockUserAgent: {
-  device: { type: 'desktop' | 'mobile' | 'tablet' | 'unknown' };
-  capabilities: { hover: boolean; touch: boolean };
-} = {
-  device: { type: 'desktop' },
-  capabilities: { hover: true, touch: false },
+let mockToolOutput: { places: Place[] } = { places: [] };
+let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+let mockViewport: { maxHeight: number } | null = { maxHeight: 600 };
+let mockHostContext: {
+  deviceCapabilities?: { hover: boolean; touch: boolean };
+} | null = {
+  deviceCapabilities: { hover: true, touch: false },
 };
+let mockDisplayMode = 'inline';
 
 vi.mock('sunpeak', () => ({
-  useWidgetProps: () => mockWidgetData,
+  useApp: () => ({ app: null, isConnected: true, error: null }),
+  useToolData: (_app: unknown, _defaultInput: unknown, defaultOutput: { places: Place[] }) => ({
+    output: mockToolOutput.places.length > 0 ? mockToolOutput : defaultOutput,
+    input: null,
+    inputPartial: null,
+    isError: false,
+    isLoading: false,
+  }),
   useSafeArea: () => mockSafeArea,
-  useMaxHeight: () => mockMaxHeight,
-  useUserAgent: () => mockUserAgent,
+  useViewport: () => mockViewport,
+  useHostContext: () => mockHostContext,
+  useDisplayMode: () => mockDisplayMode,
 }));
 
 // Mock child components
@@ -67,14 +74,15 @@ describe('CarouselResource', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWidgetData = { places: [] };
-    mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
-    mockMaxHeight = 600;
-    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
+    mockToolOutput = { places: [] };
+    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
+    mockViewport = { maxHeight: 600 };
+    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockDisplayMode = 'inline';
   });
 
   it('renders carousel with places', () => {
-    mockWidgetData = { places: mockPlaces };
+    mockToolOutput = { places: mockPlaces };
 
     render(<CarouselResource />);
 
@@ -84,7 +92,7 @@ describe('CarouselResource', () => {
   });
 
   it('renders empty carousel when no places provided', () => {
-    mockWidgetData = { places: [] };
+    mockToolOutput = { places: [] };
 
     const { container } = render(<CarouselResource />);
 
@@ -93,7 +101,7 @@ describe('CarouselResource', () => {
   });
 
   it('respects safe area insets', () => {
-    mockSafeArea = { insets: { top: 20, bottom: 30, left: 10, right: 15 } };
+    mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
 
     const { container } = render(<CarouselResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -107,7 +115,7 @@ describe('CarouselResource', () => {
   });
 
   it('respects maxHeight constraint', () => {
-    mockMaxHeight = 500;
+    mockViewport = { maxHeight: 500 };
 
     const { container } = render(<CarouselResource />);
     const mainDiv = container.firstChild as HTMLElement;
@@ -118,8 +126,8 @@ describe('CarouselResource', () => {
   });
 
   it('passes larger button size for touch devices', () => {
-    mockUserAgent = { device: { type: 'mobile' }, capabilities: { hover: false, touch: true } };
-    mockWidgetData = { places: mockPlaces };
+    mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
+    mockToolOutput = { places: mockPlaces };
 
     render(<CarouselResource />);
 
@@ -130,8 +138,8 @@ describe('CarouselResource', () => {
   });
 
   it('passes standard button size for non-touch devices', () => {
-    mockUserAgent = { device: { type: 'desktop' }, capabilities: { hover: true, touch: false } };
-    mockWidgetData = { places: mockPlaces };
+    mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
+    mockToolOutput = { places: mockPlaces };
 
     render(<CarouselResource />);
 
@@ -142,7 +150,7 @@ describe('CarouselResource', () => {
   });
 
   it('renders all place information', () => {
-    mockWidgetData = { places: mockPlaces };
+    mockToolOutput = { places: mockPlaces };
 
     render(<CarouselResource />);
 

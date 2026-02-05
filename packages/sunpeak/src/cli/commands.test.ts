@@ -415,7 +415,7 @@ describe('CLI Commands', () => {
       const simulationData = {
         userMessage: 'Test message',
         tool: { name: 'test-tool', title: 'Test Tool' },
-        callToolResult: { structuredContent: { data: 'test' } },
+        toolResult: { structuredContent: { data: 'test' } },
       };
 
       let capturedFormData: FormData | null = null;
@@ -491,7 +491,7 @@ describe('CLI Commands', () => {
       const simulationData = {
         userMessage: 'Test message',
         tool: { name: 'test-tool', title: 'Test Tool' },
-        callToolResult: { structuredContent: { data: 'test' } },
+        toolResult: { structuredContent: { data: 'test' } },
       };
 
       let capturedFormData: FormData | null = null;
@@ -866,7 +866,7 @@ describe('CLI Commands', () => {
       const simulationData = {
         userMessage: 'Test message',
         tool: { name: 'test-tool' },
-        callToolResult: { structuredContent: {} },
+        toolResult: { structuredContent: {} },
       };
 
       const result = findResources('/test/dist', '/test/simulations', {

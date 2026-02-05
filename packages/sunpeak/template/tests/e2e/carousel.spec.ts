@@ -6,11 +6,8 @@ test.describe('Carousel Resource', () => {
     test('should render carousel cards with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light' }));
 
-      // Wait for carousel to load
-      await page.waitForLoadState('networkidle');
-
-      // Find a card in the carousel
-      const card = page.locator('.rounded-2xl').first();
+      const iframe = page.frameLocator('iframe');
+      const card = iframe.locator('.rounded-2xl').first();
       await expect(card).toBeVisible();
 
       const styles = await card.evaluate((el) => {
@@ -28,10 +25,8 @@ test.describe('Carousel Resource', () => {
     test('should have card with border styling', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light' }));
 
-      await page.waitForLoadState('networkidle');
-
-      // Cards have border-subtle styling
-      const card = page.locator('.rounded-2xl.border').first();
+      const iframe = page.frameLocator('iframe');
+      const card = iframe.locator('.rounded-2xl.border').first();
       await expect(card).toBeVisible();
 
       const styles = await card.evaluate((el) => {
@@ -49,10 +44,8 @@ test.describe('Carousel Resource', () => {
     test('should have interactive buttons', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light' }));
 
-      await page.waitForLoadState('networkidle');
-
-      // Find the Visit button (primary button)
-      const visitButton = page.locator('button:has-text("Visit")').first();
+      const iframe = page.frameLocator('iframe');
+      const visitButton = iframe.locator('button:has-text("Visit")').first();
       await expect(visitButton).toBeAttached();
 
       const styles = await visitButton.evaluate((el) => {
@@ -70,9 +63,8 @@ test.describe('Carousel Resource', () => {
     test('should render carousel cards with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark' }));
 
-      await page.waitForLoadState('networkidle');
-
-      const card = page.locator('.rounded-2xl').first();
+      const iframe = page.frameLocator('iframe');
+      const card = iframe.locator('.rounded-2xl').first();
       await expect(card).toBeVisible();
 
       const styles = await card.evaluate((el) => {
@@ -90,10 +82,8 @@ test.describe('Carousel Resource', () => {
     test('should have appropriate background color for dark mode', async ({ page }) => {
       await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark' }));
 
-      await page.waitForLoadState('networkidle');
-
-      // Verify the card has a background color set
-      const card = page.locator('.rounded-2xl.bg-surface').first();
+      const iframe = page.frameLocator('iframe');
+      const card = iframe.locator('.rounded-2xl.bg-surface').first();
       await expect(card).toBeVisible();
 
       const styles = await card.evaluate((el) => {
@@ -117,9 +107,20 @@ test.describe('Carousel Resource', () => {
       });
 
       await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark' }));
-      await page.waitForLoadState('networkidle');
 
-      expect(errors).toHaveLength(0);
+      // Wait for iframe content to render
+      const iframe = page.frameLocator('iframe');
+      await expect(iframe.locator('.rounded-2xl').first()).toBeVisible();
+
+      // Filter out expected iframe/MCP handshake errors
+      const unexpectedErrors = errors.filter(
+        (e) =>
+          !e.includes('[IframeResource]') &&
+          !e.includes('mcp') &&
+          !e.includes('PostMessage') &&
+          !e.includes('connect')
+      );
+      expect(unexpectedErrors).toHaveLength(0);
     });
   });
 

@@ -4,7 +4,7 @@ import { FullscreenViewer } from './fullscreen-viewer';
 import type { Album } from './albums';
 
 // Mock sunpeak hooks
-let mockSafeArea = { insets: { top: 0, bottom: 0, left: 0, right: 0 } };
+let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
 
 vi.mock('sunpeak', () => ({
   useSafeArea: () => mockSafeArea,
@@ -23,7 +23,7 @@ describe('FullscreenViewer', () => {
   };
 
   it('resets to first photo when album changes', () => {
-    const { rerender, container } = render(<FullscreenViewer album={mockAlbum} />);
+    const { rerender, container } = render(<FullscreenViewer app={null} album={mockAlbum} />);
 
     // Get the main photo area
     const mainPhotoArea = container.querySelector('.flex-1');
@@ -43,7 +43,7 @@ describe('FullscreenViewer', () => {
     };
 
     // Rerender with different album
-    rerender(<FullscreenViewer album={differentAlbum} />);
+    rerender(<FullscreenViewer app={null} album={differentAlbum} />);
 
     // Should show the first photo of the new album
     mainPhoto = mainPhotoArea?.querySelector('img');
@@ -52,7 +52,7 @@ describe('FullscreenViewer', () => {
   });
 
   it('displays correct photo based on selected index from FilmStrip', () => {
-    const { container } = render(<FullscreenViewer album={mockAlbum} />);
+    const { container } = render(<FullscreenViewer app={null} album={mockAlbum} />);
 
     // Get the main photo
     const mainPhotoArea = container.querySelector('.flex-1');
@@ -70,7 +70,7 @@ describe('FullscreenViewer', () => {
       photos: [],
     };
 
-    const { container } = render(<FullscreenViewer album={emptyAlbum} />);
+    const { container } = render(<FullscreenViewer app={null} album={emptyAlbum} />);
 
     // Should not render any img element in the main photo area
     const images = container.querySelectorAll('img');
@@ -78,9 +78,9 @@ describe('FullscreenViewer', () => {
   });
 
   it('respects safe area insets', () => {
-    mockSafeArea = { insets: { top: 20, bottom: 30, left: 10, right: 15 } };
+    mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
 
-    const { container } = render(<FullscreenViewer album={mockAlbum} />);
+    const { container } = render(<FullscreenViewer app={null} album={mockAlbum} />);
 
     // Check root div has safe area padding
     const rootDiv = container.firstChild as HTMLElement;

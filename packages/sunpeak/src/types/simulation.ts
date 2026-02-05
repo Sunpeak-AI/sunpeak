@@ -4,30 +4,27 @@
  * the dev simulator and MCP server contexts.
  */
 
-import type * as React from 'react';
-import type {
-  Tool,
-  Resource,
-  CallToolRequestParams,
-  CallToolResult,
-} from '@modelcontextprotocol/sdk/types.js';
+import type { Tool, Resource } from '@modelcontextprotocol/sdk/types.js';
+import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
 /**
  * A simulation packages a component with its example data and metadata.
  * Each simulation represents a complete tool experience in the simulator.
  *
- * Specify either `resourceComponent` (React component) or `resourceScript` (URL to built .js file).
+ * Resource rendering options (mutually exclusive):
+ * - `resourceUrl`: URL to an HTML page (dev mode with Vite HMR)
+ * - `resourceScript`: URL to a built .js file (production builds)
  */
 export interface Simulation {
   // Unique identifier derived from the simulation filename (e.g., 'albums-show')
   name: string;
 
-  // React resource to be rendered.
-  resourceComponent?: React.ComponentType;
+  // URL to an HTML page to load in an iframe (dev mode).
+  // The page mounts the resource component and uses SDK's useApp().
+  resourceUrl?: string;
 
-  // Used by https://app.sunpeak.ai, ignore in favor of resourceComponent.
   // URL to a built .js file for iframe rendering (e.g., '/dist/carousel.js').
-  // WARNING: using this attribute without proper safeguards is dangerous.
+  // Used by https://app.sunpeak.ai for production builds.
   resourceScript?: string;
 
   userMessage?: string; // Decoration for the simulator, no functional purpose.
@@ -38,12 +35,16 @@ export interface Simulation {
   // Official Resource type from the MCP SDK, used in ListResources response.
   resource: Resource;
 
-  // Official CallToolResult from the MCP SDK, mock data for the CallTool response.
-  callToolResult?: CallToolResult;
+  // Tool input arguments (the arguments object sent to CallTool).
+  toolInput?: Record<string, unknown>;
 
-  // Official CallToolRequestParams from the MCP SDK (arguments maps to toolInput in the runtime).
-  callToolRequestParams?: CallToolRequestParams;
+  // Tool result data (the response from CallTool).
+  toolResult?: {
+    content?: Array<{ type: string; text: string }>;
+    structuredContent?: unknown;
+    isError?: boolean;
+  };
 
-  // Initial widget state for the simulation.
-  widgetState?: Record<string, unknown> | null;
+  // Initial host context overrides for the simulation.
+  hostContext?: Partial<McpUiHostContext>;
 }

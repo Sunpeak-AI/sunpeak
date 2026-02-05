@@ -34,22 +34,16 @@
     "title": "Review Post",
     "annotations": { "readOnlyHint": false },
     "_meta": {
-      "openai/toolInvocation/invoking": "Preparing post",
-      "openai/toolInvocation/invoked": "Post ready for review",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
+      "ui": { "visibility": ["model", "app"] }
     }
   },
-  "callToolRequestParams": {
-    "name": "review-post",
-    "arguments": {
-      "content": "Just shipped a major update to our app! 🚀\n\nNew features include:\n• Dark mode support\n• Faster load times\n• Bug fixes and improvements\n\nThanks to everyone who provided feedback. You all are amazing! 💪\n\n#ProductUpdate #TechNews #Startup",
-      "platforms": ["x", "linkedin"],
-      "schedule": "now",
-      "visibility": "public"
-    }
+  "toolInput": {
+    "content": "Just shipped a major update to our app! \ud83d\ude80\n\nNew features include:\n\u2022 Dark mode support\n\u2022 Faster load times\n\u2022 Bug fixes and improvements\n\nThanks to everyone who provided feedback. You all are amazing! \ud83d\udcaa\n\n#ProductUpdate #TechNews #Startup",
+    "platforms": ["x", "linkedin"],
+    "schedule": "now",
+    "visibility": "public"
   },
-  "callToolResult": {
+  "toolResult": {
     "structuredContent": {
       "title": "Review Your Post",
       "description": "This post will be published to your connected accounts.",
@@ -57,7 +51,7 @@
         {
           "title": "Content",
           "type": "preview",
-          "content": "Just shipped a major update to our app! 🚀\n\nNew features include:\n• Dark mode support\n• Faster load times\n• Bug fixes and improvements\n\nThanks to everyone who provided feedback. You all are amazing! 💪\n\n#ProductUpdate #TechNews #Startup"
+          "content": "Just shipped a major update to our app! \ud83d\ude80\n\nNew features include:\n\u2022 Dark mode support\n\u2022 Faster load times\n\u2022 Bug fixes and improvements\n\nThanks to everyone who provided feedback. You all are amazing! \ud83d\udcaa\n\n#ProductUpdate #TechNews #Startup"
         },
         {
           "title": "Post Details",
@@ -86,7 +80,6 @@
           "platforms": ["x", "linkedin"]
         }
       }
-    },
-    "_meta": {}
+    }
   }
 }

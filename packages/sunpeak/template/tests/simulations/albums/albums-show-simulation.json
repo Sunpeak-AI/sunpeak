@@ -21,21 +21,15 @@
     "title": "Show Albums",
     "annotations": { "readOnlyHint": true },
     "_meta": {
-      "openai/toolInvocation/invoking": "Loading albums",
-      "openai/toolInvocation/invoked": "Album loaded",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
+      "ui": { "visibility": ["model", "app"] }
     }
   },
-  "callToolRequestParams": {
-    "name": "show-albums",
-    "arguments": {
-      "category": "food",
-      "search": "Austin pizza tour",
-      "limit": 10
-    }
+  "toolInput": {
+    "category": "food",
+    "search": "Austin pizza tour",
+    "limit": 10
   },
-  "callToolResult": {
+  "toolResult": {
     "structuredContent": {
       "albums": [
         {
@@ -147,7 +141,6 @@
           ]
         }
       ]
-    },
-    "_meta": {}
+    }
   }
 }

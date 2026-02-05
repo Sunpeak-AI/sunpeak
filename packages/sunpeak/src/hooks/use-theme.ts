@@ -1,6 +1,7 @@
-import { useWidgetGlobal } from './use-widget-global';
-import type { Theme } from '../types';
+import { useHostContext } from './use-host-context';
+import type { App, McpUiTheme } from '@modelcontextprotocol/ext-apps';
 
-export const useTheme = (): Theme | null => {
-  return useWidgetGlobal('theme');
-};
+export function useTheme(app: App | null): McpUiTheme {
+  const context = useHostContext(app);
+  return context?.theme ?? 'light';
+}

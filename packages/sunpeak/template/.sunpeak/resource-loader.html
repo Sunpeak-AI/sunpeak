@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Resource Loader</title>
+  <style>
+    html, body, #root {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      min-height: 100%;
+      background: transparent;
+      color-scheme: dark light;
+    }
+  </style>
+  <script>
+    // Paint fence responder — allows the host to wait for this iframe to
+    // process pending messages and commit DOM updates before revealing content.
+    // Formatted as JSON-RPC 2.0 notifications to avoid PostMessageTransport parse errors.
+    window.addEventListener("message",function(e){
+      if(e.data&&e.data.method==="sunpeak/fence"){
+        var fid=e.data.params&&e.data.params.fenceId;
+        requestAnimationFrame(function(){
+          e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:fid}},"*");
+        });
+      }
+    });
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module" src="./resource-loader.tsx"></script>
+</body>
+</html>

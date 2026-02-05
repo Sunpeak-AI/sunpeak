@@ -1,23 +1,14 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { Conversation } from './conversation';
-import { initMockOpenAI, type MockOpenAI } from './mock-openai';
 
 const defaultProps = {
   screenWidth: 'full' as const,
+  displayMode: 'inline' as const,
+  platform: 'desktop' as const,
 };
 
 describe('Conversation', () => {
-  let mock: MockOpenAI;
-
-  beforeEach(() => {
-    mock = initMockOpenAI({ displayMode: 'inline' });
-  });
-
-  afterEach(() => {
-    delete (window as unknown as { openai?: unknown }).openai;
-  });
-
   it('renders user message and children in assistant area', () => {
     render(
       <Conversation {...defaultProps} userMessage="Hello, show me places">
@@ -42,20 +33,19 @@ describe('Conversation', () => {
     expect(screen.getByText('TravelBot said:', { selector: '.sr-only' })).toBeInTheDocument();
   });
 
-  it('renders simplified layout in fullscreen mode with footer', () => {
-    // Set displayMode to fullscreen via window.openai
-    mock.displayMode = 'fullscreen';
-
+  it('renders fullscreen mode with chrome overlay and stable children', () => {
     const { container } = render(
-      <Conversation {...defaultProps}>
+      <Conversation {...defaultProps} displayMode="fullscreen">
         <div data-testid="fullscreen-content">Fullscreen App</div>
       </Conversation>
     );
 
+    // Children stay mounted at stable tree position
     expect(screen.getByTestId('fullscreen-content')).toBeInTheDocument();
-    expect(screen.queryByText('sunpeak.ai')).not.toBeInTheDocument();
-    expect(container.querySelector('header')).not.toBeInTheDocument();
+    // Fullscreen chrome overlay has a footer with input
     expect(container.querySelector('footer')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Message sunpeak.ai')).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText('Message sunpeak.ai').length).toBeGreaterThan(0);
+    // Fullscreen header has a close button
+    expect(screen.getByLabelText('Close')).toBeInTheDocument();
   });
 });

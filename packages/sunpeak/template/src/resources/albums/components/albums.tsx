@@ -1,11 +1,6 @@
 import * as React from 'react';
-import {
-  useWidgetState,
-  useDisplayMode,
-  useWidgetAPI,
-  useWidgetProps,
-  useUserAgent,
-} from 'sunpeak';
+import { useAppState, useDisplayMode, useToolData, useHostContext } from 'sunpeak';
+import type { App } from 'sunpeak';
 import { AlbumCarousel } from './album-carousel';
 import { AlbumCard } from './album-card';
 import { FullscreenViewer } from './fullscreen-viewer';
@@ -21,46 +16,52 @@ export interface Album {
   }>;
 }
 
-export interface AlbumsData extends Record<string, unknown> {
+export interface AlbumsData {
   albums: Album[];
 }
 
-export interface AlbumsState extends Record<string, unknown> {
-  selectedAlbumId?: string | null;
+interface AlbumsState {
+  selectedAlbumId: string | null;
 }
 
 export type AlbumsProps = {
+  app: App | null;
   className?: string;
 };
 
-export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className }, ref) => {
-  const data = useWidgetProps<AlbumsData>(() => ({ albums: [] }));
-  const [widgetState, setWidgetState] = useWidgetState<AlbumsState>(() => ({
+export function Albums({ app, className }: AlbumsProps) {
+  const { output } = useToolData<unknown, AlbumsData>(app, undefined, { albums: [] });
+  const [state, setState] = useAppState<AlbumsState>(app, {
     selectedAlbumId: null,
-  }));
-  const displayMode = useDisplayMode();
-  const api = useWidgetAPI();
-  const userAgent = useUserAgent();
+  });
+  const displayMode = useDisplayMode(app);
+  const context = useHostContext(app);
 
-  const albums = data.albums || [];
-  const selectedAlbum = albums.find((album: Album) => album.id === widgetState?.selectedAlbumId);
-  const hasTouch = userAgent?.capabilities.touch ?? false;
+  const albums = output?.albums ?? [];
+  const selectedAlbum = albums.find((album: Album) => album.id === state.selectedAlbumId);
+  const hasTouch = context?.deviceCapabilities?.touch ?? false;
 
   const handleSelectAlbum = React.useCallback(
     (album: Album) => {
-      setWidgetState((prev) => ({ ...prev, selectedAlbumId: album.id }));
-      api?.requestDisplayMode?.({ mode: 'fullscreen' });
+      setState((prev) => ({ ...prev, selectedAlbumId: album.id }));
+      app?.requestDisplayMode({ mode: 'fullscreen' });
     },
-    [setWidgetState, api]
+    [setState, app]
   );
 
   if (displayMode === 'fullscreen' && selectedAlbum) {
-    return <FullscreenViewer ref={ref} album={selectedAlbum} />;
+    return <FullscreenViewer app={app} album={selectedAlbum} />;
   }
 
   return (
-    <div ref={ref} className={className}>
-      <AlbumCarousel gap={20} showArrows={false} showEdgeGradients={false} cardWidth={272}>
+    <div className={className}>
+      <AlbumCarousel
+        gap={20}
+        showArrows={false}
+        showEdgeGradients={false}
+        cardWidth={272}
+        displayMode={displayMode}
+      >
         {albums.map((album: Album) => (
           <AlbumCard
             key={album.id}
@@ -72,5 +73,4 @@ export const Albums = React.forwardRef<HTMLDivElement, AlbumsProps>(({ className
       </AlbumCarousel>
     </div>
   );
-});
-Albums.displayName = 'Albums';
+}

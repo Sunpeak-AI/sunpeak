@@ -1,67 +1,72 @@
 import * as React from 'react';
 import { CloseBold } from '@openai/apps-sdk-ui/components/Icon';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
-import { useDisplayMode, useUserAgent, useWidgetAPI } from '../hooks';
 import { SCREEN_WIDTHS, type ScreenWidth } from './chatgpt-simulator-types';
-import { IframeResource, type WidgetCSP } from './iframe-resource';
+import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
+
+type Platform = NonNullable<McpUiHostContext['platform']>;
 
 interface ConversationProps {
-  /** React content to render (mutually exclusive with iframeScriptSrc) */
   children?: React.ReactNode;
-  /** URL to a built .js file to render in an iframe (mutually exclusive with children) */
-  iframeScriptSrc?: string;
   screenWidth: ScreenWidth;
+  displayMode: McpUiDisplayMode;
+  platform: Platform;
+  onRequestDisplayMode?: (mode: McpUiDisplayMode) => void;
   appName?: string;
   appIcon?: string;
   userMessage?: string;
-  resourceMeta?: Record<string, unknown>;
+  /**
+   * Whether the content is transitioning between display modes.
+   * When true, the content area is hidden (opacity 0) to prevent flashing
+   * stale content in the new layout.
+   */
+  isTransitioning?: boolean;
 }
 
+/**
+ * Conversation layout that renders children (iframe) at a stable tree position.
+ *
+ * All three display modes (inline, pip, fullscreen) share the same React tree
+ * shape so that the iframe never unmounts when switching modes, avoiding a
+ * white-flash reload.
+ *
+ * Visual differences are achieved purely with CSS:
+ * - **inline**: content in normal document flow
+ * - **pip**: content wrapper becomes `position: fixed` floating overlay
+ * - **fullscreen**: content wrapper becomes `position: fixed` covering the viewport;
+ *   fullscreen chrome (header/footer) rendered as a separate fixed overlay
+ */
 export function Conversation({
   children,
-  iframeScriptSrc,
   screenWidth,
+  displayMode,
+  platform,
+  onRequestDisplayMode,
   appName = 'Sunpeak',
   appIcon,
   userMessage = 'What have you got for me today?',
-  resourceMeta,
+  isTransitioning = false,
 }: ConversationProps) {
-  // Read displayMode from window.openai (same source the App uses)
-  const displayMode = useDisplayMode() ?? 'inline';
-  const api = useWidgetAPI();
-  const userAgent = useUserAgent();
-  const isDesktop = userAgent?.device.type === 'desktop';
+  const isDesktop = platform === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
+  const isFullscreen = displayMode === 'fullscreen';
+  const isPip = displayMode === 'pip';
 
-  // Extract CSP from resource metadata
-  const widgetCSP = resourceMeta?.['openai/widgetCSP'] as WidgetCSP | undefined;
+  const handleClose = () => onRequestDisplayMode?.('inline');
 
-  // Determine what content to render: iframe or React children
-  const content = iframeScriptSrc ? (
-    <IframeResource scriptSrc={iframeScriptSrc} className="h-full w-full" csp={widgetCSP} />
-  ) : (
-    children
-  );
-
-  // Fullscreen mode: children take over the entire conversation area
-  if (displayMode === 'fullscreen') {
-    const handleClose = () => {
-      if (api?.requestDisplayMode) {
-        api.requestDisplayMode({ mode: 'inline' });
-      }
-    };
-
-    return (
-      <div
-        className="flex flex-col bg-surface w-full h-full flex-1 items-center relative"
-        style={{ transform: 'translate(0)' }}
-      >
-        {/* Match reference HTML structure for fullscreen */}
+  return (
+    <div
+      className="flex flex-col bg-surface w-full h-full flex-1 items-center relative"
+      style={{ transform: 'translate(0)' }}
+    >
+      {/* ─── Fullscreen chrome overlay ─── */}
+      {/* Rendered as a fixed overlay above the content (z-[51] > z-50). */}
+      {/* pointer-events-none on container, pointer-events-auto on interactive parts. */}
+      {isFullscreen && (
         <div
-          className="no-scrollbar fixed start-0 end-0 top-0 bottom-0 z-50 mx-auto flex w-auto flex-col overflow-hidden"
+          className="fixed start-0 end-0 top-0 bottom-0 z-[51] mx-auto flex flex-col pointer-events-none"
           style={{ maxWidth: containerWidth }}
         >
-          <div className="border-subtle bg-token-bg-primary sm:bg-token-bg-primary z-10 grid h-[3.25rem] grid-cols-[1fr_auto_1fr] border-b px-2">
+          <div className="border-subtle bg-token-bg-primary sm:bg-token-bg-primary z-10 grid h-[3.25rem] grid-cols-[1fr_auto_1fr] border-b px-2 pointer-events-auto">
             <div className="flex items-center justify-start gap-3">
               <button
                 onClick={handleClose}
@@ -77,35 +82,11 @@ export function Conversation({
                 {appName}
               </div>
             )}
-            {isDesktop && (
-              <div className="flex items-center justify-end">
-                <Button
-                  variant="outline"
-                  color="primary"
-                  className="bg-token-bg-primary"
-                  onClick={() => {
-                    const widgetDomain = resourceMeta?.['openai/widgetDomain'] as
-                      | string
-                      | undefined;
-                    if (api?.openExternal && widgetDomain) {
-                      api.openExternal({ href: widgetDomain });
-                    }
-                  }}
-                >
-                  {appIcon && (
-                    <span className="me-2 h-4 w-4 flex items-center justify-center">{appIcon}</span>
-                  )}
-                  Open in {appName}
-                </Button>
-              </div>
-            )}
+            {isDesktop && <div />}
           </div>
-          <div className="relative overflow-hidden flex-1 min-h-0">
-            {/* Simulated iframe - scrollable when content exceeds viewport */}
-            <div className="h-full w-full max-w-full overflow-auto">{content}</div>
-          </div>
-          {/* Input area */}
-          <footer className="bg-surface">
+          {/* Spacer - pointer events pass through to content below */}
+          <div className="flex-1" />
+          <footer className="bg-surface pointer-events-auto">
             <div className="max-w-[48rem] mx-auto px-4 py-4">
               <div className="relative">
                 <input
@@ -119,49 +100,47 @@ export function Conversation({
             </div>
           </footer>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  return (
-    <div
-      className="flex flex-col bg-surface w-full h-full flex-1 items-center relative"
-      style={{ transform: 'translate(0)' }}
-    >
-      {/* Header bar */}
-      <header
-        className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40 w-full"
-        style={{ maxWidth: containerWidth }}
-      >
-        <span className="text-primary">sunpeak.ai</span>
-      </header>
+      {/* ─── Conversation header ─── */}
+      {/* Hidden in fullscreen since the fullscreen chrome has its own header */}
+      {!isFullscreen && (
+        <header
+          className="h-12 bg-surface flex items-center px-4 text-lg sticky top-0 z-40 w-full"
+          style={{ maxWidth: containerWidth }}
+        >
+          <span className="text-primary">sunpeak.ai</span>
+        </header>
+      )}
 
-      {/* Conversation container with configurable width */}
+      {/* ─── Conversation container ─── */}
       <div
         className="flex flex-col flex-1 w-full transition-all duration-200 overflow-hidden"
         style={{ maxWidth: containerWidth }}
       >
         <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          {/* User turn */}
-          <article className="text-primary w-full focus:outline-none" dir="auto" data-turn="user">
-            <h5 className="sr-only">You said:</h5>
-            <div className="text-base my-auto mx-auto md:pt-8 px-4">
-              <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
-                <div className="flex max-w-full flex-col grow">
-                  <div
-                    data-message-author-role="user"
-                    className="min-h-8 relative flex w-full flex-col items-end gap-2 text-start break-words whitespace-normal"
-                  >
-                    <div className="flex w-full flex-col gap-1 empty:hidden items-end">
-                      <div className="bg-[var(--color-background-primary-soft)] relative rounded-[18px] px-4 py-3 max-w-[70%]">
-                        <div className="whitespace-pre-wrap">{userMessage}</div>
+          {/* User turn - hidden in fullscreen */}
+          {!isFullscreen && (
+            <article className="text-primary w-full focus:outline-none" dir="auto" data-turn="user">
+              <h5 className="sr-only">You said:</h5>
+              <div className="text-base my-auto mx-auto md:pt-8 px-4">
+                <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
+                  <div className="flex max-w-full flex-col grow">
+                    <div
+                      data-message-author-role="user"
+                      className="min-h-8 relative flex w-full flex-col items-end gap-2 text-start break-words whitespace-normal"
+                    >
+                      <div className="flex w-full flex-col gap-1 empty:hidden items-end">
+                        <div className="bg-[var(--color-background-primary-soft)] relative rounded-[18px] px-4 py-3 max-w-[70%]">
+                          <div className="whitespace-pre-wrap">{userMessage}</div>
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </article>
+            </article>
+          )}
 
           {/* Assistant turn */}
           <article
@@ -173,19 +152,21 @@ export function Conversation({
             <div className="text-base my-auto mx-auto pb-10 px-4">
               <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                 <div className="flex max-w-full flex-col grow">
-                  {/* Assistant avatar and name */}
-                  <div className="flex items-center gap-2 my-3">
-                    {appIcon ? (
-                      <div className="size-6 flex items-center justify-center text-base">
-                        {appIcon}
-                      </div>
-                    ) : (
-                      <div className="size-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium text-xs">
-                        AI
-                      </div>
-                    )}
-                    <span className="font-semibold text-sm">{appName}</span>
-                  </div>
+                  {/* Assistant avatar and name - hidden in fullscreen */}
+                  {!isFullscreen && (
+                    <div className="flex items-center gap-2 my-3">
+                      {appIcon ? (
+                        <div className="size-6 flex items-center justify-center text-base">
+                          {appIcon}
+                        </div>
+                      ) : (
+                        <div className="size-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-medium text-xs">
+                          AI
+                        </div>
+                      )}
+                      <span className="font-semibold text-sm">{appName}</span>
+                    </div>
+                  )}
 
                   {/* Assistant message content */}
                   <div
@@ -193,39 +174,68 @@ export function Conversation({
                     className="min-h-8 relative flex w-full flex-col items-start gap-2 text-start break-words whitespace-normal"
                   >
                     <div className="flex w-full flex-col gap-1 empty:hidden">
-                      {/* App UI content area - allows horizontal overflow */}
-                      {displayMode === 'pip' ? (
-                        <div
-                          className="no-scrollbar @w-xl/main:top-4 fixed start-4 end-4 top-12 z-50 mx-auto max-w-[40rem] lg:max-w-[48rem] sm:start-0 sm:end-0 sm:top-[3.25rem] sm:w-full overflow-visible"
-                          style={{ maxHeight: '480px' }}
-                        >
+                      {/*
+                       * ─── CONTENT AREA ───
+                       * Children (iframe) are always at this tree position.
+                       * CSS handles visual positioning for each display mode:
+                       *   inline:     normal flow (position: relative)
+                       *   pip:        floating overlay (position: fixed)
+                       *   fullscreen: viewport takeover (position: fixed)
+                       */}
+                      <div
+                        className={
+                          isPip
+                            ? 'no-scrollbar @w-xl/main:top-4 fixed start-4 end-4 top-12 z-50 mx-auto max-w-[40rem] lg:max-w-[48rem] sm:start-0 sm:end-0 sm:top-[3.25rem] sm:w-full overflow-visible'
+                            : isFullscreen
+                              ? 'no-scrollbar fixed inset-x-0 top-[3.25rem] bottom-0 z-50 mx-auto'
+                              : 'no-scrollbar relative mb-2 @w-sm/main:w-full mx-0 max-sm:-mx-[1rem] max-sm:w-[100cqw] max-sm:overflow-hidden overflow-visible'
+                        }
+                        style={{
+                          ...(isPip ? { maxHeight: '480px' } : {}),
+                          ...(isFullscreen ? { maxWidth: containerWidth } : {}),
+                        }}
+                      >
+                        {/* PiP close button - keyed so it doesn't shift content's position */}
+                        {isPip && (
                           <button
-                            onClick={() => {
-                              if (api?.requestDisplayMode) {
-                                api.requestDisplayMode({ mode: 'inline' });
-                              }
-                            }}
+                            key="pip-close"
+                            onClick={handleClose}
                             className="absolute -start-2 -top-1.5 z-10 rounded-full bg-[#3a3a3a] p-1.5 text-white shadow-[0px_0px_0px_1px_#fff3,0px_4px_12px_rgba(0,0,0,0.12)] hover:bg-[#6a6a6a]"
                             aria-label="Close picture-in-picture"
                             type="button"
                           >
                             <CloseBold className="h-4 w-4" />
                           </button>
-                          <div className="relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_#fff3,0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4">
-                            {/* Simulated iframe - scrollable content */}
-                            <div className="h-full w-full max-w-full overflow-auto bg-white dark:bg-[#212121]">
-                              {content}
-                            </div>
+                        )}
+                        <div
+                          key="content"
+                          className={
+                            isPip
+                              ? 'relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_#fff3,0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4'
+                              : isFullscreen
+                                ? 'relative overflow-hidden h-full'
+                                : 'relative overflow-hidden h-full'
+                          }
+                        >
+                          <div
+                            className={
+                              isPip
+                                ? 'h-full w-full max-w-full overflow-auto bg-white dark:bg-[#212121]'
+                                : isFullscreen
+                                  ? 'h-full w-full max-w-full overflow-auto bg-surface'
+                                  : 'h-full w-full max-w-full bg-transparent'
+                            }
+                            style={{
+                              opacity: isTransitioning ? 0 : 1,
+                              // Only animate the reveal — the hide must be instant
+                              // to prevent old content from being visible in the new layout.
+                              transition: isTransitioning ? 'none' : 'opacity 100ms',
+                            }}
+                          >
+                            {children}
                           </div>
                         </div>
-                      ) : (
-                        <div className="no-scrollbar relative mb-2 @w-sm/main:w-full mx-0 max-sm:-mx-[1rem] max-sm:w-[100cqw] max-sm:overflow-hidden overflow-visible">
-                          <div className="relative overflow-hidden h-full">
-                            {/* Simulated iframe - expands to content height, not scrollable */}
-                            {content}
-                          </div>
-                        </div>
-                      )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -234,20 +244,22 @@ export function Conversation({
           </article>
         </main>
 
-        {/* Input area */}
-        <footer className="bg-surface">
-          <div className="max-w-[48rem] mx-auto px-4 py-4">
-            <div className="relative">
-              <input
-                type="text"
-                name="userInput"
-                disabled
-                placeholder="Message sunpeak.ai"
-                className="w-full dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
-              />
+        {/* Input area - hidden in fullscreen since fullscreen chrome has its own footer */}
+        {!isFullscreen && (
+          <footer className="bg-surface">
+            <div className="max-w-[48rem] mx-auto px-4 py-4">
+              <div className="relative">
+                <input
+                  type="text"
+                  name="userInput"
+                  disabled
+                  placeholder="Message sunpeak.ai"
+                  className="w-full dark:bg-[#303030] text-secondary-foreground placeholder:text-muted-foreground rounded-3xl px-5 py-3 pr-12 shadow-md light:border border-[#0000000f]"
+                />
+              </div>
             </div>
-          </div>
-        </footer>
+          </footer>
+        )}
       </div>
     </div>
   );

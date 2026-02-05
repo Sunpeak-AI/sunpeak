@@ -1,12 +1,8 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { ChatGPTSimulator } from './chatgpt-simulator';
 
 describe('ChatGPTSimulator', () => {
-  afterEach(() => {
-    delete (window as unknown as { openai?: unknown }).openai;
-  });
-
   it('renders children in the conversation area', () => {
     render(
       <ChatGPTSimulator>
@@ -31,7 +27,7 @@ describe('ChatGPTSimulator', () => {
     expect(screen.getByText('Simulation Width')).toBeInTheDocument();
   });
 
-  it('initializes mock OpenAI on window object', () => {
+  it('does not use window.openai (uses McpAppHost instead)', () => {
     render(
       <ChatGPTSimulator>
         <div>Content</div>
@@ -39,8 +35,6 @@ describe('ChatGPTSimulator', () => {
     );
 
     const openai = (window as unknown as { openai?: unknown }).openai;
-    expect(openai).toBeDefined();
-    expect(openai).toHaveProperty('setTheme');
-    expect(openai).toHaveProperty('setDisplayMode');
+    expect(openai).toBeUndefined();
   });
 });

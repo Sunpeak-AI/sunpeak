@@ -32,23 +32,17 @@
     "title": "Show Map",
     "annotations": { "readOnlyHint": true },
     "_meta": {
-      "openai/toolInvocation/invoking": "Finding pizza places",
-      "openai/toolInvocation/invoked": "Found pizza places",
-      "openai/widgetAccessible": true,
-      "openai/resultCanProduceWidget": true
+      "ui": { "visibility": ["model", "app"] }
     }
   },
-  "callToolRequestParams": {
-    "name": "show-map",
-    "arguments": {
-      "query": "pizza",
-      "location": { "lat": 37.7749, "lng": -122.4194 },
-      "radius": 5,
-      "minRating": 4.0,
-      "priceRange": ["$", "$$", "$$$"]
-    }
+  "toolInput": {
+    "query": "pizza",
+    "location": { "lat": 37.7749, "lng": -122.4194 },
+    "radius": 5,
+    "minRating": 4.0,
+    "priceRange": ["$", "$$", "$$$"]
   },
-  "callToolResult": {
+  "toolResult": {
     "structuredContent": {
       "places": [
         {
@@ -152,7 +146,6 @@
           "thumbnail": "https://cdn.sunpeak.ai/demo/pizza4.jpeg"
         }
       ]
-    },
-    "_meta": {}
+    }
   }
 }

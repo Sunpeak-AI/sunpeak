@@ -1,11 +1,26 @@
 /**
- * Generic runtime types for widget environments.
- * These types are provider-agnostic and can be used across different widget platforms.
+ * Runtime types for MCP Apps environments.
+ * Re-exports canonical types from the MCP Apps SDK and provides
+ * legacy type aliases for backwards compatibility.
  */
 
-export type UnknownObject = Record<string, unknown>;
+// Re-export canonical MCP Apps types
+export type {
+  McpUiHostContext,
+  McpUiTheme,
+  McpUiDisplayMode,
+  McpUiAppCapabilities,
+  McpUiHostCapabilities,
+  McpUiHostStyles,
+  McpUiStyleVariableKey,
+  McpUiStyles,
+} from '@modelcontextprotocol/ext-apps';
 
-export type Theme = 'light' | 'dark';
+// Type aliases for backwards compatibility and ergonomics
+export type {
+  McpUiTheme as Theme,
+  McpUiDisplayMode as DisplayMode,
+} from '@modelcontextprotocol/ext-apps';
 
 export type SafeAreaInsets = {
   top: number;
@@ -14,29 +29,6 @@ export type SafeAreaInsets = {
   right: number;
 };
 
-export type SafeArea = {
-  insets: SafeAreaInsets;
-};
-
+// Legacy types kept for simulator-url.ts
 export type DeviceType = 'mobile' | 'tablet' | 'desktop' | 'unknown';
-
-export type UserAgent = {
-  device: { type: DeviceType };
-  capabilities: {
-    hover: boolean;
-    touch: boolean;
-  };
-};
-
-export type DisplayMode = 'pip' | 'inline' | 'fullscreen';
-
 export type ViewMode = 'modal' | 'default';
-
-export type View = {
-  mode: ViewMode;
-  params?: UnknownObject;
-};
-
-export type CallToolResponse = {
-  result: string;
-};
