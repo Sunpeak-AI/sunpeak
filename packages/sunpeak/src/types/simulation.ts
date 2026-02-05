@@ -13,7 +13,7 @@ import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
  *
  * Resource rendering options (mutually exclusive):
  * - `resourceUrl`: URL to an HTML page (dev mode with Vite HMR)
- * - `resourceScript`: URL to a built .js file (production builds)
+ * - `resourceScript`: URL to a built resource file (production builds)
  */
 export interface Simulation {
   // Unique identifier derived from the simulation filename (e.g., 'albums-show')
@@ -23,7 +23,7 @@ export interface Simulation {
   // The page mounts the resource component and uses SDK's useApp().
   resourceUrl?: string;
 
-  // URL to a built .js file for iframe rendering (e.g., '/dist/carousel.js').
+  // URL to a built resource for iframe rendering.
   // Used by https://app.sunpeak.ai for production builds.
   resourceScript?: string;
 

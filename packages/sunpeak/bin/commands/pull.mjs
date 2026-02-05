@@ -62,20 +62,20 @@ async function lookupResources(tag, repository, accessToken, name = null, deps =
 }
 
 /**
- * Download the JS file for a resource
+ * Download the HTML file for a resource
  */
-async function downloadJsFile(resource, deps = defaultDeps) {
+async function downloadHtmlFile(resource, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
 
-  if (!resource.js_file?.url) {
-    throw new Error('Resource has no JS file attached');
+  if (!resource.html_file?.url) {
+    throw new Error('Resource has no HTML file attached');
   }
 
   // The URL is a pre-signed S3 URL, no additional auth needed
-  const response = await d.fetch(resource.js_file.url);
+  const response = await d.fetch(resource.html_file.url);
 
   if (!response.ok) {
-    throw new Error(`Failed to download JS file: HTTP ${response.status}`);
+    throw new Error(`Failed to download HTML file: HTTP ${response.status}`);
   }
 
   return response.text();
@@ -171,21 +171,21 @@ Examples:
       d.console.log(`  Tags: ${resource.tags?.join(', ') || 'none'}`);
       d.console.log(`  Created: ${resource.created_at}`);
 
-      if (!resource.js_file) {
-        d.console.log(`  ⚠ Skipping: No JS file attached.\n`);
+      if (!resource.html_file) {
+        d.console.log(`  ⚠ Skipping: No HTML file attached.\n`);
         continue;
       }
 
-      // Download the JS file
-      d.console.log(`  Downloading JS file...`);
-      const jsContent = await downloadJsFile(resource, d);
+      // Download the HTML file
+      d.console.log(`  Downloading HTML file...`);
+      const htmlContent = await downloadHtmlFile(resource, d);
 
-      const outputFile = join(outputDir, `${resource.name}.js`);
+      const outputFile = join(outputDir, `${resource.name}.html`);
       const metaFile = join(outputDir, `${resource.name}.json`);
 
-      // Write the JS file
-      d.writeFileSync(outputFile, jsContent);
-      d.console.log(`  ✓ Saved ${resource.name}.js`);
+      // Write the HTML file
+      d.writeFileSync(outputFile, htmlContent);
+      d.console.log(`  ✓ Saved ${resource.name}.html`);
 
       // Write metadata JSON
       const meta = {

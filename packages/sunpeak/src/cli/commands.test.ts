@@ -359,13 +359,13 @@ describe('CLI Commands', () => {
           loadCredentials: () => ({ access_token: 'test-token' }),
           getGitRepoName: () => 'owner/repo',
           existsSync: (path: string) => {
-            // Support new folder structure: dist/widget/widget.js
+            // Support new folder structure: dist/widget/widget.html
             if (path.includes('dist')) return true;
             if (path.includes('widget')) return true;
             return false;
           },
           readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
-            // New folder structure: dist/{resource}/{resource}.js
+            // New folder structure: dist/{resource}/{resource}.html
             if (options?.withFileTypes) {
               if (dirPath.endsWith('dist')) {
                 // Return directory entry for widget
@@ -374,7 +374,7 @@ describe('CLI Commands', () => {
             }
             // Return files in resource directory (for simulation discovery)
             if (dirPath.endsWith('/widget')) {
-              return ['widget.js', 'widget.json'];
+              return ['widget.html', 'widget.json'];
             }
             return [];
           },
@@ -657,13 +657,13 @@ describe('CLI Commands', () => {
                   tags: ['prod'],
                   created_at: '2024-01-01T00:00:00Z',
                   mime_type: 'text/html+skybridge',
-                  js_file: { url: 'https://example.com/widget.js' },
+                  html_file: { url: 'https://example.com/widget.html' },
                 },
               ],
             }),
           };
         }
-        if (url.includes('example.com/widget.js')) {
+        if (url.includes('example.com/widget.html')) {
           return {
             ok: true,
             text: async () => 'console.log("widget");',
@@ -697,7 +697,7 @@ describe('CLI Commands', () => {
           }),
         })
       );
-      expect(writtenFiles['/test/output/widget.js']).toBe('console.log("widget");');
+      expect(writtenFiles['/test/output/widget.html']).toBe('console.log("widget");');
       expect(writtenFiles['/test/output/widget.json']).toBeDefined();
       expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('Successfully pulled'));
     });
@@ -759,13 +759,13 @@ describe('CLI Commands', () => {
           loadCredentials: () => ({ access_token: 'test-token' }),
           getGitRepoName: () => 'owner/repo',
           existsSync: (path: string) => {
-            // Support new folder structure: dist/widget/widget.js
+            // Support new folder structure: dist/widget/widget.html
             if (path.includes('dist')) return true;
             if (path.includes('widget')) return true;
             return false;
           },
           readdirSync: (dirPath: string, options?: { withFileTypes?: boolean }) => {
-            // New folder structure: dist/{resource}/{resource}.js
+            // New folder structure: dist/{resource}/{resource}.html
             if (options?.withFileTypes) {
               if (dirPath.endsWith('dist')) {
                 // Return directory entry for widget
@@ -774,7 +774,7 @@ describe('CLI Commands', () => {
             }
             // Return files in resource directory (for simulation discovery)
             if (dirPath.endsWith('/widget')) {
-              return ['widget.js', 'widget.json'];
+              return ['widget.html', 'widget.json'];
             }
             return [];
           },
@@ -819,15 +819,15 @@ describe('CLI Commands', () => {
 
       const result = findResources('/test/dist', '/test/simulations', {
         existsSync: (path: string) => {
-          // New folder structure: dist/widget/widget.js, dist/widget/widget.json
-          // Only widget folder has both .js and .json files
+          // New folder structure: dist/widget/widget.html, dist/widget/widget.json
+          // Only widget folder has both .html and .json files
           if (path.endsWith('/test/dist')) return true;
           if (path.endsWith('/test/dist/widget')) return true;
-          if (path.endsWith('/test/dist/widget/widget.js')) return true;
+          if (path.endsWith('/test/dist/widget/widget.html')) return true;
           if (path.endsWith('/test/dist/widget/widget.json')) return true;
           // standalone folder exists but is missing the .json file
           if (path.endsWith('/test/dist/standalone')) return true;
-          if (path.endsWith('/test/dist/standalone/standalone.js')) return true;
+          if (path.endsWith('/test/dist/standalone/standalone.html')) return true;
           // standalone.json does NOT exist
           return false;
         },
@@ -852,7 +852,7 @@ describe('CLI Commands', () => {
         console: createMockConsole(),
       });
 
-      // Should find widget because it has matching widget.js and widget.json in its folder
+      // Should find widget because it has matching widget.html and widget.json in its folder
       // standalone folder exists but is missing standalone.json
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('widget');
@@ -873,7 +873,7 @@ describe('CLI Commands', () => {
         existsSync: (path: string) => {
           if (path.endsWith('/test/dist')) return true;
           if (path.endsWith('/test/dist/widget')) return true;
-          if (path.endsWith('/test/dist/widget/widget.js')) return true;
+          if (path.endsWith('/test/dist/widget/widget.html')) return true;
           if (path.endsWith('/test/dist/widget/widget.json')) return true;
           // Simulations directory
           if (path.endsWith('/test/simulations/widget')) return true;

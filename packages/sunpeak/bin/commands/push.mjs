@@ -94,9 +94,9 @@ function findSimulations(simulationsDir, resourceName, deps = defaultDeps) {
 
 /**
  * Find all resources in a directory
- * Expects folder structure: dist/{resource}/{resource}.js
+ * Expects folder structure: dist/{resource}/{resource}.html
  * Simulations are loaded from tests/simulations/{resource}/
- * Returns array of { name, jsPath, metaPath, meta, simulations }
+ * Returns array of { name, htmlPath, metaPath, meta, simulations }
  */
 export function findResources(distDir, simulationsDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
@@ -112,10 +112,10 @@ export function findResources(distDir, simulationsDir, deps = defaultDeps) {
     if (entry.isDirectory()) {
       const resourceName = entry.name;
       const resourceDir = join(distDir, resourceName);
-      const jsPath = join(resourceDir, `${resourceName}.js`);
+      const htmlPath = join(resourceDir, `${resourceName}.html`);
       const metaPath = join(resourceDir, `${resourceName}.json`);
 
-      if (d.existsSync(jsPath) && d.existsSync(metaPath)) {
+      if (d.existsSync(htmlPath) && d.existsSync(metaPath)) {
         let meta = null;
         try {
           meta = JSON.parse(d.readFileSync(metaPath, 'utf-8'));
@@ -123,7 +123,7 @@ export function findResources(distDir, simulationsDir, deps = defaultDeps) {
           d.console.warn(`Warning: Could not parse ${resourceName}.json`);
         }
         const simulations = findSimulations(simulationsDir, resourceName, d);
-        resources.push({ name: resourceName, dir: resourceDir, jsPath, metaPath, meta, simulations });
+        resources.push({ name: resourceName, dir: resourceDir, htmlPath, metaPath, meta, simulations });
       }
     }
   }
@@ -133,9 +133,9 @@ export function findResources(distDir, simulationsDir, deps = defaultDeps) {
 
 /**
  * Build a resource from a resource directory path
- * Expects structure: dir/{name}.js, dir/{name}.json
+ * Expects structure: dir/{name}.html, dir/{name}.json
  * Simulations are loaded from tests/simulations/{name}/
- * Returns { name, jsPath, metaPath, meta, simulations }
+ * Returns { name, htmlPath, metaPath, meta, simulations }
  */
 function buildResourceFromDir(resourceDir, simulationsDir, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
@@ -150,11 +150,11 @@ function buildResourceFromDir(resourceDir, simulationsDir, deps = defaultDeps) {
 
   // Extract resource name from directory name
   const name = basename(dir);
-  const jsPath = join(dir, `${name}.js`);
+  const htmlPath = join(dir, `${name}.html`);
   const metaPath = join(dir, `${name}.json`);
 
-  if (!d.existsSync(jsPath)) {
-    d.console.error(`Error: Resource JS file not found: ${jsPath}`);
+  if (!d.existsSync(htmlPath)) {
+    d.console.error(`Error: Resource HTML file not found: ${htmlPath}`);
     d.process.exit(1);
   }
 
@@ -172,7 +172,7 @@ function buildResourceFromDir(resourceDir, simulationsDir, deps = defaultDeps) {
 
   const simulations = findSimulations(simulationsDir, name, d);
 
-  return { name, jsPath, metaPath, meta, simulations };
+  return { name, htmlPath, metaPath, meta, simulations };
 }
 
 /**
@@ -185,13 +185,13 @@ async function pushResource(resource, repository, tags, accessToken, deps = defa
     throw new Error('Resource is missing URI. Run "sunpeak build" to generate URIs.');
   }
 
-  const jsContent = d.readFileSync(resource.jsPath);
-  const jsBlob = new Blob([jsContent], { type: 'application/javascript' });
+  const htmlContent = d.readFileSync(resource.htmlPath);
+  const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
 
   // Build form data
   const formData = new FormData();
   formData.append('repository', repository);
-  formData.append('js_file', jsBlob, `${resource.name}.js`);
+  formData.append('html_file', htmlBlob, `${resource.name}.html`);
 
   // Add metadata fields
   if (resource.meta) {

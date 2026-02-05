@@ -55,7 +55,7 @@ async function startServer() {
         simulations.push({
           ...simulation,
           name: simulationKey,
-          distPath: path.join(projectRoot, `dist/${resourceKey}/${resourceKey}.js`),
+          distPath: path.join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
           srcPath: `/src/resources/${resourceKey}/${resourceKey}-resource.tsx`,
           resource,
         });

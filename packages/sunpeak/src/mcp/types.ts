@@ -2,13 +2,13 @@ import type { Resource, Tool } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Simulation configuration for MCP server.
- * Must include distPath for the built widget file.
+ * Must include distPath for the built HTML file.
  */
 export interface SimulationWithDist {
   // Unique identifier derived from the simulation filename (e.g., 'albums-show')
   name: string;
 
-  // Path to the built JS bundle (for production mode)
+  // Path to the built HTML file (for production mode)
   distPath: string;
 
   // Path to the source TSX file (for Vite dev mode)
@@ -31,7 +31,7 @@ export interface SimulationWithDist {
 
 /**
  * Configuration for the MCP server.
- * Takes an array of simulations with distPath for each built widget.
+ * Takes an array of simulations with distPath for each built HTML file.
  */
 export interface MCPServerConfig {
   name?: string;
@@ -41,7 +41,7 @@ export interface MCPServerConfig {
   /**
    * Vite dev server instance for HMR mode.
    * When provided, resources are served as HTML that loads from Vite.
-   * When not provided, resources serve bundled JS (production mode).
+   * When not provided, resources serve pre-built HTML (production mode).
    */
   viteServer?: unknown; // ViteDevServer type, kept as unknown to avoid hard dependency
 }

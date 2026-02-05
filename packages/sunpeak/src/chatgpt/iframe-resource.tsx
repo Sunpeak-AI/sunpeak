@@ -174,7 +174,7 @@ interface IframeResourceProps {
    */
   src?: string;
   /**
-   * URL to a built .js file to load in the iframe via srcdoc.
+   * URL to a built resource to load in the iframe via srcdoc.
    * Used for production builds where we generate the HTML wrapper.
    * Mutually exclusive with src.
    */

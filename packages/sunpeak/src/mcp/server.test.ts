@@ -12,11 +12,10 @@ describe('MCP Server Module', () => {
     expect(fs.existsSync('/nonexistent/file.js')).toBe(false);
   });
 
-  it('verifies HTML shell structure for wrapping widgets', () => {
+  it('verifies pre-built HTML structure from sunpeak build', () => {
+    // The build process generates self-contained HTML files with JS inlined
     const mockJsCode = 'console.log("test");';
-
-    // Expected HTML structure that widgets should be wrapped in
-    const expectedStructure = `<!DOCTYPE html>
+    const preBuiltHtml = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
@@ -31,10 +30,10 @@ ${mockJsCode}
 </html>`;
 
     // Verify the structure contains essential elements
-    expect(expectedStructure).toContain('<!DOCTYPE html>');
-    expect(expectedStructure).toContain('<div id="root"></div>');
-    expect(expectedStructure).toContain('<script>');
-    expect(expectedStructure).toContain(mockJsCode);
+    expect(preBuiltHtml).toContain('<!DOCTYPE html>');
+    expect(preBuiltHtml).toContain('<div id="root"></div>');
+    expect(preBuiltHtml).toContain('<script>');
+    expect(preBuiltHtml).toContain(mockJsCode);
   });
 
   it('verifies timestamp pattern for cache busting URIs', () => {

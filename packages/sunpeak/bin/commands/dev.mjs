@@ -181,7 +181,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       simulations.push({
         ...simulation,
         name: simulationKey,
-        distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.js`),
+        distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
         srcPath: `/src/resources/${resourceKey}/${resourceKey}-resource.tsx`,
         resource,
       });

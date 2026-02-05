@@ -169,7 +169,8 @@ export async function build(projectRoot = process.cwd()) {
         kebabName,
         resourceDir: path.join(resourcesDir, kebabName),
         entry: `.tmp/index-${kebabName}.tsx`,
-        output: `${kebabName}.js`,
+        jsOutput: `${kebabName}.js`,
+        htmlOutput: `${kebabName}.html`,
         buildOutDir: path.join(buildDir, kebabName),
         distOutDir: path.join(distDir, kebabName),  // Final output: dist/{resource}/
       };
@@ -204,8 +205,8 @@ export async function build(projectRoot = process.cwd()) {
 
   // Build all resources (but don't copy yet)
   for (let i = 0; i < resourceFiles.length; i++) {
-    const { componentName, componentFile, kebabName, entry, output, buildOutDir } = resourceFiles[i];
-    console.log(`[${i + 1}/${resourceFiles.length}] Building ${output}...`);
+    const { componentName, componentFile, kebabName, entry, jsOutput, buildOutDir } = resourceFiles[i];
+    console.log(`[${i + 1}/${resourceFiles.length}] Building ${kebabName}...`);
 
     try {
       // Create build directory if it doesn't exist
@@ -246,7 +247,7 @@ export async function build(projectRoot = process.cwd()) {
             entry: entryPath,
             name: 'SunpeakApp',
             formats: ['iife'],
-            fileName: () => output,
+            fileName: () => jsOutput,
           },
           rollupOptions: {
             output: {
@@ -269,7 +270,7 @@ export async function build(projectRoot = process.cwd()) {
   console.log('\nCopying built files to dist/...');
   const timestamp = Date.now().toString(36);
 
-  for (const { output, buildOutDir, distOutDir, kebabName, componentFile, resourceDir } of resourceFiles) {
+  for (const { jsOutput, htmlOutput, buildOutDir, distOutDir, kebabName, componentFile, resourceDir } of resourceFiles) {
     // Create resource-specific output directory
     if (!existsSync(distOutDir)) {
       mkdirSync(distOutDir, { recursive: true });
@@ -287,15 +288,29 @@ export async function build(projectRoot = process.cwd()) {
       console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
     }
 
-    // Copy built JS file
-    const builtFile = path.join(buildOutDir, output);
-    const destFile = path.join(distOutDir, output);
+    // Read built JS file and wrap in HTML shell
+    const builtJsFile = path.join(buildOutDir, jsOutput);
+    const destHtmlFile = path.join(distOutDir, htmlOutput);
 
-    if (existsSync(builtFile)) {
-      copyFileSync(builtFile, destFile);
-      console.log(`✓ Copied ${kebabName}/${output}`);
+    if (existsSync(builtJsFile)) {
+      const jsContents = readFileSync(builtJsFile, 'utf-8');
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="root"></div>
+  <script>
+${jsContents}
+  </script>
+</body>
+</html>`;
+      writeFileSync(destHtmlFile, html);
+      console.log(`✓ Built ${kebabName}/${htmlOutput}`);
     } else {
-      console.error(`Built file not found: ${builtFile}`);
+      console.error(`Built file not found: ${builtJsFile}`);
       if (existsSync(buildOutDir)) {
         console.log(`  Files in ${buildOutDir}:`, readdirSync(buildOutDir));
       } else {
