@@ -1,0 +1,59 @@
+---
+title: "useTeardown"
+description: "Clean up before app destruction."
+---
+
+## Overview
+
+Registers a cleanup callback that runs before the app's iframe is destroyed. Use this to save state, close connections, or perform other cleanup.
+
+## Import
+
+```tsx
+import { useTeardown } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useTeardown(
+  app: App | null,
+  callback: () => Promise<void> | void
+): void
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+<ResponseField name="callback" type="() => Promise<void> | void" required>
+  Cleanup function to run before app destruction.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="void">
+  This hook does not return a value.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useTeardown } from 'sunpeak';
+import { useCallback } from 'react';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+
+  const cleanup = useCallback(async () => {
+    console.log('App is being torn down');
+    // Save state, close connections, etc.
+  }, []);
+
+  useTeardown(app, cleanup);
+
+  return <div>My Resource</div>;
+}
+```

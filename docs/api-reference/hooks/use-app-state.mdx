@@ -1,0 +1,69 @@
+---
+title: "useAppState"
+description: "Persistent state synced with the host."
+---
+
+## Overview
+
+Manages persistent UI state that is automatically synced to the host via `updateModelContext`. Works like React's `useState` but the state survives across conversations and is available to the AI model. Use this for user decisions, selections, or any state that should persist.
+
+## Import
+
+```tsx
+import { useAppState } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useAppState<T extends Record<string, unknown>>(
+  app: App | null,
+  defaultState: T
+): readonly [T, (state: SetStateAction<T>) => void]
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+<ResponseField name="defaultState" type="T" required>
+  Initial state value.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="[T, (state: SetStateAction<T>) => void]">
+  A tuple containing the current state and a setter function, similar to React's `useState`.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useAppState } from 'sunpeak';
+
+interface ReviewState {
+  decision: 'approved' | 'rejected' | null;
+  decidedAt: string | null;
+}
+
+function ReviewResource() {
+  const { app } = useApp({ appInfo: { name: 'Review', version: '1.0.0' } });
+  const [state, setState] = useAppState<ReviewState>(app, {
+    decision: null,
+    decidedAt: null,
+  });
+
+  const handleApprove = () => {
+    setState({ decision: 'approved', decidedAt: new Date().toISOString() });
+  };
+
+  return (
+    <div>
+      <p>Decision: {state.decision ?? 'Pending'}</p>
+      <button onClick={handleApprove}>Approve</button>
+    </div>
+  );
+}
+```

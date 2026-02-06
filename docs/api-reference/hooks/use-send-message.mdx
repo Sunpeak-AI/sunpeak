@@ -1,0 +1,74 @@
+---
+title: "useSendMessage"
+description: "Send follow-up messages to the conversation."
+---
+
+## Overview
+
+Returns a function to send messages to the conversation on behalf of the user. The message appears as a user message and triggers the AI to respond.
+
+## Import
+
+```tsx
+import { useSendMessage } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useSendMessage(
+  app: App | null
+): (params: SendMessageParams) => Promise<void>
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+### SendMessageParams
+
+<ResponseField name="role" type="'user'" required>
+  Message role.
+</ResponseField>
+
+<ResponseField name="content" type="MessageContent[]" required>
+  Array of message content parts.
+</ResponseField>
+
+### MessageContent
+
+<ResponseField name="type" type="'text'" required>
+  Content type.
+</ResponseField>
+
+<ResponseField name="text" type="string" required>
+  Message text content.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="sendMessage" type="(params: SendMessageParams) => Promise<void>">
+  Function to send a message to the conversation.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useSendMessage } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const sendMessage = useSendMessage(app);
+
+  const handleFollowUp = async () => {
+    await sendMessage({
+      role: 'user',
+      content: [{ type: 'text', text: 'Show me more details' }],
+    });
+  };
+
+  return <button onClick={handleFollowUp}>Ask for Details</button>;
+}
+```

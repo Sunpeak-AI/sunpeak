@@ -6,7 +6,23 @@ import {
   useHostContext,
   useDisplayMode,
 } from 'sunpeak';
+import type { ResourceConfig } from 'sunpeak';
 import { Carousel, Card } from './components';
+
+export const resource: ResourceConfig = {
+  name: 'carousel',
+  title: 'Carousel',
+  description: 'Show popular places to visit widget',
+  mimeType: 'text/html;profile=mcp-app',
+  _meta: {
+    ui: {
+      domain: 'https://sunpeak.ai',
+      csp: {
+        resourceDomains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
+      },
+    },
+  },
+};
 
 /**
  * Production-ready Carousel Resource

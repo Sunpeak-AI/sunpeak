@@ -1,0 +1,74 @@
+---
+title: "useRequestDisplayMode"
+description: "Request display mode changes."
+---
+
+## Overview
+
+Returns a function to request display mode changes and the list of available modes. The host may accept or deny the request.
+
+## Import
+
+```tsx
+import { useRequestDisplayMode, useHostContext } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useRequestDisplayMode(
+  app: App | null,
+  hostContext: McpUiHostContext | null
+): {
+  requestDisplayMode: (mode: AppDisplayMode) => Promise<void>;
+  availableModes: AppDisplayMode[] | undefined;
+}
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+<ResponseField name="hostContext" type="McpUiHostContext | null" required>
+  Host context from `useHostContext()`.
+</ResponseField>
+
+### AppDisplayMode
+
+<ResponseField name="mode" type="'inline' | 'pip' | 'fullscreen'">
+  Available display modes.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="requestDisplayMode" type="(mode: AppDisplayMode) => Promise<void>">
+  Function to request a display mode change.
+</ResponseField>
+
+<ResponseField name="availableModes" type="AppDisplayMode[] | undefined">
+  List of display modes supported by the host.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useHostContext, useRequestDisplayMode } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const hostContext = useHostContext(app);
+  const { requestDisplayMode, availableModes } = useRequestDisplayMode(app, hostContext);
+
+  return (
+    <div>
+      {availableModes?.includes('fullscreen') && (
+        <button onClick={() => requestDisplayMode('fullscreen')}>
+          Go Fullscreen
+        </button>
+      )}
+    </div>
+  );
+}
+```

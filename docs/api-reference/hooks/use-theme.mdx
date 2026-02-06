@@ -1,11 +1,11 @@
 ---
 title: "useTheme"
-description: "Hook for detecting ChatGPT's theme."
+description: "Get the current color theme."
 ---
 
 ## Overview
 
-The `useTheme` hook detects and returns the current ChatGPT theme (light or dark).
+The `useTheme` hook returns the host's current theme. It is a convenience wrapper around `useHostContext`.
 
 ## Import
 
@@ -16,26 +16,33 @@ import { useTheme } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useTheme(): 'light' | 'dark' | null
+function useTheme(app: App | null): McpUiTheme
 ```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
 
 ## Returns
 
-<ResponseField name="return" type="'light' | 'dark' | null">
-  The current ChatGPT theme, or `null` if not available.
+<ResponseField name="return" type="'light' | 'dark'">
+  The current theme. Defaults to `'light'` when unavailable.
 </ResponseField>
 
 ## Usage
 
 ```tsx
-import { useTheme } from 'sunpeak';
+import { useApp, useTheme } from 'sunpeak';
 
-function MyWidget() {
-  const theme = useTheme();
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const theme = useTheme(app);
 
   return (
-    <div className={theme === 'dark' ? 'dark-mode' : 'light-mode'}>
-      Current theme: {theme}
+    <div className={theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}>
+      ...
     </div>
   );
 }

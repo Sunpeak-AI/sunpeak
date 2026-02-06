@@ -134,15 +134,15 @@ The command discovers resources by finding all resource folders in the dist dire
 ```
 dist/
 ├── search/
-│   ├── search.js                    # Resource bundle
+│   ├── search.html                  # Resource bundle
 │   └── search.json                  # Metadata
 ├── dashboard/
-│   ├── dashboard.js
+│   ├── dashboard.html
 │   └── dashboard.json
 ```
 
-Each resource folder needs a `.js` bundle and a `.json` metadata file containing name, title, description, and uri.
-URIs are generated during `sunpeak build`—if a resource is missing its URI, push will fail with an error.
+Each resource folder needs an `.html` bundle and a `.json` metadata file containing name, title, description, and uri.
+URIs are generated during `sunpeak build`--if a resource is missing its URI, push will fail with an error.
 Simulation files are automatically included when pushing, but can be omitted with `--no-simulations`.
 
 ## Related Commands

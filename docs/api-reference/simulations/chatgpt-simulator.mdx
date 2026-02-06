@@ -7,7 +7,7 @@ import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
 
 ## Overview
 
-The `ChatGPTSimulator` component provides a local development environment that replicates ChatGPT's widget runtime.
+The `ChatGPTSimulator` component provides a local development environment that replicates the MCP App runtime used by hosts like ChatGPT. It renders your resources inside iframes, matching the production hosting behavior.
 
 ## Import
 
@@ -49,7 +49,7 @@ The ChatGPT Simulator supports URL parameters for configuring the initial state.
 |-----------|------|---------|-------------|
 | `simulation` | `string` | First simulation | Simulation name to load |
 | `theme` | `'light' \| 'dark'` | `'dark'` | Color theme |
-| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | `'inline'` | Widget display mode |
+| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | `'inline'` | App display mode |
 | `locale` | `string` | `'en-US'` | Locale for i18n |
 | `maxHeight` | `number` | `600` | Max height in PiP mode |
 | `deviceType` | `'mobile' \| 'tablet' \| 'desktop' \| 'unknown'` | `'desktop'` | Device type |
@@ -178,7 +178,7 @@ The simulator sidebar provides interactive controls for:
 - **Display Mode**: Switch between inline, PiP, and fullscreen modes
 - **Locale**: Set the locale string
 - **Max Height**: Configure PiP mode height
-- **User Agent**: Configure device type and capabilities (hover, touch)
+- **Device Type**: Configure device type and capabilities (hover, touch)
 - **Safe Area Insets**: Configure safe area insets for notch simulation
 - **View Mode**: Toggle between default and modal views
-- **JSON Editors**: Edit tool input, output, metadata, and widget state directly
+- **JSON Editors**: Edit tool input, output, metadata, and host context directly

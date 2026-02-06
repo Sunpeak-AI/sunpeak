@@ -1,0 +1,75 @@
+---
+title: "useApp"
+description: "Connect to the MCP Apps runtime."
+---
+
+## Overview
+
+The `useApp` hook is the core hook that establishes a connection to the MCP Apps host. It returns an `App` instance that is used by all other hooks in the framework. This hook is HMR-safe and survives React Fast Refresh during development.
+
+## Import
+
+```tsx
+import { useApp } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useApp(options: UseAppOptions): AppState
+```
+
+## Parameters
+
+<ResponseField name="options" type="UseAppOptions" required>
+  Configuration options for the app connection.
+
+  <ResponseField name="appInfo" type="{ name: string; version: string }" required>
+    App identification information.
+  </ResponseField>
+
+  <ResponseField name="capabilities" type="Record<string, unknown>">
+    Capabilities to advertise to the host. Optional.
+  </ResponseField>
+
+  <ResponseField name="onAppCreated" type="(app: App) => void">
+    Callback invoked when a new App instance is created. Optional.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+<ResponseField name="AppState" type="object">
+  The app connection state.
+
+  <ResponseField name="app" type="App | null">
+    The connected App instance, or `null` while connecting.
+  </ResponseField>
+
+  <ResponseField name="isConnected" type="boolean">
+    Whether the connection to the host is established.
+  </ResponseField>
+
+  <ResponseField name="error" type="Error | null">
+    Connection error, if any.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useTheme, useToolData } from 'sunpeak';
+
+function MyResource() {
+  const { app, isConnected } = useApp({
+    appInfo: { name: 'MyResource', version: '1.0.0' },
+  });
+
+  const theme = useTheme(app);
+  const { output } = useToolData(app);
+
+  if (!isConnected) return <div>Connecting...</div>;
+
+  return <div data-theme={theme}>...</div>;
+}
+```

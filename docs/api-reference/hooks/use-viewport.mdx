@@ -1,0 +1,58 @@
+---
+title: "useViewport"
+description: "Get container dimensions."
+---
+
+## Overview
+
+The `useViewport` hook returns the container dimensions provided by the host. This is useful for creating responsive layouts based on the actual available space.
+
+## Import
+
+```tsx
+import { useViewport } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useViewport(app: App | null): ContainerDimensions | null
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="ContainerDimensions | null">
+  Container dimensions, or `null` if unavailable.
+
+  ```typescript
+  {
+    width: number;
+    height: number;
+  }
+  ```
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useViewport } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const viewport = useViewport(app);
+
+  if (!viewport) return null;
+
+  return (
+    <div style={{ maxWidth: viewport.width }}>
+      Container: {viewport.width}x{viewport.height}
+    </div>
+  );
+}
+```

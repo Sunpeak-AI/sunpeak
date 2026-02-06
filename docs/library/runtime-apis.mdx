@@ -1,18 +1,18 @@
 ---
 title: "Runtime APIs"
-description: "Strongly typed, multi-platform APIs."
+description: "Strongly typed, multi-platform APIs for the MCP Apps runtime."
 ---
 
 ## Overview
 
 sunpeak provides a multi-platform runtime abstraction layer that helps you build
-components once and deploy them across different AI chat platforms like
-ChatGPT, Gemini, and Claude.
+MCP Apps once and deploy them across different AI chat hosts like
+ChatGPT, Claude, and more.
 
 ## Why Multi-Platform?
 
 <Card horizontal title="Write Once, Deploy Everywhere" icon="recycle">
-  Build your component logic once, run it on multiple platforms without rewriting.
+  Build your app logic once, run it on multiple platforms without rewriting.
 </Card>
 
 <Card horizontal title="Consistent Developer Experience" icon="code">
@@ -29,53 +29,59 @@ ChatGPT, Gemini, and Claude.
 
 ## React Hooks
 
-sunpeak provides access to the entire platform runtime API via platform-agnostic React hooks.
+sunpeak provides access to the entire MCP Apps runtime API via platform-agnostic React hooks.
 
-Here is an example component using some of these hooks:
+Every hook takes an `app` instance from `useApp()` as its first argument:
 
 ```tsx
-import { useTheme, useDisplayMode, useWidgetState } from 'sunpeak';
+import { useApp, useTheme, useDisplayMode, useAppState } from 'sunpeak';
 
-function MyComponentResource() {
-  const theme = useTheme();                    // 'light' | 'dark'
-  const displayMode = useDisplayMode();        // 'mobile' | 'tablet' | 'desktop'
-  const [data, setData] = useWidgetState('key', defaultValue);
+function MyResource() {
+  const { app } = useApp({
+    appInfo: { name: 'MyResource', version: '1.0.0' },
+  });
 
-  return <div className={displayMode === 'mobile' ? 'w-full' : 'w-1/2'}>...</div>;
+  const theme = useTheme(app);                          // 'light' | 'dark'
+  const displayMode = useDisplayMode(app);              // 'inline' | 'pip' | 'fullscreen'
+  const [state, setState] = useAppState(app, { count: 0 });
+
+  return <div className={displayMode === 'fullscreen' ? 'h-screen' : 'max-h-96'}>...</div>;
 }
 ```
 
-### Widget API
+### Action Hooks
 
-One of these hooks, the `useWidgetAPI`, provides methods for interacting with the
-platform runtime, including calling MCP tools, sending messages,
-and controlling the platform display.
+sunpeak provides individual hooks for interacting with the host runtime, including calling MCP tools, sending messages, and opening links.
 
 ```tsx
-import { useWidgetAPI } from 'sunpeak';
+import { useApp, useCallServerTool, useSendMessage, useOpenLink } from 'sunpeak';
 
-function MyComponentResource() {
-  const api = useWidgetAPI();
+function MyResource() {
+  const { app } = useApp({
+    appInfo: { name: 'MyResource', version: '1.0.0' },
+  });
+
+  const callTool = useCallServerTool(app);
+  const sendMessage = useSendMessage(app);
+  const openLink = useOpenLink(app);
 
   const handleAction = async () => {
-    if (api) {
-      // Call an MCP tool.
-      const result = await api.callTool('my-tool', { arg: 'value' });
+    // Call an MCP tool.
+    const result = await callTool({ name: 'my-tool', arguments: { arg: 'value' } });
 
-      // Send a follow-up message.
-      await api.sendFollowUpMessage({ prompt: 'Continue the conversation' });
+    // Send a follow-up message.
+    await sendMessage({ role: 'user', content: [{ type: 'text', text: 'Continue' }] });
 
-      // Open an external URL.
-      await api.openExternal({ href: 'https://sunpeak.ai' });
-    }
+    // Open an external URL.
+    await openLink({ url: 'https://sunpeak.ai' });
   };
 
-  return <button onClick={handleAction}>Interact with Platform</button>;
+  return <button onClick={handleAction}>Interact with Host</button>;
 }
 ```
 
 ## Dive Deeper
 
-<Card horizontal title="Runtime API Reference" icon="code" href="/api-reference/hooks/use-display-mode">
+<Card horizontal title="Runtime API Reference" icon="code" href="/api-reference/hooks/use-app">
   All hooks provided by sunpeak.
 </Card>

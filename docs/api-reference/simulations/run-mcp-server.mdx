@@ -1,14 +1,14 @@
 ---
 title: "runMCPServer"
-description: "Serve your widgets to ChatGPT via the Model Context Protocol."
+description: "Serve your MCP Apps to hosts like ChatGPT via the Model Context Protocol."
 ---
 
 ## Overview
 
-The `runMCPServer` function creates an MCP server that serves your built widgets to ChatGPT. It's designed for local development and testing against the real ChatGPT platform.
+The `runMCPServer` function creates an MCP server that serves your built apps to hosts like ChatGPT. It's designed for local development and testing against real MCP App hosts.
 
 <Warning>
-This server is for **local development only**. For production, create your own MCP server that returns your published widget URL as a resource. See the [Deployment Guide](/guides/deployment).
+This server is for **local development only**. For production, create your own MCP server that returns your published resource URL. See the [Deployment Guide](/guides/deployment).
 </Warning>
 
 ## Quick Start
@@ -22,7 +22,7 @@ This server is for **local development only**. For production, create your own M
     ```
 
     This starts the ChatGPT simulator and an MCP server with Hot Module Reload.
-    The MCP server discovers simulations from `tests/simulations/{name}/` and serves the widgets with automatic rebuilding.
+    The MCP server discovers simulations from `tests/simulations/{name}/` and serves the apps with automatic rebuilding.
   </Tab>
   <Tab title="Library">
     For custom setups, configure the MCP server manually:
@@ -31,15 +31,15 @@ This server is for **local development only**. For production, create your own M
     import { runMCPServer } from 'sunpeak/mcp';
     import path from 'path';
     import { fileURLToPath } from 'url';
-    import exampleResource from '../src/resources/example/example-resource.json';
+    import { resource } from '../src/resources/example/example-resource';
     import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
 
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
     const simulations = [{
       ...exampleSimulation,
-      resource: exampleResource,
-      distPath: path.resolve(__dirname, '../dist/example/example.js'),
+      resource,
+      distPath: path.resolve(__dirname, '../dist/example/example.html'),
     }];
 
     runMCPServer({
@@ -75,8 +75,8 @@ Once your MCP server is running:
     3. Complete the connection flow.
   </Step>
 
-  <Step title="Test your widget">
-    Send a message that triggers your tool (e.g., "show albums") to see your widget in ChatGPT.
+  <Step title="Test your app">
+    Send a message that triggers your tool (e.g., "show albums") to see your app in ChatGPT.
 
     <Warning>
       ChatGPT caches UIs aggressively. The sunpeak MCP server serves resources at unique URIs to cache-bust, but you need to manually **Refresh** your app from the settings modal after changes.
@@ -89,7 +89,7 @@ Once your MCP server is running:
 ### MCPServerConfig
 
 <ResponseField name="name" type="string" default="sunpeak-app">
-  MCP server name displayed in ChatGPT.
+  MCP server name displayed in the host.
 </ResponseField>
 
 <ResponseField name="version" type="string" default="0.1.0">
@@ -101,12 +101,12 @@ Once your MCP server is running:
 </ResponseField>
 
 <ResponseField name="simulations" type="SimulationWithDist[]" required>
-  Array of simulations with built widget paths. Each simulation must include:
+  Array of simulations with built resource paths. Each simulation must include:
 
-  - `distPath` (string, required) - Path to the built widget JavaScript file
+  - `distPath` (string, required) - Path to the built resource HTML file
   - `tool` (Tool, required) - MCP Tool definition
   - `resource` (Resource, required) - MCP Resource definition
-  - `callToolResult` (CallToolResult, optional) - Mock response data
+  - `toolResult` (object, optional) - Mock response data
 
   See [Simulation](/api-reference/simulations/simulation) for the full interface.
 </ResponseField>
@@ -124,22 +124,19 @@ The MCP server exposes:
 
 The server creates MCP Tools and Resources from your simulations:
 
-1. **Tools** - One per simulation, using the `tool` definition. When called, returns `callToolResult.structuredContent`.
-2. **Resources** - One per simulation, containing the built widget HTML/JavaScript from `distPath`.
+1. **Tools** - One per simulation, using the `tool` definition. When called, returns `toolResult.structuredContent`.
+2. **Resources** - One per simulation, containing the built resource HTML from `distPath`.
 
-Your widget accesses the mock data via runtime hooks:
+Your app accesses the mock data via runtime hooks:
 
 ```typescript
-import { useWidgetProps, useToolResponseMetadata } from 'sunpeak';
+import { useApp, useToolData } from 'sunpeak';
 
-function MyWidget() {
-  // Data from callToolResult.structuredContent
-  const props = useWidgetProps<{ items: string[] }>();
+function MyApp() {
+  const { app } = useApp({ appInfo: { name: 'MyApp', version: '1.0.0' } });
+  const { output } = useToolData<unknown, { items: string[] }>(app);
 
-  // Metadata from callToolResult._meta
-  const meta = useToolResponseMetadata();
-
-  return <div>{props.items.map(item => <p key={item}>{item}</p>)}</div>;
+  return <div>{output?.items.map(item => <p key={item}>{item}</p>)}</div>;
 }
 ```
 

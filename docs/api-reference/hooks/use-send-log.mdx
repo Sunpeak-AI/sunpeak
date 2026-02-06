@@ -1,0 +1,65 @@
+---
+title: "useSendLog"
+description: "Send structured log messages."
+---
+
+## Overview
+
+Returns a function to send structured log messages to the host for debugging and monitoring.
+
+## Import
+
+```tsx
+import { useSendLog } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useSendLog(
+  app: App | null
+): (params: SendLogParams) => void
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+### SendLogParams
+
+<ResponseField name="level" type="LogLevel" required>
+  Log level: `'debug' | 'info' | 'warning' | 'error' | 'critical'`
+</ResponseField>
+
+<ResponseField name="data" type="unknown" required>
+  Log data payload.
+</ResponseField>
+
+<ResponseField name="logger" type="string">
+  Logger name for categorization.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="sendLog" type="(params: SendLogParams) => void">
+  Function to send a log message to the host.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useSendLog } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const sendLog = useSendLog(app);
+
+  const handleAction = () => {
+    sendLog({ level: 'info', data: { action: 'button_clicked' }, logger: 'MyResource' });
+  };
+
+  return <button onClick={handleAction}>Click Me</button>;
+}
+```

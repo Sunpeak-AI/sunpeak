@@ -1,0 +1,57 @@
+---
+title: "useOpenLink"
+description: "Open external links."
+---
+
+## Overview
+
+Returns a function to open URLs through the host application. The host controls how the link is opened (new tab, in-app browser, etc.).
+
+## Import
+
+```tsx
+import { useOpenLink } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useOpenLink(
+  app: App | null
+): (params: OpenLinkParams) => Promise<void>
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+### OpenLinkParams
+
+<ResponseField name="url" type="string" required>
+  The URL to open.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="openLink" type="(params: OpenLinkParams) => Promise<void>">
+  Function to open a URL through the host application.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useOpenLink } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const openLink = useOpenLink(app);
+
+  return (
+    <button onClick={() => openLink({ url: 'https://example.com' })}>
+      Visit Website
+    </button>
+  );
+}
+```

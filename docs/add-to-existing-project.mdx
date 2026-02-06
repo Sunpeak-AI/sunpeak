@@ -9,7 +9,7 @@ If you already have a React project and want to use sunpeak for runtime APIs or 
 you can integrate the sunpeak library directly without using the framework.
 
 <Info>
-**Starting from scratch?** Use [Quickstart](/quickstart) for the recommended ChatGPT App creation experience.
+**Starting from scratch?** Use [Quickstart](/quickstart) for the recommended MCP App creation experience.
 </Info>
 
 ## Prerequisites
@@ -119,40 +119,47 @@ Your existing project needs:
       </Tab>
     </Tabs>
 
-    Import Tailwind and ChatGPT styles to your CSS entrypoint:
+    Import Tailwind and sunpeak styles in your CSS entrypoint:
 
     ```css
     @import "tailwindcss";
-    @import "@openai/apps-sdk-ui/css";
+    @import "sunpeak/style.css";
 
-    /* Scan simulator source files for Tailwind classes */
+    /* Scan source files for Tailwind classes */
     @source "./**/*.{ts,tsx}";
 
-    /* Required for Tailwind to find class references in Apps SDK UI components. */
-    @source "../node_modules/@openai/apps-sdk-ui";
-
-    /* Configure dark mode to use data-theme attribute (OpenAI SDK standard) */
+    /* Configure dark mode to use data-theme attribute */
     @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 ```
   </Step>
 
   <Step title="Create resource and simulation files">
-    Create a resource folder with metadata. Each resource lives in its own folder:
+    Create a resource folder with a `.tsx` file that exports both the metadata and the React component:
 
-    ```json
-    // src/resources/example/example-resource.json
-    {
-      "name": "example",
-      "title": "Example",
-      "description": "My example component",
-      "mimeType": "text/html+skybridge",
-      "_meta": {
-        "openai/widgetDomain": "https://example.com",
-        "openai/widgetCSP": {
-          "connect_domains": [],
-          "resource_domains": []
-        }
-      }
+    ```tsx
+    // src/resources/example/example-resource.tsx
+    import { useApp } from 'sunpeak';
+    import type { ResourceConfig } from 'sunpeak';
+
+    export const resource: ResourceConfig = {
+      name: 'example',
+      title: 'Example',
+      description: 'My example component',
+      mimeType: 'text/html;profile=mcp-app',
+      _meta: {
+        ui: {
+          domain: 'https://example.com',
+          csp: {
+            resourceDomains: [],
+            connectDomains: [],
+          },
+        },
+      },
+    };
+
+    export function ExampleResource() {
+      const { app } = useApp();
+      return <div>Hello from Example!</div>;
     }
     ```
 
@@ -164,18 +171,16 @@ Your existing project needs:
       "userMessage": "Show me an example",
       "tool": {
         "name": "show-example",
-        "description": "Show an example widget",
+        "description": "Show an example app",
         "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
         "title": "Show Example",
         "annotations": { "readOnlyHint": true },
         "_meta": {
-          "openai/widgetAccessible": true,
-          "openai/resultCanProduceWidget": true
+          "ui": { "visibility": ["model", "app"] }
         }
       },
-      "callToolResult": {
-        "structuredContent": { "message": "Hello from simulation!" },
-        "_meta": {}
+      "toolResult": {
+        "structuredContent": { "message": "Hello from simulation!" }
       }
     }
     ```
@@ -187,17 +192,16 @@ Your existing project needs:
     ```tsx
     import { StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
-    import { ChatGPTSimulator } from 'sunpeak';
-    import { MyComponent } from '../src/components/MyComponent';
-    import exampleResource from '../src/resources/example/example-resource.json';
+    import { ChatGPTSimulator } from 'sunpeak/chatgpt';
+    import { resource } from '../src/resources/example/example-resource';
     import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
     import '../src/styles/globals.css';
 
-    // Combine simulation with resource and component
+    // Combine simulation with resource
     const simulations = [{
       ...exampleSimulation,
-      resource: exampleResource,
-      resourceComponent: MyComponent,
+      resource,
+      resourceUrl: 'http://localhost:5173/resources/example',
     }];
 
     createRoot(document.getElementById('root')!).render(
@@ -244,13 +248,13 @@ Your existing project needs:
   </Step>
 
   <Step title="Wire up the MCP server">
-    Create an MCP server file (like `mcp/server.ts`) to serve your built widgets to ChatGPT:
+    Create an MCP server file (like `mcp/server.ts`) to serve your built apps to hosts like ChatGPT:
 
     ```typescript
     import { runMCPServer } from 'sunpeak/mcp';
     import path from 'path';
     import { fileURLToPath } from 'url';
-    import exampleResource from '../src/resources/example/example-resource.json';
+    import { resource } from '../src/resources/example/example-resource';
     import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
 
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -258,8 +262,8 @@ Your existing project needs:
     // Combine simulation with resource and distPath for MCP server
     const simulations = [{
       ...exampleSimulation,
-      resource: exampleResource,
-      distPath: path.resolve(__dirname, '../dist/example/example.js'),
+      resource,
+      distPath: path.resolve(__dirname, '../dist/example/example.html'),
     }];
 
     runMCPServer({
@@ -301,7 +305,7 @@ Your existing project needs:
       </Tab>
     </Tabs>
 
-    See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server) for configuration options and connecting to ChatGPT via tunnel.
+    See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server) for configuration options and connecting to a host via tunnel.
   </Step>
 </Steps>
 
@@ -309,7 +313,7 @@ Your existing project needs:
 
 Often, it's easier to just copy your existing components into a new project initiated with the sunpeak framework.
 
-The framework comes pre-configured for local and platform testing with pre-built components
+The framework comes pre-configured for local and host testing with pre-built components
 and automatic discovery of simulations and resources.
 
 See [Quickstart](/quickstart) to get started.

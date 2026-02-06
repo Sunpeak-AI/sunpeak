@@ -7,13 +7,13 @@ description: "A horizontal scrolling carousel for displaying multiple cards with
 
 `Carousel` is a production-ready carousel resource included in the sunpeak framework. It displays places or items in a horizontal scrolling carousel with card components, featuring navigation arrows, edge gradients, and interactive buttons.
 
-The resource retrieves place data from `useWidgetProps()` and adapts button sizes based on device capabilities.
+The resource retrieves place data from `useToolData(app).output` and adapts button sizes based on device capabilities.
 
 ## Data Structure
 
 ### CarouselData
 
-The resource expects data in the following format via `useWidgetProps()`:
+The resource expects data in the following format via `useToolData(app).output`:
 
 ```tsx
 interface CarouselData {
@@ -85,15 +85,15 @@ Each card includes:
 
 ### Responsive Button Sizing
 
-The resource detects touch capabilities using `useUserAgent()` and automatically adjusts button sizes for easier interaction on touch devices.
+The resource detects touch capabilities from the host context and automatically adjusts button sizes for easier interaction on touch devices.
 
 ### Safe Area Support
 
-Respects device safe areas using `useSafeArea()` to ensure proper padding on devices with notches or rounded corners.
+Respects device safe areas using `useSafeArea(app)` to ensure proper padding on devices with notches or rounded corners.
 
 ### Height Constraints
 
-Uses `useMaxHeight()` to adapt to available screen space and prevent overflow.
+Uses `useViewport(app)` to adapt to available screen space and prevent overflow.
 
 ## Common Use Cases
 

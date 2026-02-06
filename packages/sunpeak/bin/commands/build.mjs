@@ -4,6 +4,7 @@ import path from 'path';
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 import { toPascalCase } from '../lib/patterns.mjs';
+import { extractResourceExport } from '../lib/extract-resource.mjs';
 
 /**
  * Resolve the ESM entry point for a package from a specific project directory.
@@ -276,17 +277,15 @@ export async function build(projectRoot = process.cwd()) {
       mkdirSync(distOutDir, { recursive: true });
     }
 
-    // Copy and process resource metadata JSON file
-    const srcJson = path.join(resourceDir, `${componentFile}.json`);
+    // Extract resource metadata from .tsx file and write as JSON
+    const srcTsx = path.join(resourceDir, `${componentFile}.tsx`);
     const destJson = path.join(distOutDir, `${kebabName}.json`);
 
-    if (existsSync(srcJson)) {
-      const meta = JSON.parse(readFileSync(srcJson, 'utf-8'));
-      // Generate URI using resource name and build timestamp
-      meta.uri = `ui://${meta.name}-${timestamp}`;
-      writeFileSync(destJson, JSON.stringify(meta, null, 2));
-      console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
-    }
+    const meta = await extractResourceExport(srcTsx);
+    // Generate URI using resource name and build timestamp
+    meta.uri = `ui://${meta.name}-${timestamp}`;
+    writeFileSync(destJson, JSON.stringify(meta, null, 2));
+    console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
 
     // Read built JS file and wrap in HTML shell
     const builtJsFile = path.join(buildOutDir, jsOutput);

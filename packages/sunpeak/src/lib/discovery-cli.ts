@@ -17,3 +17,5 @@ export {
 } from './discovery';
 
 export type { ResourceDirInfo, FsOps } from './discovery';
+
+export { extractResourceExport } from './extract-resource';

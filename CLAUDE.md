@@ -54,7 +54,6 @@ packages/sunpeak/
 - `sunpeak` — Hooks, types, SDK re-exports
 - `sunpeak/chatgpt` — Simulator, IframeResource, McpAppHost, simulation utilities
 - `sunpeak/mcp` — Server utilities
-- `sunpeak/mcp/entry` — MCP server entry point
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/style.css` — Main stylesheet

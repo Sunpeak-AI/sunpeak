@@ -1,0 +1,91 @@
+---
+title: "useHostInfo"
+description: "Get host application information."
+---
+
+## Overview
+
+Returns information about the host application, including its name, version, and supported capabilities.
+
+## Import
+
+```tsx
+import { useHostInfo } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useHostInfo(
+  app: App | null
+): {
+  hostVersion: HostVersion | undefined;
+  hostCapabilities: HostCapabilities | undefined;
+}
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="hostVersion" type="HostVersion | undefined">
+  Host application name and version.
+</ResponseField>
+
+<ResponseField name="hostCapabilities" type="HostCapabilities | undefined">
+  Host-supported capabilities.
+</ResponseField>
+
+### HostVersion
+
+<ResponseField name="name" type="string">
+  Host application name.
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  Host application version.
+</ResponseField>
+
+### HostCapabilities
+
+<ResponseField name="serverTools" type="boolean">
+  Whether the host supports calling server tools.
+</ResponseField>
+
+<ResponseField name="openLinks" type="boolean">
+  Whether the host supports opening external links.
+</ResponseField>
+
+<ResponseField name="logging" type="boolean">
+  Whether the host supports structured logging.
+</ResponseField>
+
+<ResponseField name="messages" type="boolean">
+  Whether the host supports sending messages.
+</ResponseField>
+
+<ResponseField name="displayModes" type="boolean">
+  Whether the host supports display mode changes.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useHostInfo } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const { hostVersion, hostCapabilities } = useHostInfo(app);
+
+  return (
+    <div>
+      <p>Host: {hostVersion?.name} {hostVersion?.version}</p>
+      <p>Can call tools: {hostCapabilities?.serverTools ? 'Yes' : 'No'}</p>
+    </div>
+  );
+}
+```

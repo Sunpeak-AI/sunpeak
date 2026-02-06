@@ -1,0 +1,66 @@
+---
+title: "useToolCancelled"
+description: "Detect tool cancellation."
+---
+
+## Overview
+
+Detects when a tool call has been cancelled by the host or user. Use this to stop ongoing operations and clean up resources.
+
+## Import
+
+```tsx
+import { useToolCancelled } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useToolCancelled(
+  app: App | null
+): ToolCancelled | null
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="return" type="ToolCancelled | null">
+  Cancellation status or null if not cancelled.
+</ResponseField>
+
+### ToolCancelled
+
+<ResponseField name="cancelled" type="true">
+  Always true when present.
+</ResponseField>
+
+<ResponseField name="reason" type="string">
+  Optional reason for cancellation.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useToolCancelled } from 'sunpeak';
+import { useEffect } from 'react';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const cancelled = useToolCancelled(app);
+
+  useEffect(() => {
+    if (cancelled) {
+      console.log('Tool was cancelled:', cancelled.reason);
+    }
+  }, [cancelled]);
+
+  if (cancelled) return <div>Operation cancelled.</div>;
+
+  return <div>Working...</div>;
+}
+```

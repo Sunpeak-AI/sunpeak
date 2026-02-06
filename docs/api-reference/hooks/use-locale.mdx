@@ -5,7 +5,7 @@ description: "Get the user's locale."
 
 ## Overview
 
-The `useLocale` hook returns the user's current locale (language and region).
+The `useLocale` hook returns the user's locale string from the host. It is a convenience wrapper around `useHostContext`.
 
 ## Import
 
@@ -16,27 +16,31 @@ import { useLocale } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useLocale(): string | null
+function useLocale(app: App | null): string
 ```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
 
 ## Returns
 
-<ResponseField name="return" type="string | null">
-  A locale string (e.g., `'en-US'`, `'fr-FR'`, `'ja-JP'`), or `null` if not available.
+<ResponseField name="return" type="string">
+  BCP 47 locale string (e.g., `'en-US'`). Defaults to `'en-US'` when unavailable.
 </ResponseField>
 
 ## Usage
 
 ```tsx
-import { useLocale } from 'sunpeak';
+import { useApp, useLocale } from 'sunpeak';
 
-function MyWidget() {
-  const locale = useLocale();
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const locale = useLocale(app);
 
-  return (
-    <div>
-      Current locale: {locale || 'Unknown'}
-    </div>
-  );
+  const formatted = new Intl.NumberFormat(locale).format(1234.56);
+  return <p>{formatted}</p>;
 }
 ```

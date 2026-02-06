@@ -7,16 +7,14 @@ description: "Production-ready components in the framework."
 
 The sunpeak framework includes pre-built MCP resources in your project's `src/resources/` directory. Each resource lives in its own folder with its component, metadata, and related components.
 
-These components are built on [@openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui)
-and follow ChatGPT's design guidelines.
+These components follow MCP App design best practices and use sunpeak's built-in component primitives.
 
 ## Resources
 
 Resources (from MCP) are top-level components that can be simulated or shipped to production.
 
 Each resource lives in its own folder under `src/resources/{name}/`:
-- `{name}-resource.tsx` - The React component (built to `dist/{name}/{name}.js`)
-- `{name}-resource.json` - Metadata (name, title, description, etc.)
+- `{name}-resource.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
 - `components/` - Optional resource-specific components
 
 Simulation files live separately in `tests/simulations/{name}/`.
@@ -38,7 +36,7 @@ These components are included in your project source code, so you can modify the
 
 ### Design Principles
 
-All components follow (and are required to follow) ChatGPT's design guidelines:
+All components follow MCP App design best practices:
 
 <Card horizontal title="Theme Support" icon="palette">
   Automatic light/dark theme adaptation.
@@ -58,13 +56,7 @@ All components follow (and are required to follow) ChatGPT's design guidelines:
 
 ## Low-Level Components
 
-Beyond the framework components, you can use any component from `@openai/apps-sdk-ui`:
-
-```tsx
-import { Button, Input, Select } from '@openai/apps-sdk-ui/components';
-```
-
-See the [OpenAI apps-sdk-ui documentation](https://openai.github.io/apps-sdk-ui/) for the full low-level component library.
+Beyond the framework components, you can build your own primitives using standard React patterns and Tailwind CSS. The framework provides semantic design tokens that work across light and dark themes.
 
 <Card horizontal title="Component Library API Reference" icon="code" href="/api-reference/resources/albums">
   All components provided by sunpeak.

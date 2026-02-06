@@ -18,7 +18,7 @@
 
 Local-first MCP Apps framework.
 
-Quickstart, build, test, and ship your MCP App!
+Quickstart, build, test, and ship your Claude or ChatGPT App!
 
 [Demo (Hosted)](https://sunpeak.ai/simulator) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
@@ -48,11 +48,11 @@ To add `sunpeak` to an existing project, refer to the [documentation](https://do
 
 ## Overview
 
-`sunpeak` is an npm package that helps you build MCP Apps (interactive UI resources) while keeping your MCP server client-agnostic. Built on the [MCP Apps SDK](https://github.com/anthropics/mcp-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:
+`sunpeak` is an npm package that helps you build MCP Apps (interactive UI resources) while keeping your MCP server client-agnostic. Built on the [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:
 
 ### The `sunpeak` library
 
-1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`), **architected to support multiple platforms** (ChatGPT, Claude, etc.).
+1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`), architected to **support generic and platforms-specific features** (ChatGPT, Claude, etc.).
 2. ChatGPT simulator: React component replicating ChatGPT's runtime to **test Apps locally and automatically** via UI, props, or URL parameters.
 3. MCP server: Serve Resources with mock data to the real ChatGPT with HMR (**no more cache issues or 5-click manual refreshes**).
 
@@ -64,8 +64,7 @@ Next.js for MCP Apps. Using an example App `my-app` with a `Review` UI (MCP reso
 my-app/
 ├── src/resources/
 │   └── review/
-│       ├── review-resource.tsx                 # Review UI component.
-│       └── review-resource.json                # Review UI MCP metadata.
+│       └── review-resource.tsx                 # Review UI component + resource metadata.
 ├── tests/simulations/
 │   └── review/
 │       ├── review-{scenario1}-simulation.json  # Mock state for testing.
@@ -76,7 +75,7 @@ my-app/
 1. Project scaffold: Complete development setup with the `sunpeak` library.
 2. UI components: Production-ready components following ChatGPT design guidelines and using OpenAI `apps-sdk-ui` React components.
 3. Convention over configuration:
-   1. Create a UI by creating a `-resource.tsx` component file ([example](#resource-component)) and `-resource.json` MCP metadata file ([example](#resource-mcp-metadata)).
+   1. Create a UI by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example](#resource-component)).
    2. Create test state (`Simulation`s) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file. ([example](#simulation))
 
 ### The `sunpeak` CLI
@@ -108,74 +107,28 @@ Example `Resource`, `Simulation`, and testing file (using `ChatGPTSimulator`) fo
 my-app/
 ├── src/resources/
 │   └── review/
-│       ├── review-resource.tsx   # This one!
-│       └── review-resource.json
+│       └── review-resource.tsx # Here!
 ```
 
-React component (`.tsx`) defining a UI (MCP resource) in your MCP App.
+Each resource `.tsx` file exports both the React component and the MCP resource metadata:
 
 ```tsx
 // src/resources/review-resource.tsx
 
-import { useApp, useToolData, useAppState } from 'sunpeak';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
+import { useApp, useToolData } from 'sunpeak';
+import type { ResourceConfig } from 'sunpeak';
+
+export const resource: ResourceConfig = {
+  name: 'review',
+  description: 'Visualize and review a proposed set of changes or actions',
+  _meta: { ui: { csp: { resourceDomains: ['https://cdn.openai.com'] } } },
+};
 
 export function ReviewResource() {
-  const { app } = useApp({ appInfo: { name: 'review', version: '1.0.0' } });
-  const { structuredContent: data } = useToolData<{ title: string; changes: string[] }>(app);
-  const [state, setState] = useAppState<{ decision: string | null }>(app, { decision: null });
+  const { app } = useApp();
+  const { structuredContent: data } = useToolData<{ title: string }>(app);
 
-  return (
-    <div>
-      <h1>{data.title}</h1>
-      <ul>
-        {data.changes.map((change, i) => (
-          <li key={i}>{change}</li>
-        ))}
-      </ul>
-      {state.decision ? (
-        <p>{state.decision === 'approved' ? 'Approved!' : 'Rejected'}</p>
-      ) : (
-        <>
-          <Button onClick={() => setState({ decision: 'approved' })}>Approve</Button>
-          <Button onClick={() => setState({ decision: 'rejected' })}>Reject</Button>
-        </>
-      )}
-    </div>
-  );
-}
-```
-
-### `Resource` MCP Metadata
-
-```bash
-my-app/
-├── src/resources/
-│   └── review/
-│       ├── review-resource.tsx
-│       └── review-resource.json  # This one!
-```
-
-MCP metadata (`.json`) for your UI. Version your resource metadata alongside the resource itself.
-
-This is just an official [MCP resource object](https://modelcontextprotocol.io/specification/2025-11-25/server/resources#resource).
-
-```jsonc
-// src/resources/review-resource.json
-
-{
-  "name": "review",
-  "title": "Review",
-  "description": "Visualize and review a proposed set of changes or actions",
-  "mimeType": "text/html;profile=mcp-app",
-  "_meta": {
-    "ui": {
-      "domain": "https://sunpeak.ai",
-      "csp": {
-        "resourceDomains": ["https://cdn.openai.com"],
-      },
-    },
-  },
+  return <h1>Review: {data.title}</h1>;
 }
 ```
 
@@ -264,8 +217,7 @@ test.describe('Review Resource', () => {
 
 ## Resources
 
-- [MCP Apps SDK](https://github.com/anthropics/mcp-apps)
+- [MCP Apps](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
-- [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)
 - [ChatGPT Apps SDK UI Documentation](https://openai.github.io/apps-sdk-ui/)

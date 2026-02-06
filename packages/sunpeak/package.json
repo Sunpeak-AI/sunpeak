@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.12.20",
+  "version": "0.13.0",
   "description": "The ChatGPT App framework. Quickstart, build, & test your ChatGPT App locally!",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -31,7 +31,6 @@
         "default": "./dist/mcp/index.js"
       }
     },
-    "./mcp/entry": "./dist/mcp/entry.js",
     "./platform": {
       "import": {
         "types": "./dist/platform/index.d.ts",
@@ -107,6 +106,7 @@
     "@typescript-eslint/eslint-plugin": "^8.53.0",
     "@typescript-eslint/parser": "^8.53.0",
     "@vitejs/plugin-react": "^4.7.0",
+    "esbuild": "^0.27.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",

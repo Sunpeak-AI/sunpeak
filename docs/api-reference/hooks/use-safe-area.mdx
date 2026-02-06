@@ -1,11 +1,11 @@
 ---
 title: "useSafeArea"
-description: "Get safe area insets for the widget."
+description: "Get safe area insets."
 ---
 
 ## Overview
 
-The `useSafeArea` hook returns the safe area insets, which define the areas of the screen that are not obscured by notches, rounded corners, or system UI.
+The `useSafeArea` hook returns the safe area insets for handling device notches, status bars, and other system UI. It is a convenience wrapper around `useHostContext`.
 
 ## Import
 
@@ -16,22 +16,26 @@ import { useSafeArea } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useSafeArea(): SafeArea | null
+function useSafeArea(app: App | null): SafeAreaInsets
 ```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
 
 ## Returns
 
-<ResponseField name="return" type="SafeArea | null">
-  A `SafeArea` object with `insets` property, or `null` if not available.
+<ResponseField name="return" type="SafeAreaInsets">
+  Safe area insets object. Defaults to all zeros when unavailable.
 
-  ```tsx
+  ```typescript
   {
-    insets: {
-      top: number;
-      bottom: number;
-      left: number;
-      right: number;
-    }
+    top: number;
+    bottom: number;
+    left: number;
+    right: number;
   }
   ```
 </ResponseField>
@@ -39,17 +43,15 @@ function useSafeArea(): SafeArea | null
 ## Usage
 
 ```tsx
-import { useSafeArea } from 'sunpeak';
+import { useApp, useSafeArea } from 'sunpeak';
 
-function MyWidget() {
-  const safeArea = useSafeArea();
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const safeArea = useSafeArea(app);
 
   return (
-    <div style={{
-      paddingTop: safeArea?.insets.top || 0,
-      paddingBottom: safeArea?.insets.bottom || 0,
-    }}>
-      Content respects safe areas
+    <div style={{ paddingTop: safeArea.top, paddingBottom: safeArea.bottom }}>
+      Content with safe area padding.
     </div>
   );
 }

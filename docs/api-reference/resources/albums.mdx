@@ -7,13 +7,13 @@ description: "A photo album viewer with carousel display and fullscreen viewing 
 
 `Albums` is a production-ready album viewer resource included in the sunpeak framework. It displays photo albums in a carousel layout with the ability to open albums in fullscreen mode for detailed photo browsing. The component automatically switches between inline and fullscreen display modes.
 
-The resource retrieves album data from `useWidgetProps()` and manages selection state with `useWidgetState()`.
+The resource retrieves album data from `useToolData(app).output` and manages selection state with `useAppState(app)`.
 
 ## Data Structure
 
 ### AlbumsData
 
-The resource expects data in the following format via `useWidgetProps()`:
+The resource expects data in the following format via `useToolData(app).output`:
 
 ```tsx
 interface AlbumsData {
@@ -75,8 +75,8 @@ Displays albums in a horizontal scrolling carousel with album cards showing the 
 ### Fullscreen Mode
 
 When a user selects an album, the resource:
-1. Sets the selected album ID in widget state using `useWidgetState()`.
-2. Requests fullscreen mode via `useWidgetAPI()`.
+1. Sets the selected album ID in app state using `useAppState(app)`.
+2. Requests fullscreen mode via `useDisplayMode(app)`.
 3. Displays a fullscreen photo viewer with:
    - Film strip navigation (desktop only).
    - Large centered photo display.
@@ -84,7 +84,7 @@ When a user selects an album, the resource:
 
 ## State Management
 
-The resource uses `useWidgetState` to persist the selected album across sessions:
+The resource uses `useAppState(app)` to persist the selected album across sessions:
 
 ```tsx
 interface AlbumsState {
@@ -96,11 +96,11 @@ interface AlbumsState {
 
 ### Safe Area Support
 
-Respects device safe areas using `useSafeArea()` to ensure proper padding on devices with notches or rounded corners.
+Respects device safe areas using `useSafeArea(app)` to ensure proper padding on devices with notches or rounded corners.
 
 ### Height Constraints
 
-Uses `useMaxHeight()` to adapt to available screen space and prevent overflow.
+Uses `useViewport(app)` to adapt to available screen space and prevent overflow.
 
 ## Common Use Cases
 

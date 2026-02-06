@@ -24,7 +24,7 @@ The `--repository` option is required because `sunpeak pull` is typically run fr
 The pull command:
 
 1. Looks up resources by tag and repository (optionally filtered by name)
-2. Downloads the JavaScript bundle for each resource
+2. Downloads the HTML bundle for each resource
 3. Saves the resources and metadata to the output directory
 
 ```bash
@@ -34,21 +34,21 @@ Pulling resources from repository "myorg/my-app" with tag "prod"...
 Found 2 resource(s):
 
 Resource: search
-  Title: Search Widget
+  Title: Search App
   URI: ui://search-mjdoy6rs
   Tags: prod, v1.2.0
   Created: 2024-01-15T10:30:00Z
-  Downloading JS file...
-  ✓ Saved search.js
+  Downloading HTML file...
+  ✓ Saved search.html
   ✓ Saved search.json
 
 Resource: dashboard
-  Title: Dashboard Widget
+  Title: Dashboard App
   URI: ui://dashboard-abc123
   Tags: prod
   Created: 2024-01-15T11:00:00Z
-  Downloading JS file...
-  ✓ Saved dashboard.js
+  Downloading HTML file...
+  ✓ Saved dashboard.html
   ✓ Saved dashboard.json
 
 ✓ Successfully pulled 2 resource(s) to .
@@ -96,9 +96,9 @@ The pull command creates two files for each resource in the output directory:
 
 ```
 ./
-├── search.js       # The JavaScript bundle
+├── search.html     # The HTML bundle
 ├── search.json     # Resource metadata
-├── dashboard.js
+├── dashboard.html
 └── dashboard.json
 ```
 
@@ -108,14 +108,16 @@ The metadata file contains:
 {
   "uri": "ui://search-mjdoy6rs",
   "name": "search",
-  "title": "Search Widget",
+  "title": "Search App",
   "description": "A search interface",
-  "mimeType": "text/html+skybridge",
+  "mimeType": "text/html;profile=mcp-app",
   "_meta": {
-    "openai/widgetDomain": "example.com",
-    "openai/widgetCSP": {
-      "connect_domains": ["api.example.com"],
-      "resource_domains": ["cdn.example.com"]
+    "ui": {
+      "domain": "example.com",
+      "csp": {
+        "connect_domains": ["api.example.com"],
+        "resource_domains": ["cdn.example.com"]
+      }
     }
   }
 }

@@ -1,11 +1,11 @@
 ---
 title: "useDisplayMode"
-description: "Hook for detecting the widget's display mode."
+description: "Get the current display mode."
 ---
 
 ## Overview
 
-The `useDisplayMode` hook returns the current display mode of the widget.
+The `useDisplayMode` hook returns the current display mode of the app. It is a convenience wrapper around `useHostContext`.
 
 ## Import
 
@@ -16,30 +16,33 @@ import { useDisplayMode } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useDisplayMode(): 'pip' | 'inline' | 'fullscreen' | null
+function useDisplayMode(app: App | null): McpUiDisplayMode
 ```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
 
 ## Returns
 
-<ResponseField name="return" type="'pip' | 'inline' | 'fullscreen' | null">
-  The current display mode:
-  - `'pip'` - Picture-in-picture mode.
-  - `'inline'` - Inline mode within the chat.
-  - `'fullscreen'` - Fullscreen mode.
-  - `null` - Display mode not available.
+<ResponseField name="return" type="'inline' | 'pip' | 'fullscreen'">
+  The current display mode. Defaults to `'inline'` when unavailable.
 </ResponseField>
 
 ## Usage
 
 ```tsx
-import { useDisplayMode } from 'sunpeak';
+import { useApp, useDisplayMode } from 'sunpeak';
 
-function MyWidget() {
-  const displayMode = useDisplayMode();
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const displayMode = useDisplayMode(app);
 
   return (
-    <div>
-      Display mode: {displayMode}
+    <div className={displayMode === 'fullscreen' ? 'h-screen' : 'max-h-96'}>
+      Current mode: {displayMode}
     </div>
   );
 }

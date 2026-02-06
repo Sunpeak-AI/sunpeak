@@ -5,7 +5,7 @@ description: "Testing and validation in sunpeak projects."
 
 ## Overview
 
-sunpeak supports both unit testing and end-to-end testing against the ChatGPT Simulator. The setup differs depending on whether you're using the full framework or just the library.
+sunpeak supports both unit testing and end-to-end testing against the simulator. The setup differs depending on whether you're using the full framework or just the library.
 
 <Tabs>
   <Tab title="Framework">
@@ -20,7 +20,7 @@ sunpeak supports both unit testing and end-to-end testing against the ChatGPT Si
     </ResponseField>
 
     <ResponseField name="pnpm test:e2e" type="command">
-      Run end-to-end tests with Playwright against the ChatGPT Simulator.
+      Run end-to-end tests with Playwright against the simulator.
     </ResponseField>
 
     ## Unit Testing
@@ -100,7 +100,7 @@ sunpeak supports both unit testing and end-to-end testing against the ChatGPT Si
     });
     ```
 
-    You'll need to ensure your dev server serves the `ChatGPTSimulator` component at a known URL for Playwright to test against.
+    You'll need to ensure your dev server serves the ChatGPTSimulator component at a known URL for Playwright to test against.
   </Tab>
 </Tabs>
 
@@ -137,12 +137,12 @@ test('should render in fullscreen mode', async ({ page }) => {
 
 <img
   src="https://cdn.sunpeak.ai/sunpeak-docs-fullscreen-dark.png"
-  alt="ChatGPT Simulator set to fullscreen dark mode via URL params"
+  alt="Simulator set to fullscreen dark mode via URL params"
 />
 
 <img
   src="https://cdn.sunpeak.ai/sunpeak-docs-inline-light.png"
-  alt="ChatGPT Simulator set to inline light mode via URL params"
+  alt="Simulator set to inline light mode via URL params"
 />
 
 The `createSimulatorUrl` function accepts parameters for configuring theme, display mode, device type, safe area insets, and more. See the [ChatGPTSimulator API Reference](/api-reference/simulations/chatgpt-simulator#createsimulatorurl) for the complete list.

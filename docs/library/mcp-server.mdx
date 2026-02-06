@@ -1,22 +1,22 @@
 ---
 title: "MCP Server"
-description: "Serve your widgets to the real ChatGPT platform."
+description: "Serve your MCP Apps to AI hosts like ChatGPT."
 ---
 
 <img
   src="https://cdn.sunpeak.ai/chatgpt-counter.png"
-  alt="ChatGPT production screenshot"
+  alt="MCP App in ChatGPT"
 />
 
 ## Overview
 
-The MCP (Model Context Protocol) server lets you serve your simulations to ChatGPT. Once running, ChatGPT can discover and render your widgets.
+The MCP (Model Context Protocol) server lets you serve your simulations to AI hosts like ChatGPT. Once running, the host can discover and render your MCP Apps.
 
-sunpeak includes an MCP server implementation that serves your widgets out-of-the-box.
+sunpeak includes an MCP server implementation that serves your apps out-of-the-box.
 
 ## What is MCP?
 
-MCP is the protocol ChatGPT uses to communicate with your servers. It handles:
+MCP is the protocol AI hosts use to communicate with your servers. It handles:
 
 - Resource & Tool registration and discovery
 - Tool invocation and state synchronization
@@ -35,7 +35,7 @@ Learn more in the [Model Context Protocol documentation](https://modelcontextpro
     sunpeak dev
     ```
 
-    This starts both the ChatGPT simulator and an MCP server with Hot Module Reload.
+    This starts both the simulator and an MCP server with Hot Module Reload.
     The MCP server runs on port `6766` and serves your resources with automatic rebuilding.
   </Tab>
   <Tab title="Library">
@@ -43,12 +43,12 @@ Learn more in the [Model Context Protocol documentation](https://modelcontextpro
   </Tab>
 </Tabs>
 
-Then connect to ChatGPT using a tunnel. See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server#connecting-to-chatgpt) for the full connection flow.
+Then connect to a host using a tunnel. See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server#connecting-to-chatgpt) for the full connection flow.
 
 ## Dive Deeper
 
 <Card horizontal title="runMCPServer API Reference" icon="code" href="/api-reference/simulations/run-mcp-server">
-  Complete configuration options and ChatGPT connection guide.
+  Complete configuration options and host connection guide.
 </Card>
 <Card horizontal title="Simulation API Reference" icon="code" href="/api-reference/simulations/simulation">
   Complete simulation documentation.

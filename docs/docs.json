@@ -95,20 +95,25 @@
           {
             "group": "Hooks",
             "pages": [
-              "api-reference/hooks/use-display-mode",
-              "api-reference/hooks/use-is-mobile",
-              "api-reference/hooks/use-locale",
-              "api-reference/hooks/use-max-height",
-              "api-reference/hooks/use-safe-area",
+              "api-reference/hooks/use-app",
+              "api-reference/hooks/use-host-context",
+              "api-reference/hooks/use-tool-data",
               "api-reference/hooks/use-theme",
-              "api-reference/hooks/use-tool-input",
-              "api-reference/hooks/use-tool-response-metadata",
-              "api-reference/hooks/use-user-agent",
-              "api-reference/hooks/use-view",
-              "api-reference/hooks/use-widget-api",
-              "api-reference/hooks/use-widget-global",
-              "api-reference/hooks/use-widget-props",
-              "api-reference/hooks/use-widget-state"
+              "api-reference/hooks/use-display-mode",
+              "api-reference/hooks/use-locale",
+              "api-reference/hooks/use-safe-area",
+              "api-reference/hooks/use-viewport",
+              "api-reference/hooks/use-is-mobile",
+              "api-reference/hooks/use-app-state",
+              "api-reference/hooks/use-call-server-tool",
+              "api-reference/hooks/use-send-message",
+              "api-reference/hooks/use-open-link",
+              "api-reference/hooks/use-request-display-mode",
+              "api-reference/hooks/use-send-log",
+              "api-reference/hooks/use-host-info",
+              "api-reference/hooks/use-tool-input-partial",
+              "api-reference/hooks/use-tool-cancelled",
+              "api-reference/hooks/use-teardown"
             ]
           }
         ]

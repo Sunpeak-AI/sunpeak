@@ -1,0 +1,75 @@
+---
+title: "useCallServerTool"
+description: "Call other MCP server tools."
+---
+
+## Overview
+
+Returns a function to invoke other MCP tools registered on the server. Useful for multi-step workflows where one app needs to trigger another tool.
+
+## Import
+
+```tsx
+import { useCallServerTool } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useCallServerTool(
+  app: App | null
+): (params: CallServerToolParams) => Promise<CallServerToolResult | undefined>
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  App instance from `useApp()`.
+</ResponseField>
+
+### CallServerToolParams
+
+<ResponseField name="name" type="string" required>
+  Name of the MCP tool to call.
+</ResponseField>
+
+<ResponseField name="arguments" type="Record<string, unknown>">
+  Arguments to pass to the tool.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="callTool" type="(params: CallServerToolParams) => Promise<CallServerToolResult | undefined>">
+  Function to call an MCP server tool.
+</ResponseField>
+
+### CallServerToolResult
+
+<ResponseField name="content" type="Array<{ type: string; text?: string }>">
+  Tool response content.
+</ResponseField>
+
+<ResponseField name="isError" type="boolean">
+  Whether the tool call resulted in an error.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useCallServerTool } from 'sunpeak';
+
+function ReviewResource() {
+  const { app } = useApp({ appInfo: { name: 'Review', version: '1.0.0' } });
+  const callTool = useCallServerTool(app);
+
+  const handleApply = async () => {
+    const result = await callTool({
+      name: 'apply_changes',
+      arguments: { changesetId: 'cs_789' },
+    });
+    console.log('Tool result:', result);
+  };
+
+  return <button onClick={handleApply}>Apply Changes</button>;
+}
+```

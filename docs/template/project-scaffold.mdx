@@ -8,17 +8,16 @@ import Examples from '/snippets/examples.mdx';
 
 ## Overview
 
-When you create a new project with `sunpeak new`, the sunpeak framework gives you a minimal, convention-based project structure with everything needed for ChatGPT widget development.
+When you create a new project with `sunpeak new`, the sunpeak framework gives you a minimal, convention-based project structure with everything needed for MCP App development.
 
 <ProjectStructure />
 
 ## Key Files & Directories
 
-- `src/resources/` - Directory containing all your MCP Resources (ChatGPT App UIs).
+- `src/resources/` - Directory containing all your MCP Resources (MCP App UIs).
     - Each resource lives in its own folder: `src/resources/{name}/`
     - Each folder contains:
-        - `{name}-resource.tsx` - The React component (built to `dist/{name}/{name}.js`)
-        - `{name}-resource.json` - Metadata (name, title, description, etc.)
+        - `{name}-resource.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
         - `components/` - Optional subfolder for resource-specific components
 - `tests/simulations/` - Directory containing simulation files for local development and testing.
     - Each resource's simulations live in their own folder: `tests/simulations/{name}/`
@@ -43,7 +42,6 @@ Fast build tool with hot-reload (HMR) for instant development feedback. The fram
 ### Tailwind CSS 4
 
 Utility-first CSS framework for rapid UI development. Pre-configured via Vite plugin.
-Required for [@openai/apps-sdk-ui](https://github.com/openai/apps-sdk-ui), which is also configured out-of-the-box.
 
 ### TypeScript
 

@@ -28,7 +28,7 @@ export function toPascalCase(str: string): string {
 /**
  * Extract the resource key from a resource file path
  * @example extractResourceKey('./review-resource.tsx') // 'review'
- * @example extractResourceKey('../src/resources/albums-resource.json') // 'albums'
+ * @example extractResourceKey('../src/resources/albums-resource.tsx') // 'albums'
  */
 export function extractResourceKey(path: string): string | undefined {
   const match = path.match(/([^/]+)-resource\.(tsx|json)$/);
@@ -109,7 +109,7 @@ export function createResourceExports(modules: GlobModules): Record<string, Reac
  * Used for connecting simulations to their resource definitions.
  *
  * @example
- * const modules = import.meta.glob('../src/resources/**\/*-resource.json', { eager: true });
+ * const modules = import.meta.glob('../src/resources/**\/*-resource.tsx', { eager: true });
  * const resourcesMap = buildResourceMap(modules);
  */
 export function buildResourceMap<T>(modules: GlobModules): Map<string, T> {
@@ -118,7 +118,7 @@ export function buildResourceMap<T>(modules: GlobModules): Map<string, T> {
   for (const [path, module] of Object.entries(modules)) {
     const key = extractResourceKey(path);
     if (key) {
-      map.set(key, (module as { default: T }).default);
+      map.set(key, (module as { resource: T }).resource);
     }
   }
 
@@ -161,7 +161,7 @@ export function buildSimulations<TResource, TSimulation>(
     onMissingResource = (key, prefix) =>
       console.warn(
         `No matching resource found for simulation "${key}". ` +
-          `Expected a resource file like src/resources/${prefix}/${prefix}-resource.json`
+          `Expected a resource file like src/resources/${prefix}/${prefix}-resource.tsx`
       ),
   } = options;
 
@@ -209,7 +209,7 @@ export function buildSimulations<TResource, TSimulation>(
 // --- Dev server helpers ---
 
 /**
- * Resource metadata from *-resource.json files
+ * Resource metadata from *-resource.tsx files
  */
 export interface ResourceMetadata {
   name: string;
@@ -222,7 +222,7 @@ export interface ResourceMetadata {
 export interface BuildDevSimulationsOptions {
   /** Glob result of simulation JSON files: import.meta.glob('*-simulation.json', { eager: true }) */
   simulationModules: GlobModules;
-  /** Glob result of resource JSON files: import.meta.glob('*-resource.json', { eager: true }) */
+  /** Glob result of resource JSON files: import.meta.glob('*-resource.tsx', { eager: true }) */
   resourceModules: GlobModules;
   /** Resource components map from src/resources/index.ts */
   resourceComponents: Record<string, React.ComponentType>;
@@ -235,7 +235,7 @@ export interface BuildDevSimulationsOptions {
  * @example
  * const simulations = buildDevSimulations({
  *   simulationModules: import.meta.glob('../src/resources/**\/*-simulation.json', { eager: true }),
- *   resourceModules: import.meta.glob('../src/resources/**\/*-resource.json', { eager: true }),
+ *   resourceModules: import.meta.glob('../src/resources/**\/*-resource.tsx', { eager: true }),
  *   resourceComponents: resourceComponents,
  * });
  */
@@ -350,7 +350,7 @@ export function findResourceDirs(
  * @example
  * isSimulationFile('albums-show-simulation.json', 'albums') // true
  * isSimulationFile('albums-show-simulation.json', 'carousel') // false
- * isSimulationFile('albums-resource.json', 'albums') // false
+ * isSimulationFile('albums-resource.tsx', 'albums') // false
  */
 export function isSimulationFile(filename: string, resourceKey: string): boolean {
   return filename.startsWith(`${resourceKey}-`) && filename.endsWith('-simulation.json');

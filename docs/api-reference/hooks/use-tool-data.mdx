@@ -1,0 +1,98 @@
+---
+title: "useToolData"
+description: "Access tool input and output data."
+---
+
+## Overview
+
+The `useToolData` hook provides reactive access to both the tool's input arguments and output data (structured content). It replaces the need for separate input/output hooks. The `output` field contains the data from your MCP tool's `structuredContent` response.
+
+## Import
+
+```tsx
+import { useToolData } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useToolData<TInput, TOutput>(
+  app: App | null,
+  defaultInput?: TInput,
+  defaultOutput?: TOutput
+): ToolData<TInput, TOutput>
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
+
+<ResponseField name="defaultInput" type="TInput">
+  Fallback value when no input is available. Optional.
+</ResponseField>
+
+<ResponseField name="defaultOutput" type="TOutput">
+  Fallback value when no output is available. Optional.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="ToolData<TInput, TOutput>" type="object">
+  The tool data state.
+
+  <ResponseField name="input" type="TInput | null">
+    The tool call arguments.
+  </ResponseField>
+
+  <ResponseField name="inputPartial" type="TInput | null">
+    Streaming partial input during tool execution.
+  </ResponseField>
+
+  <ResponseField name="output" type="TOutput | null">
+    The structured content from the tool result.
+  </ResponseField>
+
+  <ResponseField name="isError" type="boolean">
+    Whether the tool result indicates an error.
+  </ResponseField>
+
+  <ResponseField name="isLoading" type="boolean">
+    Whether the tool is still executing.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useToolData } from 'sunpeak';
+
+interface ReviewInput {
+  changesetId: string;
+  title: string;
+}
+
+interface ReviewOutput {
+  title: string;
+  sections: Array<{ title: string; content: unknown[] }>;
+}
+
+function ReviewResource() {
+  const { app } = useApp({ appInfo: { name: 'Review', version: '1.0.0' } });
+  const { input, output, isLoading } = useToolData<ReviewInput, ReviewOutput>(
+    app,
+    undefined,
+    { title: 'Review', sections: [] }
+  );
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div>
+      <h1>{output?.title}</h1>
+      <p>Changeset: {input?.changesetId}</p>
+    </div>
+  );
+}
+```

@@ -37,8 +37,7 @@ Using a Review page as an example, sunpeak projects look like:
 my-app/
 ├── src/resources/
 │   └── review/
-│       ├── review-resource.tsx                 # Review UI component.
-│       └── review-resource.json                # Review UI MCP metadata.
+│       └── review-resource.tsx                 # Review UI component + resource metadata.
 ├── tests/simulations/
 │   └── review/
 │       ├── review-{scenario1}-simulation.json  # Mock state for testing.
@@ -75,18 +74,18 @@ This creates optimized builds in `dist/`, organized by resource:
 ```bash
 dist/
 ├── albums/
-│   ├── albums.js             # Built resource component.
-│   └── albums.json           # Resource metadata.
+│   ├── albums.html           # Built resource bundle.
+│   └── albums.json           # Resource metadata (extracted from .tsx).
 ├── review/
-│   ├── review.js
+│   ├── review.html
 │   └── review.json
 └── ...
 ```
 
 Each resource folder contains:
 
-- **`.js` file**: Self-contained bundle with CSS inlined
-- **`.json` file**: Resource metadata with unique `uri` for cache-busting
+- **`.html` file**: Self-contained bundle with JS and CSS inlined
+- **`.json` file**: Resource metadata (extracted from the `resource` export in your `.tsx` file) with a generated `uri` for cache-busting
 
 Host these files and reference them as resources in your production MCP server.
 Use the sunpeak resource repository for built-in resource hosting.
@@ -97,20 +96,18 @@ To add a new UI (MCP Resource), create a new directory under `src/resources/` wi
 
 ```
 src/resources/NAME/
-├── NAME-resource.tsx              # React component (required)
-├── NAME-resource.json             # Resource metadata (required)
+├── NAME-resource.tsx              # React component + resource metadata (required)
 ├── NAME-resource.test.tsx         # Unit tests (optional)
 └── components/                    # UI components (optional)
 ```
 
-Only the resource files (`.tsx` and `.json`) are required to generate a production build and ship a UI.
+Only the resource file (`.tsx`) is required to generate a production build and ship a UI.
 
 Create the simulation file(s) in `tests/simulations/` if you want to preview your resource in `sunpeak dev`.
 
 ## Resources
 
 - [sunpeak](https://github.com/Sunpeak-AI/sunpeak)
-- [MCP Apps SDK](https://github.com/anthropics/mcp-apps)
+- [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK UI Documentation](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
-- [ChatGPT Apps SDK Examples](https://github.com/openai/openai-apps-sdk-examples)

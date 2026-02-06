@@ -8,8 +8,24 @@ import {
   useHostContext,
   useDisplayMode,
 } from 'sunpeak';
+import type { ResourceConfig } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
+
+export const resource: ResourceConfig = {
+  name: 'review',
+  title: 'Review',
+  description: 'Visualize and review a proposed set of changes or actions',
+  mimeType: 'text/html;profile=mcp-app',
+  _meta: {
+    ui: {
+      domain: 'https://sunpeak.ai',
+      csp: {
+        resourceDomains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
+      },
+    },
+  },
+};
 
 /**
  * Production-ready Review Resource

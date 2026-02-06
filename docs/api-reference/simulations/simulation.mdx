@@ -5,11 +5,11 @@ description: "Define test scenarios for your resources."
 
 ## Overview
 
-Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the ChatGPTSimulator for local development or runMCPServer for platform testing.
+Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the ChatGPTSimulator for local development or runMCPServer for platform testing with hosts like ChatGPT.
 
 <Tabs>
   <Tab title="Framework (JSON)">
-    In the sunpeak framework, simulations are **JSON files** that live in the `tests/simulations/` directory. The resource component and metadata are automatically linked based on directory structure.
+    In the sunpeak framework, simulations are **JSON files** that live in the `tests/simulations/` directory. The resource URL and metadata are automatically linked based on directory structure.
 
     ## File Naming Convention
 
@@ -24,9 +24,8 @@ Simulations define test scenarios for your resources—combining tool definition
     - `tests/simulations/review/review-diff-simulation.json`
     - `tests/simulations/review/review-post-simulation.json`
 
-    Resource files live separately in `src/resources/{name}/`:
-    - **Component**: `src/resources/{name}/{name}-resource.tsx`
-    - **Metadata**: `src/resources/{name}/{name}-resource.json`
+    Resource files live in `src/resources/{name}/`:
+    - **Component + Metadata**: `src/resources/{name}/{name}-resource.tsx` (exports both the React component and `export const resource: ResourceConfig`)
 
     You can have multiple simulations per resource (e.g., `albums-show-simulation.json` and `albums-empty-simulation.json` in the same folder).
 
@@ -45,13 +44,12 @@ Simulations define test scenarios for your resources—combining tool definition
         "title": "Show Example",
         "annotations": { "readOnlyHint": true },
         "_meta": {
-          "openai/toolInvocation/invoking": "Loading example",
-          "openai/toolInvocation/invoked": "Example loaded",
-          "openai/widgetAccessible": true,
-          "openai/resultCanProduceWidget": true
+          "ui": {
+            "visibility": true
+          }
         }
       },
-      "callToolResult": {
+      "toolResult": {
         "structuredContent": {
           "items": ["item1", "item2"]
         },
@@ -79,8 +77,7 @@ Simulations define test scenarios for your resources—combining tool definition
 
     ```
     src/resources/albums/
-      albums-resource.tsx              # Component
-      albums-resource.json             # Metadata
+      albums-resource.tsx              # Component + resource metadata
 
     tests/simulations/albums/
       albums-show-simulation.json      # Default view
@@ -88,7 +85,7 @@ Simulations define test scenarios for your resources—combining tool definition
       albums-error-simulation.json     # Error state
     ```
 
-    Each simulation can have different `callToolResult.structuredContent` to test various data scenarios.
+    Each simulation can have different `toolResult.structuredContent` to test various data scenarios.
   </Tab>
   <Tab title="Library (TypeScript)">
     When using the library directly, create simulations as TypeScript objects.
@@ -106,8 +103,11 @@ Simulations define test scenarios for your resources—combining tool definition
       // Unique identifier for the simulation
       name: string;
 
-      // React component to render
-      resourceComponent: React.ComponentType;
+      // Dev mode: HTML page URL (with Vite HMR)
+      resourceUrl?: string;
+
+      // Prod mode: JS bundle URL
+      resourceScript?: string;
 
       // Decorative message for simulator UI
       userMessage?: string;
@@ -118,14 +118,18 @@ Simulations define test scenarios for your resources—combining tool definition
       // MCP Resource definition (from @modelcontextprotocol/sdk)
       resource: Resource;
 
-      // Mock data for the CallTool response
-      callToolResult?: CallToolResult;
-
       // Mock input parameters for the tool call
-      callToolRequestParams?: CallToolRequestParams;
+      toolInput?: Record<string, unknown>;
 
-      // Initial widget state
-      widgetState?: Record<string, unknown> | null;
+      // Mock data for the tool response
+      toolResult?: {
+        content?: Array<{ type: string; text: string }>;
+        structuredContent?: unknown;
+        isError?: boolean;
+      };
+
+      // Initial host context
+      hostContext?: Partial<McpUiHostContext>;
     }
     ```
 
@@ -137,12 +141,11 @@ Simulations define test scenarios for your resources—combining tool definition
     import 'sunpeak/style.css';
     import { ChatGPTSimulator } from 'sunpeak';
     import type { Simulation } from 'sunpeak';
-    import { AlbumsResource } from './resources/albums';
 
     const simulations: Record<string, Simulation> = {
       'albums-show': {
         name: 'albums-show',
-        resourceComponent: AlbumsResource,
+        resourceUrl: '/resources/albums/index.html',
         userMessage: 'Show me some albums',
         tool: {
           name: 'show-albums',
@@ -153,9 +156,9 @@ Simulations define test scenarios for your resources—combining tool definition
         resource: {
           name: 'albums',
           uri: 'resource://albums',
-          mimeType: 'text/html+skybridge',
+          mimeType: 'text/html;profile=mcp-app',
         },
-        callToolResult: {
+        toolResult: {
           structuredContent: {
             albums: [{ id: '1', title: 'Summer', cover: '/cover.jpg' }],
           },
@@ -168,7 +171,7 @@ Simulations define test scenarios for your resources—combining tool definition
     }
     ```
 
-    Simulations can also be passed to [runMCPServer](/api-reference/simulations/run-mcp-server) for testing against the real ChatGPT platform.
+    Simulations can also be passed to [runMCPServer](/api-reference/simulations/run-mcp-server) for testing against real MCP App hosts like ChatGPT.
   </Tab>
 </Tabs>
 
@@ -178,8 +181,12 @@ Simulations define test scenarios for your resources—combining tool definition
   Unique identifier for the simulation. Used to select simulations in the UI and URL parameters. (Library only - auto-generated from filename in framework)
 </ResponseField>
 
-<ResponseField name="resourceComponent" type="React.ComponentType" required>
-  The React component to render for this simulation. (Library only - auto-linked in framework)
+<ResponseField name="resourceUrl" type="string">
+  URL to the resource HTML page for dev mode (with Vite HMR). (Library only - auto-linked in framework)
+</ResponseField>
+
+<ResponseField name="resourceScript" type="string">
+  URL to the resource JS bundle for prod mode. (Library only - auto-linked in framework)
 </ResponseField>
 
 <ResponseField name="userMessage" type="string">
@@ -202,25 +209,24 @@ Simulations define test scenarios for your resources—combining tool definition
   ```
 </ResponseField>
 
-<ResponseField name="callToolResult" type="CallToolResult">
-  Mock data for the MCP CallTool response. The `structuredContent` property is passed to your component via `useWidgetProps()`.
+<ResponseField name="toolInput" type="Record<string, unknown>">
+  Mock input parameters for the tool call. Accessible via `useToolData()`.
+</ResponseField>
+
+<ResponseField name="toolResult" type="object">
+  Mock data for the tool response. The `structuredContent` property is passed to your component via `useToolData()`.
 
   ```typescript
-  import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+  {
+    content?: Array<{ type: string; text: string }>;
+    structuredContent?: unknown;
+    isError?: boolean;
+  }
   ```
 </ResponseField>
 
-<ResponseField name="callToolRequestParams" type="CallToolRequestParams">
-  Mock input parameters for the tool call. The `arguments` property is accessible via `useToolInput()`.
-
-  ```typescript
-  import type { CallToolRequest } from '@modelcontextprotocol/sdk/types.js';
-  type CallToolRequestParams = CallToolRequest['params'];
-  ```
-</ResponseField>
-
-<ResponseField name="widgetState" type="Record<string, unknown> | null">
-  Initial widget state for the simulation. Accessible via `useWidgetState()`.
+<ResponseField name="hostContext" type="Partial<McpUiHostContext>">
+  Initial host context for the simulation. Accessible via `useHostContext()`.
 </ResponseField>
 
 ## MCP SDK Types
@@ -255,48 +261,6 @@ interface Resource {
   description?: string;
   mimeType?: string;
   _meta?: Record<string, unknown>;
-}
-```
-
-### CallToolResult
-
-```typescript
-interface CallToolResult {
-  content?: Array<TextContent | ImageContent | AudioContent | EmbeddedResource>;
-  structuredContent?: Record<string, unknown>;
-  isError?: boolean;
-  _meta?: Record<string, unknown>;
-}
-```
-
-## OpenAI-Specific Metadata
-
-When targeting ChatGPT, include OpenAI-specific metadata in the `_meta` fields:
-
-### Tool _meta
-
-```typescript
-{
-  _meta: {
-    'openai/toolInvocation/invoking': 'Loading albums...',
-    'openai/toolInvocation/invoked': 'Albums loaded',
-    'openai/widgetAccessible': true,
-    'openai/resultCanProduceWidget': true,
-  }
-}
-```
-
-### Resource _meta
-
-```typescript
-{
-  _meta: {
-    'openai/widgetDomain': 'https://example.com',
-    'openai/widgetCSP': {
-      connect_domains: [],
-      resource_domains: ['https://cdn.sunpeak.ai'],
-    },
-  }
 }
 ```
 

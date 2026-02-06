@@ -7,16 +7,15 @@ sunpeak dev
 For custom setups, you can manually configure the simulator:
 
 ```tsx
-import { ChatGPTSimulator } from 'sunpeak';
-import { MyComponent } from './components/MyComponent';
-import exampleResource from './resources/example/example-resource.json';
+import { ChatGPTSimulator } from 'sunpeak/chatgpt';
+import { resource } from './resources/example/example-resource';
 import exampleSimulation from './resources/example/example-show-simulation.json';
 
-// Combine simulation with resource and component
+// Combine simulation with resource
 const simulations = [{
   ...exampleSimulation,
-  resource: exampleResource,
-  resourceComponent: MyComponent,
+  resource,
+  resourceUrl: 'http://localhost:5173/resources/example',
 }];
 
 <ChatGPTSimulator

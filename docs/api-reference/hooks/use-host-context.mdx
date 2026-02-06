@@ -1,0 +1,65 @@
+---
+title: "useHostContext"
+description: "Reactive access to the host context."
+---
+
+## Overview
+
+The `useHostContext` hook subscribes to the full host context object, which contains theme, display mode, locale, safe area insets, container dimensions, and more. It updates reactively whenever the host changes any value.
+
+Most apps should use the convenience hooks (`useTheme`, `useDisplayMode`, `useLocale`, etc.) instead of accessing the full context directly.
+
+## Import
+
+```tsx
+import { useHostContext } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useHostContext(app: App | null): McpUiHostContext | null
+```
+
+## Parameters
+
+<ResponseField name="app" type="App | null" required>
+  The App instance from `useApp()`.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="McpUiHostContext | null" type="object">
+  The full host context, or `null` before first update.
+
+  ```typescript
+  interface McpUiHostContext {
+    theme?: 'light' | 'dark';
+    displayMode?: 'inline' | 'pip' | 'fullscreen';
+    locale?: string;
+    safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
+    containerDimensions?: { width: number; height: number };
+    availableDisplayModes?: ('inline' | 'pip' | 'fullscreen')[];
+    // ... additional host-specific fields
+  }
+  ```
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useHostContext } from 'sunpeak';
+
+function MyResource() {
+  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
+  const context = useHostContext(app);
+
+  return (
+    <div>
+      <p>Theme: {context?.theme}</p>
+      <p>Display: {context?.displayMode}</p>
+      <p>Locale: {context?.locale}</p>
+    </div>
+  );
+}
+```

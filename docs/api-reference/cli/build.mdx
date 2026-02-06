@@ -5,7 +5,7 @@ description: "Build optimized production bundles for deployment."
 
 ## Overview
 
-The `sunpeak build` command creates optimized, production-ready JavaScript bundles for your MCP Resources. Each Resource file is built as a separate, standalone bundle.
+The `sunpeak build` command creates optimized, production-ready bundles for your MCP Resources. Each Resource file is built as a separate, standalone HTML bundle.
 
 ```bash
 sunpeak build
@@ -16,7 +16,7 @@ sunpeak build
 
 The build process creates:
 
-- **Minified JavaScript** - Optimized and compressed for minimal file size
+- **Minified HTML** - Optimized and compressed for minimal file size
 - **CSS extraction** - Unused Tailwind styles removed automatically
 - **Asset optimization** - Static assets with hashed filenames for caching
 - **Source maps** - For debugging production issues
@@ -26,14 +26,14 @@ The build process creates:
 ```
 dist/
 ├── search/
-│   ├── search.js                        # Built resource bundle
-│   └── search.json                      # Resource metadata with generated URI
+│   ├── search.html                      # Built resource bundle
+│   └── search.json                      # Resource metadata (extracted from .tsx)
 ├── calendar/
-│   ├── calendar.js
+│   ├── calendar.html
 │   └── calendar.json
 ```
 
-Each resource folder from `src/resources/{name}/` is built to `dist/{name}/`, containing the JS bundle and metadata. Simulation files are not included in the build output.
+Each resource folder from `src/resources/{name}/` is built to `dist/{name}/`, containing the HTML bundle and metadata. The `.json` file is extracted from the `resource` export in your `.tsx` file. Simulation files are not included in the build output.
 
 ## Automatic Discovery
 
@@ -44,19 +44,19 @@ src/resources/{name}/{name}-resource.tsx
 ```
 
 For example:
-- `src/resources/search/` → `dist/search/search.js` + `dist/search/search.json`
-- `src/resources/calendar/` → `dist/calendar/calendar.js` + `dist/calendar/calendar.json`
+- `src/resources/search/` → `dist/search/search.html` + `dist/search/search.json`
+- `src/resources/calendar/` → `dist/calendar/calendar.html` + `dist/calendar/calendar.json`
 
 ### Metadata JSON Files
 
-The build copies each source `*-resource.json` file to the dist directory and adds a generated `uri` field:
+The build extracts the `resource` export from each `*-resource.tsx` file and writes it to a JSON file with a generated `uri` field:
 
 ```json
 {
   "name": "search",
-  "title": "Search Widget",
+  "title": "Search App",
   "description": "A search interface",
-  "mimeType": "text/html+skybridge",
+  "mimeType": "text/html;profile=mcp-app",
   "uri": "ui://search-mjdoy6rs",
   "_meta": { ... }
 }
@@ -106,5 +106,5 @@ sunpeak build
 After building, deploy the `dist/` directory to any static hosting service:
 
 <Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
-  Learn how to deploy your built widgets to production.
+  Learn how to deploy your built apps to production.
 </Card>

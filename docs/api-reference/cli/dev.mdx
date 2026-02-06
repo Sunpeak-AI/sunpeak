@@ -1,11 +1,11 @@
 ---
 title: "sunpeak dev"
-description: "Run the ChatGPT simulator and MCP server with HMR."
+description: "Run the simulator and MCP server with HMR."
 ---
 
 ## Overview
 
-The `sunpeak dev` command starts a local development server with a built-in ChatGPT simulator and MCP server, allowing you to develop and test your MCP Resources both locally and with the real ChatGPT.
+The `sunpeak dev` command starts a local development server with a built-in simulator and MCP server, allowing you to develop and test your MCP Resources both locally and with hosts like ChatGPT.
 
 ```bash
 sunpeak dev
@@ -23,7 +23,7 @@ The dev server uses Vite's hot reload technology for instant feedback:
 - CSS updates apply instantly
 - **MCP server also supports HMR** - no more cache issues or manual refreshes in ChatGPT
 
-### ChatGPT Simulator
+### Simulator
 
 Access the simulator at `http://localhost:6767` to:
 
@@ -34,9 +34,9 @@ Access the simulator at `http://localhost:6767` to:
 
 ### MCP Server
 
-The dev server also runs an MCP server on port `6766` for testing with the real ChatGPT:
+The dev server also runs an MCP server on port `6766` for testing with hosts like ChatGPT:
 
-- Serves your widgets to ChatGPT via MCP
+- Serves your apps to ChatGPT via MCP
 - Automatically rebuilds when you make changes
 - Uses unique URIs to cache-bust ChatGPT's aggressive caching
 
@@ -54,7 +54,7 @@ No manual configuration or entry point files needed!
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--port <number>` | `-p` | Port for the simulator (default: 6767, also respects `PORT` env var) |
-| `--prod-mcp` | | Serve production build `.js` files over MCP instead of Vite HMR (requires `sunpeak build` first) |
+| `--prod-mcp` | | Serve production build `.html` files over MCP instead of Vite HMR (requires `sunpeak build` first) |
 
 ## Configuration
 
@@ -79,7 +79,7 @@ sunpeak dev --port 3000
 
 Use `sunpeak dev` for:
 
-- Local component development with the ChatGPT simulator
+- Local component development with the simulator
 - Testing with real ChatGPT via the integrated MCP server
 - Rapid iteration with hot reload in either context
 

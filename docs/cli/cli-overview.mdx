@@ -1,13 +1,13 @@
 ---
 title: "CLI Overview"
-description: "Commands for managing ChatGPT Apps."
+description: "Commands for managing MCP Apps."
 ---
 
 ## Overview
 
-The sunpeak CLI provides commands for managing ChatGPT Apps.
+The sunpeak CLI provides commands for managing MCP Apps.
 It includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/)
-(ECR for ChatGPT Apps).
+(Docker Hub for MCP Apps).
 
 <img
   src="https://cdn.sunpeak.ai/blog/storybook-for-chatgpt-apps.png"
@@ -29,7 +29,7 @@ The repository helps you & your CI/CD decouple your App from your client-agnosti
 </Card>
 
 <Card horizontal title="Demo Apps" icon="mask">
-  Hosted runtime to collaborate, and share your ChatGPT Apps with teammates, prospects, and strangers!
+  Hosted runtime to collaborate, and share your MCP Apps with teammates, prospects, and strangers!
 </Card>
 
 ## Commands
@@ -59,11 +59,11 @@ The CLI is included when you install sunpeak. No separate installation required!
 </Note>
 
 ## Why decouple Apps & MCP servers?
-ChatGPT Apps are built on MCP servers, but your UI resources don't need to live alongside your server code. Decoupling them provides:
+MCP Apps are built on MCP servers, but your UI resources don't need to live alongside your server code. Decoupling them provides:
 
 1. **Generic MCP servers**: Keep your production MCP server largely client agnostic
 2. **Remove JavaScript**: If your server is in Python (or any other language), keep React and JavaScript out of your server.
-3. **Independent lifecycles**: Clearly indicate which code changes and version tags require ChatGPT App submission reviews and which are entirely MCP server-side
+3. **Independent lifecycles**: Clearly indicate which code changes and version tags require MCP App submission reviews (for ChatGPT integration) and which are entirely MCP server-side
 4. **Team collaboration**: Designers and frontend devs can push UI changes without touching server infrastructure and vice versa
 
 ## Dive Deeper
