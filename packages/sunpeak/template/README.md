@@ -75,7 +75,7 @@ This creates optimized builds in `dist/`, organized by resource:
 dist/
 ├── albums/
 │   ├── albums.html           # Built resource bundle.
-│   └── albums.json           # Resource metadata (extracted from .tsx).
+│   └── albums.json           # ResourceConfig (extracted from .tsx).
 ├── review/
 │   ├── review.html
 │   └── review.json
@@ -101,7 +101,7 @@ src/resources/NAME/
 └── components/                    # UI components (optional)
 ```
 
-Only the resource file (`.tsx`) is required to generate a production build and ship a UI.
+Only the resource file (`.tsx`) is required to generate a production build and ship a UI. It must export a `resource` object (`ResourceConfig`) describing the resource metadata, and a React component that renders the UI.
 
 Create the simulation file(s) in `tests/simulations/` if you want to preview your resource in `sunpeak dev`.
 

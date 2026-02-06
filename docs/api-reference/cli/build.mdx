@@ -16,7 +16,7 @@ sunpeak build
 
 The build process creates:
 
-- **Minified HTML** - Optimized and compressed for minimal file size
+- **HTML** - Optimized and compressed for minimal file size
 - **CSS extraction** - Unused Tailwind styles removed automatically
 - **Asset optimization** - Static assets with hashed filenames for caching
 - **Source maps** - For debugging production issues
@@ -27,7 +27,7 @@ The build process creates:
 dist/
 ├── search/
 │   ├── search.html                      # Built resource bundle
-│   └── search.json                      # Resource metadata (extracted from .tsx)
+│   └── search.json                      # ResourceConfig (extracted from .tsx)
 ├── calendar/
 │   ├── calendar.html
 │   └── calendar.json
@@ -64,10 +64,6 @@ The build extracts the `resource` export from each `*-resource.tsx` file and wri
 
 The `uri` is generated using the resource name and a build timestamp for cache invalidation.
 
-<Note>
-No entry point configuration needed! The framework handles discovery automatically.
-</Note>
-
 ## Build Optimizations
 
 ### Tree Shaking
@@ -78,14 +74,6 @@ Unused code is automatically removed from the bundle:
 // Only the imported components are included in the bundle
 import { Card, Button } from 'sunpeak';
 ```
-
-### Code Splitting
-
-Each Resource is built as a separate bundle:
-
-- Reduces initial load time
-- Allows independent updates
-- Improves caching
 
 ### CSS Purging
 

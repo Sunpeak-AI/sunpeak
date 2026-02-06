@@ -75,8 +75,8 @@ my-app/
 1. Project scaffold: Complete development setup with the `sunpeak` library.
 2. UI components: Production-ready components following ChatGPT design guidelines and using OpenAI `apps-sdk-ui` React components.
 3. Convention over configuration:
-   1. Create a UI by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example](#resource-component)).
-   2. Create test state (`Simulation`s) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file. ([example](#simulation))
+   1. Create a UI by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
+   2. Create test state (`Simulation`s) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file. ([example below](#simulation))
 
 ### The `sunpeak` CLI
 
@@ -107,20 +107,20 @@ Example `Resource`, `Simulation`, and testing file (using `ChatGPTSimulator`) fo
 my-app/
 ├── src/resources/
 │   └── review/
-│       └── review-resource.tsx # Here!
+│       └── review-resource.tsx # This!
 ```
 
 Each resource `.tsx` file exports both the React component and the MCP resource metadata:
 
 ```tsx
-// src/resources/review-resource.tsx
+// src/resources/review/review-resource.tsx
 
 import { useApp, useToolData } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 
 export const resource: ResourceConfig = {
   name: 'review',
-  description: 'Visualize and review a proposed set of changes or actions',
+  description: 'Visualize and review a code change',
   _meta: { ui: { csp: { resourceDomains: ['https://cdn.openai.com'] } } },
 };
 

@@ -47,7 +47,7 @@ export function MapResource() {
         paddingBottom: `${safeArea.bottom}px`,
         paddingLeft: `${safeArea.left}px`,
         paddingRight: `${safeArea.right}px`,
-        maxHeight: viewport?.maxHeight ?? undefined,
+        maxHeight: (viewport as { maxHeight?: number } | null)?.maxHeight,
       }}
     >
       <Map app={app} />

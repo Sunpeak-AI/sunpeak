@@ -1,6 +1,6 @@
 ---
 title: "Simulator"
-description: "Local development environment replicating the MCP Apps host runtime."
+description: "Local development environment replicating the ChatGPT App host runtime."
 ---
 
 import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
@@ -12,12 +12,12 @@ import ChatGPTSimulator from '/snippets/chatgpt-simulator.mdx';
 
 ## Overview
 
-The simulator is a local development environment that replicates the MCP Apps host runtime (ChatGPT, Claude, etc.). It uses the `ChatGPTSimulator` React component.
+The simulator is a local development environment that replicates the ChatGPT App host runtime. It uses the `ChatGPTSimulator` React component.
 
 ## Why Use the Simulator?
 
 <Card horizontal title="Instant Feedback" icon="rotate">
-  See changes immediately with hot module replacement. No more constantly reloading the host.
+  See changes immediately with hot module replacement. No more cache issues or constantly reloading the host.
 </Card>
 <Card horizontal title="Visualize Design Variations" icon="palette">
   Toggle between light/dark themes, mobile/tablet/desktop views, and other platform states.
@@ -93,7 +93,7 @@ Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
     const simulations: Record<string, Simulation> = {
       'albums-show': {
         name: 'albums-show',
-        resourceUrl: 'http://localhost:5173/resources/albums',
+        resourceUrl: 'http://localhost:6767/resources/albums',
         tool: { name: 'show-albums', description: '...', inputSchema: {} },
         resource: { name: 'albums', uri: 'ui://albums', mimeType: 'text/html;profile=mcp-app' },
         toolResult: { structuredContent: { albums: [] } },

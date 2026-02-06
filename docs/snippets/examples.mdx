@@ -8,49 +8,37 @@ Each resource `.tsx` file exports both a `ResourceConfig` metadata object and th
 
 ```tsx
 // src/resources/review/review-resource.tsx
+
 import { useApp, useToolData } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
-import { Card } from './components';
 
 export const resource: ResourceConfig = {
   name: 'review',
-  title: 'Review',
-  description: 'Visualize and review a proposed set of changes or actions',
-  mimeType: 'text/html;profile=mcp-app',
-  _meta: {
-    ui: {
-      domain: 'https://sunpeak.ai',
-      csp: {
-        resourceDomains: ['https://cdn.sunpeak.ai'],
-      },
-    },
-  },
+  description: 'Visualize and review a code change',
+  _meta: { ui: { csp: { resourceDomains: ['https://cdn.openai.com'] } } },
 };
 
 export function ReviewResource() {
   const { app } = useApp();
-  const { output } = useToolData<unknown, { title: string }>(app);
+  const { structuredContent: data } = useToolData<{ title: string }>(app);
 
-  return (
-    <Card header={output?.title ?? 'Review'}>
-      Scenic lake perfect for kayaking, paddleboarding, and trails.
-    </Card>
-  );
+  return <h1>Review: {data.title}</h1>;
 }
 ```
 
 ### Simulation
 
-Testing an MCP App requires setting a lot of state: state in your backend (accessed via MCP tool), the app runtime, and the host itself.
+Testing an MCP App requires setting a lot of state: state in your backend (accessed via MCP tool), the app runtime, and the host agent itself.
 
 Simulation files let you define key App states for development, automated testing, and demo purposes.
 
 Simulation files contain an [official MCP Tool object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool) and tool result data with [structured content](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content). Host state (like light/dark mode) is not set on the simulation, but rather on the sunpeak simulator itself via UI, props, or URL params.
 
-```json
-// tests/simulations/review/review-diff-simulation.json
+```jsonc
+// tests/simulations/review-diff-simulation.json
+
 {
-  "userMessage": "Refactor the authentication module",
+  // Official MCP tool object.
   "tool": {
     "name": "review-diff",
     "description": "Show a review dialog for a proposed code diff",
@@ -58,12 +46,20 @@ Simulation files contain an [official MCP Tool object](https://modelcontextproto
     "title": "Diff Review",
     "annotations": { "readOnlyHint": false },
     "_meta": {
-      "ui": { "visibility": ["model", "app"] }
-    }
+      "ui": { "visibility": ["model", "app"] },
+    },
   },
+  // Tool input arguments (sent to CallTool).
+  "toolInput": {
+    "changesetId": "cs_789",
+    "title": "Refactor Authentication Module",
+  },
+  // Tool result data (CallToolResult response).
   "toolResult": {
     "structuredContent": {
-    }
-  }
+      "title": "Refactor Authentication Module",
+      // ...
+    },
+  },
 }
 ```

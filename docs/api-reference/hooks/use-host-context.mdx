@@ -29,21 +29,19 @@ function useHostContext(app: App | null): McpUiHostContext | null
 
 ## Returns
 
-<ResponseField name="McpUiHostContext | null" type="object">
-  The full host context, or `null` before first update.
+Returns the full `McpUiHostContext` object, or `null` before the first update.
 
-  ```typescript
-  interface McpUiHostContext {
-    theme?: 'light' | 'dark';
-    displayMode?: 'inline' | 'pip' | 'fullscreen';
-    locale?: string;
-    safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
-    containerDimensions?: { width: number; height: number };
-    availableDisplayModes?: ('inline' | 'pip' | 'fullscreen')[];
-    // ... additional host-specific fields
-  }
-  ```
-</ResponseField>
+```typescript
+interface McpUiHostContext {
+  theme?: 'light' | 'dark';
+  displayMode?: 'inline' | 'pip' | 'fullscreen';
+  locale?: string;
+  safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
+  containerDimensions?: { width: number; height: number };
+  availableDisplayModes?: ('inline' | 'pip' | 'fullscreen')[];
+  // ... additional host-specific fields
+}
+```
 
 ## Usage
 

@@ -39,28 +39,26 @@ function useToolData<TInput, TOutput>(
 
 ## Returns
 
-<ResponseField name="ToolData<TInput, TOutput>" type="object">
-  The tool data state.
+Returns a `ToolData<TInput, TOutput>` object with the following fields:
 
-  <ResponseField name="input" type="TInput | null">
-    The tool call arguments.
-  </ResponseField>
+<ResponseField name="input" type="TInput | null">
+  The tool call arguments.
+</ResponseField>
 
-  <ResponseField name="inputPartial" type="TInput | null">
-    Streaming partial input during tool execution.
-  </ResponseField>
+<ResponseField name="inputPartial" type="TInput | null">
+  Streaming partial input during tool execution.
+</ResponseField>
 
-  <ResponseField name="output" type="TOutput | null">
-    The structured content from the tool result.
-  </ResponseField>
+<ResponseField name="output" type="TOutput | null">
+  The structured content from the tool result.
+</ResponseField>
 
-  <ResponseField name="isError" type="boolean">
-    Whether the tool result indicates an error.
-  </ResponseField>
+<ResponseField name="isError" type="boolean">
+  Whether the tool result indicates an error.
+</ResponseField>
 
-  <ResponseField name="isLoading" type="boolean">
-    Whether the tool is still executing.
-  </ResponseField>
+<ResponseField name="isLoading" type="boolean">
+  Whether the tool is still executing.
 </ResponseField>
 
 ## Usage

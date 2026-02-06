@@ -1,4 +1,3 @@
-import * as React from 'react';
 import {
   useApp,
   useAppState,
@@ -123,6 +122,7 @@ interface ReviewData {
 }
 
 interface ReviewState {
+  [key: string]: unknown;
   decision: 'accepted' | 'rejected' | null;
   decidedAt: string | null;
 }
@@ -407,7 +407,7 @@ export function ReviewResource() {
         paddingBottom: `${safeArea.bottom}px`,
         paddingLeft: `${safeArea.left}px`,
         paddingRight: `${safeArea.right}px`,
-        maxHeight: viewport?.maxHeight ?? undefined,
+        maxHeight: (viewport as { maxHeight?: number } | null)?.maxHeight,
       }}
     >
       {/* Header */}

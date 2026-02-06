@@ -23,36 +23,34 @@ function useApp(options: UseAppOptions): AppState
 
 <ResponseField name="options" type="UseAppOptions" required>
   Configuration options for the app connection.
+</ResponseField>
 
-  <ResponseField name="appInfo" type="{ name: string; version: string }" required>
-    App identification information.
-  </ResponseField>
+<ResponseField name="options.appInfo" type="{ name: string; version: string }" required>
+  App identification information.
+</ResponseField>
 
-  <ResponseField name="capabilities" type="Record<string, unknown>">
-    Capabilities to advertise to the host. Optional.
-  </ResponseField>
+<ResponseField name="options.capabilities" type="Record<string, unknown>">
+  Capabilities to advertise to the host. Optional.
+</ResponseField>
 
-  <ResponseField name="onAppCreated" type="(app: App) => void">
-    Callback invoked when a new App instance is created. Optional.
-  </ResponseField>
+<ResponseField name="options.onAppCreated" type="(app: App) => void">
+  Callback invoked when a new App instance is created. Optional.
 </ResponseField>
 
 ## Returns
 
-<ResponseField name="AppState" type="object">
-  The app connection state.
+Returns an `AppState` object with the following fields:
 
-  <ResponseField name="app" type="App | null">
-    The connected App instance, or `null` while connecting.
-  </ResponseField>
+<ResponseField name="app" type="App | null">
+  The connected App instance, or `null` while connecting.
+</ResponseField>
 
-  <ResponseField name="isConnected" type="boolean">
-    Whether the connection to the host is established.
-  </ResponseField>
+<ResponseField name="isConnected" type="boolean">
+  Whether the connection to the host is established.
+</ResponseField>
 
-  <ResponseField name="error" type="Error | null">
-    Connection error, if any.
-  </ResponseField>
+<ResponseField name="error" type="Error | null">
+  Connection error, if any.
 </ResponseField>
 
 ## Usage
