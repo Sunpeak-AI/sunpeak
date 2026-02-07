@@ -270,16 +270,26 @@ export function IframeResource({
   );
   hostRef.current = host;
 
-  // Connect to iframe when it loads
-  const handleLoad = useCallback(() => {
-    const iframe = iframeRef.current;
-    if (!iframe?.contentWindow) return;
+  // Connect bridge transport as soon as the iframe element exists in the DOM,
+  // before the browser loads the iframe content. For built HTML files with
+  // inline scripts (same-origin), React effects inside the iframe can fire
+  // before the parent's onLoad event, causing the app's `initialize` request
+  // to be lost if the bridge transport isn't listening yet.
+  const setIframeRef = useCallback(
+    (node: HTMLIFrameElement | null) => {
+      iframeRef.current = node;
+      if (node?.contentWindow) {
+        host.connectToIframe(node.contentWindow);
+      }
+    },
+    [host]
+  );
 
-    host.connectToIframe(iframe.contentWindow).then(() => {
-      // Send initial data after connection
-      if (toolInput) host.sendToolInput(toolInput);
-      if (toolResult) host.sendToolResult(toolResult);
-    });
+  // Send tool data after iframe content loads (belt-and-suspenders with
+  // the useEffect hooks below, which queue data as pending before init).
+  const handleLoad = useCallback(() => {
+    if (toolInput) host.sendToolInput(toolInput);
+    if (toolResult) host.sendToolResult(toolResult);
   }, [host, toolInput, toolResult]);
 
   // Update host context when props change.
@@ -363,7 +373,7 @@ export function IframeResource({
 
     return (
       <iframe
-        ref={iframeRef}
+        ref={setIframeRef}
         src={src}
         onLoad={handleLoad}
         className={className}
@@ -386,7 +396,7 @@ export function IframeResource({
 
   return (
     <iframe
-      ref={iframeRef}
+      ref={setIframeRef}
       srcDoc={htmlContent}
       onLoad={handleLoad}
       className={className}
