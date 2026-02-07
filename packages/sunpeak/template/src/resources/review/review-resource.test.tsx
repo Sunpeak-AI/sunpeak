@@ -8,8 +8,6 @@ const mockRequestDisplayMode = vi.fn();
 
 let mockToolOutput: Record<string, unknown> = { title: 'Test Review' };
 let mockState: Record<string, unknown> = { decision: null, decidedAt: null };
-let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
-let mockViewport: { maxHeight: number } | null = { maxHeight: 600 };
 let mockHostContext: {
   deviceCapabilities?: { hover: boolean; touch: boolean };
 } | null = {
@@ -22,19 +20,24 @@ const mockApp = {
 };
 
 vi.mock('sunpeak', () => ({
-  useApp: () => ({ app: mockApp, isConnected: true, error: null }),
-  useToolData: (_app: unknown, _defaultInput: unknown, defaultOutput: Record<string, unknown>) => ({
+  useApp: () => mockApp,
+  useToolData: (_defaultInput: unknown, defaultOutput: Record<string, unknown>) => ({
     output: { ...defaultOutput, ...mockToolOutput },
     input: null,
     inputPartial: null,
     isError: false,
     isLoading: false,
+    isCancelled: false,
+    cancelReason: null,
   }),
-  useSafeArea: () => mockSafeArea,
-  useViewport: () => mockViewport,
   useHostContext: () => mockHostContext,
   useDisplayMode: () => mockDisplayMode,
   useAppState: () => [mockState, mockSetState],
+  SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div data-testid="safe-area" {...props}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock Button component
@@ -83,8 +86,6 @@ describe('ReviewResource', () => {
     vi.clearAllMocks();
     mockToolOutput = { title: 'Test Review' };
     mockState = { decision: null, decidedAt: null };
-    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
-    mockViewport = { maxHeight: 600 };
     mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
     mockDisplayMode = 'inline';
   });
@@ -410,53 +411,20 @@ describe('ReviewResource', () => {
     });
   });
 
-  describe('Safe Area and Layout', () => {
-    it('respects safe area insets', () => {
-      mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
+  describe('SafeArea and Layout', () => {
+    it('wraps content in SafeArea', () => {
+      render(<ReviewResource />);
 
-      const { container } = render(<ReviewResource />);
-      const mainDiv = container.firstChild as HTMLElement;
-
-      expect(mainDiv).toHaveStyle({
-        paddingTop: '20px',
-        paddingBottom: '30px',
-        paddingLeft: '10px',
-        paddingRight: '15px',
-      });
-    });
-
-    it('respects maxHeight constraint', () => {
-      mockViewport = { maxHeight: 400 };
-
-      const { container } = render(<ReviewResource />);
-      const mainDiv = container.firstChild as HTMLElement;
-
-      expect(mainDiv).toHaveStyle({
-        maxHeight: '400px',
-      });
+      const safeArea = screen.getByTestId('safe-area');
+      expect(safeArea).toBeInTheDocument();
     });
 
     it('handles null host context', () => {
       mockHostContext = null;
 
-      const { container } = render(<ReviewResource />);
-      const mainDiv = container.firstChild as HTMLElement;
-
-      expect(mainDiv).toHaveStyle({
-        paddingTop: '0px',
-        paddingBottom: '0px',
-        paddingLeft: '0px',
-        paddingRight: '0px',
-      });
-    });
-
-    it('handles null viewport', () => {
-      mockViewport = null;
-
-      const { container } = render(<ReviewResource />);
-      const mainDiv = container.firstChild as HTMLElement;
-
-      expect(mainDiv.style.maxHeight).toBe('');
+      // Should render without errors
+      render(<ReviewResource />);
+      expect(screen.getByText('Test Review')).toBeInTheDocument();
     });
   });
 

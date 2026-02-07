@@ -1,7 +1,7 @@
 import { useHostContext } from './use-host-context';
-import type { App, McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
+import type { McpUiDisplayMode } from '@modelcontextprotocol/ext-apps';
 
-export function useDisplayMode(app: App | null): McpUiDisplayMode {
-  const context = useHostContext(app);
+export function useDisplayMode(): McpUiDisplayMode {
+  const context = useHostContext();
   return context?.displayMode ?? 'inline';
 }

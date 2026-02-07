@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from '../../hooks/use-app';
 import { getOpenAIRuntime, type OpenAIRequestModalParams } from './openai-types';
 
 export type { OpenAIRequestModalParams as OpenModalParams };
@@ -15,12 +15,10 @@ export type { OpenAIRequestModalParams as OpenModalParams };
  *
  * @example
  * ```tsx
- * import { useApp } from 'sunpeak';
  * import { useRequestModal } from 'sunpeak/platform/chatgpt';
  *
  * function CheckoutButton() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const requestModal = useRequestModal(app);
+ *   const requestModal = useRequestModal();
  *
  *   return (
  *     <button onClick={() => requestModal({ template: 'ui://widget/checkout.html' })}>
@@ -29,12 +27,9 @@ export type { OpenAIRequestModalParams as OpenModalParams };
  *   );
  * }
  * ```
- *
- * @param app - The MCP App instance (from useApp).
  */
-export function useRequestModal(
-  app: App | null
-): (params: OpenAIRequestModalParams) => Promise<void> {
+export function useRequestModal(): (params: OpenAIRequestModalParams) => Promise<void> {
+  const app = useApp();
   return useCallback(
     async (params: OpenAIRequestModalParams) => {
       if (!app) {

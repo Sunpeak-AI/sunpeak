@@ -1,4 +1,4 @@
-import { useApp, useSafeArea, useViewport } from 'sunpeak';
+import { SafeArea } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 import { Map } from './components/map';
 
@@ -31,26 +31,9 @@ export const resource: ResourceConfig = {
  * Can be dropped into any production environment without changes.
  */
 export function MapResource() {
-  const { app } = useApp({
-    appInfo: { name: 'MapResource', version: '1.0.0' },
-    capabilities: {},
-  });
-
-  const safeArea = useSafeArea(app);
-  const viewport = useViewport(app);
-
   return (
-    <div
-      className="h-full"
-      style={{
-        paddingTop: `${safeArea.top}px`,
-        paddingBottom: `${safeArea.bottom}px`,
-        paddingLeft: `${safeArea.left}px`,
-        paddingRight: `${safeArea.right}px`,
-        maxHeight: (viewport as { maxHeight?: number } | null)?.maxHeight,
-      }}
-    >
-      <Map app={app} />
-    </div>
+    <SafeArea className="h-full">
+      <Map />
+    </SafeArea>
   );
 }

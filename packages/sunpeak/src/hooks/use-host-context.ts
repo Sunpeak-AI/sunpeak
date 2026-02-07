@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
 import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 import { applyDocumentTheme } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * Per-app subscriber registry.
@@ -40,10 +41,11 @@ function getRegistry(app: App): Set<() => void> {
  * Reactive access to the MCP Apps host context.
  * Subscribes to host context changes and re-renders when the context updates.
  *
- * @param app - The MCP App instance (from useApp).
  * @returns The current host context, or null if not connected.
  */
-export function useHostContext(app: App | null): McpUiHostContext | null {
+export function useHostContext(): McpUiHostContext | null {
+  const app = useApp();
+
   const subscribe = useCallback(
     (onChange: () => void) => {
       if (!app) return () => {};

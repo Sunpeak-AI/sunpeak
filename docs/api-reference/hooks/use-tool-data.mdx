@@ -17,17 +17,12 @@ import { useToolData } from 'sunpeak';
 
 ```tsx
 function useToolData<TInput, TOutput>(
-  app: App | null,
   defaultInput?: TInput,
   defaultOutput?: TOutput
 ): ToolData<TInput, TOutput>
 ```
 
 ## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 <ResponseField name="defaultInput" type="TInput">
   Fallback value when no input is available. Optional.
@@ -61,10 +56,18 @@ Returns a `ToolData<TInput, TOutput>` object with the following fields:
   Whether the tool is still executing.
 </ResponseField>
 
+<ResponseField name="isCancelled" type="boolean">
+  Whether the tool call was cancelled by the host or user.
+</ResponseField>
+
+<ResponseField name="cancelReason" type="string | null">
+  Optional reason for cancellation, or null if not cancelled.
+</ResponseField>
+
 ## Usage
 
 ```tsx
-import { useApp, useToolData } from 'sunpeak';
+import { useToolData } from 'sunpeak';
 
 interface ReviewInput {
   changesetId: string;
@@ -77,9 +80,7 @@ interface ReviewOutput {
 }
 
 function ReviewResource() {
-  const { app } = useApp({ appInfo: { name: 'Review', version: '1.0.0' } });
   const { input, output, isLoading } = useToolData<ReviewInput, ReviewOutput>(
-    app,
     undefined,
     { title: 'Review', sections: [] }
   );

@@ -16,17 +16,12 @@ import { useAppState } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useAppState<T extends Record<string, unknown>>(
-  app: App | null,
+function useAppState<T>(
   defaultState: T
 ): readonly [T, (state: SetStateAction<T>) => void]
 ```
 
 ## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 <ResponseField name="defaultState" type="T" required>
   Initial state value.
@@ -41,7 +36,7 @@ function useAppState<T extends Record<string, unknown>>(
 ## Usage
 
 ```tsx
-import { useApp, useAppState } from 'sunpeak';
+import { useAppState } from 'sunpeak';
 
 interface ReviewState {
   decision: 'approved' | 'rejected' | null;
@@ -49,8 +44,7 @@ interface ReviewState {
 }
 
 function ReviewResource() {
-  const { app } = useApp({ appInfo: { name: 'Review', version: '1.0.0' } });
-  const [state, setState] = useAppState<ReviewState>(app, {
+  const [state, setState] = useAppState<ReviewState>({
     decision: null,
     decidedAt: null,
   });

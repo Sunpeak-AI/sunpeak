@@ -14,8 +14,6 @@ interface Place {
 }
 
 let mockToolOutput: { places: Place[] } = { places: [] };
-let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
-let mockViewport: { maxHeight: number } | null = { maxHeight: 600 };
 let mockHostContext: {
   deviceCapabilities?: { hover: boolean; touch: boolean };
 } | null = {
@@ -24,18 +22,23 @@ let mockHostContext: {
 let mockDisplayMode = 'inline';
 
 vi.mock('sunpeak', () => ({
-  useApp: () => ({ app: null, isConnected: true, error: null }),
-  useToolData: (_app: unknown, _defaultInput: unknown, defaultOutput: { places: Place[] }) => ({
+  useApp: () => null,
+  useToolData: (_defaultInput: unknown, defaultOutput: { places: Place[] }) => ({
     output: mockToolOutput.places.length > 0 ? mockToolOutput : defaultOutput,
     input: null,
     inputPartial: null,
     isError: false,
     isLoading: false,
+    isCancelled: false,
+    cancelReason: null,
   }),
-  useSafeArea: () => mockSafeArea,
-  useViewport: () => mockViewport,
   useHostContext: () => mockHostContext,
   useDisplayMode: () => mockDisplayMode,
+  SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
+    <div data-testid="safe-area" {...props}>
+      {children}
+    </div>
+  ),
 }));
 
 // Mock child components
@@ -75,8 +78,6 @@ describe('CarouselResource', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockToolOutput = { places: [] };
-    mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
-    mockViewport = { maxHeight: 600 };
     mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
     mockDisplayMode = 'inline';
   });
@@ -100,29 +101,12 @@ describe('CarouselResource', () => {
     expect(container.querySelectorAll('[data-testid="card"]').length).toBe(0);
   });
 
-  it('respects safe area insets', () => {
-    mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
+  it('wraps content in SafeArea', () => {
+    render(<CarouselResource />);
 
-    const { container } = render(<CarouselResource />);
-    const mainDiv = container.firstChild as HTMLElement;
-
-    expect(mainDiv).toHaveStyle({
-      paddingTop: '20px',
-      paddingBottom: '30px',
-      paddingLeft: '10px',
-      paddingRight: '15px',
-    });
-  });
-
-  it('respects maxHeight constraint', () => {
-    mockViewport = { maxHeight: 500 };
-
-    const { container } = render(<CarouselResource />);
-    const mainDiv = container.firstChild as HTMLElement;
-
-    expect(mainDiv).toHaveStyle({
-      maxHeight: '500px',
-    });
+    const safeArea = screen.getByTestId('safe-area');
+    expect(safeArea).toBeInTheDocument();
+    expect(safeArea).toContainElement(screen.getByTestId('carousel'));
   });
 
   it('passes larger button size for touch devices', () => {

@@ -115,7 +115,7 @@ Each resource `.tsx` file exports both the React component and the MCP resource 
 ```tsx
 // src/resources/review/review-resource.tsx
 
-import { useApp, useToolData } from 'sunpeak';
+import { useToolData } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 
 export const resource: ResourceConfig = {
@@ -125,10 +125,9 @@ export const resource: ResourceConfig = {
 };
 
 export function ReviewResource() {
-  const { app } = useApp();
-  const { structuredContent: data } = useToolData<{ title: string }>(app);
+  const { output: data } = useToolData<unknown, { title: string }>();
 
-  return <h1>Review: {data.title}</h1>;
+  return <h1>Review: {data?.title}</h1>;
 }
 ```
 

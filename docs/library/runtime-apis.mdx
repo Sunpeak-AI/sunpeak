@@ -29,21 +29,15 @@ ChatGPT, Claude, and more.
 
 ## React Hooks
 
-sunpeak provides access to the entire MCP Apps runtime API via platform-agnostic React hooks.
-
-Every hook takes an `app` instance from `useApp()` as its first argument:
+sunpeak provides access to the entire MCP Apps runtime API via platform-agnostic React hooks. All hooks read from context automatically — no need to pass an `app` instance:
 
 ```tsx
-import { useApp, useTheme, useDisplayMode, useAppState } from 'sunpeak';
+import { useTheme, useDisplayMode, useAppState } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({
-    appInfo: { name: 'MyResource', version: '1.0.0' },
-  });
-
-  const theme = useTheme(app);                          // 'light' | 'dark'
-  const displayMode = useDisplayMode(app);              // 'inline' | 'pip' | 'fullscreen'
-  const [state, setState] = useAppState(app, { count: 0 });
+  const theme = useTheme();                          // 'light' | 'dark'
+  const displayMode = useDisplayMode();              // 'inline' | 'pip' | 'fullscreen'
+  const [state, setState] = useAppState({ count: 0 });
 
   return <div className={displayMode === 'fullscreen' ? 'h-screen' : 'max-h-96'}>...</div>;
 }
@@ -54,16 +48,12 @@ function MyResource() {
 sunpeak provides individual hooks for interacting with the host runtime, including calling MCP tools, sending messages, and opening links.
 
 ```tsx
-import { useApp, useCallServerTool, useSendMessage, useOpenLink } from 'sunpeak';
+import { useCallServerTool, useSendMessage, useOpenLink } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({
-    appInfo: { name: 'MyResource', version: '1.0.0' },
-  });
-
-  const callTool = useCallServerTool(app);
-  const sendMessage = useSendMessage(app);
-  const openLink = useOpenLink(app);
+  const callTool = useCallServerTool();
+  const sendMessage = useSendMessage();
+  const openLink = useOpenLink();
 
   const handleAction = async () => {
     // Call an MCP tool.

@@ -1,7 +1,9 @@
-// === MCP Apps SDK React hooks (re-exported) ===
-// These are the canonical implementations from the SDK
+// === App context (provider + hook) ===
+export { AppProvider } from './app-context';
+export type { AppProviderProps, AppState } from './app-context';
 export { useApp } from './use-app';
-export type { UseAppOptions, AppState } from './use-app';
+
+// === MCP Apps SDK React hooks (re-exported) ===
 export { useAutoResize } from '@modelcontextprotocol/ext-apps/react';
 export { useDocumentTheme } from '@modelcontextprotocol/ext-apps/react';
 export {
@@ -22,7 +24,12 @@ export { useDisplayMode } from './use-display-mode';
 export { useLocale } from './use-locale';
 export { useSafeArea } from './use-safe-area';
 export { useViewport } from './use-viewport';
+export type { Viewport } from './use-viewport';
 export { useIsMobile } from './use-mobile';
+
+// === Components ===
+export { SafeArea } from './safe-area';
+export type { SafeAreaProps } from './safe-area';
 
 // === Action hooks (wrap App methods) ===
 export { useCallServerTool } from './use-call-server-tool';
@@ -41,10 +48,6 @@ export { useHostInfo } from './use-host-info';
 export type { HostVersion, HostCapabilities } from './use-host-info';
 
 // === Event hooks (reactive state from App events) ===
-export { useToolInputPartial } from './use-tool-input-partial';
-export type { ToolInputPartial } from './use-tool-input-partial';
-export { useToolCancelled } from './use-tool-cancelled';
-export type { ToolCancelled } from './use-tool-cancelled';
 export { useTeardown } from './use-teardown';
 
 // === State management ===

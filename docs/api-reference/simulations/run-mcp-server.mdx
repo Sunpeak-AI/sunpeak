@@ -130,11 +130,10 @@ The server creates MCP Tools and Resources from your simulations:
 Your app accesses the mock data via runtime hooks:
 
 ```typescript
-import { useApp, useToolData } from 'sunpeak';
+import { useToolData } from 'sunpeak';
 
 function MyApp() {
-  const { app } = useApp({ appInfo: { name: 'MyApp', version: '1.0.0' } });
-  const { output } = useToolData<unknown, { items: string[] }>(app);
+  const { output } = useToolData<unknown, { items: string[] }>();
 
   return <div>{output?.items.map(item => <p key={item}>{item}</p>)}</div>;
 }

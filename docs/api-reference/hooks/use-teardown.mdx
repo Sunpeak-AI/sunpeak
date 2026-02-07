@@ -17,16 +17,11 @@ import { useTeardown } from 'sunpeak';
 
 ```tsx
 function useTeardown(
-  app: App | null,
   callback: () => Promise<void> | void
 ): void
 ```
 
 ## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 <ResponseField name="callback" type="() => Promise<void> | void" required>
   Cleanup function to run before app destruction.
@@ -41,18 +36,16 @@ function useTeardown(
 ## Usage
 
 ```tsx
-import { useApp, useTeardown } from 'sunpeak';
+import { useTeardown } from 'sunpeak';
 import { useCallback } from 'react';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-
   const cleanup = useCallback(async () => {
     console.log('App is being torn down');
     // Save state, close connections, etc.
   }, []);
 
-  useTeardown(app, cleanup);
+  useTeardown(cleanup);
 
   return <div>My Resource</div>;
 }

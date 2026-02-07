@@ -7,13 +7,13 @@ description: "A flexible review dialog for confirmations across purchase reviews
 
 `Review` is a production-ready review resource included in the sunpeak framework. It provides a flexible confirmation dialog that adapts to various use cases including purchase reviews, code change approvals, social media post previews, booking confirmations, and generic action reviews.
 
-The resource uses `useToolData(app).output` for configuration data and `useAppState(app)` to persist the user's decision across sessions.
+The resource uses `useToolData().output` for configuration data and `useAppState()` to persist the user's decision across sessions.
 
 ## Data Structure
 
 ### ReviewData
 
-The resource expects data in the following format via `useToolData(app).output`:
+The resource expects data in the following format via `useToolData().output`:
 
 ```tsx
 interface ReviewData {
@@ -154,7 +154,7 @@ interface ReviewTool {
 
 ## State Management
 
-The resource uses `useAppState(app)` to persist the user's decision:
+The resource uses `useAppState()` to persist the user's decision:
 
 ```tsx
 interface ReviewState {
@@ -186,7 +186,7 @@ Display contextual alerts with four severity levels:
 
 ### Fullscreen Support
 
-Includes a fullscreen toggle button using `useDisplayMode(app)` and `useCallServerTool(app)` for expanded viewing of complex reviews.
+Includes a fullscreen toggle button using `useDisplayMode()` and `useCallServerTool()` for expanded viewing of complex reviews.
 
 ### Responsive Button Sizing
 
@@ -194,11 +194,7 @@ Detects touch capabilities from the host context and automatically adjusts butto
 
 ### Safe Area Support
 
-Respects device safe areas using `useSafeArea(app)` to ensure proper padding on devices with notches or rounded corners.
-
-### Height Constraints
-
-Uses `useViewport(app)` to adapt to available screen space and prevent overflow.
+Wraps content in the `<SafeArea>` component, which automatically applies device safe area padding and viewport height constraints.
 
 ## Common Use Cases
 

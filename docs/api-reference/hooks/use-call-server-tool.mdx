@@ -16,16 +16,8 @@ import { useCallServerTool } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useCallServerTool(
-  app: App | null
-): (params: CallServerToolParams) => Promise<CallServerToolResult | undefined>
+function useCallServerTool(): (params: CallServerToolParams) => Promise<CallServerToolResult | undefined>
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 ### CallServerToolParams
 
@@ -56,11 +48,10 @@ function useCallServerTool(
 ## Usage
 
 ```tsx
-import { useApp, useCallServerTool } from 'sunpeak';
+import { useCallServerTool } from 'sunpeak';
 
 function ReviewResource() {
-  const { app } = useApp({ appInfo: { name: 'Review', version: '1.0.0' } });
-  const callTool = useCallServerTool(app);
+  const callTool = useCallServerTool();
 
   const handleApply = async () => {
     const result = await callTool({

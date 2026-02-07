@@ -1,7 +1,7 @@
 import { useHostContext } from './use-host-context';
-import type { App, McpUiTheme } from '@modelcontextprotocol/ext-apps';
+import type { McpUiTheme } from '@modelcontextprotocol/ext-apps';
 
-export function useTheme(app: App | null): McpUiTheme {
-  const context = useHostContext(app);
+export function useTheme(): McpUiTheme {
+  const context = useHostContext();
   return context?.theme ?? 'light';
 }

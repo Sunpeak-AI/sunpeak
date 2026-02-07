@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import type { App, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
+import { useHostContext } from './use-host-context';
 
 /**
  * Display modes available for apps.
@@ -12,14 +13,10 @@ export type AppDisplayMode = 'inline' | 'pip' | 'fullscreen';
  * Returns a function to request display mode changes and the list of available modes.
  * Always check `availableModes` before requesting a mode change.
  *
- * @param app - The MCP App instance (from useApp).
- *
  * @example
  * ```tsx
  * function MyApp() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const hostContext = useHostContext(app);
- *   const { requestDisplayMode, availableModes } = useRequestDisplayMode(app, hostContext);
+ *   const { requestDisplayMode, availableModes } = useRequestDisplayMode();
  *
  *   return (
  *     <>
@@ -38,15 +35,15 @@ export type AppDisplayMode = 'inline' | 'pip' | 'fullscreen';
  * }
  * ```
  */
-export function useRequestDisplayMode(
-  app: App | null,
-  hostContext: McpUiHostContext | null
-): {
+export function useRequestDisplayMode(): {
   /** Request a display mode change */
   requestDisplayMode: (mode: AppDisplayMode) => Promise<void>;
   /** List of display modes the host supports */
   availableModes: AppDisplayMode[] | undefined;
 } {
+  const app = useApp();
+  const hostContext = useHostContext();
+
   const requestDisplayMode = useCallback(
     async (mode: AppDisplayMode) => {
       if (!app) {

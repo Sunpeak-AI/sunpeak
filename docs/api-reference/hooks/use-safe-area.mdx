@@ -7,6 +7,8 @@ description: "Get safe area insets."
 
 The `useSafeArea` hook returns the safe area insets for handling device notches, status bars, and other system UI. It is a convenience wrapper around `useHostContext`.
 
+<Tip>For most resources, use the [`<SafeArea>`](/api-reference/hooks/safe-area) component instead — it applies both safe area padding and viewport height constraints automatically.</Tip>
+
 ## Import
 
 ```tsx
@@ -16,14 +18,8 @@ import { useSafeArea } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useSafeArea(app: App | null): SafeAreaInsets
+function useSafeArea(): SafeAreaInsets
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
@@ -43,11 +39,10 @@ function useSafeArea(app: App | null): SafeAreaInsets
 ## Usage
 
 ```tsx
-import { useApp, useSafeArea } from 'sunpeak';
+import { useSafeArea } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const safeArea = useSafeArea(app);
+  const safeArea = useSafeArea();
 
   return (
     <div style={{ paddingTop: safeArea.top, paddingBottom: safeArea.bottom }}>

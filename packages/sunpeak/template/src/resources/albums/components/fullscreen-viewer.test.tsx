@@ -3,11 +3,23 @@ import { describe, it, expect, vi } from 'vitest';
 import { FullscreenViewer } from './fullscreen-viewer';
 import type { Album } from './albums';
 
-// Mock sunpeak hooks
-let mockSafeArea = { top: 0, bottom: 0, left: 0, right: 0 };
-
+// Mock sunpeak — SafeArea renders as a plain div
 vi.mock('sunpeak', () => ({
-  useSafeArea: () => mockSafeArea,
+  SafeArea: vi.fn(
+    ({
+      children,
+      className,
+      ...props
+    }: {
+      children: React.ReactNode;
+      className?: string;
+      [key: string]: unknown;
+    }) => (
+      <div data-testid="safe-area" className={className} {...props}>
+        {children}
+      </div>
+    )
+  ),
 }));
 
 describe('FullscreenViewer', () => {
@@ -23,7 +35,7 @@ describe('FullscreenViewer', () => {
   };
 
   it('resets to first photo when album changes', () => {
-    const { rerender, container } = render(<FullscreenViewer app={null} album={mockAlbum} />);
+    const { rerender, container } = render(<FullscreenViewer album={mockAlbum} />);
 
     // Get the main photo area
     const mainPhotoArea = container.querySelector('.flex-1');
@@ -43,7 +55,7 @@ describe('FullscreenViewer', () => {
     };
 
     // Rerender with different album
-    rerender(<FullscreenViewer app={null} album={differentAlbum} />);
+    rerender(<FullscreenViewer album={differentAlbum} />);
 
     // Should show the first photo of the new album
     mainPhoto = mainPhotoArea?.querySelector('img');
@@ -52,7 +64,7 @@ describe('FullscreenViewer', () => {
   });
 
   it('displays correct photo based on selected index from FilmStrip', () => {
-    const { container } = render(<FullscreenViewer app={null} album={mockAlbum} />);
+    const { container } = render(<FullscreenViewer album={mockAlbum} />);
 
     // Get the main photo
     const mainPhotoArea = container.querySelector('.flex-1');
@@ -70,25 +82,17 @@ describe('FullscreenViewer', () => {
       photos: [],
     };
 
-    const { container } = render(<FullscreenViewer app={null} album={emptyAlbum} />);
+    const { container } = render(<FullscreenViewer album={emptyAlbum} />);
 
     // Should not render any img element in the main photo area
     const images = container.querySelectorAll('img');
     expect(images.length).toBe(0);
   });
 
-  it('respects safe area insets', () => {
-    mockSafeArea = { top: 20, bottom: 30, left: 10, right: 15 };
+  it('wraps content in SafeArea', () => {
+    const { container } = render(<FullscreenViewer album={mockAlbum} />);
 
-    const { container } = render(<FullscreenViewer app={null} album={mockAlbum} />);
-
-    // Check root div has safe area padding
-    const rootDiv = container.firstChild as HTMLElement;
-    expect(rootDiv).toHaveStyle({
-      paddingTop: '20px',
-      paddingBottom: '30px',
-      paddingLeft: '10px',
-      paddingRight: '15px',
-    });
+    const safeArea = container.querySelector('[data-testid="safe-area"]');
+    expect(safeArea).toBeInTheDocument();
   });
 });

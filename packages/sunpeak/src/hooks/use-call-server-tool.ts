@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * Parameters for calling a server tool.
@@ -25,15 +26,11 @@ export interface CallServerToolResult {
  * Hook to call other MCP server tools from within an app.
  *
  * Returns a function that invokes a tool on the MCP server and returns its result.
- * The result is returned to the same app instance (not rendered as a new message).
- *
- * @param app - The MCP App instance (from useApp).
  *
  * @example
  * ```tsx
  * function MyApp() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const callServerTool = useCallServerTool(app);
+ *   const callServerTool = useCallServerTool();
  *
  *   const handleRefresh = async () => {
  *     const result = await callServerTool({
@@ -47,9 +44,10 @@ export interface CallServerToolResult {
  * }
  * ```
  */
-export function useCallServerTool(
-  app: App | null
-): (params: CallServerToolParams) => Promise<CallServerToolResult | undefined> {
+export function useCallServerTool(): (
+  params: CallServerToolParams
+) => Promise<CallServerToolResult | undefined> {
+  const app = useApp();
   return useCallback(
     async (params: CallServerToolParams) => {
       if (!app) {

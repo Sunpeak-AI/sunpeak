@@ -1,7 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Albums, type AlbumsData } from './albums';
-import type { App } from '@modelcontextprotocol/ext-apps';
 
 // Mock sunpeak hooks
 const mockSetState = vi.fn();
@@ -13,11 +12,8 @@ let mockHostContext: {
   deviceCapabilities: { hover: true, touch: false },
 };
 
-const mockApp = {
-  requestDisplayMode: mockRequestDisplayMode,
-} as unknown as App;
-
 vi.mock('sunpeak', () => ({
+  useApp: () => ({ requestDisplayMode: mockRequestDisplayMode }),
   useToolData: () => ({
     output: mockToolOutput,
     input: null,
@@ -82,7 +78,7 @@ describe('Albums', () => {
   });
 
   it('renders Carousel with all albums in default mode', () => {
-    render(<Albums app={mockApp} />);
+    render(<Albums />);
 
     // Should render carousel
     expect(screen.getByTestId('carousel')).toBeInTheDocument();
@@ -93,7 +89,7 @@ describe('Albums', () => {
   });
 
   it('calls setState and requestDisplayMode when album is selected', () => {
-    render(<Albums app={mockApp} />);
+    render(<Albums />);
 
     // Find and click the first album
     const firstAlbum = screen.getByText('Summer Vacation').closest('button')!;
@@ -114,7 +110,7 @@ describe('Albums', () => {
   it('renders empty carousel when no albums provided', () => {
     mockToolOutput = { albums: [] };
 
-    const { container } = render(<Albums app={mockApp} />);
+    const { container } = render(<Albums />);
 
     // Should render carousel (even if empty)
     expect(screen.getByTestId('carousel')).toBeInTheDocument();
@@ -127,7 +123,7 @@ describe('Albums', () => {
   it('passes larger button size for touch devices', () => {
     mockHostContext = { deviceCapabilities: { hover: false, touch: true } };
 
-    render(<Albums app={mockApp} />);
+    render(<Albums />);
 
     const albumButtons = screen.getAllByRole('button');
     albumButtons.forEach((button) => {
@@ -138,7 +134,7 @@ describe('Albums', () => {
   it('passes standard button size for non-touch devices', () => {
     mockHostContext = { deviceCapabilities: { hover: true, touch: false } };
 
-    render(<Albums app={mockApp} />);
+    render(<Albums />);
 
     const albumButtons = screen.getAllByRole('button');
     albumButtons.forEach((button) => {

@@ -217,8 +217,8 @@ export async function build(projectRoot = process.cwd()) {
 
       // Create entry file from template in temp directory
       const entryContent = template
-        .replace('// RESOURCE_IMPORT', `import { ${componentName} } from '../src/resources/${kebabName}/${componentFile}';`)
-        .replace('// RESOURCE_MOUNT', `createRoot(root).render(<${componentName} />);`);
+        .replace('// RESOURCE_IMPORT', `import { ${componentName}, resource } from '../src/resources/${kebabName}/${componentFile}';`)
+        .replace('// RESOURCE_MOUNT', `createRoot(root).render(<AppProvider appInfo={{ name: resource.name, version: '1.0.0' }}><${componentName} /></AppProvider>);`);
 
       const entryPath = path.join(projectRoot, entry);
       writeFileSync(entryPath, entryContent);

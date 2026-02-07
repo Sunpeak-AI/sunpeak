@@ -27,8 +27,17 @@ const simulations = buildDevSimulations({
 const appName = import.meta.env?.VITE_APP_NAME || 'Sunpeak';
 const appIcon = import.meta.env?.VITE_APP_ICON || '🌄';
 
-createRoot(document.getElementById('root')!).render(
+// Reuse existing React root across HMR updates to avoid full page reload
+// when resource files change (they have mixed exports that disable Fast Refresh)
+const root = import.meta.hot?.data?.root ?? createRoot(document.getElementById('root')!);
+if (import.meta.hot) import.meta.hot.data.root = root;
+
+root.render(
   <StrictMode>
     <ChatGPTSimulator simulations={simulations} appName={appName} appIcon={appIcon} />
   </StrictMode>
 );
+
+if (import.meta.hot) {
+  import.meta.hot.accept();
+}

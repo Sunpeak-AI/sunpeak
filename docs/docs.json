@@ -111,9 +111,13 @@
               "api-reference/hooks/use-request-display-mode",
               "api-reference/hooks/use-send-log",
               "api-reference/hooks/use-host-info",
-              "api-reference/hooks/use-tool-input-partial",
-              "api-reference/hooks/use-tool-cancelled",
               "api-reference/hooks/use-teardown"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "api-reference/hooks/safe-area"
             ]
           }
         ]

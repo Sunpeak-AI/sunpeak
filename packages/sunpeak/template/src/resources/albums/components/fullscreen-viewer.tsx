@@ -1,18 +1,15 @@
 import * as React from 'react';
-import { useSafeArea } from 'sunpeak';
-import type { App } from 'sunpeak';
+import { SafeArea } from 'sunpeak';
 import { cn } from '../../../lib/index';
 import { FilmStrip } from './film-strip';
 import type { Album } from './albums';
 
 export type FullscreenViewerProps = {
-  app: App | null;
   album: Album;
   className?: string;
 };
 
-export function FullscreenViewer({ app, album, className }: FullscreenViewerProps) {
-  const safeArea = useSafeArea(app);
+export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
   const [selectedIndex, setSelectedIndex] = React.useState(0);
   const [width, setWidth] = React.useState(0);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -44,15 +41,9 @@ export function FullscreenViewer({ app, album, className }: FullscreenViewerProp
   const isMobile = width > 0 && width < 768;
 
   return (
-    <div
+    <SafeArea
       ref={containerRef}
       className={cn('flex w-full bg-surface', isMobile ? 'flex-col' : 'flex-row', className)}
-      style={{
-        paddingTop: `${safeArea.top}px`,
-        paddingBottom: `${safeArea.bottom}px`,
-        paddingLeft: `${safeArea.left}px`,
-        paddingRight: `${safeArea.right}px`,
-      }}
     >
       {/* Album header - mobile only */}
       {isMobile && (
@@ -81,6 +72,6 @@ export function FullscreenViewer({ app, album, className }: FullscreenViewerProp
           />
         ) : null}
       </div>
-    </div>
+    </SafeArea>
   );
 }

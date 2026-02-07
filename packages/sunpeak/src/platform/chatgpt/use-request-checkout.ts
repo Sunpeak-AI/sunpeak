@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from '../../hooks/use-app';
 import {
   getOpenAIRuntime,
   type OpenAICheckoutSession,
@@ -20,12 +20,10 @@ export type { OpenAICheckoutOrder as CheckoutOrder };
  *
  * @example
  * ```tsx
- * import { useApp } from 'sunpeak';
  * import { useRequestCheckout } from 'sunpeak/platform/chatgpt';
  *
  * function BuyButton() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const requestCheckout = useRequestCheckout(app);
+ *   const requestCheckout = useRequestCheckout();
  *
  *   const handleBuy = async () => {
  *     try {
@@ -51,12 +49,11 @@ export type { OpenAICheckoutOrder as CheckoutOrder };
  *   return <button onClick={handleBuy}>Buy Now</button>;
  * }
  * ```
- *
- * @param app - The MCP App instance (from useApp).
  */
-export function useRequestCheckout(
-  app: App | null
-): (session: OpenAICheckoutSession) => Promise<OpenAICheckoutOrder> {
+export function useRequestCheckout(): (
+  session: OpenAICheckoutSession
+) => Promise<OpenAICheckoutOrder> {
+  const app = useApp();
   return useCallback(
     async (session: OpenAICheckoutSession) => {
       if (!app) {

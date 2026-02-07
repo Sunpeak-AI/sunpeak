@@ -1,0 +1,65 @@
+---
+title: "SafeArea"
+description: "Component that applies safe area padding and viewport constraints."
+---
+
+## Overview
+
+The `SafeArea` component wraps content with device safe area padding and viewport height constraints. It replaces the common pattern of manually combining `useSafeArea()` and `useViewport()` in every resource.
+
+## Import
+
+```tsx
+import { SafeArea } from 'sunpeak';
+```
+
+## Props
+
+`SafeArea` accepts all standard `<div>` props (`className`, `style`, `ref`, etc.) plus:
+
+<ResponseField name="children" type="ReactNode" required>
+  Content to render inside the safe area.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { SafeArea } from 'sunpeak';
+
+function MyResource() {
+  return (
+    <SafeArea className="h-full">
+      <h1>Hello</h1>
+      <p>This content respects device safe areas and viewport constraints.</p>
+    </SafeArea>
+  );
+}
+```
+
+## What it does
+
+`SafeArea` renders a `<div>` with:
+
+- `paddingTop`, `paddingBottom`, `paddingLeft`, `paddingRight` from the host's safe area insets (for notches, status bars, rounded corners)
+- `maxHeight` from the host's viewport dimensions
+
+You can override or extend these via the `style` prop. Any additional props (like `className`) are passed through to the underlying `<div>`.
+
+## Ref forwarding
+
+`SafeArea` forwards refs to the underlying `<div>`, so you can use it with `useRef`:
+
+```tsx
+import { useRef } from 'react';
+import { SafeArea } from 'sunpeak';
+
+function MyResource() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  return (
+    <SafeArea ref={containerRef} className="overflow-auto">
+      <div>Scrollable content</div>
+    </SafeArea>
+  );
+}
+```

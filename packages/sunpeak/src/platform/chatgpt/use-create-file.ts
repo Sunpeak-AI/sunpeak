@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from '../../hooks/use-app';
 import { getOpenAIRuntime, type OpenAIUploadFileResult } from './openai-types';
 
 export type { OpenAIUploadFileResult as CreateFileResult };
@@ -14,12 +14,10 @@ export type { OpenAIUploadFileResult as CreateFileResult };
  *
  * @example
  * ```tsx
- * import { useApp } from 'sunpeak';
  * import { useUploadFile } from 'sunpeak/platform/chatgpt';
  *
  * function ImageUploader() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const uploadFile = useUploadFile(app);
+ *   const uploadFile = useUploadFile();
  *
  *   const handleChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
  *     const file = e.currentTarget.files?.[0];
@@ -31,10 +29,9 @@ export type { OpenAIUploadFileResult as CreateFileResult };
  *   return <input type="file" accept="image/*" onChange={handleChange} />;
  * }
  * ```
- *
- * @param app - The MCP App instance (from useApp).
  */
-export function useUploadFile(app: App | null): (file: File) => Promise<OpenAIUploadFileResult> {
+export function useUploadFile(): (file: File) => Promise<OpenAIUploadFileResult> {
+  const app = useApp();
   return useCallback(
     async (file: File) => {
       if (!app) {

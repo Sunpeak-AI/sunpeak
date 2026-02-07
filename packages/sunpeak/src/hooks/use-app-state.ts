@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * State management with automatic sync to host via updateModelContext.
@@ -8,15 +8,12 @@ import type { App } from '@modelcontextprotocol/ext-apps';
  * state updates to the host via `app.updateModelContext()`. The host can
  * then include this state in the model's context for the next message.
  *
- * Works with any MCP Apps host that supports the updateModelContext capability.
- *
  * @example Basic usage
  * ```tsx
  * import { useAppState } from 'sunpeak';
  *
  * function MyResource() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const [state, setState] = useAppState(app, { count: 0 });
+ *   const [state, setState] = useAppState({ count: 0 });
  *
  *   return (
  *     <button onClick={() => setState(prev => ({ ...prev, count: prev.count + 1 }))}>
@@ -33,20 +30,14 @@ import type { App } from '@modelcontextprotocol/ext-apps';
  *   items: string[];
  * }
  *
- * const [state, setState] = useAppState<MyState>(app, {
- *   selectedId: null,
- *   items: [],
- * });
+ * const [state, setState] = useAppState<MyState>({ selectedId: null, items: [] });
  * ```
  *
- * @param app - The MCP App instance (from useApp).
  * @param defaultState - Initial state value.
  * @returns A tuple of [state, setState] similar to React's useState.
  */
-export function useAppState<T extends Record<string, unknown>>(
-  app: App | null,
-  defaultState: T
-): readonly [T, (state: SetStateAction<T>) => void] {
+export function useAppState<T>(defaultState: T): readonly [T, (state: SetStateAction<T>) => void] {
+  const app = useApp();
   const [state, _setState] = useState<T>(defaultState);
   const pendingSync = useRef<T | null>(null);
 

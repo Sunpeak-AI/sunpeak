@@ -7,13 +7,13 @@ description: "An interactive map with points of interest, location data, and det
 
 `Map` is a production-ready map resource included in the sunpeak framework. It displays pizza restaurants on an interactive map with list and carousel views, switching between inline and fullscreen display modes for different browsing experiences.
 
-The resource retrieves place data from `useToolData(app).output` and manages selection state with `useAppState(app)`.
+The resource retrieves place data from `useToolData().output` and manages selection state with `useAppState()`.
 
 ## Data Structure
 
 ### MapData
 
-The resource expects data in the following format via `useToolData(app).output`:
+The resource expects data in the following format via `useToolData().output`:
 
 ```tsx
 interface MapData {
@@ -83,7 +83,7 @@ Displays a map view with a bottom carousel of place cards. Features include:
 ### Fullscreen Mode
 
 When the user clicks the fullscreen button or selects a place, the resource:
-1. Requests fullscreen mode via `useDisplayMode(app)`.
+1. Requests fullscreen mode via `useDisplayMode()`.
 2. Displays a sidebar list of places (desktop).
 3. Shows a detailed inspector panel when a place is selected.
 4. Includes suggestion chips for filtering (desktop only).
@@ -91,7 +91,7 @@ When the user clicks the fullscreen button or selects a place, the resource:
 
 ## State Management
 
-The resource uses `useAppState(app)` to persist the selected place across sessions:
+The resource uses `useAppState()` to persist the selected place across sessions:
 
 ```tsx
 interface MapState {
@@ -119,11 +119,7 @@ Clicking a place in the carousel, list, or map updates the selected place and di
 
 ### Safe Area Support
 
-Respects device safe areas using `useSafeArea(app)` to ensure proper padding on devices with notches or rounded corners.
-
-### Height Constraints
-
-Uses `useViewport(app)` to adapt to available screen space and prevent overflow.
+Wraps content in the `<SafeArea>` component, which automatically applies device safe area padding and viewport height constraints.
 
 ## Common Use Cases
 

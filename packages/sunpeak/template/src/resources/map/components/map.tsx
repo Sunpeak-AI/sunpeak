@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { useAppState, useDisplayMode, useToolData, useViewport } from 'sunpeak';
-import type { App } from 'sunpeak';
+import { useApp, useAppState, useDisplayMode, useToolData, useViewport } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
 import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
 import { cn } from '../../../lib/index';
@@ -15,17 +14,17 @@ interface MapState {
 }
 
 export type MapProps = {
-  app: App | null;
   className?: string;
 };
 
-export function Map({ app, className }: MapProps) {
-  const { output } = useToolData<unknown, MapData>(app, undefined, { places: [] });
-  const [state, setState] = useAppState<MapState>(app, {
+export function Map({ className }: MapProps) {
+  const app = useApp();
+  const { output } = useToolData<unknown, MapData>(undefined, { places: [] });
+  const [state, setState] = useAppState<MapState>({
     selectedPlaceId: null,
   });
-  const displayMode = useDisplayMode(app);
-  const viewport = useViewport(app);
+  const displayMode = useDisplayMode();
+  const viewport = useViewport();
 
   const maxHeight = viewport?.maxHeight ?? null;
   const places = output?.places ?? [];

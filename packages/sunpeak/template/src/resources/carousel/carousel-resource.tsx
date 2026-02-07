@@ -1,11 +1,4 @@
-import {
-  useApp,
-  useToolData,
-  useSafeArea,
-  useViewport,
-  useHostContext,
-  useDisplayMode,
-} from 'sunpeak';
+import { useToolData, useHostContext, useDisplayMode, SafeArea } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 import { Carousel, Card } from './components';
 
@@ -46,30 +39,15 @@ interface CarouselData {
 }
 
 export function CarouselResource() {
-  const { app } = useApp({
-    appInfo: { name: 'CarouselResource', version: '1.0.0' },
-    capabilities: {},
-  });
-
-  const { output } = useToolData<unknown, CarouselData>(app, undefined, { places: [] });
-  const safeArea = useSafeArea(app);
-  const viewport = useViewport(app);
-  const context = useHostContext(app);
-  const displayMode = useDisplayMode(app);
+  const { output } = useToolData<unknown, CarouselData>(undefined, { places: [] });
+  const context = useHostContext();
+  const displayMode = useDisplayMode();
 
   const hasTouch = context?.deviceCapabilities?.touch ?? false;
   const places = output?.places ?? [];
 
   return (
-    <div
-      style={{
-        paddingTop: `${safeArea.top}px`,
-        paddingBottom: `${safeArea.bottom}px`,
-        paddingLeft: `${safeArea.left}px`,
-        paddingRight: `${safeArea.right}px`,
-        maxHeight: (viewport as { maxHeight?: number } | null)?.maxHeight,
-      }}
-    >
+    <SafeArea>
       <Carousel
         gap={16}
         showArrows={true}
@@ -100,6 +78,6 @@ export function CarouselResource() {
           </Card>
         ))}
       </Carousel>
-    </div>
+    </SafeArea>
   );
 }

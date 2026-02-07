@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from '../../hooks/use-app';
 import { getOpenAIRuntime, type OpenAIFileDownloadUrlResult } from './openai-types';
 
 export type { OpenAIFileDownloadUrlResult as FileDownloadUrlResult };
@@ -15,12 +15,10 @@ export type { OpenAIFileDownloadUrlResult as FileDownloadUrlResult };
  *
  * @example
  * ```tsx
- * import { useApp } from 'sunpeak';
  * import { useGetFileDownloadUrl } from 'sunpeak/platform/chatgpt';
  *
  * function FilePreview({ fileId }: { fileId: string }) {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const getFileDownloadUrl = useGetFileDownloadUrl(app);
+ *   const getFileDownloadUrl = useGetFileDownloadUrl();
  *   const [src, setSrc] = useState<string>();
  *
  *   useEffect(() => {
@@ -30,12 +28,11 @@ export type { OpenAIFileDownloadUrlResult as FileDownloadUrlResult };
  *   return src ? <img src={src} /> : <p>Loading...</p>;
  * }
  * ```
- *
- * @param app - The MCP App instance (from useApp).
  */
-export function useGetFileDownloadUrl(
-  app: App | null
-): (params: { fileId: string }) => Promise<OpenAIFileDownloadUrlResult> {
+export function useGetFileDownloadUrl(): (params: {
+  fileId: string;
+}) => Promise<OpenAIFileDownloadUrlResult> {
+  const app = useApp();
   return useCallback(
     async (params: { fileId: string }) => {
       if (!app) {

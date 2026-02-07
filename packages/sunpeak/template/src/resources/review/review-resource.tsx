@@ -2,10 +2,9 @@ import {
   useApp,
   useAppState,
   useToolData,
-  useSafeArea,
-  useViewport,
   useHostContext,
   useDisplayMode,
+  SafeArea,
 } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 import { Button } from '@openai/apps-sdk-ui/components/Button';
@@ -122,7 +121,6 @@ interface ReviewData {
 }
 
 interface ReviewState {
-  [key: string]: unknown;
   decision: 'accepted' | 'rejected' | null;
   decidedAt: string | null;
 }
@@ -323,25 +321,20 @@ function AlertBanner({ alert }: { alert: Alert }) {
 // ============================================================================
 
 export function ReviewResource() {
-  const { app } = useApp({
-    appInfo: { name: 'ReviewResource', version: '1.0.0' },
-    capabilities: {},
-  });
+  const app = useApp();
 
-  const { output } = useToolData<unknown, ReviewData>(app, undefined, {
+  const { output } = useToolData<unknown, ReviewData>(undefined, {
     title: 'Review',
     sections: [],
   });
 
-  const [state, setState] = useAppState<ReviewState>(app, {
+  const [state, setState] = useAppState<ReviewState>({
     decision: null,
     decidedAt: null,
   });
 
-  const safeArea = useSafeArea(app);
-  const viewport = useViewport(app);
-  const context = useHostContext(app);
-  const displayMode = useDisplayMode(app);
+  const context = useHostContext();
+  const displayMode = useDisplayMode();
 
   const hasTouch = context?.deviceCapabilities?.touch ?? false;
   const decision = state.decision ?? null;
@@ -400,16 +393,7 @@ export function ReviewResource() {
   const alerts = data.alerts ?? [];
 
   return (
-    <div
-      className="flex flex-col"
-      style={{
-        paddingTop: `${safeArea.top}px`,
-        paddingBottom: `${safeArea.bottom}px`,
-        paddingLeft: `${safeArea.left}px`,
-        paddingRight: `${safeArea.right}px`,
-        maxHeight: (viewport as { maxHeight?: number } | null)?.maxHeight,
-      }}
-    >
+    <SafeArea className="flex flex-col">
       {/* Header */}
       <div className="px-4 pt-4 pb-3 border-b border-subtle">
         <div className="flex items-start justify-between gap-2">
@@ -498,6 +482,6 @@ export function ReviewResource() {
           </div>
         )}
       </div>
-    </div>
+    </SafeArea>
   );
 }

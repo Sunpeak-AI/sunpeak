@@ -217,14 +217,28 @@ export async function dev(projectRoot = process.cwd(), args = []) {
             return `
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
+import { AppProvider } from 'sunpeak';
 import '/src/styles/globals.css';
 import * as ResourceModule from '${srcPath}';
+
+// Reuse React root across HMR updates to preserve the AppProvider host connection.
+// The host renders this HTML inline (not at a fetchable URL), so location.reload()
+// would blank the iframe. Self-accept prevents that by re-executing with fresh imports.
+const root = import.meta.hot?.data?.root ?? createRoot(document.getElementById('root'));
+if (import.meta.hot) import.meta.hot.data.root = root;
 
 const Component = ResourceModule.default || ResourceModule['${componentName}'];
 if (!Component) {
   document.getElementById('root').innerHTML = '<pre style="color:red;padding:16px">Component not found: ${componentName}\\nExports: ' + Object.keys(ResourceModule).join(', ') + '</pre>';
 } else {
-  createRoot(document.getElementById('root')).render(createElement(Component));
+  const appInfo = { name: ResourceModule.resource?.name || '${componentName}', version: '1.0.0' };
+  root.render(
+    createElement(AppProvider, { appInfo }, createElement(Component))
+  );
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept();
 }
 `;
           }

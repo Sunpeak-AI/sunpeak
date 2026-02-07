@@ -10,30 +10,17 @@ Returns a function to request display mode changes and the list of available mod
 ## Import
 
 ```tsx
-import { useRequestDisplayMode, useHostContext } from 'sunpeak';
+import { useRequestDisplayMode } from 'sunpeak';
 ```
 
 ## Signature
 
 ```tsx
-function useRequestDisplayMode(
-  app: App | null,
-  hostContext: McpUiHostContext | null
-): {
+function useRequestDisplayMode(): {
   requestDisplayMode: (mode: AppDisplayMode) => Promise<void>;
   availableModes: AppDisplayMode[] | undefined;
 }
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
-
-<ResponseField name="hostContext" type="McpUiHostContext | null" required>
-  Host context from `useHostContext()`.
-</ResponseField>
 
 ### AppDisplayMode
 
@@ -54,12 +41,10 @@ function useRequestDisplayMode(
 ## Usage
 
 ```tsx
-import { useApp, useHostContext, useRequestDisplayMode } from 'sunpeak';
+import { useRequestDisplayMode } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const hostContext = useHostContext(app);
-  const { requestDisplayMode, availableModes } = useRequestDisplayMode(app, hostContext);
+  const { requestDisplayMode, availableModes } = useRequestDisplayMode();
 
   return (
     <div>

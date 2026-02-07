@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { useAppState, useDisplayMode, useToolData, useHostContext } from 'sunpeak';
-import type { App } from 'sunpeak';
+import { useApp, useAppState, useDisplayMode, useToolData, useHostContext } from 'sunpeak';
 import { AlbumCarousel } from './album-carousel';
 import { AlbumCard } from './album-card';
 import { FullscreenViewer } from './fullscreen-viewer';
@@ -25,17 +24,17 @@ interface AlbumsState {
 }
 
 export type AlbumsProps = {
-  app: App | null;
   className?: string;
 };
 
-export function Albums({ app, className }: AlbumsProps) {
-  const { output } = useToolData<unknown, AlbumsData>(app, undefined, { albums: [] });
-  const [state, setState] = useAppState<AlbumsState>(app, {
+export function Albums({ className }: AlbumsProps) {
+  const app = useApp();
+  const { output } = useToolData<unknown, AlbumsData>(undefined, { albums: [] });
+  const [state, setState] = useAppState<AlbumsState>({
     selectedAlbumId: null,
   });
-  const displayMode = useDisplayMode(app);
-  const context = useHostContext(app);
+  const displayMode = useDisplayMode();
+  const context = useHostContext();
 
   const albums = output?.albums ?? [];
   const selectedAlbum = albums.find((album: Album) => album.id === state.selectedAlbumId);
@@ -50,7 +49,7 @@ export function Albums({ app, className }: AlbumsProps) {
   );
 
   if (displayMode === 'fullscreen' && selectedAlbum) {
-    return <FullscreenViewer app={app} album={selectedAlbum} />;
+    return <FullscreenViewer album={selectedAlbum} />;
   }
 
   return (

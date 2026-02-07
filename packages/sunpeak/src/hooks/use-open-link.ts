@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * Parameters for opening a link.
@@ -15,13 +15,10 @@ export interface OpenLinkParams {
  * Opens a URL in a new tab/window through the host's link handling mechanism.
  * This is preferred over `window.open()` as it respects the host's security policies.
  *
- * @param app - The MCP App instance (from useApp).
- *
  * @example
  * ```tsx
  * function MyApp() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const openLink = useOpenLink(app);
+ *   const openLink = useOpenLink();
  *
  *   return (
  *     <button onClick={() => openLink({ url: 'https://example.com' })}>
@@ -31,7 +28,8 @@ export interface OpenLinkParams {
  * }
  * ```
  */
-export function useOpenLink(app: App | null): (params: OpenLinkParams) => Promise<void> {
+export function useOpenLink(): (params: OpenLinkParams) => Promise<void> {
+  const app = useApp();
   return useCallback(
     async (params: OpenLinkParams) => {
       if (!app) {

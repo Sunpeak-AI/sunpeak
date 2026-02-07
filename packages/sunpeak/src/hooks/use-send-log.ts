@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * Log levels for structured logging.
@@ -24,13 +24,10 @@ export interface SendLogParams {
  * Sends logs through the MCP protocol rather than just console.log.
  * Useful for debugging in production where console isn't accessible.
  *
- * @param app - The MCP App instance (from useApp).
- *
  * @example
  * ```tsx
  * function MyApp() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const sendLog = useSendLog(app);
+ *   const sendLog = useSendLog();
  *
  *   const handleAction = () => {
  *     sendLog({ level: 'info', data: 'User clicked button' });
@@ -45,7 +42,8 @@ export interface SendLogParams {
  * }
  * ```
  */
-export function useSendLog(app: App | null): (params: SendLogParams) => void {
+export function useSendLog(): (params: SendLogParams) => void {
+  const app = useApp();
   return useCallback(
     (params: SendLogParams) => {
       if (!app) {

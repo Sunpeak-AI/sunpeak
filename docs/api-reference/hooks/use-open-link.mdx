@@ -16,16 +16,8 @@ import { useOpenLink } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useOpenLink(
-  app: App | null
-): (params: OpenLinkParams) => Promise<void>
+function useOpenLink(): (params: OpenLinkParams) => Promise<void>
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 ### OpenLinkParams
 
@@ -42,11 +34,10 @@ function useOpenLink(
 ## Usage
 
 ```tsx
-import { useApp, useOpenLink } from 'sunpeak';
+import { useOpenLink } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const openLink = useOpenLink(app);
+  const openLink = useOpenLink();
 
   return (
     <button onClick={() => openLink({ url: 'https://example.com' })}>

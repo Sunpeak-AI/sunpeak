@@ -4,6 +4,9 @@ import 'sunpeak';
 // @ts-expect-error - Template file with placeholders
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { createRoot } from 'react-dom/client';
+// @ts-expect-error - Template file with placeholders
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { AppProvider } from 'sunpeak';
 // RESOURCE_IMPORT
 
 // Mount the resource

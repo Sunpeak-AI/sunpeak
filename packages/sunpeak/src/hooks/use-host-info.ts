@@ -1,4 +1,4 @@
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * Host version information.
@@ -34,13 +34,10 @@ export interface HostCapabilities {
  * Returns the host's version and capabilities. Use capabilities to check
  * what features are available before using them.
  *
- * @param app - The MCP App instance (from useApp).
- *
  * @example
  * ```tsx
  * function MyApp() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const { hostVersion, hostCapabilities } = useHostInfo(app);
+ *   const { hostVersion, hostCapabilities } = useHostInfo();
  *
  *   return (
  *     <div>
@@ -53,12 +50,13 @@ export interface HostCapabilities {
  * }
  * ```
  */
-export function useHostInfo(app: App | null): {
+export function useHostInfo(): {
   /** Host application version info */
   hostVersion: HostVersion | undefined;
   /** Host capabilities */
   hostCapabilities: HostCapabilities | undefined;
 } {
+  const app = useApp();
   return {
     hostVersion: app?.getHostVersion() as HostVersion | undefined,
     hostCapabilities: app?.getHostCapabilities() as HostCapabilities | undefined,

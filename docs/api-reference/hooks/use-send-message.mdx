@@ -16,16 +16,8 @@ import { useSendMessage } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useSendMessage(
-  app: App | null
-): (params: SendMessageParams) => Promise<void>
+function useSendMessage(): (params: SendMessageParams) => Promise<void>
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 ### SendMessageParams
 
@@ -56,11 +48,10 @@ function useSendMessage(
 ## Usage
 
 ```tsx
-import { useApp, useSendMessage } from 'sunpeak';
+import { useSendMessage } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const sendMessage = useSendMessage(app);
+  const sendMessage = useSendMessage();
 
   const handleFollowUp = async () => {
     await sendMessage({

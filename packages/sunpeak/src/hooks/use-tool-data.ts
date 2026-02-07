@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 export interface ToolData<TInput = unknown, TOutput = unknown> {
   input: TInput | null;
@@ -7,6 +8,8 @@ export interface ToolData<TInput = unknown, TOutput = unknown> {
   output: TOutput | null;
   isError: boolean;
   isLoading: boolean;
+  isCancelled: boolean;
+  cancelReason: string | null;
 }
 
 interface ToolDataStore<TInput, TOutput> {
@@ -30,6 +33,8 @@ function getStore<TInput, TOutput>(
         output: defaultOutput ?? null,
         isError: false,
         isLoading: !defaultOutput,
+        isCancelled: false,
+        cancelReason: null,
       },
       listeners: new Set(),
     };
@@ -65,23 +70,31 @@ function getStore<TInput, TOutput>(
       };
       notify();
     };
+
+    app.ontoolcancelled = (_params) => {
+      store!.data = {
+        ...store!.data,
+        isCancelled: true,
+        cancelReason: _params.reason ?? null,
+        isLoading: false,
+      };
+      notify();
+    };
   }
   return store;
 }
 
 /**
  * Reactive access to tool input and output data from the MCP Apps host.
- * Replaces useWidgetProps, useToolInput, and useToolResponseMetadata.
  *
- * @param app - The MCP App instance (from useApp).
  * @param defaultInput - Optional default input value before host sends data.
  * @param defaultOutput - Optional default output value before host sends data.
  */
 export function useToolData<TInput = unknown, TOutput = unknown>(
-  app: App | null,
   defaultInput?: TInput,
   defaultOutput?: TOutput
 ): ToolData<TInput, TOutput> {
+  const app = useApp();
   const defaultInputRef = useRef(defaultInput);
   const defaultOutputRef = useRef(defaultOutput);
 
@@ -95,6 +108,8 @@ export function useToolData<TInput = unknown, TOutput = unknown>(
       output: defaultOutput ?? null,
       isError: false,
       isLoading: !defaultOutput,
+      isCancelled: false,
+      cancelReason: null,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [] // Intentionally empty - only compute once on first render

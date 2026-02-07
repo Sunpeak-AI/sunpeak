@@ -16,14 +16,8 @@ import { useDisplayMode } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useDisplayMode(app: App | null): McpUiDisplayMode
+function useDisplayMode(): McpUiDisplayMode
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
@@ -34,11 +28,10 @@ function useDisplayMode(app: App | null): McpUiDisplayMode
 ## Usage
 
 ```tsx
-import { useApp, useDisplayMode } from 'sunpeak';
+import { useDisplayMode } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const displayMode = useDisplayMode(app);
+  const displayMode = useDisplayMode();
 
   return (
     <div className={displayMode === 'fullscreen' ? 'h-screen' : 'max-h-96'}>

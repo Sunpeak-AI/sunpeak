@@ -7,6 +7,8 @@ description: "Get container dimensions."
 
 The `useViewport` hook returns the container dimensions provided by the host. This is useful for creating responsive layouts based on the actual available space.
 
+<Tip>For most resources, use the [`<SafeArea>`](/api-reference/hooks/safe-area) component instead — it applies both safe area padding and viewport height constraints automatically.</Tip>
+
 ## Import
 
 ```tsx
@@ -16,24 +18,19 @@ import { useViewport } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useViewport(app: App | null): ContainerDimensions | null
+function useViewport(): Viewport | null
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
-<ResponseField name="return" type="ContainerDimensions | null">
+<ResponseField name="return" type="Viewport | null">
   Container dimensions, or `null` if unavailable.
 
   ```typescript
   {
     width: number;
     height: number;
+    maxHeight?: number;
   }
   ```
 </ResponseField>
@@ -41,11 +38,10 @@ function useViewport(app: App | null): ContainerDimensions | null
 ## Usage
 
 ```tsx
-import { useApp, useViewport } from 'sunpeak';
+import { useViewport } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const viewport = useViewport(app);
+  const viewport = useViewport();
 
   if (!viewport) return null;
 

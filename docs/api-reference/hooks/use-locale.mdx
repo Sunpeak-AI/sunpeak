@@ -16,14 +16,8 @@ import { useLocale } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useLocale(app: App | null): string
+function useLocale(): string
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
@@ -34,11 +28,10 @@ function useLocale(app: App | null): string
 ## Usage
 
 ```tsx
-import { useApp, useLocale } from 'sunpeak';
+import { useLocale } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const locale = useLocale(app);
+  const locale = useLocale();
 
   const formatted = new Intl.NumberFormat(locale).format(1234.56);
   return <p>{formatted}</p>;

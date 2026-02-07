@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import type { App } from '@modelcontextprotocol/ext-apps';
+import { useApp } from './use-app';
 
 /**
  * Content item for a message.
@@ -23,15 +23,11 @@ export interface SendMessageParams {
  * Hook to send follow-up messages to the conversation.
  *
  * Sends a message that appears in the conversation as if the user sent it.
- * Note: Only 'user' role is supported by the MCP Apps protocol.
- *
- * @param app - The MCP App instance (from useApp).
  *
  * @example
  * ```tsx
  * function MyApp() {
- *   const { app } = useApp({ appInfo, capabilities });
- *   const sendMessage = useSendMessage(app);
+ *   const sendMessage = useSendMessage();
  *
  *   const handleSubmit = async () => {
  *     await sendMessage({
@@ -44,7 +40,8 @@ export interface SendMessageParams {
  * }
  * ```
  */
-export function useSendMessage(app: App | null): (params: SendMessageParams) => Promise<void> {
+export function useSendMessage(): (params: SendMessageParams) => Promise<void> {
+  const app = useApp();
   return useCallback(
     async (params: SendMessageParams) => {
       if (!app) {

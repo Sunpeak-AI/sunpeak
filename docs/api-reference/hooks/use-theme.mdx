@@ -16,14 +16,8 @@ import { useTheme } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useTheme(app: App | null): McpUiTheme
+function useTheme(): McpUiTheme
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
@@ -34,11 +28,10 @@ function useTheme(app: App | null): McpUiTheme
 ## Usage
 
 ```tsx
-import { useApp, useTheme } from 'sunpeak';
+import { useTheme } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const theme = useTheme(app);
+  const theme = useTheme();
 
   return (
     <div className={theme === 'dark' ? 'bg-black text-white' : 'bg-white text-black'}>

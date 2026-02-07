@@ -16,16 +16,8 @@ import { useSendLog } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useSendLog(
-  app: App | null
-): (params: SendLogParams) => void
+function useSendLog(): (params: SendLogParams) => void
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 ### SendLogParams
 
@@ -50,11 +42,10 @@ function useSendLog(
 ## Usage
 
 ```tsx
-import { useApp, useSendLog } from 'sunpeak';
+import { useSendLog } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const sendLog = useSendLog(app);
+  const sendLog = useSendLog();
 
   const handleAction = () => {
     sendLog({ level: 'info', data: { action: 'button_clicked' }, logger: 'MyResource' });

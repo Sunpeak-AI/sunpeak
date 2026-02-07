@@ -18,14 +18,8 @@ import { useHostContext } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useHostContext(app: App | null): McpUiHostContext | null
+function useHostContext(): McpUiHostContext | null
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  The App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
@@ -46,11 +40,10 @@ interface McpUiHostContext {
 ## Usage
 
 ```tsx
-import { useApp, useHostContext } from 'sunpeak';
+import { useHostContext } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const context = useHostContext(app);
+  const context = useHostContext();
 
   return (
     <div>

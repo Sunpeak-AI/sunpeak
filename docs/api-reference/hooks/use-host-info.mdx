@@ -16,19 +16,11 @@ import { useHostInfo } from 'sunpeak';
 ## Signature
 
 ```tsx
-function useHostInfo(
-  app: App | null
-): {
+function useHostInfo(): {
   hostVersion: HostVersion | undefined;
   hostCapabilities: HostCapabilities | undefined;
 }
 ```
-
-## Parameters
-
-<ResponseField name="app" type="App | null" required>
-  App instance from `useApp()`.
-</ResponseField>
 
 ## Returns
 
@@ -75,11 +67,10 @@ function useHostInfo(
 ## Usage
 
 ```tsx
-import { useApp, useHostInfo } from 'sunpeak';
+import { useHostInfo } from 'sunpeak';
 
 function MyResource() {
-  const { app } = useApp({ appInfo: { name: 'MyResource', version: '1.0.0' } });
-  const { hostVersion, hostCapabilities } = useHostInfo(app);
+  const { hostVersion, hostCapabilities } = useHostInfo();
 
   return (
     <div>
