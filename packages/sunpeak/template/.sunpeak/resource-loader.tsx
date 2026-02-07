@@ -17,8 +17,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProvider } from 'sunpeak';
-import resourceComponents from '../src/resources';
 import '../src/styles/globals.css';
+import resourceComponents from '../src/resources';
 
 // Get the component name from URL query params
 const params = new URLSearchParams(window.location.search);

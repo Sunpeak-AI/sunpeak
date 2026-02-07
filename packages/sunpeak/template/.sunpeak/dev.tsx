@@ -11,8 +11,8 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { chatgpt } from 'sunpeak';
-import resourceComponents from '../src/resources';
 import '../src/styles/globals.css';
+import resourceComponents from '../src/resources';
 
 const { ChatGPTSimulator, buildDevSimulations } = chatgpt;
 
