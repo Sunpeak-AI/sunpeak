@@ -79,6 +79,12 @@ export interface ResourceCSP {
 }
 
 /**
+ * Domains required by the sunpeak SDK and its peer dependencies
+ * (e.g., @openai/apps-sdk-ui loads fonts/styles from cdn.openai.com).
+ */
+const SDK_RESOURCE_DOMAINS = ['https://cdn.openai.com'];
+
+/**
  * Generates a Content Security Policy string.
  */
 function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
@@ -91,7 +97,7 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
 
   const directives: string[] = [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' blob: ${scriptOrigin}`.trim(),
+    `script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: ${scriptOrigin}`.trim(),
     `style-src 'self' 'unsafe-inline' ${scriptOrigin}`.trim(),
     "frame-src 'none'",
     "form-action 'none'",
@@ -107,6 +113,7 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
 
   const resourceSources = new Set<string>(["'self'", 'data:', 'blob:']);
   if (scriptOrigin) resourceSources.add(scriptOrigin);
+  for (const domain of SDK_RESOURCE_DOMAINS) resourceSources.add(domain);
   if (csp?.resourceDomains) {
     for (const domain of csp.resourceDomains) resourceSources.add(domain);
   }
@@ -331,7 +338,9 @@ export function IframeResource({
   // For scriptSrc mode, generate HTML with srcdoc (must be above early return to satisfy rules-of-hooks)
   const htmlContent = useMemo(() => {
     if (!scriptSrc || !isValidUrl) {
-      console.error('[IframeResource] Script source not allowed:', scriptSrc);
+      if (scriptSrc) {
+        console.error('[IframeResource] Script source not allowed:', scriptSrc);
+      }
       return `<!DOCTYPE html><html><body><h1>Error</h1><p>Script source not allowed.</p></body></html>`;
     }
 

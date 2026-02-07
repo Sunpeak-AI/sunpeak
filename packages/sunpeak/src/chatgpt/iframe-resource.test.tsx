@@ -347,7 +347,7 @@ describe('IframeResource Security', () => {
       );
 
       expect(csp).toContain("default-src 'self'");
-      expect(csp).toContain("script-src 'self' 'unsafe-inline' blob:");
+      expect(csp).toContain("script-src 'self' 'unsafe-inline' 'unsafe-eval' blob:");
       expect(csp).toContain("style-src 'self' 'unsafe-inline'");
       expect(csp).toContain("frame-src 'none'");
       expect(csp).toContain("form-action 'none'");
@@ -376,10 +376,21 @@ describe('IframeResource Security', () => {
       expect(csp).toContain('https://events.mapbox.com');
     });
 
+    it('always includes SDK resource domains (cdn.openai.com)', () => {
+      const csp = generateCSP(
+        undefined,
+        'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
+      );
+
+      expect(csp).toContain('https://cdn.openai.com');
+      expect(csp).toContain('font-src');
+      expect(csp).toContain('img-src');
+    });
+
     it('adds custom resource domains to img-src and font-src', () => {
       const csp = generateCSP(
         {
-          resourceDomains: ['https://cdn.sunpeak.ai', 'https://cdn.openai.com'],
+          resourceDomains: ['https://cdn.sunpeak.ai'],
         },
         'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widget.js'
       );
