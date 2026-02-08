@@ -77,6 +77,17 @@ export class McpAppHost {
       if (this.options.onOpenLink) {
         this.options.onOpenLink(url);
       } else {
+        // Validate URL scheme to prevent javascript: and data: URLs
+        try {
+          const parsed = new URL(url);
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            console.warn('[MCP App] openLink blocked non-http(s) URL:', url);
+            return {};
+          }
+        } catch {
+          console.warn('[MCP App] openLink blocked invalid URL:', url);
+          return {};
+        }
         window.open(url, '_blank');
       }
       return {};
@@ -178,6 +189,7 @@ export class McpAppHost {
 
     return new Promise<void>((resolve) => {
       const handler = (event: MessageEvent) => {
+        if (event.source !== win) return;
         if (event.data?.method === 'sunpeak/fence-ack' && event.data.params?.fenceId === id) {
           cleanup();
           resolve();

@@ -2,8 +2,14 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IframeResource, _testExports } from './iframe-resource';
 
-const { escapeHtml, isAllowedUrl, generateCSP, generateScriptHtml, ALLOWED_SCRIPT_ORIGINS } =
-  _testExports;
+const {
+  escapeHtml,
+  isAllowedUrl,
+  isValidCspSource,
+  generateCSP,
+  generateScriptHtml,
+  ALLOWED_SCRIPT_ORIGINS,
+} = _testExports;
 
 describe('IframeResource', () => {
   it('renders an iframe with srcDoc', () => {
@@ -476,6 +482,79 @@ describe('IframeResource Security', () => {
 
       expect(html).not.toContain('><script>alert');
       expect(html).toContain('&lt;script&gt;');
+    });
+
+    it('escapes theme attribute to prevent injection', () => {
+      const maliciousTheme = '"><script>alert("xss")</script><div x="';
+      const html = generateScriptHtml('https://example.com/script.js', maliciousTheme, '');
+
+      expect(html).not.toContain('"><script>');
+      expect(html).toContain('data-theme="&quot;&gt;&lt;script&gt;');
+    });
+  });
+
+  describe('CSP Domain Validation - isValidCspSource', () => {
+    it('allows valid http(s) URLs', () => {
+      expect(isValidCspSource('https://api.example.com')).toBe(true);
+      expect(isValidCspSource('http://localhost:3000')).toBe(true);
+      expect(isValidCspSource('https://cdn.openai.com')).toBe(true);
+    });
+
+    it('allows WebSocket URLs', () => {
+      expect(isValidCspSource('ws://localhost:24678')).toBe(true);
+      expect(isValidCspSource('wss://api.example.com')).toBe(true);
+    });
+
+    it('rejects wildcard *', () => {
+      expect(isValidCspSource('*')).toBe(false);
+    });
+
+    it('rejects CSP keywords that could weaken the policy', () => {
+      expect(isValidCspSource("'unsafe-inline'")).toBe(false);
+      expect(isValidCspSource("'unsafe-eval'")).toBe(false);
+      expect(isValidCspSource("'none'")).toBe(false);
+    });
+
+    it('rejects entries with whitespace that could inject directives', () => {
+      expect(isValidCspSource('https://ok.com ; script-src *')).toBe(false);
+      expect(isValidCspSource('https://ok.com unsafe-inline')).toBe(false);
+    });
+
+    it('rejects empty strings', () => {
+      expect(isValidCspSource('')).toBe(false);
+    });
+
+    it('rejects non-URL strings', () => {
+      expect(isValidCspSource('not-a-url')).toBe(false);
+    });
+  });
+
+  describe('CSP Domain Validation - generateCSP integration', () => {
+    it('filters out invalid connectDomains', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const csp = generateCSP(
+        { connectDomains: ['https://api.example.com', '*', "'unsafe-inline'"] },
+        '/script.js'
+      );
+
+      expect(csp).toContain('https://api.example.com');
+      expect(csp).not.toMatch(/connect-src[^;]*\*/);
+      expect(csp).not.toMatch(/connect-src[^;]*unsafe-inline/);
+      expect(warnSpy).toHaveBeenCalledTimes(2);
+      warnSpy.mockRestore();
+    });
+
+    it('filters out invalid resourceDomains', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const csp = generateCSP(
+        { resourceDomains: ['https://images.example.com', '* ; script-src *'] },
+        '/script.js'
+      );
+
+      expect(csp).toContain('https://images.example.com');
+      expect(csp).not.toMatch(/img-src[^;]*script-src/);
+      expect(warnSpy).toHaveBeenCalledTimes(1);
+      warnSpy.mockRestore();
     });
   });
 });

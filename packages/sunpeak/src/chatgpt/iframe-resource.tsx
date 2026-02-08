@@ -85,6 +85,26 @@ export interface ResourceCSP {
 const SDK_RESOURCE_DOMAINS = ['https://cdn.openai.com'];
 
 /**
+ * Validates a CSP source entry is a safe origin URL (scheme + host + optional port).
+ * Rejects wildcards, CSP keywords, and whitespace that could inject extra directives.
+ */
+function isValidCspSource(source: string): boolean {
+  // Block CSP keywords like 'unsafe-inline', wildcards like *, and whitespace injection
+  if (!source || /[\s;,']/.test(source) || source === '*') return false;
+  try {
+    const url = new URL(source);
+    return (
+      url.protocol === 'http:' ||
+      url.protocol === 'https:' ||
+      url.protocol === 'ws:' ||
+      url.protocol === 'wss:'
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Generates a Content Security Policy string.
  */
 function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
@@ -107,7 +127,13 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
   const connectSources = new Set<string>(["'self'"]);
   if (scriptOrigin) connectSources.add(scriptOrigin);
   if (csp?.connectDomains) {
-    for (const domain of csp.connectDomains) connectSources.add(domain);
+    for (const domain of csp.connectDomains) {
+      if (isValidCspSource(domain)) {
+        connectSources.add(domain);
+      } else {
+        console.warn('[IframeResource] Ignoring invalid CSP connect domain:', domain);
+      }
+    }
   }
   directives.push(`connect-src ${Array.from(connectSources).join(' ')}`);
 
@@ -115,7 +141,13 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
   if (scriptOrigin) resourceSources.add(scriptOrigin);
   for (const domain of SDK_RESOURCE_DOMAINS) resourceSources.add(domain);
   if (csp?.resourceDomains) {
-    for (const domain of csp.resourceDomains) resourceSources.add(domain);
+    for (const domain of csp.resourceDomains) {
+      if (isValidCspSource(domain)) {
+        resourceSources.add(domain);
+      } else {
+        console.warn('[IframeResource] Ignoring invalid CSP resource domain:', domain);
+      }
+    }
   }
   const resourceList = Array.from(resourceSources).join(' ');
   directives.push(`img-src ${resourceList}`);
@@ -132,8 +164,9 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
 function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string): string {
   const safeScriptSrc = escapeHtml(scriptSrc);
   const safeCsp = escapeHtml(cspPolicy);
+  const safeTheme = escapeHtml(theme);
   return `<!DOCTYPE html>
-<html lang="en" data-theme="${theme}">
+<html lang="en" data-theme="${safeTheme}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -421,6 +454,7 @@ export function IframeResource({
 export const _testExports = {
   escapeHtml,
   isAllowedUrl,
+  isValidCspSource,
   generateCSP,
   generateScriptHtml,
   ALLOWED_SCRIPT_ORIGINS,
