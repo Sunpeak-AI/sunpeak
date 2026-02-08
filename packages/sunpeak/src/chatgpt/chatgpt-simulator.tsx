@@ -76,8 +76,6 @@ function parseUrlParams(): {
     platform = 'mobile';
   } else if (deviceType === 'desktop') {
     platform = 'desktop';
-  } else if (deviceType) {
-    platform = 'web';
   }
 
   // Device capabilities
@@ -315,17 +313,12 @@ export function ChatGPTSimulator({
   const resourceUrl = selectedSim?.resourceUrl;
   const resourceScript = selectedSim?.resourceScript;
 
-  // Extract CSP from resource metadata (supports both old and new format)
+  // Extract CSP from resource metadata
   const resourceMeta = selectedSim?.resource._meta as Record<string, unknown> | undefined;
   const resourceUi = resourceMeta?.ui as
     | { csp?: { connectDomains?: string[]; resourceDomains?: string[] }; domain?: string }
     | undefined;
-  // Fall back to old OpenAI format for backward compat
-  const csp =
-    resourceUi?.csp ??
-    (resourceMeta?.['openai/widgetCSP'] as
-      | { connectDomains?: string[]; resourceDomains?: string[] }
-      | undefined);
+  const csp = resourceUi?.csp;
 
   // Build content based on rendering mode
   // All rendering goes through IframeResource for consistent behavior with ChatGPT

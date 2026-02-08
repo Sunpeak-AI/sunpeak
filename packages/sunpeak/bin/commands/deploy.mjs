@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { join } from 'path';
 import { push, findResources, defaultDeps as pushDefaultDeps } from './push.mjs';
 
 /**
@@ -60,7 +61,7 @@ This command is equivalent to: sunpeak push --tag prod
 
   // If no specific directory provided, check current directory first, then dist/
   if (!deployOptions.dir) {
-    const cwdResources = findResources(projectRoot, d);
+    const cwdResources = findResources(projectRoot, join(projectRoot, 'tests/simulations'), d);
     if (cwdResources.length > 0) {
       // Found resources in current directory, push each one
       for (const resource of cwdResources) {

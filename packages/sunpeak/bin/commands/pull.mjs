@@ -187,20 +187,24 @@ Examples:
       d.writeFileSync(outputFile, htmlContent);
       d.console.log(`  ✓ Saved ${resource.name}.html`);
 
-      // Write metadata JSON
+      // Write metadata JSON (reconstruct McpUiResourceMeta from server flat fields)
+      const ui = { domain: resource.widget_domain };
+      const csp = {};
+      if (resource.widget_csp_connect_domains?.length) csp.connectDomains = resource.widget_csp_connect_domains;
+      if (resource.widget_csp_resource_domains?.length) csp.resourceDomains = resource.widget_csp_resource_domains;
+      if (resource.widget_csp_frame_domains?.length) csp.frameDomains = resource.widget_csp_frame_domains;
+      if (resource.widget_csp_base_uri_domains?.length) csp.baseUriDomains = resource.widget_csp_base_uri_domains;
+      if (Object.keys(csp).length > 0) ui.csp = csp;
+      if (resource.permissions) ui.permissions = resource.permissions;
+      if (resource.prefers_border != null) ui.prefersBorder = resource.prefers_border;
+
       const meta = {
         uri: resource.uri,
         name: resource.name,
         title: resource.title,
         description: resource.description,
         mimeType: resource.mime_type,
-        _meta: {
-          'openai/widgetDomain': resource.widget_domain,
-          'openai/widgetCSP': {
-            connect_domains: resource.widget_csp_connect_domains || [],
-            resource_domains: resource.widget_csp_resource_domains || [],
-          },
-        },
+        _meta: { ui },
       };
       d.writeFileSync(metaFile, JSON.stringify(meta, null, 2));
       d.console.log(`  ✓ Saved ${resource.name}.json\n`);

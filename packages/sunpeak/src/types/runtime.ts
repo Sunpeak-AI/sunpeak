@@ -1,7 +1,6 @@
 /**
  * Runtime types for MCP Apps environments.
- * Re-exports canonical types from the MCP Apps SDK and provides
- * legacy type aliases for backwards compatibility.
+ * Re-exports canonical types from the MCP Apps SDK with short aliases.
  */
 
 // Re-export canonical MCP Apps types
@@ -16,7 +15,7 @@ export type {
   McpUiStyles,
 } from '@modelcontextprotocol/ext-apps';
 
-// Type aliases for backwards compatibility and ergonomics
+// Short aliases for common SDK types
 export type {
   McpUiTheme as Theme,
   McpUiDisplayMode as DisplayMode,
@@ -29,6 +28,4 @@ export type SafeAreaInsets = {
   right: number;
 };
 
-// Legacy types kept for simulator-url.ts
-export type DeviceType = 'mobile' | 'tablet' | 'desktop' | 'unknown';
-export type ViewMode = 'modal' | 'default';
+export type DeviceType = 'mobile' | 'tablet' | 'desktop';

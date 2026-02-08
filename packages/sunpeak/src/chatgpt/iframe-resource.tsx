@@ -421,7 +421,6 @@ export function IframeResource({
 export const _testExports = {
   escapeHtml,
   isAllowedUrl,
-  isAllowedScriptSrc: isAllowedUrl, // Alias for backwards compatibility
   generateCSP,
   generateScriptHtml,
   ALLOWED_SCRIPT_ORIGINS,

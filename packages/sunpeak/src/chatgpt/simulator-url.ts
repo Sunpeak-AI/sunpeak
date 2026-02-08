@@ -1,4 +1,4 @@
-import type { Theme, DisplayMode, DeviceType, ViewMode } from '../types/runtime';
+import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
 
 /**
  * Strongly-typed URL parameters for the ChatGPT Simulator.
@@ -90,13 +90,6 @@ export interface SimulatorUrlParams {
    * Safe area inset from the right of the screen (in pixels).
    */
   safeAreaRight?: number;
-
-  /**
-   * The view mode for the widget.
-   * - 'modal': Display as a modal dialog
-   * - 'default': Normal display
-   */
-  viewMode?: ViewMode;
 }
 
 /**
@@ -178,10 +171,6 @@ export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): 
   if (params.safeAreaRight !== undefined) {
     searchParams.set('safeAreaRight', String(params.safeAreaRight));
   }
-  if (params.viewMode !== undefined) {
-    searchParams.set('viewMode', params.viewMode);
-  }
-
   const queryString = searchParams.toString();
   return queryString ? `${basePath}?${queryString}` : basePath;
 }

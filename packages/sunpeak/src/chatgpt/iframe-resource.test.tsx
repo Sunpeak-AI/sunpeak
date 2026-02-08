@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { IframeResource, _testExports } from './iframe-resource';
 
-const { escapeHtml, isAllowedScriptSrc, generateCSP, generateScriptHtml, ALLOWED_SCRIPT_ORIGINS } =
+const { escapeHtml, isAllowedUrl, generateCSP, generateScriptHtml, ALLOWED_SCRIPT_ORIGINS } =
   _testExports;
 
 describe('IframeResource', () => {
@@ -188,68 +188,68 @@ describe('IframeResource Security', () => {
     });
   });
 
-  describe('Script Origin Validation - isAllowedScriptSrc', () => {
+  describe('Script Origin Validation - isAllowedUrl', () => {
     it('allows relative paths starting with /', () => {
-      expect(isAllowedScriptSrc('/dist/carousel/carousel.js')).toBe(true);
-      expect(isAllowedScriptSrc('/scripts/widget.js')).toBe(true);
+      expect(isAllowedUrl('/dist/carousel/carousel.js')).toBe(true);
+      expect(isAllowedUrl('/scripts/widget.js')).toBe(true);
     });
 
     it('rejects protocol-relative URLs (//)', () => {
-      expect(isAllowedScriptSrc('//evil.com/malware.js')).toBe(false);
+      expect(isAllowedUrl('//evil.com/malware.js')).toBe(false);
     });
 
     it('allows same-origin absolute URLs', () => {
-      expect(isAllowedScriptSrc('http://localhost:3000/dist/widget.js')).toBe(true);
+      expect(isAllowedUrl('http://localhost:3000/dist/widget.js')).toBe(true);
     });
 
     it('allows localhost with any port', () => {
-      expect(isAllowedScriptSrc('http://localhost:8080/script.js')).toBe(true);
-      expect(isAllowedScriptSrc('http://localhost:5173/script.js')).toBe(true);
-      expect(isAllowedScriptSrc('https://localhost:3000/script.js')).toBe(true);
+      expect(isAllowedUrl('http://localhost:8080/script.js')).toBe(true);
+      expect(isAllowedUrl('http://localhost:5173/script.js')).toBe(true);
+      expect(isAllowedUrl('https://localhost:3000/script.js')).toBe(true);
     });
 
     it('allows 127.0.0.1 with any port', () => {
-      expect(isAllowedScriptSrc('http://127.0.0.1:8080/script.js')).toBe(true);
-      expect(isAllowedScriptSrc('http://127.0.0.1:5173/script.js')).toBe(true);
+      expect(isAllowedUrl('http://127.0.0.1:8080/script.js')).toBe(true);
+      expect(isAllowedUrl('http://127.0.0.1:5173/script.js')).toBe(true);
     });
 
     it('allows sunpeak-prod-app-storage S3 bucket', () => {
       expect(
-        isAllowedScriptSrc(
+        isAllowedUrl(
           'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com/widgets/carousel.js'
         )
       ).toBe(true);
     });
 
     it('rejects arbitrary external domains', () => {
-      expect(isAllowedScriptSrc('https://evil.com/malware.js')).toBe(false);
-      expect(isAllowedScriptSrc('https://attacker.io/script.js')).toBe(false);
-      expect(isAllowedScriptSrc('http://malicious-cdn.net/widget.js')).toBe(false);
+      expect(isAllowedUrl('https://evil.com/malware.js')).toBe(false);
+      expect(isAllowedUrl('https://attacker.io/script.js')).toBe(false);
+      expect(isAllowedUrl('http://malicious-cdn.net/widget.js')).toBe(false);
     });
 
     it('rejects similar-looking domains (typosquatting)', () => {
       expect(
-        isAllowedScriptSrc(
+        isAllowedUrl(
           'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com.evil.com/script.js'
         )
       ).toBe(false);
       expect(
-        isAllowedScriptSrc('https://sunpeak-fake-app-storage.s3.us-east-2.amazonaws.com/script.js')
+        isAllowedUrl('https://sunpeak-fake-app-storage.s3.us-east-2.amazonaws.com/script.js')
       ).toBe(false);
-      expect(isAllowedScriptSrc('https://s3.us-east-2.amazonaws.com/script.js')).toBe(false);
+      expect(isAllowedUrl('https://s3.us-east-2.amazonaws.com/script.js')).toBe(false);
     });
 
     it('rejects data: URLs', () => {
-      expect(isAllowedScriptSrc('data:text/javascript,alert(1)')).toBe(false);
+      expect(isAllowedUrl('data:text/javascript,alert(1)')).toBe(false);
     });
 
     it('rejects blob: URLs from other origins', () => {
-      expect(isAllowedScriptSrc('blob:https://evil.com/12345')).toBe(false);
+      expect(isAllowedUrl('blob:https://evil.com/12345')).toBe(false);
     });
 
     it('rejects invalid URLs', () => {
-      expect(isAllowedScriptSrc('not-a-valid-url')).toBe(false);
-      expect(isAllowedScriptSrc('')).toBe(false);
+      expect(isAllowedUrl('not-a-valid-url')).toBe(false);
+      expect(isAllowedUrl('')).toBe(false);
     });
   });
 

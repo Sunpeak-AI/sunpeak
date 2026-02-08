@@ -203,21 +203,37 @@ async function pushResource(resource, repository, tags, accessToken, deps = defa
     formData.append('mime_type', resource.meta.mimeType || 'text/html+skybridge');
     formData.append('uri', resource.meta.uri);
 
-    // Handle OpenAI widget metadata
-    if (resource.meta._meta) {
-      if (resource.meta._meta['openai/widgetDomain']) {
-        formData.append('widget_domain', resource.meta._meta['openai/widgetDomain']);
+    // Handle UI resource metadata (_meta.ui matches McpUiResourceMeta from ext-apps SDK)
+    if (resource.meta._meta?.ui) {
+      const ui = resource.meta._meta.ui;
+      if (ui.domain) {
+        formData.append('widget_domain', ui.domain);
       }
-      if (resource.meta._meta['openai/widgetCSP']) {
-        const csp = resource.meta._meta['openai/widgetCSP'];
-        if (csp.connect_domains) {
-          csp.connect_domains.forEach((domain) => {
+      if (ui.prefersBorder != null) {
+        formData.append('prefers_border', String(ui.prefersBorder));
+      }
+      if (ui.permissions) {
+        formData.append('permissions', JSON.stringify(ui.permissions));
+      }
+      if (ui.csp) {
+        if (ui.csp.connectDomains) {
+          ui.csp.connectDomains.forEach((domain) => {
             formData.append('widget_csp_connect_domains[]', domain);
           });
         }
-        if (csp.resource_domains) {
-          csp.resource_domains.forEach((domain) => {
+        if (ui.csp.resourceDomains) {
+          ui.csp.resourceDomains.forEach((domain) => {
             formData.append('widget_csp_resource_domains[]', domain);
+          });
+        }
+        if (ui.csp.frameDomains) {
+          ui.csp.frameDomains.forEach((domain) => {
+            formData.append('widget_csp_frame_domains[]', domain);
+          });
+        }
+        if (ui.csp.baseUriDomains) {
+          ui.csp.baseUriDomains.forEach((domain) => {
+            formData.append('widget_csp_base_uri_domains[]', domain);
           });
         }
       }

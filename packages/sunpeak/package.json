@@ -93,6 +93,7 @@
     "@modelcontextprotocol/sdk": "^1.25.2",
     "clsx": "^2.1.1",
     "tailwind-merge": "^3.4.0",
+    "esbuild": "^0.27.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -106,7 +107,6 @@
     "@typescript-eslint/eslint-plugin": "^8.53.0",
     "@typescript-eslint/parser": "^8.53.0",
     "@vitejs/plugin-react": "^4.7.0",
-    "esbuild": "^0.27.0",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",

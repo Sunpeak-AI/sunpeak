@@ -20,6 +20,9 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      esbuild:
+        specifier: ^0.27.0
+        version: 0.27.2
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
@@ -57,9 +60,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.7.0
         version: 4.7.0(vite@7.3.1(@types/node@22.19.6)(jiti@2.6.1)(lightningcss@1.30.2)(tsx@4.21.0))
-      esbuild:
-        specifier: ^0.27.0
-        version: 0.27.2
       eslint:
         specifier: ^9.39.2
         version: 9.39.2(jiti@2.6.1)
