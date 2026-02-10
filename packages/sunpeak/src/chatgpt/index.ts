@@ -35,7 +35,7 @@ export { McpAppHost } from './mcp-app-host';
 export type { McpAppHostOptions } from './mcp-app-host';
 
 // Iframe rendering (used internally by simulator)
-export { IframeResource } from './iframe-resource';
+export { IframeResource, extractResourceCSP } from './iframe-resource';
 export type { ResourceCSP } from './iframe-resource';
 
 // Theme provider

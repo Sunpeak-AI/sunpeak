@@ -34,6 +34,8 @@ export interface McpAppHostOptions {
   onSizeChanged?: (params: { width?: number; height?: number }) => void;
   onLog?: (params: LoggingMessageNotification['params']) => void;
   onCallTool?: (params: CallToolRequest['params']) => CallToolResult | Promise<CallToolResult>;
+  /** Called after the iframe confirms rendering in a new display mode (paint fence resolved). */
+  onDisplayModeReady?: (mode: string) => void;
 }
 
 /**
@@ -48,11 +50,13 @@ export class McpAppHost {
   private _contentWindow: Window | null = null;
   private _fenceId = 0;
   private _fenceCleanup: (() => void) | null = null;
+  private _prevDisplayMode: string | undefined;
   private _pendingToolInput: McpUiToolInputNotification['params'] | null = null;
   private _pendingToolResult: McpUiToolResultNotification['params'] | null = null;
 
   constructor(options: McpAppHostOptions = {}) {
     this.options = options;
+    this._prevDisplayMode = options.hostContext?.displayMode;
 
     this.bridge = new AppBridge(null, HOST_INFO, HOST_CAPABILITIES, {
       hostContext: options.hostContext,
@@ -221,9 +225,20 @@ export class McpAppHost {
 
   /**
    * Update the host context and notify the connected app.
+   * Automatically detects display mode changes and waits for the iframe
+   * to commit its DOM before firing onDisplayModeReady.
    */
   setHostContext(context: McpUiHostContext): void {
     this.bridge.setHostContext(context);
+
+    const currentMode = context.displayMode;
+    if (currentMode && currentMode !== this._prevDisplayMode) {
+      this._prevDisplayMode = currentMode;
+      const mode = currentMode;
+      this.waitForPaint().then(() => {
+        this.options.onDisplayModeReady?.(mode);
+      });
+    }
   }
 
   /**
@@ -289,7 +304,13 @@ export class McpAppHost {
     }
     await this.bridge.close();
     this._initialized = false;
-    this._contentWindow = null;
+    // Note: _contentWindow is intentionally NOT cleared here.
+    // In React strict mode, close() runs asynchronously during the cleanup
+    // phase of double-mount, completing after effects have re-run. Clearing
+    // _contentWindow would break injectState() and waitForPaint() which
+    // use it directly (unlike sendToolResult which goes through the bridge).
+    // The reference becomes harmless on real unmount since no code calls
+    // methods on a host whose component has been removed from the tree.
   }
 
   /**

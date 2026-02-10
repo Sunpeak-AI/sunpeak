@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
 import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -76,6 +76,15 @@ export interface ResourceCSP {
   connectDomains?: string[];
   /** Domains allowed for scripts, images, styles, fonts */
   resourceDomains?: string[];
+}
+
+/**
+ * Extract CSP configuration from a resource's _meta.ui.csp field.
+ */
+export function extractResourceCSP(resource: { _meta?: unknown }): ResourceCSP | undefined {
+  const meta = resource._meta as Record<string, unknown> | undefined;
+  const ui = meta?.ui as { csp?: ResourceCSP } | undefined;
+  return ui?.csp;
 }
 
 /**
@@ -158,6 +167,41 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
 }
 
 /**
+ * Paint fence responder script body.
+ * Allows the host to wait for this iframe to process pending messages and
+ * commit DOM updates before revealing content during display mode transitions.
+ *
+ * Used in two places:
+ * - Embedded in the generated HTML for scriptSrc mode
+ * - Injected into src-mode iframes after load via contentDocument
+ */
+const PAINT_FENCE_SCRIPT = `window.addEventListener("message",function(e){
+if(e.data&&e.data.method==="sunpeak/fence"){
+var fid=e.data.params&&e.data.params.fenceId;
+requestAnimationFrame(function(){
+e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:fid}},"*");
+});}});`;
+
+/**
+ * Inject the paint fence responder into an iframe's document.
+ * For src-mode iframes the host doesn't control the HTML, so we inject the
+ * script after load. This requires same-origin access (sandbox must include
+ * allow-same-origin). Silently skipped for cross-origin iframes.
+ */
+function injectPaintFence(iframe: HTMLIFrameElement): void {
+  try {
+    const doc = iframe.contentDocument;
+    if (!doc || doc.querySelector('script[data-sunpeak-fence]')) return;
+    const script = doc.createElement('script');
+    script.setAttribute('data-sunpeak-fence', '');
+    script.textContent = PAINT_FENCE_SCRIPT;
+    doc.head.appendChild(script);
+  } catch {
+    // Cross-origin iframe — contentDocument access blocked
+  }
+}
+
+/**
  * Generates HTML wrapper for a script URL.
  * The MCP Apps SDK in the loaded script handles communication via PostMessageTransport.
  */
@@ -185,19 +229,7 @@ function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string)
       color-scheme: dark light;
     }
   </style>
-  <script>
-    // Paint fence responder — allows the host to wait for this iframe to
-    // process pending messages and commit DOM updates before revealing content.
-    // Formatted as JSON-RPC 2.0 notifications to avoid PostMessageTransport parse errors.
-    window.addEventListener("message",function(e){
-      if(e.data&&e.data.method==="sunpeak/fence"){
-        var fid=e.data.params&&e.data.params.fenceId;
-        requestAnimationFrame(function(){
-          e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:fid}},"*");
-        });
-      }
-    });
-  </script>
+  <script>${PAINT_FENCE_SCRIPT}</script>
 </head>
 <body>
   <div id="root"></div>
@@ -234,13 +266,6 @@ interface IframeResourceProps {
   /** Optional style for the iframe */
   style?: React.CSSProperties;
   /**
-   * Called after the iframe has rendered following a display mode change.
-   * The callback receives the display mode that was confirmed.
-   * Used by the simulator to hide content during transitions and only
-   * reveal it once the app has committed its DOM for the new mode.
-   */
-  onDisplayModeReady?: (mode: string) => void;
-  /**
    * Debug: State to inject directly into the app's useAppState hook.
    * This bypasses the normal MCP Apps protocol and is for simulator testing.
    */
@@ -269,14 +294,13 @@ export function IframeResource({
   csp,
   className,
   style,
-  onDisplayModeReady,
   debugInjectState,
 }: IframeResourceProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
-  const prevDisplayModeRef = useRef(hostContext?.displayMode);
-  const onDisplayModeReadyRef = useRef(onDisplayModeReady);
-  onDisplayModeReadyRef.current = onDisplayModeReady;
+  const [readyDisplayMode, setReadyDisplayMode] = useState<string | undefined>(
+    hostContext?.displayMode
+  );
 
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
@@ -297,6 +321,7 @@ export function IframeResource({
             iframeRef.current.style.height = `${params.height}px`;
           }
         },
+        onDisplayModeReady: (mode) => setReadyDisplayMode(mode),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [] // Stable - create once
@@ -318,30 +343,22 @@ export function IframeResource({
     [host]
   );
 
-  // Send tool data after iframe content loads (belt-and-suspenders with
-  // the useEffect hooks below, which queue data as pending before init).
+  // After iframe content loads, inject the paint fence responder for src-mode
+  // iframes (scriptSrc mode already embeds it in the generated HTML).
+  // Tool data is NOT sent here — McpAppHost queues pending data and flushes
+  // it automatically when the app initializes.
   const handleLoad = useCallback(() => {
-    if (toolInput) host.sendToolInput(toolInput);
-    if (toolResult) host.sendToolResult(toolResult);
-  }, [host, toolInput, toolResult]);
+    if (src && iframeRef.current) {
+      injectPaintFence(iframeRef.current);
+    }
+  }, [src]);
 
   // Update host context when props change.
-  // When the display mode changes, wait for the iframe to commit its DOM
-  // update before signaling readiness (used to prevent flash during transitions).
+  // McpAppHost.setHostContext() internally detects display mode changes
+  // and waits for the iframe to commit its DOM before firing onDisplayModeReady.
   useEffect(() => {
     if (hostContext) {
       host.setHostContext(hostContext);
-
-      const currentMode = hostContext.displayMode;
-      if (currentMode !== prevDisplayModeRef.current) {
-        prevDisplayModeRef.current = currentMode;
-        if (currentMode) {
-          const mode = currentMode;
-          host.waitForPaint().then(() => {
-            onDisplayModeReadyRef.current?.(mode);
-          });
-        }
-      }
     }
   }, [host, hostContext]);
 
@@ -397,6 +414,10 @@ export function IframeResource({
     return generateScriptHtml(absoluteScriptSrc, theme, cspPolicy);
   }, [scriptSrc, isValidUrl, csp, hostContext?.theme]);
 
+  // Content is transitioning when the display mode has changed but the iframe
+  // hasn't yet confirmed it has rendered with the new mode.
+  const isTransitioning = hostContext?.displayMode !== readyDisplayMode;
+
   // For src mode, use iframe src directly
   if (src) {
     if (!isValidUrl) {
@@ -418,6 +439,10 @@ export function IframeResource({
           // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
           // Don't use height: 100% as it requires explicit height in parent chain.
           minHeight: '200px',
+          // Hide during display mode transitions; reveal with a short fade once
+          // the iframe has committed its DOM for the new mode.
+          opacity: isTransitioning ? 0 : 1,
+          transition: isTransitioning ? 'none' : 'opacity 100ms',
           ...style,
         }}
         title="Resource Preview"
@@ -441,6 +466,8 @@ export function IframeResource({
         // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
         // Don't use height: 100% as it requires explicit height in parent chain.
         minHeight: '200px',
+        opacity: isTransitioning ? 0 : 1,
+        transition: isTransitioning ? 'none' : 'opacity 100ms',
         ...style,
       }}
       title="Resource Preview"

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   SimpleSidebar,
   SidebarControl,
@@ -11,7 +11,7 @@ import {
   SidebarToggle,
 } from './simple-sidebar';
 import { Conversation } from './conversation';
-import { IframeResource } from './iframe-resource';
+import { IframeResource, extractResourceCSP } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
 import type {
   McpUiHostContext,
@@ -164,17 +164,6 @@ export function ChatGPTSimulator({
     }
   };
 
-  // Track which display mode the iframe has confirmed rendering.
-  // Content is hidden when displayMode !== readyDisplayMode (transition in progress).
-  // Initialized to displayMode so there's no transition on first render.
-  const [readyDisplayMode, setReadyDisplayMode] = useState<McpUiDisplayMode>(
-    urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
-  );
-
-  const handleDisplayModeReady = useCallback((mode: string) => {
-    setReadyDisplayMode(mode as McpUiDisplayMode);
-  }, []);
-
   // Build host context from state
   const hostContext = useMemo<McpUiHostContext>(
     () => ({
@@ -313,22 +302,11 @@ export function ChatGPTSimulator({
   const resourceUrl = selectedSim?.resourceUrl;
   const resourceScript = selectedSim?.resourceScript;
 
-  // Extract CSP from resource metadata
-  const resourceMeta = selectedSim?.resource._meta as Record<string, unknown> | undefined;
-  const resourceUi = resourceMeta?.ui as
-    | { csp?: { connectDomains?: string[]; resourceDomains?: string[] }; domain?: string }
-    | undefined;
-  const csp = resourceUi?.csp;
+  const csp = selectedSim ? extractResourceCSP(selectedSim.resource) : undefined;
 
-  // Build content based on rendering mode
-  // All rendering goes through IframeResource for consistent behavior with ChatGPT
-  const hasIframeContent = !!(resourceUrl || resourceScript);
-
-  // Content is transitioning when the display mode has changed but the iframe
-  // hasn't yet confirmed it has rendered with the new mode.
-  // For non-iframe content (children), there's no async rendering so no transition.
-  const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
-
+  // Build content based on rendering mode.
+  // All rendering goes through IframeResource for consistent behavior with ChatGPT.
+  // Display mode transitions (hide-during-repaint) are handled internally by IframeResource.
   let content: React.ReactNode;
   if (resourceUrl) {
     // Dev mode: load HTML page directly (supports Vite HMR)
@@ -342,7 +320,6 @@ export function ChatGPTSimulator({
           onDisplayModeChange: handleDisplayModeChange,
           onUpdateModelContext: handleUpdateModelContext,
         }}
-        onDisplayModeReady={handleDisplayModeReady}
         debugInjectState={modelContext}
         className="h-full w-full"
       />
@@ -360,7 +337,6 @@ export function ChatGPTSimulator({
           onDisplayModeChange: handleDisplayModeChange,
           onUpdateModelContext: handleUpdateModelContext,
         }}
-        onDisplayModeReady={handleDisplayModeReady}
         debugInjectState={modelContext}
         className="h-full w-full"
       />
@@ -606,7 +582,6 @@ export function ChatGPTSimulator({
           appName={appName}
           appIcon={appIcon}
           userMessage={selectedSim?.userMessage}
-          isTransitioning={isTransitioning}
           key={selectedSimulationName}
         >
           {content}
