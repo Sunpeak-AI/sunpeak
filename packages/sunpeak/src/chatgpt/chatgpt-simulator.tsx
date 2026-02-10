@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   SimpleSidebar,
   SidebarControl,
@@ -164,6 +164,17 @@ export function ChatGPTSimulator({
     }
   };
 
+  // Track which display mode the iframe has confirmed rendering.
+  // Content is hidden when displayMode !== readyDisplayMode (transition in progress).
+  // Initialized to displayMode so there's no transition on first render.
+  const [readyDisplayMode, setReadyDisplayMode] = useState<McpUiDisplayMode>(
+    urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
+  );
+
+  const handleDisplayModeReady = useCallback((mode: string) => {
+    setReadyDisplayMode(mode as McpUiDisplayMode);
+  }, []);
+
   // Build host context from state
   const hostContext = useMemo<McpUiHostContext>(
     () => ({
@@ -306,7 +317,13 @@ export function ChatGPTSimulator({
 
   // Build content based on rendering mode.
   // All rendering goes through IframeResource for consistent behavior with ChatGPT.
-  // Display mode transitions (hide-during-repaint) are handled internally by IframeResource.
+  const hasIframeContent = !!(resourceUrl || resourceScript);
+
+  // Content is transitioning when the display mode has changed but the iframe
+  // hasn't yet confirmed it has rendered with the new mode.
+  // For non-iframe content (children), there's no async rendering so no transition.
+  const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
+
   let content: React.ReactNode;
   if (resourceUrl) {
     // Dev mode: load HTML page directly (supports Vite HMR)
@@ -320,6 +337,7 @@ export function ChatGPTSimulator({
           onDisplayModeChange: handleDisplayModeChange,
           onUpdateModelContext: handleUpdateModelContext,
         }}
+        onDisplayModeReady={handleDisplayModeReady}
         debugInjectState={modelContext}
         className="h-full w-full"
       />
@@ -337,6 +355,7 @@ export function ChatGPTSimulator({
           onDisplayModeChange: handleDisplayModeChange,
           onUpdateModelContext: handleUpdateModelContext,
         }}
+        onDisplayModeReady={handleDisplayModeReady}
         debugInjectState={modelContext}
         className="h-full w-full"
       />
@@ -582,6 +601,7 @@ export function ChatGPTSimulator({
           appName={appName}
           appIcon={appIcon}
           userMessage={selectedSim?.userMessage}
+          isTransitioning={isTransitioning}
           key={selectedSimulationName}
         >
           {content}

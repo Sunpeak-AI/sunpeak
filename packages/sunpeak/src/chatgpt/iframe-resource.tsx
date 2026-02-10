@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
+import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
 import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -266,6 +266,13 @@ interface IframeResourceProps {
   /** Optional style for the iframe */
   style?: React.CSSProperties;
   /**
+   * Called after the iframe has rendered following a display mode change.
+   * The callback receives the display mode that was confirmed.
+   * Used by the simulator to hide content during transitions and only
+   * reveal it once the app has committed its DOM for the new mode.
+   */
+  onDisplayModeReady?: (mode: string) => void;
+  /**
    * Debug: State to inject directly into the app's useAppState hook.
    * This bypasses the normal MCP Apps protocol and is for simulator testing.
    */
@@ -294,13 +301,11 @@ export function IframeResource({
   csp,
   className,
   style,
+  onDisplayModeReady,
   debugInjectState,
 }: IframeResourceProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
-  const [readyDisplayMode, setReadyDisplayMode] = useState<string | undefined>(
-    hostContext?.displayMode
-  );
 
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
@@ -321,7 +326,7 @@ export function IframeResource({
             iframeRef.current.style.height = `${params.height}px`;
           }
         },
-        onDisplayModeReady: (mode) => setReadyDisplayMode(mode),
+        onDisplayModeReady: (mode) => onDisplayModeReady?.(mode),
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [] // Stable - create once
@@ -414,10 +419,6 @@ export function IframeResource({
     return generateScriptHtml(absoluteScriptSrc, theme, cspPolicy);
   }, [scriptSrc, isValidUrl, csp, hostContext?.theme]);
 
-  // Content is transitioning when the display mode has changed but the iframe
-  // hasn't yet confirmed it has rendered with the new mode.
-  const isTransitioning = hostContext?.displayMode !== readyDisplayMode;
-
   // For src mode, use iframe src directly
   if (src) {
     if (!isValidUrl) {
@@ -439,10 +440,6 @@ export function IframeResource({
           // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
           // Don't use height: 100% as it requires explicit height in parent chain.
           minHeight: '200px',
-          // Hide during display mode transitions; reveal with a short fade once
-          // the iframe has committed its DOM for the new mode.
-          opacity: isTransitioning ? 0 : 1,
-          transition: isTransitioning ? 'none' : 'opacity 100ms',
           ...style,
         }}
         title="Resource Preview"
@@ -466,8 +463,6 @@ export function IframeResource({
         // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
         // Don't use height: 100% as it requires explicit height in parent chain.
         minHeight: '200px',
-        opacity: isTransitioning ? 0 : 1,
-        transition: isTransitioning ? 'none' : 'opacity 100ms',
         ...style,
       }}
       title="Resource Preview"

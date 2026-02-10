@@ -14,6 +14,12 @@ interface ConversationProps {
   appName?: string;
   appIcon?: string;
   userMessage?: string;
+  /**
+   * Whether the content is transitioning between display modes.
+   * When true, the content area is hidden (opacity 0) to prevent the pip
+   * border from flashing at a stale height before the iframe resizes.
+   */
+  isTransitioning?: boolean;
 }
 
 /**
@@ -38,6 +44,7 @@ export function Conversation({
   appName = 'Sunpeak',
   appIcon,
   userMessage = 'What have you got for me today?',
+  isTransitioning = false,
 }: ConversationProps) {
   const isDesktop = platform === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
@@ -218,6 +225,12 @@ export function Conversation({
                                   ? 'h-full w-full max-w-full overflow-auto bg-surface'
                                   : 'h-full w-full max-w-full bg-transparent'
                             }
+                            style={{
+                              opacity: isTransitioning ? 0 : 1,
+                              // Only animate the reveal — the hide must be instant
+                              // to prevent old content from being visible in the new layout.
+                              transition: isTransitioning ? 'none' : 'opacity 100ms',
+                            }}
                           >
                             {children}
                           </div>
