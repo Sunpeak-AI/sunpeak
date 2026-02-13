@@ -143,6 +143,11 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
         return false;
       }
 
+      // Skip deps.json files (build-time metadata, not needed in scaffolded projects)
+      if (name === 'deps.json' && src.includes('/resources/')) {
+        return false;
+      }
+
       for (const resource of excludedResources) {
         // Skip entire resource directory: src/resources/{resource}/
         if (src.includes('/resources/') && name === resource) {
@@ -184,6 +189,26 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
   // Replace workspace:* with actual version
   if (pkg.dependencies?.sunpeak === 'workspace:*') {
     pkg.dependencies.sunpeak = sunpeakVersion;
+  }
+
+  // Prune dependencies not needed by selected resources
+  if (excludedResources.length > 0 && pkg.dependencies) {
+    const resourcesDir = join(d.templateDir, 'src', 'resources');
+    const readDeps = (resource) => {
+      const depsPath = join(resourcesDir, resource, 'deps.json');
+      try { return JSON.parse(d.readFileSync(depsPath, 'utf-8')); } catch { return {}; }
+    };
+
+    // Deps needed by selected resources
+    const needed = new Set(selectedResources.flatMap((r) => Object.keys(readDeps(r))));
+    // Deps from excluded resources that no selected resource needs
+    const removable = excludedResources
+      .flatMap((r) => Object.keys(readDeps(r)))
+      .filter((dep) => !needed.has(dep));
+
+    for (const dep of removable) {
+      delete pkg.dependencies[dep];
+    }
   }
 
   d.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');

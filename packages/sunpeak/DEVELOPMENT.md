@@ -22,10 +22,10 @@ pnpm validate
 
 This will:
 
-- Run linting, typechecking, and unit tests at the root and template levels
-- Build both packages
-- Start the dev server and run E2E tests with Playwright
-- Create a tmp staging folder outside of this directory, initialize a new sunpeak project, link the sunpeak library to the local sunpeak source, and run staging tests with Playwright.
+- Run linting, typechecking, and unit tests at the package level
+- Build the package
+- Generate per-resource example projects (via `sunpeak new`) in `examples/`
+- For each example: link local sunpeak, run unit tests, build, and run E2E tests with Playwright
 
 For manual testing with live servers, you can also run:
 

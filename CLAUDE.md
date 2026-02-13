@@ -9,8 +9,8 @@ pnpm --filter sunpeak test -- --run    # Unit tests (vitest, 118 tests)
 pnpm --filter sunpeak lint             # ESLint
 pnpm --filter sunpeak typecheck        # tsc --noEmit
 pnpm --filter sunpeak build            # Vite build
-pnpm --filter sunpeak validate         # Full validation (lint + build + test + e2e)
-cd packages/sunpeak/template && pnpm test:e2e  # Playwright e2e tests (38 tests)
+pnpm --filter sunpeak validate         # Full validation (lint + build + test + examples)
+pnpm --filter sunpeak generate-examples  # Regenerate examples/ from template
 ```
 
 ## Architecture
@@ -46,8 +46,9 @@ packages/sunpeak/
 │   ├── .sunpeak/             # dev.tsx (simulator bootstrap), resource-loader.tsx (iframe loader)
 │   ├── src/resources/        # Example resource components (albums, carousel, map, review)
 │   └── tests/e2e/            # Playwright tests
-├── tests/staging/            # Staging validation test templates (copied during validate)
-└── scripts/validate.mjs      # Full validation pipeline
+└── scripts/
+    ├── validate.mjs           # Full validation pipeline
+    └── generate-examples.mjs  # Generate examples/ from template resources
 ```
 
 ### Export Map (`sunpeak`)

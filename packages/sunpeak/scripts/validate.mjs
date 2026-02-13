@@ -9,6 +9,7 @@ import { execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readFileSync, writeFileSync } from 'fs';
+import { discoverResources } from '../bin/lib/patterns.mjs';
 
 // Color codes for output
 const colors = {
@@ -97,123 +98,85 @@ try {
   }
   printSuccess('pnpm test');
 
-  // Template level tests
-  printSection('TEMPLATE LEVEL TESTS');
+  // Example projects
+  printSection('EXAMPLE PROJECTS');
 
-  const templateDir = join(PACKAGE_ROOT, 'template');
+  const EXAMPLES_DIR = join(REPO_ROOT, 'examples');
+  const SUNPEAK_BIN = join(PACKAGE_ROOT, 'bin', 'sunpeak.js');
+  const resources = discoverResources();
 
-  console.log('Running: pnpm install (template)');
-  if (!runCommand('pnpm install', templateDir)) {
-    throw new Error('pnpm install failed in template');
+  console.log(`Discovered resources: ${resources.join(', ')}`);
+
+  // Generate all examples
+  console.log('\nGenerating examples...');
+  if (!runCommand(`node ${join(PACKAGE_ROOT, 'scripts', 'generate-examples.mjs')} --skip-install`, REPO_ROOT)) {
+    throw new Error('Example generation failed');
   }
-  console.log()
-  printSuccess('pnpm install (template)');
+  printSuccess('Examples generated');
 
-  console.log('\nRunning: pnpm test (template)');
-  if (!runCommand('pnpm test', templateDir)) {
-    throw new Error('pnpm test failed in template');
-  }
-  printSuccess('pnpm test (template)');
+  // Link local sunpeak, install, build, and test each example
+  let playwrightInstalled = false;
 
-  console.log('\nRunning: sunpeak build (template)');
-  if (!runCommand('node ../bin/sunpeak.js build', templateDir)) {
-    throw new Error('sunpeak build failed in template');
-  }
-  console.log()
-  printSuccess('sunpeak build (template)');
+  for (const resource of resources) {
+    const exampleName = `${resource}-example`;
+    const exampleDir = join(EXAMPLES_DIR, exampleName);
 
-  console.log('Checking: Playwright browsers');
-  if (!runCommand('pnpm exec playwright install chromium --with-deps', templateDir)) {
-    console.log('Note: Browser installation may require additional system dependencies');
-  }
-  console.log()
-  printSuccess('Playwright browsers');
+    printSection(`TESTING: ${exampleName}`);
 
-  console.log('\nRunning: pnpm test:e2e (template)');
-  if (!runCommand('pnpm test:e2e', templateDir)) {
-    throw new Error('Playwright tests failed');
-  }
-  console.log()
-  printSuccess('pnpm test:e2e (template)\n');
+    // Link local sunpeak package
+    console.log('Linking local sunpeak package...');
+    const pkgPath = join(exampleDir, 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    pkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
+    writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+    printSuccess('Linked local sunpeak');
 
-  // Staging scenario test
-  printSection('STAGING SCENARIO TEST');
+    console.log('\nRunning: pnpm install');
+    if (!runCommand('pnpm install --ignore-workspace --no-frozen-lockfile', exampleDir)) {
+      throw new Error(`pnpm install failed in ${exampleName}`);
+    }
+    printSuccess('pnpm install');
 
-  const tmpDir = join(REPO_ROOT, '..', 'tmp-sunpeak-staging');
-  const testProjectDir = join(tmpDir, 'test-app');
+    // Unit tests
+    console.log('\nRunning: pnpm test');
+    if (!runCommand('pnpm test', exampleDir)) {
+      throw new Error(`Tests failed in ${exampleName}`);
+    }
+    printSuccess('pnpm test');
 
-  console.log('Cleaning up old test directory...');
-  if (!runCommand(`rm -rf ${tmpDir}`, REPO_ROOT)) {
-    console.log('Note: No previous test directory to clean');
-  }
+    // Build
+    console.log('\nRunning: sunpeak build');
+    if (!runCommand(`node ${SUNPEAK_BIN} build`, exampleDir)) {
+      throw new Error(`Build failed in ${exampleName}`);
+    }
+    printSuccess('sunpeak build');
 
-  console.log('\nCreating temp directory...');
-  if (!runCommand(`mkdir -p ${tmpDir}`, REPO_ROOT)) {
-    throw new Error('Failed to create temp directory');
-  }
-  printSuccess('Created temp directory');
+    // Install Playwright browsers once
+    if (!playwrightInstalled) {
+      console.log('\nInstalling Playwright browsers...');
+      if (!runCommand('pnpm exec playwright install chromium --with-deps', exampleDir)) {
+        console.log('Note: Browser installation may require additional system dependencies');
+      }
+      playwrightInstalled = true;
+      printSuccess('Playwright browsers');
+    }
 
-  console.log('\nRunning: sunpeak new test-app review');
-  if (!runCommand(`node ${join(PACKAGE_ROOT, 'bin', 'sunpeak.js')} new test-app review`, tmpDir)) {
-    throw new Error('sunpeak new failed');
-  }
-  printSuccess('sunpeak new test-app review');
+    // E2E tests
+    console.log('\nRunning: pnpm test:e2e');
+    if (!runCommand('pnpm test:e2e', exampleDir)) {
+      throw new Error(`E2E tests failed in ${exampleName}`);
+    }
+    printSuccess('pnpm test:e2e');
 
-  console.log('\nLinking local sunpeak package...');
-  const testPkgPath = join(testProjectDir, 'package.json');
-  const testPkg = JSON.parse(readFileSync(testPkgPath, 'utf-8'));
-  testPkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
-  writeFileSync(testPkgPath, JSON.stringify(testPkg, null, 2) + '\n');
-  printSuccess('Linked local sunpeak package');
-
-  console.log('\nRunning: pnpm install (test-app)');
-  if (!runCommand('pnpm install --no-frozen-lockfile', testProjectDir)) {
-    throw new Error('pnpm install failed in test-app');
-  }
-  printSuccess('pnpm install (test-app)');
-
-  console.log('\nRunning: pnpm build (test-app)');
-  if (!runCommand('pnpm build', testProjectDir)) {
-    throw new Error('pnpm build failed in test-app');
-  }
-  printSuccess('pnpm build (test-app)');
-
-  console.log('\nRunning: Playwright test (test-app)');
-
-  // Copy staging templates from tests/staging directory
-  const stagingDir = join(PACKAGE_ROOT, 'tests', 'staging');
-  const testFileContent = readFileSync(join(stagingDir, 'staging-validation.spec.ts'), 'utf-8');
-  const playwrightConfigContent = readFileSync(join(stagingDir, 'staging-playwright.config.ts'), 'utf-8');
-
-  const testDir = join(testProjectDir, 'tests', 'e2e');
-  if (!runCommand(`mkdir -p ${testDir}`, testProjectDir)) {
-    throw new Error('Failed to create test directory');
-  }
-  writeFileSync(join(testDir, 'validation.spec.ts'), testFileContent);
-  writeFileSync(join(testProjectDir, 'playwright.config.ts'), playwrightConfigContent);
-
-  // Install playwright dependencies
-  console.log('\nInstalling Playwright...');
-  if (!runCommand('pnpm add -D @playwright/test', testProjectDir)) {
-    throw new Error('Failed to install Playwright');
+    printSuccess(`${exampleName} passed!\n`);
   }
 
-  console.log('\nInstalling Playwright browsers...');
-  if (!runCommand('pnpm exec playwright install chromium --with-deps', testProjectDir)) {
-    console.log('Note: Browser installation may require additional system dependencies');
+  // Regenerate clean examples (undo file: linking)
+  console.log('\nRegenerating clean examples...');
+  if (!runCommand(`node ${join(PACKAGE_ROOT, 'scripts', 'generate-examples.mjs')} --skip-install`, REPO_ROOT)) {
+    console.log('Note: Failed to regenerate clean examples');
   }
-
-  // Run the test
-  if (!runCommand('pnpm exec playwright test', testProjectDir)) {
-    throw new Error('Playwright test failed in test-app');
-  }
-  printSuccess('Playwright test (test-app)');
-
-  console.log('\nCleaning up test directory...');
-  if (!runCommand(`rm -rf ${tmpDir}`, REPO_ROOT)) {
-    console.log('Note: Failed to clean up test directory, you may want to remove it manually');
-  }
-  printSuccess('Cleaned up test directory\n');
+  printSuccess('Clean examples restored');
 
   printSuccess('SHIP IT!\n\n');
   process.exit(0);

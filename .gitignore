@@ -42,6 +42,13 @@ lerna-debug.log*
 *.sln
 *.sw?
 
+# Generated example artifacts
+examples/*/node_modules
+examples/*/pnpm-lock.yaml
+examples/*/dist
+examples/*/test-results
+examples/*/playwright-report
+
 # Temporary files
 *.log
 .cache

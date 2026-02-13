@@ -1,0 +1,84 @@
+{
+  "userMessage": "Show me popular places to visit in Austin Texas.",
+  "tool": {
+    "name": "show-carousel",
+    "description": "Show popular places to visit",
+    "inputSchema": {
+      "type": "object",
+      "properties": {
+        "city": { "type": "string", "description": "City name to search for places" },
+        "state": { "type": "string", "description": "State or region" },
+        "categories": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Filter by categories (e.g., parks, restaurants, landmarks)"
+        },
+        "limit": { "type": "number", "description": "Maximum number of places to return" }
+      },
+      "required": ["city"],
+      "additionalProperties": false
+    },
+    "title": "Show Carousel",
+    "annotations": { "readOnlyHint": true },
+    "_meta": {
+      "ui": { "visibility": ["model", "app"] }
+    }
+  },
+  "toolInput": {
+    "city": "Austin",
+    "state": "Texas",
+    "categories": ["landmarks", "parks", "historic sites"],
+    "limit": 5
+  },
+  "toolResult": {
+    "structuredContent": {
+      "places": [
+        {
+          "id": "1",
+          "name": "Lady Bird Lake",
+          "rating": 4.5,
+          "category": "Waterfront",
+          "location": "Austin",
+          "image": "https://cdn.sunpeak.ai/demo/austin1.jpeg",
+          "description": "Scenic lake perfect for kayaking, paddleboarding, and trails."
+        },
+        {
+          "id": "2",
+          "name": "Texas State Capitol",
+          "rating": 4.8,
+          "category": "Historic Site",
+          "location": "Austin",
+          "image": "https://cdn.sunpeak.ai/demo/austin2.jpeg",
+          "description": "Stunning capitol building with free tours and beautiful grounds."
+        },
+        {
+          "id": "3",
+          "name": "The Paramount Theatre",
+          "rating": 4.7,
+          "category": "Architecture",
+          "location": "Austin",
+          "image": "https://cdn.sunpeak.ai/demo/austin3.jpeg",
+          "description": "Century-old performance and movie theatre in the heart of downtown Austin."
+        },
+        {
+          "id": "4",
+          "name": "Zilker Park",
+          "rating": 4.7,
+          "category": "Park",
+          "location": "Austin",
+          "image": "https://cdn.sunpeak.ai/demo/austin4.jpeg",
+          "description": "Popular park with trails, sports fields, and Barton Springs Pool."
+        },
+        {
+          "id": "5",
+          "name": "South Congress Avenue",
+          "rating": 4.6,
+          "category": "Landmark",
+          "location": "Austin",
+          "image": "https://cdn.sunpeak.ai/demo/austin5.jpeg",
+          "description": "Vibrant street with unique shops, restaurants, and live music."
+        }
+      ]
+    }
+  }
+}

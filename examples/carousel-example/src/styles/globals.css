@@ -1,0 +1,11 @@
+/* Base styles: Tailwind CSS + OpenAI Apps SDK UI */
+@import "sunpeak/chatgpt/globals.css";
+
+/* Scan app-specific source files for Tailwind classes */
+@source "../**/*.{ts,tsx}";
+
+/* Required for Tailwind to find class references in sunpeak simulator and SDK UI components. */
+@source "../../node_modules/sunpeak";
+@source "../../node_modules/@openai/apps-sdk-ui";
+
+/* Add your custom styles below */

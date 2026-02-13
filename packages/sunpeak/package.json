@@ -64,6 +64,7 @@
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "generate-examples": "node scripts/generate-examples.mjs",
     "validate": "node scripts/validate.mjs",
     "prepublishOnly": "pnpm build"
   },
