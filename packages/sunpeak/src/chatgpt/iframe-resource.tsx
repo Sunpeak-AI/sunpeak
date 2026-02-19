@@ -217,6 +217,12 @@ function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string)
   <meta http-equiv="Content-Security-Policy" content="${safeCsp}" />
   <title>Resource</title>
   <style>
+    html {
+      /* Set color-scheme before the resource script loads so system UI (scrollbars,
+         form elements) is themed correctly from first paint. Once the script loads,
+         applyDocumentTheme() takes over with an inline style. */
+      color-scheme: ${safeTheme};
+    }
     html, body, #root {
       margin: 0;
       padding: 0;
@@ -225,8 +231,10 @@ function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string)
          This allows ResizeObserver to detect content changes and
          report accurate intrinsic height to the host. */
       min-height: 100%;
-      background: transparent;
-      color-scheme: dark light;
+      /* Use the platform's surface token so the background adapts to the host's
+         design system. The Canvas would otherwise vary by OS/browser mode when
+         color-scheme: dark is active, causing a mismatch with the simulator. */
+      background-color: var(--color-surface);
     }
   </style>
   <script>${PAINT_FENCE_SCRIPT}</script>

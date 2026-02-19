@@ -101,13 +101,27 @@ describe('IframeResource', () => {
     expect(srcDoc).toContain('data-theme="dark"');
   });
 
-  it('includes transparent background style', () => {
+  it('uses var(--color-surface) for background instead of transparent', () => {
     render(<IframeResource scriptSrc="/dist/carousel/carousel.js" />);
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
     const srcDoc = iframe.getAttribute('srcDoc') ?? '';
 
-    expect(srcDoc).toContain('background: transparent');
+    // Platform-agnostic surface token — adapts to whatever the host's CSS defines.
+    // Prevents the browser's dark Canvas from showing through when color-scheme: dark
+    // is active, which can appear darker than the simulator surface.
+    expect(srcDoc).toContain('background-color: var(--color-surface)');
+  });
+
+  it('sets color-scheme before resource script loads', () => {
+    render(
+      <IframeResource scriptSrc="/dist/carousel/carousel.js" hostContext={{ theme: 'dark' }} />
+    );
+
+    const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
+    const srcDoc = iframe.getAttribute('srcDoc') ?? '';
+
+    expect(srcDoc).toContain('color-scheme: dark');
   });
 });
 
