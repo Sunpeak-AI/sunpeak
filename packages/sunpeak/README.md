@@ -24,8 +24,7 @@ Quickstart, build, test, and ship your Claude or ChatGPT App!
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
 [Discord (NEW)](https://discord.gg/FB2QNXqRnw) ~
 [Documentation](https://docs.sunpeak.ai/) ~
-[GitHub](https://github.com/Sunpeak-AI/sunpeak) ~
-[Resource Repository](https://app.sunpeak.ai/)
+[GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
 <div align="center">
   <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
@@ -80,22 +79,12 @@ my-app/
 
 ### The `sunpeak` CLI
 
-Commands for managing MCP Apps. Includes a client for the [sunpeak Resource Repository](https://app.sunpeak.ai/). The repository helps you & your CI/CD decouple your App from your client-agnostic MCP server while also providing a hosted runtime to collaborate, demo, and share your MCP Apps.
+Commands for managing MCP Apps:
 
-Think Docker Hub for MCP Apps:
-
-<div align="center">
-  <a href="https://docs.sunpeak.ai/library/chatgpt-simulator">
-    <picture>
-      <img alt="ChatGPT Resource Repository" src="https://cdn.sunpeak.ai/blog/storybook-for-chatgpt-apps.png">
-    </picture>
-  </a>
-</div>
-
-1. Tag your app builds with version numbers and environment names (like `v1.0.0` and `prod`)
-2. `sunpeak push` built Apps to a central location
-3. `sunpeak pull` built Apps to be run in different environments, like your production MCP server.
-4. Share your fully-functional demo Apps with teammates, prospects, and strangers!
+- `sunpeak new [name] [resources]` - Create a new project
+- `sunpeak dev` - Start dev server with MCP endpoint and live simulator
+- `sunpeak build` - Build resources for production
+- `sunpeak upgrade` - Upgrade sunpeak to latest version
 
 ## Example App
 

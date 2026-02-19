@@ -15,16 +15,11 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 ## Commands
 
 ```bash
-# Core commands:
 pnpm test              # Run tests with Vitest.
 pnpm test:e2e          # Run end-to-end tests with Playwright.
 sunpeak dev            # Start dev server + MCP endpoint.
 sunpeak build          # Build all resources for production.
-
-# sunpeak repository (think ECR for MCP Apps):
-sunpeak login          # Authenticate with the sunpeak repository.
-sunpeak push           # Push built resources to the sunpeak repository.
-sunpeak pull           # Pull built resources from the sunpeak repository (for your prod MCP server).
+sunpeak upgrade        # Upgrade sunpeak to latest version.
 ```
 
 The template includes a minimal test setup with Vitest. You can add additional tooling (linting, formatting, type-checking) as needed for your project.
@@ -88,7 +83,6 @@ Each resource folder contains:
 - **`.json` file**: Resource metadata (extracted from the `resource` export in your `.tsx` file) with a generated `uri` for cache-busting
 
 Host these files and reference them as resources in your production MCP server.
-Use the sunpeak resource repository for built-in resource hosting.
 
 ## Add a new UI (Resource)
 

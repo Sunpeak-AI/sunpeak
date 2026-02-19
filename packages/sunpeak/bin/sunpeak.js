@@ -37,17 +37,7 @@ function getVersion() {
   }
 
   // Commands that don't require a package.json
-  const standaloneCommands = [
-    'new',
-    'login',
-    'logout',
-    'push',
-    'pull',
-    'deploy',
-    'upgrade',
-    'help',
-    undefined,
-  ];
+  const standaloneCommands = ['new', 'upgrade', 'help', undefined];
 
   if (command && !standaloneCommands.includes(command)) {
     checkPackageJson();
@@ -72,41 +62,6 @@ function getVersion() {
       {
         const { build } = await import(join(COMMANDS_DIR, 'build.mjs'));
         await build(process.cwd());
-      }
-      break;
-
-    case 'login':
-      {
-        const { login } = await import(join(COMMANDS_DIR, 'login.mjs'));
-        await login();
-      }
-      break;
-
-    case 'logout':
-      {
-        const { logout } = await import(join(COMMANDS_DIR, 'logout.mjs'));
-        await logout();
-      }
-      break;
-
-    case 'push':
-      {
-        const { push, parseArgs } = await import(join(COMMANDS_DIR, 'push.mjs'));
-        await push(process.cwd(), parseArgs(args));
-      }
-      break;
-
-    case 'pull':
-      {
-        const { pull, parseArgs } = await import(join(COMMANDS_DIR, 'pull.mjs'));
-        await pull(process.cwd(), parseArgs(args));
-      }
-      break;
-
-    case 'deploy':
-      {
-        const { deploy, parseArgs } = await import(join(COMMANDS_DIR, 'deploy.mjs'));
-        await deploy(process.cwd(), parseArgs(args));
       }
       break;
 
@@ -136,18 +91,11 @@ Usage:
   sunpeak dev              Start dev server + MCP endpoint
     --no-begging           Suppress GitHub star message
   sunpeak build            Build resources
-  sunpeak login            Log in to Sunpeak
-  sunpeak logout           Log out of Sunpeak
-  sunpeak push             Push resources to repository
-  sunpeak pull             Pull resources from repository
-  sunpeak deploy           Push resources with "prod" tag
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 
   Resources: ${resources.join(', ')} (comma/space separated)
   Example: sunpeak new my-app "${resources.slice(0, 2).join(',')}"
-
-For more information, visit: https://sunpeak.ai/
 `);
       }
       break;

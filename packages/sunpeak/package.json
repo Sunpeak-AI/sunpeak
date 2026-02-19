@@ -1,7 +1,7 @@
 {
   "name": "sunpeak",
-  "version": "0.13.12",
-  "description": "The ChatGPT App framework. Quickstart, build, & test your ChatGPT App locally!",
+  "version": "0.13.11",
+  "description": "Local-first MCP Apps framework. Quickstart, build, test, and ship your Claude or ChatGPT App!",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

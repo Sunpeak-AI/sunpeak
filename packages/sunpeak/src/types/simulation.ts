@@ -23,8 +23,7 @@ export interface Simulation {
   // The page mounts the resource component and uses SDK's useApp().
   resourceUrl?: string;
 
-  // URL to a built resource for iframe rendering.
-  // Used by https://app.sunpeak.ai for production builds.
+  // URL to a built resource for iframe rendering (production builds).
   resourceScript?: string;
 
   userMessage?: string; // Decoration for the simulator, no functional purpose.

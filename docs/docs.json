@@ -67,11 +67,6 @@
               "api-reference/cli/new",
               "api-reference/cli/dev",
               "api-reference/cli/build",
-              "api-reference/cli/login",
-              "api-reference/cli/logout",
-              "api-reference/cli/push",
-              "api-reference/cli/pull",
-              "api-reference/cli/deploy",
               "api-reference/cli/upgrade"
             ]
           },

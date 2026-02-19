@@ -5,7 +5,7 @@ description: "How the CLI fits into your development workflow."
 
 ## Overview
 
-The sunpeak CLI commands support a complete development lifecycle, from project creation to production deployment. This page explains how the commands work together.
+The sunpeak CLI commands support a complete development lifecycle, from project creation to production builds. This page explains how the commands work together.
 
 ## Development Lifecycle
 
@@ -13,8 +13,6 @@ The sunpeak CLI commands support a complete development lifecycle, from project 
 flowchart LR
     A[sunpeak new] --> B[sunpeak dev]
     B --> C[sunpeak build]
-    C --> D[sunpeak push]
-    D --> E[sunpeak deploy]
 ```
 
 ### 1. Create
@@ -71,36 +69,9 @@ sunpeak build
 
 This compiles and optimizes your Resources for deployment.
 
-### 4. Push
+### 4. Deploy
 
-Push your built Resources to the sunpeak repository:
-
-```bash
-sunpeak login        # Authenticate (once)
-sunpeak push         # Push to repository
-sunpeak push --tag v1.0.0  # Push with version tag
-```
-
-Tags let you version your builds and reference specific versions later.
-
-### 5. Deploy
-
-Deploy to production:
-
-```bash
-sunpeak deploy
-```
-
-This is equivalent to `sunpeak push --tag prod`, marking the current build as the production version.
-
-## CI/CD Integration
-
-The push/pull commands enable CI/CD workflows where your MCP server can pull the latest Resources without rebuilding:
-
-```bash
-# In your MCP server deployment:
-sunpeak pull -r my-repo -t prod
-```
+Deploy your built resources to your production MCP server. See the [Deployment Guide](/guides/deployment) for details on publishing to ChatGPT and hosting your resources.
 
 ## Dive Deeper
 
