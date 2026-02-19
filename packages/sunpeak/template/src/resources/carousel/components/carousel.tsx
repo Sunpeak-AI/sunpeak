@@ -1,8 +1,8 @@
 import * as React from 'react';
 import useEmblaCarousel from 'embla-carousel-react';
 import { WheelGesturesPlugin } from 'embla-carousel-wheel-gestures';
-import { ArrowLeft, ArrowRight } from '@openai/apps-sdk-ui/components/Icon';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
+import { ArrowLeft, ArrowRight } from '../../../components/icon';
+import { Button } from '../../../components/button';
 import { cn } from '../../../lib/index';
 
 export type CarouselProps = {

@@ -7,8 +7,8 @@ import {
   SafeArea,
 } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
-import { ExpandLg } from '@openai/apps-sdk-ui/components/Icon';
+import { Button } from '../../components/button';
+import { ExpandLg } from '../../components/icon';
 
 export const resource: ResourceConfig = {
   name: 'review',

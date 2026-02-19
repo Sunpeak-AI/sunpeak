@@ -89,7 +89,7 @@ export function extractResourceCSP(resource: { _meta?: unknown }): ResourceCSP |
 
 /**
  * Domains required by the sunpeak SDK and its peer dependencies
- * (e.g., @openai/apps-sdk-ui loads fonts/styles from cdn.openai.com).
+ * (fonts/styles loaded from cdn.openai.com).
  */
 const SDK_RESOURCE_DOMAINS = ['https://cdn.openai.com'];
 

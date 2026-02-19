@@ -41,7 +41,7 @@ vi.mock('sunpeak', () => ({
 }));
 
 // Mock Button component
-vi.mock('@openai/apps-sdk-ui/components/Button', () => ({
+vi.mock('../../components/button', () => ({
   Button: ({
     children,
     onClick,
@@ -73,7 +73,7 @@ vi.mock('@openai/apps-sdk-ui/components/Button', () => ({
 }));
 
 // Mock Icon component
-vi.mock('@openai/apps-sdk-ui/components/Icon', () => ({
+vi.mock('../../components/icon', () => ({
   ExpandLg: ({ className }: { className?: string }) => (
     <span data-testid="expand-icon" className={className}>
       Expand

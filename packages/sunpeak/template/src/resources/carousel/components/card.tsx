@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
+import { Button } from '../../../components/button';
 import { cn } from '../../../lib/index';
 
 export interface CardButtonProps {

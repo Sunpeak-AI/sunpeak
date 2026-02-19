@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Settings } from '@openai/apps-sdk-ui/components/Icon';
+import { Settings } from '../../../components/icon';
 import { cn } from '../../../lib/index';
 import { PlaceCard } from './place-card';
 import type { Place } from './types';

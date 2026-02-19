@@ -73,7 +73,7 @@ my-app/
 ```
 
 1. Project scaffold: Complete development setup with the `sunpeak` library.
-2. UI components: Production-ready components following ChatGPT design guidelines and using OpenAI `apps-sdk-ui` React components.
+2. UI components: Production-ready components following ChatGPT design guidelines.
 3. Convention over configuration:
    1. Create a UI by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
    2. Create test state (`Simulation`s) for local dev, ChatGPT dev, automated testing, and demos by creating a `-simulation.json` file. ([example below](#simulation))
@@ -219,4 +219,3 @@ test.describe('Review Resource', () => {
 - [MCP Apps](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
 - [ChatGPT Apps SDK Documentation - UI](https://developers.openai.com/apps-sdk/build/chatgpt-ui)
-- [ChatGPT Apps SDK UI Documentation](https://openai.github.io/apps-sdk-ui/)

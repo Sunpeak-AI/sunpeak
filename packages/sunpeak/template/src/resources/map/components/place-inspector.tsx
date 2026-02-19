@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Button } from '@openai/apps-sdk-ui/components/Button';
-import { Avatar } from '@openai/apps-sdk-ui/components/Avatar';
-import { X, Star } from '@openai/apps-sdk-ui/components/Icon';
+import { Button } from '../../../components/button';
+import { Avatar } from '../../../components/avatar';
+import { X, Star } from '../../../components/icon';
 import { cn } from '../../../lib/index';
 import type { Place } from './types';
 

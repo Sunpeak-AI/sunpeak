@@ -10,11 +10,10 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@openai/apps-sdk-ui": "^0.2.1",
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "mapbox-gl": "^3.17.0",
-    "sunpeak": "^0.13.9",
+    "sunpeak": "^0.13.10",
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {

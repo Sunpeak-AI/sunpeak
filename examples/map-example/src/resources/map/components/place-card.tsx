@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Star } from '@openai/apps-sdk-ui/components/Icon';
+import { Star } from '../../../components/icon';
 import { cn } from '../../../lib/index';
 import type { Place } from './types';
 

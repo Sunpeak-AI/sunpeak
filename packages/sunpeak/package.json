@@ -69,7 +69,6 @@
     "prepublishOnly": "pnpm build"
   },
   "keywords": [
-    "openai-apps-sdk-ui",
     "openai-app",
     "chatgpt-apps-sdk",
     "chatgpt-app",
