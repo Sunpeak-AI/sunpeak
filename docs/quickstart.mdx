@@ -47,8 +47,8 @@ description: "Create your first MCP App with sunpeak."
     ```
 
     This starts:
-    - The MCP App simulator at `http://localhost:6767` for local development
-    - An MCP server at `http://localhost:6766` for testing with real hosts like ChatGPT
+    - The MCP App simulator at `http://localhost:3000` for local development
+    - An MCP server at `http://localhost:8000` for testing with real hosts like ChatGPT
 
     <Tip>Both servers support Hot Module Reload - your changes reflect instantly!</Tip>
   </Step>
@@ -58,7 +58,7 @@ description: "Create your first MCP App with sunpeak."
 
     ```bash
     # In another terminal, run a tunnel. For example:
-    ngrok http 6766
+    ngrok http 8000
     ```
 
     You can then connect to the tunnel `Forwarding URL` at the `/mcp` path (e.g. `https://your-random-subdomain.ngrok-free.dev/mcp`) from ChatGPT

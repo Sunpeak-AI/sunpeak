@@ -46,7 +46,7 @@ This server is for **local development only**. For production, create your own M
       name: 'My App',
       version: '0.1.0',
       simulations,
-      port: 6766,
+      port: 8000,
     });
     ```
   </Tab>
@@ -61,7 +61,7 @@ Once your MCP server is running:
     Expose your local server with a tunnel:
 
     ```bash
-    ngrok http 6766
+    ngrok http 8000
     ```
 
     Copy the forwarding URL (e.g., `https://abc123.ngrok.io`).
@@ -96,7 +96,7 @@ Once your MCP server is running:
   MCP server version.
 </ResponseField>
 
-<ResponseField name="port" type="number" default="6766">
+<ResponseField name="port" type="number" default="8000">
   Server port. Can also be set via the `PORT` environment variable.
 </ResponseField>
 

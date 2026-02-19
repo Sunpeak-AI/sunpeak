@@ -37,7 +37,7 @@ For manual testing with live servers, you can also run:
 With the mcp server still running from the previous step, make sure to have a tunnel like ngrok running in another terminal using the mcp port:
 
 ```
-ngrok http 6766
+ngrok http 8000
 ```
 
 You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see the template UI in action: `User > Settings > Apps & Connectors > Create`

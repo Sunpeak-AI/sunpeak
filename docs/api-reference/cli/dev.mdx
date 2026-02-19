@@ -25,7 +25,7 @@ The dev server uses Vite's hot reload technology for instant feedback:
 
 ### Simulator
 
-Access the simulator at `http://localhost:6767` to:
+Access the simulator at `http://localhost:3000` to:
 
 - Test your MCP Resources in a ChatGPT-like environment
 - Simulate tool calls and responses
@@ -34,7 +34,7 @@ Access the simulator at `http://localhost:6767` to:
 
 ### MCP Server
 
-The dev server also runs an MCP server on port `6766` for testing with hosts like ChatGPT:
+The dev server also runs an MCP server on port `8000` for testing with hosts like ChatGPT:
 
 - Serves your apps to ChatGPT via MCP
 - Automatically rebuilds when you make changes
@@ -53,15 +53,15 @@ No manual configuration or entry point files needed!
 
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--port <number>` | `-p` | Port for the simulator (default: 6767, also respects `PORT` env var) |
+| `--port <number>` | `-p` | Port for the simulator (default: 3000, also respects `PORT` env var) |
 | `--prod-mcp` | | Serve production build `.html` files over MCP instead of Vite HMR (requires `sunpeak build` first) |
 
 ## Configuration
 
 ### Ports
 
-Default simulator port: `6767`
-Default MCP server port: `6766`
+Default simulator port: `3000`
+Default MCP server port: `8000`
 
 ## Usage
 
@@ -93,7 +93,7 @@ To test with the real ChatGPT, expose the MCP server with a tunnel:
 
 ```bash
 # In another terminal, run a tunnel
-ngrok http 6766
+ngrok http 8000
 ```
 
 Then connect the tunnel URL at the `/mcp` path (e.g., `https://your-subdomain.ngrok.io/mcp`) from ChatGPT **in developer mode**: `User > Settings > Apps & Connectors > Create`.

@@ -57,7 +57,7 @@ function getViteResourceHtml(srcPath: string): string {
 
   // Use localhost URL for dev (not ngrok URL) to bypass ngrok warning page
   // Scripts load directly from localhost, user must approve "local network access" in browser
-  const devServerUrl = 'http://localhost:6766';
+  const devServerUrl = 'http://localhost:8000';
 
   // Encode srcPath and componentName for the virtual entry module
   const entryParams = new URLSearchParams({ src: srcPath, component: componentName });
@@ -112,7 +112,7 @@ function getResourceHtml(simulation: SimulationWithDist, viteMode: boolean): str
 }
 
 // Vite dev server URLs for CSP
-const DEV_SERVER_URL = 'http://localhost:6766';
+const DEV_SERVER_URL = 'http://localhost:8000';
 const HMR_WS_URL = 'ws://localhost:24678';
 
 /**
@@ -381,8 +381,8 @@ interface ViteDevServer {
  * @param config - Server configuration with simulations.
  */
 export function runMCPServer(config: MCPServerConfig): void {
-  const portEnv = Number(process.env.PORT ?? 6766);
-  const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 6766);
+  const portEnv = Number(process.env.PORT ?? 8000);
+  const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 8000);
   const { simulations } = config;
 
   // Check if Vite dev server is provided

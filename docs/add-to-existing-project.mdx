@@ -199,7 +199,7 @@ Your existing project needs:
     const simulations = [{
       ...exampleSimulation,
       resource,
-      resourceUrl: 'http://localhost:6767/resources/example',
+      resourceUrl: 'http://localhost:3000/resources/example',
     }];
 
     createRoot(document.getElementById('root')!).render(
@@ -216,7 +216,7 @@ Your existing project needs:
     Add a script to run your simulation dev server (`package.json`):
     ```json
     "scripts": {
-      "dev": "vite --port 6767"
+      "dev": "vite --port 3000"
     }
     ```
 
@@ -268,7 +268,7 @@ Your existing project needs:
       name: 'My App',
       version: '0.1.0',
       simulations,
-      port: 6766,
+      port: 8000,
     });
     ```
 

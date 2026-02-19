@@ -77,7 +77,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const tailwindcss = tailwindPlugin.default;
 
   // Parse port from args or use default
-  let port = parseInt(process.env.PORT || '6767');
+  let port = parseInt(process.env.PORT || '3000');
   const portArgIndex = args.findIndex(arg => arg === '--port' || arg === '-p');
   if (portArgIndex !== -1 && args[portArgIndex + 1]) {
     port = parseInt(args[portArgIndex + 1]);
@@ -285,7 +285,7 @@ if (import.meta.hot) {
       name: pkg.name || 'Sunpeak',
       version: pkg.version || '0.1.0',
       simulations,
-      port: 6766,
+      port: 8000,
       ...(mcpViteServer && { viteServer: mcpViteServer }),
     });
 

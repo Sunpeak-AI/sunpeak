@@ -49,7 +49,7 @@ Test your app directly in ChatGPT using the built-in MCP endpoint (starts automa
 sunpeak dev
 
 # In another terminal, run a tunnel. For example:
-ngrok http 6766
+ngrok http 8000
 ```
 
 You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps & Connectors > Create`
