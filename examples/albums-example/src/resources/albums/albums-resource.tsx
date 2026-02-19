@@ -25,7 +25,7 @@ export const resource: ResourceConfig = {
  */
 export function AlbumsResource() {
   return (
-    <SafeArea className="h-full">
+    <SafeArea>
       <Albums />
     </SafeArea>
   );

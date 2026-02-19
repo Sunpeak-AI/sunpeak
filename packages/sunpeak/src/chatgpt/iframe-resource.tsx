@@ -227,13 +227,6 @@ function generateScriptHtml(scriptSrc: string, theme: string, cspPolicy: string)
       margin: 0;
       padding: 0;
       width: 100%;
-      /* Use min-height instead of height so body sizes to content.
-         This allows ResizeObserver to detect content changes and
-         report accurate intrinsic height to the host. */
-      min-height: 100%;
-      /* Use the platform's surface token so the background adapts to the host's
-         design system. The Canvas would otherwise vary by OS/browser mode when
-         color-scheme: dark is active, causing a mismatch with the simulator. */
       background-color: var(--color-surface);
     }
   </style>

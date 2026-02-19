@@ -154,9 +154,6 @@ function createAppServer(
 ): McpServer {
   const { name = 'sunpeak-app', version = '0.1.0' } = config;
 
-  // Generate fallback timestamp for resources without URIs (dev mode)
-  const devTimestamp = Date.now().toString(36);
-
   const mcpServer = new McpServer(
     { name, version },
     { capabilities: { resources: {}, tools: {} } }
@@ -172,8 +169,10 @@ function createAppServer(
     const tool = simulation.tool;
     const toolResult = simulation.toolResult ?? { structuredContent: null };
 
-    // Generate URI if not provided (dev mode)
-    const uri = (resource.uri as string) ?? `ui://${resource.name as string}-${devTimestamp}`;
+    // Use the resource's URI, or derive a stable one from the resource name.
+    // Must be stable across all SSE sessions — ChatGPT reads resource URIs from the tools/list
+    // response in one session, then fetches the content in a separate resources/read session.
+    const uri = (resource.uri as string) ?? `ui://${resource.name as string}`;
     const resourceMeta = (resource._meta as Record<string, unknown>) ?? {};
     const toolMeta = (tool._meta as Record<string, unknown>) ?? {};
 
@@ -190,9 +189,16 @@ function createAppServer(
           _meta: viteMode ? { ui: injectViteCSP(resourceMeta)?.ui } : resourceMeta,
         },
         async () => {
-          const content = getResourceHtml(simulation, viteMode);
+          console.log(`[MCP] ReadResource: ${uri}${viteMode ? ' (vite)' : ''}`);
+          let content: string;
+          try {
+            content = getResourceHtml(simulation, viteMode);
+          } catch (error) {
+            console.error(`[MCP] ReadResource error for ${uri}:`, error);
+            throw error;
+          }
           const sizeKB = (content.length / 1024).toFixed(1);
-          console.log(`[MCP] ReadResource: ${uri} → ${sizeKB}KB${viteMode ? ' (vite)' : ''}`);
+          console.log(`[MCP] ReadResource: ${uri} → ${sizeKB}KB`);
 
           return {
             contents: [
@@ -249,8 +255,9 @@ function createAppServer(
     );
   }
 
+  const registeredUris = Array.from(registeredResources).join(', ');
   console.log(
-    `[MCP] Registered ${simulations.length} tool(s) and resource(s)${viteMode ? ' (vite mode)' : ''}`
+    `[MCP] Registered ${simulations.length} tool(s) and resource(s)${viteMode ? ' (vite mode)' : ''}: ${registeredUris}`
   );
 
   return mcpServer;
@@ -320,8 +327,32 @@ async function handlePostMessage(req: IncomingMessage, res: ServerResponse, url:
     return;
   }
 
+  // Buffer body to log the MCP method, then pass pre-parsed to avoid re-reading the stream
+  const chunks: Buffer[] = [];
+  await new Promise<void>((resolve, reject) => {
+    req.on('data', (chunk: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+    });
+    req.on('end', resolve);
+    req.on('error', reject);
+  });
+  const rawBody = Buffer.concat(chunks).toString('utf8');
+
   try {
-    await session.transport.handlePostMessage(req, res);
+    const parsed = JSON.parse(rawBody) as {
+      method?: string;
+      id?: string | number;
+      params?: Record<string, unknown>;
+    };
+    if (parsed.method) {
+      const extra =
+        parsed.method === 'resources/read' ? ` uri=${JSON.stringify(parsed.params?.uri)}` : '';
+      console.log(`[MCP] ← ${parsed.method}${extra} (${sessionId.substring(0, 8)}...)`);
+    }
+  } catch {}
+
+  try {
+    await session.transport.handlePostMessage(req, res, rawBody);
   } catch (error) {
     console.error('Failed to process message', error);
     if (!res.headersSent) {

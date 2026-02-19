@@ -43,7 +43,11 @@ export function FullscreenViewer({ album, className }: FullscreenViewerProps) {
   return (
     <SafeArea
       ref={containerRef}
-      className={cn('flex w-full bg-surface', isMobile ? 'flex-col' : 'flex-row', className)}
+      className={cn(
+        'min-h-dvh flex w-full bg-surface',
+        isMobile ? 'flex-col' : 'flex-row',
+        className
+      )}
     >
       {/* Album header - mobile only */}
       {isMobile && (
