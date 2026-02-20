@@ -203,6 +203,14 @@ test.describe('Review Resource', () => {
 });
 ```
 
+## Coding Agent Skill
+
+Install the `create-sunpeak-app` skill to give your coding agent (Claude Code, Cursor, etc.) built-in knowledge of sunpeak patterns, hooks, simulation files, and testing conventions:
+
+```bash
+npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
+```
+
 ## Resources
 
 - [MCP Apps](https://github.com/modelcontextprotocol/ext-apps)
