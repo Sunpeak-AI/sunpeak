@@ -3,9 +3,9 @@
   "theme": "maple",
   "name": "sunpeak",
   "colors": {
-    "primary": "#1A1F36",
+    "primary": "#000035",
     "light": "#FFB800",
-    "dark": "#1A1F36"
+    "dark": "#000035"
   },
   "favicon": "/favicon.svg",
   "navigation": {
