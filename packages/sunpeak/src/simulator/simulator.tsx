@@ -21,6 +21,14 @@ import { getHostShell, getRegisteredHosts, type HostId } from './hosts';
 import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './simulator-types';
 
+// Register built-in host shells. These imports live here (in the component file)
+// rather than in the barrel index.ts because Rollup code-splitting can separate
+// side-effect imports from barrel exports, letting consumer bundlers tree-shake
+// them. Importing here makes registration part of the Simulator component's
+// dependency graph, which can't be tree-shaken since the component is used.
+import '../chatgpt/chatgpt-host';
+import '../claude/claude-host';
+
 export interface SimulatorProps {
   children?: React.ReactNode;
   simulations?: Record<string, Simulation>;
