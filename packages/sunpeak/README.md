@@ -23,11 +23,11 @@ Quickstart, build, test, and ship your Claude or ChatGPT App!
 [Demo (Hosted)](https://sunpeak.ai/simulator) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
 [Discord (NEW)](https://discord.gg/FB2QNXqRnw) ~
-[Documentation](https://docs.sunpeak.ai/) ~
+[Documentation](https://sunpeak.ai/docs/) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
 <div align="center">
-  <a href="https://docs.sunpeak.ai/library/simulator">
+  <a href="https://sunpeak.ai/docs/library/simulator">
     <picture>
       <img alt="Simulator" src="https://cdn.sunpeak.ai/chatgpt-simulator.png">
     </picture>
@@ -43,7 +43,7 @@ pnpm add -g sunpeak
 sunpeak new
 ```
 
-To add `sunpeak` to an existing project, refer to the [documentation](https://docs.sunpeak.ai/add-to-existing-project).
+To add `sunpeak` to an existing project, refer to the [documentation](https://sunpeak.ai/docs/add-to-existing-project).
 
 ## Overview
 

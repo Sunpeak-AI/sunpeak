@@ -2,7 +2,7 @@
 
 An MCP App built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
 
-For an initial overview of your new app and a detailed API reference, refer to the [documentation](https://docs.sunpeak.ai/template/project-structure).
+For an initial overview of your new app and a detailed API reference, refer to the [documentation](https://sunpeak.ai/docs/template/project-scaffold).
 
 ## Quickstart
 
