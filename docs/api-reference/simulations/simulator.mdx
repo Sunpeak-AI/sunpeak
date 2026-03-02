@@ -70,16 +70,16 @@ The Simulator supports URL parameters for configuring the initial state. This is
 
 ```
 # Load albums simulation in light mode
-http://localhost:3000/?simulation=albums-show&theme=light
+http://localhost:3000/?simulation=show-albums&theme=light
 
 # Fullscreen dark mode
 http://localhost:3000/?simulation=review-diff&theme=dark&displayMode=fullscreen
 
 # Mobile simulation with touch
-http://localhost:3000/?simulation=map-show&deviceType=mobile&touch=true&hover=false
+http://localhost:3000/?simulation=show-map&deviceType=mobile&touch=true&hover=false
 
 # Claude host in light mode
-http://localhost:3000/?simulation=albums-show&host=claude&theme=light
+http://localhost:3000/?simulation=show-albums&host=claude&theme=light
 ```
 
 ## createSimulatorUrl
@@ -96,8 +96,8 @@ import { createSimulatorUrl } from 'sunpeak/simulator';
 
 ```typescript
 // Basic usage
-createSimulatorUrl({ simulation: 'albums-show', theme: 'light' })
-// Returns: '/?simulation=albums-show&theme=light'
+createSimulatorUrl({ simulation: 'show-albums', theme: 'light' })
+// Returns: '/?simulation=show-albums&theme=light'
 
 // With display mode
 createSimulatorUrl({
@@ -109,20 +109,20 @@ createSimulatorUrl({
 
 // With device simulation
 createSimulatorUrl({
-  simulation: 'map-show',
+  simulation: 'show-map',
   deviceType: 'mobile',
   touch: true,
   hover: false,
 })
-// Returns: '/?simulation=map-show&deviceType=mobile&touch=true&hover=false'
+// Returns: '/?simulation=show-map&deviceType=mobile&touch=true&hover=false'
 
 // With safe area insets (for notch simulation)
 createSimulatorUrl({
-  simulation: 'carousel-show',
+  simulation: 'show-carousel',
   safeAreaTop: 44,
   safeAreaBottom: 34,
 })
-// Returns: '/?simulation=carousel-show&safeAreaTop=44&safeAreaBottom=34'
+// Returns: '/?simulation=show-carousel&safeAreaTop=44&safeAreaBottom=34'
 ```
 
 ### SimulatorUrlParams Interface
@@ -154,7 +154,7 @@ import { createSimulatorUrl } from 'sunpeak/simulator';
 test.describe('Albums Resource', () => {
   test('should render in light mode', async ({ page }) => {
     await page.goto(createSimulatorUrl({
-      simulation: 'albums-show',
+      simulation: 'show-albums',
       theme: 'light',
     }));
 
@@ -164,7 +164,7 @@ test.describe('Albums Resource', () => {
 
   test('should render in fullscreen dark mode', async ({ page }) => {
     await page.goto(createSimulatorUrl({
-      simulation: 'albums-show',
+      simulation: 'show-albums',
       theme: 'dark',
       displayMode: 'fullscreen',
     }));

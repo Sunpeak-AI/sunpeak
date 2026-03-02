@@ -32,11 +32,15 @@ Using a Review page as an example, sunpeak projects look like:
 my-app/
 ├── src/resources/
 │   └── review/
-│       └── review-resource.tsx # Review UI component + resource metadata.
+│       └── review.tsx            # Review UI component + resource metadata.
+├── src/tools/
+│   ├── review-diff.ts            # Tool: metadata, schema, handler.
+│   ├── review-post.ts
+│   └── review-purchase.ts
 ├── tests/simulations/
-│   └── review/
-│       ├── review-{scenario1}-simulation.json  # Mock state for testing.
-│       └── review-{scenario2}-simulation.json  # Mock state for testing.
+│   ├── review-diff.json          # Mock state for testing.
+│   ├── review-post.json
+│   └── review-purchase.json
 └── package.json
 ```
 
@@ -90,14 +94,14 @@ To add a new UI (MCP Resource), create a new directory under `src/resources/` wi
 
 ```
 src/resources/NAME/
-├── NAME-resource.tsx              # React component + resource metadata (required)
-├── NAME-resource.test.tsx         # Unit tests (optional)
-└── components/                    # UI components (optional)
+├── NAME.tsx                      # React component + resource metadata (required)
+├── NAME.test.tsx                 # Unit tests (optional)
+└── components/                   # UI components (optional)
 ```
 
-Only the resource file (`.tsx`) is required to generate a production build and ship a UI. It must export a `resource` object (`ResourceConfig`) describing the resource metadata, and a React component that renders the UI.
+Only the resource file (`.tsx`) is required to generate a production build and ship a UI. It must export a `resource` object (`ResourceConfig`) describing the resource metadata, and a React component that renders the UI. The resource name is auto-derived from the directory name.
 
-Create the simulation file(s) in `tests/simulations/` if you want to preview your resource in `sunpeak dev`.
+Then create a tool file in `src/tools/` and simulation file(s) in `tests/simulations/` to preview your resource in `sunpeak dev`.
 
 ## Coding Agent Skill
 

@@ -11,7 +11,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
  * Auto-discover available resources from template/src/resources directories.
- * Each subdirectory containing a {name}-resource.tsx file is a valid resource.
+ * Each subdirectory containing a {name}.tsx file is a valid resource.
  * @returns {string[]} Array of resource names
  */
 export function discoverResources() {
@@ -21,10 +21,7 @@ export function discoverResources() {
   }
   return readdirSync(resourcesDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
-    .filter((entry) => {
-      const resourceFile = join(resourcesDir, entry.name, `${entry.name}-resource.tsx`);
-      return existsSync(resourceFile);
-    })
+    .filter((entry) => existsSync(join(resourcesDir, entry.name, `${entry.name}.tsx`)))
     .map((entry) => entry.name);
 }
 
@@ -42,24 +39,3 @@ export function toPascalCase(str) {
     .join('');
 }
 
-/**
- * Check if a filename is a simulation file for a given resource.
- * @param {string} filename
- * @param {string} resourceKey
- * @returns {boolean}
- * @example isSimulationFile('albums-show-simulation.json', 'albums') // true
- */
-export function isSimulationFile(filename, resourceKey) {
-  return filename.startsWith(`${resourceKey}-`) && filename.endsWith('-simulation.json');
-}
-
-/**
- * Extract the simulation name from a simulation filename.
- * @param {string} filename
- * @param {string} resourceKey
- * @returns {string}
- * @example extractSimulationName('albums-show-simulation.json', 'albums') // 'show'
- */
-export function extractSimulationName(filename, resourceKey) {
-  return filename.replace(`${resourceKey}-`, '').replace('-simulation.json', '');
-}

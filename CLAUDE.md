@@ -67,7 +67,9 @@ packages/sunpeak/
 ├── template/                 # Scaffolded app template (also a workspace package)
 │   ├── .sunpeak/             # dev.tsx (simulator bootstrap), resource-loader.tsx (iframe loader)
 │   ├── src/resources/        # Example resource components (albums, carousel, map, review)
-│   └── tests/e2e/            # Playwright tests
+│   ├── src/tools/            # Tool files with handlers and metadata
+│   ├── src/server.ts         # Optional server entry (auth, config)
+│   └── tests/                # Unit tests, E2E tests, simulations
 └── scripts/
     ├── validate.mjs           # Full validation pipeline
     └── generate-examples.mjs  # Generate examples/ from template resources
@@ -78,7 +80,7 @@ packages/sunpeak/
 - `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
 - `sunpeak/chatgpt` — ChatGPTSimulator (backwards compat alias), ChatGPT shell
 - `sunpeak/claude` — ClaudeSimulator alias, Claude shell
-- `sunpeak/mcp` — Server utilities (`runMCPServer`) + SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
+- `sunpeak/mcp` — Server utilities (`runMCPServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/style.css` — Main stylesheet
@@ -87,10 +89,24 @@ packages/sunpeak/
 ## Key Types
 
 ```typescript
+// Tool file export (src/tools/{name}.ts)
+interface AppToolConfig extends ToolConfig {
+  resource: string;            // Resource name (derived from directory: src/resources/{name}/)
+}
+
+// Simulation fixture (tests/simulations/*.json)
+interface SimulationJson {
+  tool: string;                // References tool filename (e.g., "show-albums")
+  userMessage?: string;
+  toolInput?: Record<string, unknown>;
+  toolResult?: { structuredContent?: unknown };
+}
+
+// Internal simulation (dev server runtime)
 interface Simulation {
   name: string;
-  resourceUrl?: string;      // Dev: HTML page URL (Vite HMR)
-  resourceScript?: string;   // Prod: JS bundle URL
+  resourceUrl?: string;        // Dev: HTML page URL (Vite HMR)
+  resourceScript?: string;     // Prod: JS bundle URL
   tool: Tool;
   resource: Resource;
   toolInput?: Record<string, unknown>;
@@ -111,5 +127,7 @@ interface HostShell {
 - pnpm workspace with packages at `packages/*` and `packages/sunpeak/template`
 - ESM-first (`"type": "module"`)
 - Tailwind CSS with MCP standard variables via arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`, `border-[var(--color-border-primary)]`)
-- Simulation files discovered by convention: `*-simulation.json` or `simulations/*.json`
-- Resources discovered by convention from `src/resources/` directory
+- Resources discovered from `src/resources/{name}/{name}.tsx`
+- Tools discovered from `src/tools/{name}.ts` (each exports `tool: AppToolConfig`, `schema`, `default` handler)
+- Simulations discovered from `tests/simulations/*.json` (flat directory, `"tool"` string field references tool filename)
+- Optional server entry at `src/server.ts` (exports `auth()` for request authentication)

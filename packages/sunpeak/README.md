@@ -61,21 +61,26 @@ Next.js for MCP Apps. Using an example App `my-app` with a `Review` UI (MCP reso
 
 ```bash
 my-app/
-├── src/resources/
-│   └── review/
-│       └── review-resource.tsx                 # Review UI component + resource metadata.
+├── src/
+│   ├── resources/
+│   │   └── review/
+│   │       └── review.tsx           # Review UI component + resource metadata.
+│   ├── tools/
+│   │   ├── review-diff.ts           # Tool with handler, schema, and resource reference.
+│   │   └── review-post.ts           # Multiple tools can share one resource.
+│   └── server.ts                    # Optional: auth, server config.
 ├── tests/simulations/
-│   └── review/
-│       ├── review-{scenario1}-simulation.json  # Mock state for testing.
-│       └── review-{scenario2}-simulation.json  # Mock state for testing.
+│   ├── review-diff.json             # Mock state for testing.
+│   └── review-post.json             # Mock state for testing.
 └── package.json
 ```
 
 1. Project scaffold: Complete development setup with the `sunpeak` library.
 2. UI components: Production-ready components following MCP App design guidelines.
 3. Convention over configuration:
-   1. Create a UI by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
-   2. Create test state (`Simulation`s) for local dev, host dev, automated testing, and demos by creating a `-simulation.json` file. ([example below](#simulation))
+   1. Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
+   2. Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler ([example below](#tool-file)).
+   3. Create test state (`Simulation`s) by creating a `.json` file in `tests/simulations/` ([example below](#simulation)).
 
 ### The `sunpeak` CLI
 
@@ -92,23 +97,15 @@ Example `Resource`, `Simulation`, and testing file (using the `Simulator`) for a
 
 ### `Resource` Component
 
-```bash
-my-app/
-├── src/resources/
-│   └── review/
-│       └── review-resource.tsx # This!
-```
-
 Each resource `.tsx` file exports both the React component and the MCP resource metadata:
 
 ```tsx
-// src/resources/review/review-resource.tsx
+// src/resources/review/review.tsx
 
 import { useToolData } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 
 export const resource: ResourceConfig = {
-  name: 'review',
   description: 'Visualize and review a code change',
   _meta: { ui: { csp: { resourceDomains: ['https://cdn.example.com'] } } },
 };
@@ -120,48 +117,54 @@ export function ReviewResource() {
 }
 ```
 
-### `Simulation`
+### Tool File
 
-```bash
-├── tests/simulations/
-│   └── review/
-│       ├── review-{scenario1}-simulation.json  # These!
-│       └── review-{scenario2}-simulation.json  # These!
+Each tool `.ts` file exports metadata (with a direct resource reference), a Zod schema, and a handler:
+
+```ts
+// src/tools/review-diff.ts
+
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+export const tool: AppToolConfig = {
+  resource: 'review',
+  title: 'Diff Review',
+  description: 'Show a review dialog for a proposed code diff',
+  annotations: { readOnlyHint: false },
+  _meta: { ui: { visibility: ['model', 'app'] } },
+};
+
+export const schema = {
+  changesetId: z.string().describe('Unique identifier for the changeset'),
+  title: z.string().describe('Title describing the changes'),
+};
+
+export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+  return { structuredContent: { title: args.title, sections: [] } };
+}
 ```
 
-`sunpeak` testing object (`.json`) defining key App-owned states.
+### `Simulation`
 
-Testing an MCP App requires setting a lot of state: state in your **backend**, **MCP tools**, and the **host runtime**.
-
-`Simulation` files contain an [official MCP tool object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool), `toolInput` (the arguments sent to CallTool), and `toolResult` (the [CallToolResult](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content) response) so you can define **backend**, **tool**, and **runtime** states for testing.
+Simulation files provide fixture data for testing. Each references a tool by filename and contains the mock input/output:
 
 ```jsonc
-// tests/simulations/review-diff-simulation.json
+// tests/simulations/review-diff.json
 
 {
-  // Official MCP tool object.
-  "tool": {
-    "name": "review-diff",
-    "description": "Show a review dialog for a proposed code diff",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-    "title": "Diff Review",
-    "annotations": { "readOnlyHint": false },
-    "_meta": {
-      "ui": { "visibility": ["model", "app"] },
-    },
-  },
-  // Tool input arguments (sent to CallTool).
+  "tool": "review-diff",                      // References src/tools/review-diff.ts
+  "userMessage": "Refactor the auth module to use JWT tokens.",
   "toolInput": {
     "changesetId": "cs_789",
-    "title": "Refactor Authentication Module",
+    "title": "Refactor Authentication Module"
   },
-  // Tool result data (CallToolResult response).
   "toolResult": {
     "structuredContent": {
       "title": "Refactor Authentication Module",
-      // ...
-    },
-  },
+      "sections": [...]
+    }
+  }
 }
 ```
 

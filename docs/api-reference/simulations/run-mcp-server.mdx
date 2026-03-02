@@ -23,7 +23,7 @@ This server is for **local development only**. For production, create your own M
     ```
 
     This starts the ChatGPT simulator and an MCP server with Hot Module Reload.
-    The MCP server discovers simulations from `tests/simulations/{name}/` and serves the apps with automatic rebuilding.
+    The MCP server discovers tools from `src/tools/` and simulations from `tests/simulations/`, and serves the apps with automatic rebuilding.
   </Tab>
   <Tab title="Library">
     For custom setups, configure the MCP server manually:
@@ -32,8 +32,8 @@ This server is for **local development only**. For production, create your own M
     import { runMCPServer } from 'sunpeak/mcp';
     import path from 'path';
     import { fileURLToPath } from 'url';
-    import { resource } from '../src/resources/example/example-resource';
-    import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
+    import { resource } from '../src/resources/example/example';
+    import exampleSimulation from '../tests/simulations/show-example.json';
 
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -123,10 +123,10 @@ The MCP server exposes:
 
 ## How It Works
 
-The server creates MCP Tools and Resources from your simulations:
+The server creates MCP Tools and Resources from your tool files and simulations:
 
-1. **Tools** - One per simulation, using the `tool` definition. When called, returns `toolResult.structuredContent`. Tool metadata including `visibility` is preserved.
-2. **Resources** - One per simulation, containing the built resource HTML from `distPath`. Resource metadata including `permissions`, `csp`, `prefersBorder`, and `domain` is preserved.
+1. **Tools** - One per tool file, using the `tool` and `schema` exports. When called in dev mode, the real handler runs. When called via simulations, returns `toolResult.structuredContent`. Tool metadata including `visibility` is preserved.
+2. **Resources** - One per resource, containing the built resource HTML from `distPath`. Resource metadata including `permissions`, `csp`, `prefersBorder`, and `domain` is preserved.
 
 Your app accesses the mock data via runtime hooks:
 

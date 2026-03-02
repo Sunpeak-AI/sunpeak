@@ -15,7 +15,8 @@
     "embla-carousel-wheel-gestures": "^8.1.0",
     "mapbox-gl": "^3.17.0",
     "sunpeak": "workspace:*",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "zod": "^3.25.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.57.0",

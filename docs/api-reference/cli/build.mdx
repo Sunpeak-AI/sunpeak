@@ -41,7 +41,7 @@ Each resource folder from `src/resources/{name}/` is built to `dist/{name}/`, co
 The build automatically discovers and builds all resource folders:
 
 ```
-src/resources/{name}/{name}-resource.tsx
+src/resources/{name}/{name}.tsx
 ```
 
 For example:
@@ -50,7 +50,7 @@ For example:
 
 ### Metadata JSON Files
 
-The build extracts the `resource` export from each `*-resource.tsx` file and writes it to a JSON file with a generated `uri` field:
+The build extracts the `resource` export from each `.tsx` file and writes it to a JSON file with a generated `uri` field:
 
 ```json
 {

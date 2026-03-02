@@ -38,7 +38,7 @@ interface ChatGPTSimulatorProps {
 /**
  * Parse URL params for initial simulator values.
  * Supported params:
- * - simulation: simulation name (e.g., 'albums-show')
+ * - simulation: simulation name (e.g., 'show-albums')
  * - theme: 'light' | 'dark'
  * - displayMode: 'inline' | 'pip' | 'fullscreen'
  * - locale: e.g., 'en-US'

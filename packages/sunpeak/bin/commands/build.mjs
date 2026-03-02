@@ -158,7 +158,8 @@ export async function build(projectRoot = process.cwd()) {
     .filter(entry => entry.isDirectory())
     .map(entry => {
       const kebabName = entry.name;
-      const resourceFile = `${kebabName}-resource.tsx`;
+
+      const resourceFile = `${kebabName}.tsx`;
       const resourcePath = path.join(resourcesDir, kebabName, resourceFile);
 
       // Skip directories without a resource file
@@ -168,10 +169,11 @@ export async function build(projectRoot = process.cwd()) {
 
       // Convert kebab-case to PascalCase: 'review' -> 'Review', 'my-widget' -> 'MyWidget'
       const pascalName = toPascalCase(kebabName);
+      const componentFile = resourceFile.replace(/\.tsx$/, '');
 
       return {
         componentName: `${pascalName}Resource`,
-        componentFile: `${kebabName}-resource`,
+        componentFile,
         kebabName,
         resourceDir: path.join(resourcesDir, kebabName),
         entry: `.tmp/index-${kebabName}.tsx`,
@@ -185,7 +187,7 @@ export async function build(projectRoot = process.cwd()) {
 
   if (resourceFiles.length === 0) {
     console.error('Error: No resource directories found in src/resources/');
-    console.error('Each resource should be a directory like: src/resources/review/review-resource.tsx');
+    console.error('Each resource should be a directory like: src/resources/review/review.tsx');
     process.exit(1);
   }
 
@@ -288,6 +290,8 @@ export async function build(projectRoot = process.cwd()) {
     const destJson = path.join(distOutDir, `${kebabName}.json`);
 
     const meta = await extractResourceExport(srcTsx);
+    // Inject name from directory key if not explicitly set
+    meta.name = meta.name ?? kebabName;
     // Generate URI using resource name and build timestamp
     meta.uri = `ui://${meta.name}-${timestamp}`;
     writeFileSync(destJson, JSON.stringify(meta, null, 2));

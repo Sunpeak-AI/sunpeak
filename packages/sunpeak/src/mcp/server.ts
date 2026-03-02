@@ -58,12 +58,10 @@ function readResourceHtmlProd(distPath: string): string {
  * Used for direct connections (e.g. ChatGPT connecting to localhost).
  */
 function getViteResourceHtml(srcPath: string): string {
-  // Extract component name from path: /src/resources/albums/albums-resource.tsx -> AlbumsResource
-  const fileName =
-    srcPath
-      .split('/')
-      .pop()
-      ?.replace(/-resource\.tsx$/, '') ?? '';
+  // Extract component name from path:
+  //   /src/resources/albums/albums.tsx -> AlbumsResource
+  const rawFileName = srcPath.split('/').pop() ?? '';
+  const fileName = rawFileName.replace(/\.tsx$/, '');
   const componentName =
     fileName
       .split('-')

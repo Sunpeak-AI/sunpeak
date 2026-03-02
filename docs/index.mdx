@@ -60,8 +60,9 @@ Next.js for MCP Apps. Using a Review page as an example, sunpeak projects look l
 1. **[Project Scaffold](/template/project-scaffold)**: Complete development setup with the sunpeak library.
 2. **[UI Components](/template/ui-components)**: Production-ready components following MCP App design guidelines.
 3. **Convention over configuration**:
-   - Create UIs by creating a `-resource.tsx` file that exports a `ResourceConfig` and a React component ([example](#resource)).
-   - Create test state (simulations) for local dev, host testing, automated testing, and demos by creating a `-simulation.json` file ([example](#simulation)).
+   - Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example](#resource)).
+   - Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler ([example](#tool)).
+   - Create test state (simulations) by creating a `.json` file in `tests/simulations/` ([example](#simulation)).
 
 ### The sunpeak CLI
 

@@ -129,7 +129,7 @@ export interface SimulatorState {
 /**
  * Parse URL params for initial simulator values.
  * Supported params:
- * - simulation: simulation name (e.g., 'albums-show')
+ * - simulation: simulation name (e.g., 'show-albums')
  * - theme: 'light' | 'dark'
  * - displayMode: 'inline' | 'pip' | 'fullscreen'
  * - locale: e.g., 'en-US'
@@ -215,7 +215,13 @@ export function useSimulatorState({
   simulations,
   defaultHost = 'chatgpt',
 }: UseSimulatorStateOptions): SimulatorState {
-  const simulationNames = Object.keys(simulations);
+  const simulationNames = Object.keys(simulations).sort((a, b) => {
+    const simA = simulations[a];
+    const simB = simulations[b];
+    const labelA = `${(simA.resource.title as string) || simA.resource.name}: ${(simA.tool.title as string) || simA.tool.name}`;
+    const labelB = `${(simB.resource.title as string) || simB.resource.name}: ${(simB.tool.title as string) || simB.tool.name}`;
+    return labelA.localeCompare(labelB);
+  });
   const urlParams = useMemo(() => parseUrlParams(), []);
   const [screenWidth, setScreenWidth] = useState<ScreenWidth>('full');
 

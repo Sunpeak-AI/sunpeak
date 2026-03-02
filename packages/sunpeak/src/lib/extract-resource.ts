@@ -57,7 +57,7 @@ export async function extractResourceExport(tsxPath: string): Promise<Record<str
   if (!resource) {
     throw new Error(
       `No "resource" export found in ${tsxPath}. ` +
-        `Add: export const resource: ResourceConfig = { name: '...', ... };`
+        `Add: export const resource: ResourceConfig = { title: '...', ... };`
     );
   }
 

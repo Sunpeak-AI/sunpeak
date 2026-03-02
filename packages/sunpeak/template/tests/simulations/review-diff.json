@@ -1,0 +1,79 @@
+{
+  "tool": "review-diff",
+  "userMessage": "Refactor the authentication module to use JWT tokens instead of sessions.",
+  "toolInput": {
+    "changesetId": "cs_789",
+    "title": "Refactor Authentication Module",
+    "description": "Update the authentication system to use JWT tokens instead of session-based auth",
+    "files": [
+      "src/lib/jwt.ts",
+      "src/middleware/auth.ts",
+      "src/routes/login.ts",
+      "src/lib/session.ts"
+    ],
+    "runMigrations": true
+  },
+  "toolResult": {
+    "structuredContent": {
+      "title": "Refactor Authentication Module",
+      "description": "The following changes will update the authentication system to use JWT tokens instead of session-based auth.",
+      "sections": [
+        {
+          "title": "File Changes",
+          "type": "changes",
+          "content": [
+            {
+              "id": "1",
+              "type": "create",
+              "path": "src/lib/jwt.ts",
+              "description": "Create JWT utility functions",
+              "details": "Token generation, verification, and refresh logic"
+            },
+            {
+              "id": "2",
+              "type": "modify",
+              "path": "src/middleware/auth.ts",
+              "description": "Update auth middleware to use JWT",
+              "details": "Replace session checks with JWT verification"
+            },
+            {
+              "id": "3",
+              "type": "modify",
+              "path": "src/routes/login.ts",
+              "description": "Update login endpoint to return JWT tokens"
+            },
+            {
+              "id": "4",
+              "type": "delete",
+              "path": "src/lib/session.ts",
+              "description": "Remove deprecated session management",
+              "details": "No longer needed after JWT migration"
+            },
+            {
+              "id": "5",
+              "type": "action",
+              "description": "Run database migration for token storage",
+              "details": "Creates refresh_tokens table"
+            }
+          ]
+        }
+      ],
+      "acceptLabel": "Apply Changes",
+      "rejectLabel": "Cancel",
+      "acceptedMessage": "Changes applied",
+      "rejectedMessage": "Changes cancelled",
+      "reviewTool": {
+        "name": "apply_changes",
+        "arguments": {
+          "changesetId": "cs_789",
+          "files": [
+            "src/lib/jwt.ts",
+            "src/middleware/auth.ts",
+            "src/routes/login.ts",
+            "src/lib/session.ts"
+          ]
+        }
+      }
+    }
+  }
+}

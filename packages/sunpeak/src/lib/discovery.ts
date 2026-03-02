@@ -7,7 +7,7 @@
  * The glob calls themselves must remain in the template (Vite compile-time),
  * but all the processing logic lives here for easy updates across templates.
  *
- * Node.js utilities (findResourceDirs, isSimulationFile, etc.) can be used
+ * Node.js utilities (findResourceDirs, findToolFiles, etc.) can be used
  * by CLI commands for build-time and runtime discovery.
  */
 
@@ -26,29 +26,28 @@ export function toPascalCase(str: string): string {
 }
 
 /**
- * Extract the resource key from a resource file path
- * @example extractResourceKey('./review-resource.tsx') // 'review'
- * @example extractResourceKey('../src/resources/albums-resource.tsx') // 'albums'
+ * Extract the resource key from a resource file path.
+ * Matches {name}.tsx (e.g., './albums/albums.tsx' → 'albums')
  */
 export function extractResourceKey(path: string): string | undefined {
-  const match = path.match(/([^/]+)-resource\.(tsx|json)$/);
-  return match?.[1];
+  const match = path.match(/([^/]+)\.tsx$/);
+  return match ? match[1] : undefined;
 }
 
 /**
- * Extract the simulation key from a simulation file path
- * @example extractSimulationKey('./albums-show-simulation.json') // 'albums-show'
+ * Extract the simulation key from a simulation file path.
+ * Matches any *.json file (e.g., './show-albums.json' → 'show-albums')
  */
 export function extractSimulationKey(path: string): string | undefined {
-  const match = path.match(/([^/]+)-simulation\.json$/);
-  return match?.[1];
+  const match = path.match(/([^/]+)\.json$/);
+  return match ? match[1] : undefined;
 }
 
 /**
  * Find the best matching resource key for a simulation key.
  * Matches the longest resource name that is a prefix of the simulation key.
- * @example findResourceKey('albums-show', ['albums', 'album']) // 'albums'
  * @example findResourceKey('review-diff', ['review', 'carousel']) // 'review'
+ * @example findResourceKey('albums', ['albums', 'review']) // 'albums'
  */
 export function findResourceKey(simulationKey: string, resourceKeys: string[]): string | undefined {
   // Sort by length descending to find longest match first
@@ -79,7 +78,7 @@ type GlobModules = Record<string, unknown>;
  * Extracts components and exports them with PascalCase names.
  *
  * @example
- * const modules = import.meta.glob('./**\/*-resource.tsx', { eager: true });
+ * const modules = import.meta.glob('./*\/*.tsx', { eager: true });
  * export default createResourceExports(modules);
  */
 export function createResourceExports(modules: GlobModules): Record<string, React.ComponentType> {
@@ -109,7 +108,7 @@ export function createResourceExports(modules: GlobModules): Record<string, Reac
  * Used for connecting simulations to their resource definitions.
  *
  * @example
- * const modules = import.meta.glob('../src/resources/**\/*-resource.tsx', { eager: true });
+ * const modules = import.meta.glob('../src/resources/*\/*.tsx', { eager: true });
  * const resourcesMap = buildResourceMap(modules);
  */
 export function buildResourceMap<T>(modules: GlobModules): Map<string, T> {
@@ -161,7 +160,7 @@ export function buildSimulations<TResource, TSimulation>(
     onMissingResource = (key, prefix) =>
       console.warn(
         `No matching resource found for simulation "${key}". ` +
-          `Expected a resource file like src/resources/${prefix}/${prefix}-resource.tsx`
+          `Expected a resource file like src/resources/${prefix}/${prefix}.tsx`
       ),
   } = options;
 
@@ -190,7 +189,7 @@ export function buildSimulations<TResource, TSimulation>(
     if (!resourceComponent) {
       console.warn(
         `Resource component "${componentName}" not found for resource "${resourceKey}". ` +
-          `Make sure src/resources/${resourceKey}/${resourceKey}-resource.tsx exists with a default export.`
+          `Make sure src/resources/${resourceKey}/${resourceKey}.tsx exists with a default export.`
       );
       continue;
     }
@@ -209,7 +208,7 @@ export function buildSimulations<TResource, TSimulation>(
 // --- Dev server helpers ---
 
 /**
- * Resource metadata from *-resource.tsx files
+ * Resource metadata from resource .tsx files
  */
 export interface ResourceMetadata {
   name: string;
@@ -220,55 +219,138 @@ export interface ResourceMetadata {
  * Options for building dev simulations
  */
 export interface BuildDevSimulationsOptions {
-  /** Glob result of simulation JSON files: import.meta.glob('*-simulation.json', { eager: true }) */
+  /** Glob result of simulation JSON files */
   simulationModules: GlobModules;
-  /** Glob result of resource JSON files: import.meta.glob('*-resource.tsx', { eager: true }) */
-  resourceModules: GlobModules;
   /** Resource components map from src/resources/index.ts */
   resourceComponents: Record<string, React.ComponentType>;
+  /** Glob result of tool files: import.meta.glob('src/tools/*.ts', { eager: true }) */
+  toolModules: GlobModules;
+  /** Glob result of resource .tsx files from src/resources/ */
+  resourceModules: GlobModules;
+}
+
+/**
+ * Tool metadata extracted from a tool module's `tool` export
+ */
+interface ToolModuleInfo {
+  tool: Record<string, unknown>;
+  /** Resource name string from tool.resource */
+  resourceName: string;
 }
 
 /**
  * Build simulations for the dev server from glob results.
- * This is the main entry point for dev.tsx bootstrap.
- *
- * @example
- * const simulations = buildDevSimulations({
- *   simulationModules: import.meta.glob('../src/resources/**\/*-simulation.json', { eager: true }),
- *   resourceModules: import.meta.glob('../src/resources/**\/*-resource.tsx', { eager: true }),
- *   resourceComponents: resourceComponents,
- * });
+ * Simulation JSON has `"tool": "tool-name"` string referencing a tool file.
+ * Tool files have `resource: 'name'` linking to a resource discovered from resourceModules.
  */
 export function buildDevSimulations(
   options: BuildDevSimulationsOptions
 ): Record<string, Simulation> {
-  const { simulationModules, resourceModules, resourceComponents } = options;
+  const { simulationModules, resourceComponents, toolModules, resourceModules } = options;
 
-  // Build resource metadata map
-  const resourcesMap = buildResourceMap<ResourceMetadata>(resourceModules);
+  // Build resource metadata map from resource modules (keyed by resource name)
+  const resourceMetaByName = new Map<string, ResourceMetadata>();
+  const resourceKeyByName = new Map<string, string>();
+  for (const [path, module] of Object.entries(resourceModules)) {
+    const key = extractResourceKey(path);
+    if (!key) continue;
+    const mod = module as { resource?: ResourceMetadata };
+    if (mod.resource) {
+      // Use explicit name if provided, otherwise derive from directory key
+      const name = mod.resource.name ?? key;
+      resourceMetaByName.set(name, { ...mod.resource, name });
+      resourceKeyByName.set(name, key);
+    }
+  }
 
-  // Build simulations with the standard dev server format
-  return buildSimulations<ResourceMetadata, Simulation>({
-    simulationModules,
-    resourcesMap,
-    resourceComponents,
-    createSimulation: (simulationKey, simulationData, resource) => {
-      // Get the component name for the resource URL
-      const resourceKey = findResourceKey(simulationKey, Array.from(resourcesMap.keys()));
-      const componentName = resourceKey ? getComponentName(resourceKey) : '';
+  // Build tool map from tool modules
+  const toolsMap = new Map<string, ToolModuleInfo>();
+  if (toolModules) {
+    for (const [path, module] of Object.entries(toolModules)) {
+      const nameMatch = path.match(/([^/]+)\.ts$/);
+      if (!nameMatch) continue;
+      const mod = module as { tool?: Record<string, unknown> };
+      if (mod.tool) {
+        const resourceName = mod.tool.resource as string | undefined;
+        if (resourceName) {
+          toolsMap.set(nameMatch[1], { tool: mod.tool, resourceName });
+        }
+      }
+    }
+  }
 
-      return {
-        ...(simulationData as Omit<Simulation, 'name' | 'resourceUrl' | 'resource'>),
-        name: simulationKey,
-        resource: {
-          uri: `ui://${resource.name}`,
-          ...resource,
-        },
-        // Generate URL to the resource loader with component name as query param
-        resourceUrl: `/.sunpeak/resource-loader.html?component=${componentName}`,
-      } as Simulation;
-    },
-  });
+  const simulations: Record<string, Simulation> = {};
+
+  for (const [path, module] of Object.entries(simulationModules)) {
+    const simKey = extractSimulationKey(path);
+    if (!simKey) continue;
+
+    const simulationData = (module as { default: Record<string, unknown> }).default;
+
+    const toolName =
+      typeof simulationData.tool === 'string' ? (simulationData.tool as string) : simKey;
+    const toolInfo = toolsMap.get(toolName);
+    if (!toolInfo) {
+      console.warn(
+        `Tool "${toolName}" not found for simulation "${simKey}". ` +
+          `Make sure src/tools/${toolName}.ts exists.`
+      );
+      continue;
+    }
+
+    // Look up resource metadata by name
+    const resourceMeta = resourceMetaByName.get(toolInfo.resourceName);
+    const resourceKey = resourceKeyByName.get(toolInfo.resourceName);
+    if (!resourceMeta || !resourceKey) {
+      console.warn(
+        `Resource "${toolInfo.resourceName}" not found for tool "${toolName}". ` +
+          `Make sure a resource with name "${toolInfo.resourceName}" exists in src/resources/.`
+      );
+      continue;
+    }
+
+    const componentName = getComponentName(resourceKey);
+    const resourceComponent = resourceComponents[componentName];
+
+    if (!resourceComponent) {
+      console.warn(`Resource component "${componentName}" not found for tool "${toolName}".`);
+      continue;
+    }
+
+    simulations[simKey] = {
+      name: simKey,
+      userMessage: simulationData.userMessage as string | undefined,
+      tool: {
+        name: toolName,
+        description: (toolInfo.tool.description as string) ?? '',
+        inputSchema: { type: 'object' as const },
+        ...(toolInfo.tool.title != null ? { title: toolInfo.tool.title as string } : {}),
+        ...(toolInfo.tool.annotations != null
+          ? { annotations: toolInfo.tool.annotations as Record<string, unknown> }
+          : {}),
+        ...(toolInfo.tool._meta != null
+          ? { _meta: toolInfo.tool._meta as Record<string, unknown> }
+          : {}),
+      },
+      resource: {
+        uri: `ui://${resourceKey}`,
+        name: resourceKey,
+        ...(resourceMeta.title != null ? { title: resourceMeta.title as string } : {}),
+        ...(resourceMeta.description != null
+          ? { description: resourceMeta.description as string }
+          : {}),
+        ...(resourceMeta.mimeType != null ? { mimeType: resourceMeta.mimeType as string } : {}),
+        ...(resourceMeta._meta != null
+          ? { _meta: resourceMeta._meta as Record<string, unknown> }
+          : {}),
+      },
+      toolInput: simulationData.toolInput as Record<string, unknown> | undefined,
+      toolResult: simulationData.toolResult as Simulation['toolResult'],
+      resourceUrl: `/.sunpeak/resource-loader.html?component=${componentName}`,
+    };
+  }
+
+  return simulations;
 }
 
 // --- Node.js utilities for CLI commands ---
@@ -307,7 +389,7 @@ export interface FsOps {
  *
  * @example
  * // Find source resources (tsx files)
- * const resources = findResourceDirs('src/resources', key => `${key}-resource.tsx`);
+ * const resources = findResourceDirs('src/resources', key => `${key}.tsx`);
  *
  * @example
  * // Find built resources (js files)
@@ -340,55 +422,76 @@ export function findResourceDirs(
     .filter((info): info is ResourceDirInfo => info !== null);
 }
 
+// --- Tool files + flat simulations discovery ---
+
 /**
- * Check if a filename is a simulation file for a given resource.
- * Matches pattern: {resourceKey}-*-simulation.json
- *
- * @example
- * isSimulationFile('albums-show-simulation.json', 'albums') // true
- * isSimulationFile('albums-show-simulation.json', 'carousel') // false
- * isSimulationFile('albums-resource.tsx', 'albums') // false
+ * Information about a discovered tool file
  */
-export function isSimulationFile(filename: string, resourceKey: string): boolean {
-  return filename.startsWith(`${resourceKey}-`) && filename.endsWith('-simulation.json');
+export interface ToolFileInfo {
+  /** Tool name derived from filename (e.g., 'show-albums') */
+  name: string;
+  /** Full path to the tool file */
+  path: string;
 }
 
 /**
- * Extract the simulation name from a simulation filename.
- * Given "{resourceKey}-{name}-simulation.json", returns "{name}".
+ * Find all tool files in a tools directory.
+ * Matches *.ts files directly in the directory (not recursive).
  *
  * @example
- * extractSimulationName('albums-show-simulation.json', 'albums') // 'show'
- * extractSimulationName('carousel-hero-simulation.json', 'carousel') // 'hero'
+ * findToolFiles('src/tools', fs)
+ * // [{ name: 'show-albums', path: 'src/tools/show-albums.ts' }]
  */
-export function extractSimulationName(filename: string, resourceKey: string): string {
-  return filename.replace(`${resourceKey}-`, '').replace('-simulation.json', '');
-}
-
-/**
- * Find all simulation files in a resource directory.
- *
- * @param resourceDir - Path to the resource directory
- * @param resourceKey - Resource key (e.g., 'albums')
- * @param fs - File system operations (for testing)
- * @returns Array of { filename, name } objects
- */
-export function findSimulationFiles(
-  resourceDir: string,
-  resourceKey: string,
+export function findToolFiles(
+  toolsDir: string,
   fs: Pick<FsOps, 'readdirSync' | 'existsSync'>
-): Array<{ filename: string; name: string; path: string }> {
-  if (!fs.existsSync(resourceDir)) {
+): ToolFileInfo[] {
+  if (!fs.existsSync(toolsDir)) {
     return [];
   }
 
-  const entries = fs.readdirSync(resourceDir, { withFileTypes: true });
+  const entries = fs.readdirSync(toolsDir, { withFileTypes: true });
 
   return entries
-    .filter((entry) => !entry.isDirectory() && isSimulationFile(entry.name, resourceKey))
+    .filter((entry) => !entry.isDirectory() && entry.name.endsWith('.ts'))
     .map((entry) => ({
-      filename: entry.name,
-      name: extractSimulationName(entry.name, resourceKey),
-      path: `${resourceDir}/${entry.name}`,
+      name: entry.name.replace(/\.ts$/, ''),
+      path: `${toolsDir}/${entry.name}`,
+    }));
+}
+
+/**
+ * Information about a discovered simulation file (flat convention)
+ */
+export interface SimulationFileInfo {
+  /** Filename without extension (e.g., 'show-albums') */
+  name: string;
+  /** Full path to the simulation file */
+  path: string;
+}
+
+/**
+ * Find all simulation JSON files in a flat simulations directory.
+ * Matches any *.json file directly in the directory.
+ *
+ * @example
+ * findSimulationFilesFlat('tests/simulations', fs)
+ * // [{ name: 'show-albums', path: 'tests/simulations/show-albums.json' }]
+ */
+export function findSimulationFilesFlat(
+  simulationsDir: string,
+  fs: Pick<FsOps, 'readdirSync' | 'existsSync'>
+): SimulationFileInfo[] {
+  if (!fs.existsSync(simulationsDir)) {
+    return [];
+  }
+
+  const entries = fs.readdirSync(simulationsDir, { withFileTypes: true });
+
+  return entries
+    .filter((entry) => !entry.isDirectory() && entry.name.endsWith('.json'))
+    .map((entry) => ({
+      name: entry.name.replace(/\.json$/, ''),
+      path: `${simulationsDir}/${entry.name}`,
     }));
 }

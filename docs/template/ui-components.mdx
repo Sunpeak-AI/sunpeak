@@ -15,10 +15,10 @@ These components follow MCP App design best practices and use sunpeak's built-in
 Resources (from MCP) are top-level components that can be simulated or shipped to production.
 
 Each resource lives in its own folder under `src/resources/{name}/`:
-- `{name}-resource.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
+- `{name}.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
 - `components/` - Optional resource-specific components
 
-Simulation files live separately in `tests/simulations/{name}/`.
+Tool files live in `src/tools/` and simulation files live in `tests/simulations/`.
 
 See the [Resource Library API Reference](/api-reference/resources/albums) for
 all pre-packaged sunpeak resources.

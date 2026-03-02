@@ -1,11 +1,42 @@
-import type { Resource, Tool } from '@modelcontextprotocol/sdk/types.js';
+import type {
+  Resource,
+  Tool,
+  ServerRequest,
+  ServerNotification,
+} from '@modelcontextprotocol/sdk/types.js';
+import type { RequestHandlerExtra } from '@modelcontextprotocol/sdk/shared/protocol.js';
+import type { ToolConfig } from '@modelcontextprotocol/ext-apps/server';
+
+export type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
+export type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+
+/**
+ * Extra context passed to tool handlers as the second argument.
+ *
+ * This is a pre-applied alias for the MCP SDK's `RequestHandlerExtra` —
+ * no custom fields, just ergonomic generics so users don't need to parameterize it.
+ *
+ * Key fields: `authInfo`, `sessionId`, `signal`, `_meta`.
+ */
+export type ToolHandlerExtra = RequestHandlerExtra<ServerRequest, ServerNotification>;
+
+/**
+ * Configuration for a Sunpeak tool file's `tool` export.
+ *
+ * Extends the ext-apps `ToolConfig` with a `resource` field that links
+ * the tool to a resource by its unique name string.
+ */
+export interface AppToolConfig extends ToolConfig {
+  /** The resource name (must match a directory in `src/resources/`, e.g. `'albums'`). */
+  resource: string;
+}
 
 /**
  * Simulation configuration for MCP server.
  * Must include distPath for the built HTML file.
  */
 export interface SimulationWithDist {
-  // Unique identifier derived from the simulation filename (e.g., 'albums-show')
+  // Unique identifier derived from the simulation filename (e.g., 'show-albums')
   name: string;
 
   // Path to the built HTML file (for production mode)
@@ -18,7 +49,7 @@ export interface SimulationWithDist {
   tool: Tool;
 
   // MCP Resource protocol - official Resource type from MCP SDK used in ListResources response
-  // Loaded from resources/NAME-resource.json where NAME is the simulation key.
+  // MCP Resource metadata (name, uri, description, _meta).
   resource: Resource;
 
   // Tool result data for CallTool response

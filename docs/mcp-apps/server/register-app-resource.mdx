@@ -49,7 +49,7 @@ function registerAppResource(
     MIME type. Defaults to `RESOURCE_MIME_TYPE` if omitted.
   </ResponseField>
   <ResponseField name="_meta" type="object">
-    Optional UI metadata for the resource listing (static default for hosts to review at connection time).
+    Optional UI metadata for the resource listing (returned in `resources/list`). You can also set `_meta.ui` on individual `contents[]` items returned by the read callback — content-item values take precedence. See [_meta Reference](#_meta-reference) below for all fields.
   </ResponseField>
 </ResponseField>
 
@@ -128,46 +128,20 @@ _meta: {
 
 ### With stable origin (domain)
 
-Use `_meta.ui.domain` to give your View a stable origin for CORS allowlists:
+Use `_meta.ui.domain` to give your View a stable sandbox origin for CORS allowlists. The value is a subdomain within the **host's** domain space, not your own domain. See [Resource `_meta` > `domain`](/mcp-apps/server/resource-meta#domain--stable-sandbox-origin) for details.
 
 ```ts
 _meta: {
   ui: {
     csp: { connectDomains: ["https://api.example.com"] },
-    domain: APP_DOMAIN,  // e.g., "{hash}.claudemcpcontent.com"
+    domain: computeDomainForClaude("https://example.com/mcp"),
   },
 }
 ```
 
-<Note>
-The `domain` format is host-specific. Check each host's documentation for the expected format.
-</Note>
+## `_meta` Reference
 
-## CSP Reference
-
-CSP is set in the `contents[]` items returned by the read callback, not in the `registerAppResource` config.
-
-| Field | CSP Directive | Purpose |
-|-------|--------------|---------|
-| `connectDomains` | `connect-src` | fetch/XHR/WebSocket origins |
-| `resourceDomains` | `img-src`, `script-src`, `style-src`, `font-src`, `media-src` | Static resource origins |
-| `frameDomains` | `frame-src` | Nested iframe origins |
-| `baseUriDomains` | `base-uri` | Allowed base URIs |
-
-## Permissions Reference
-
-| Field | Permission Policy | Purpose |
-|-------|------------------|---------|
-| `camera` | `camera` | Camera access |
-| `microphone` | `microphone` | Microphone access |
-| `geolocation` | `geolocation` | Location access |
-| `clipboardWrite` | `clipboard-write` | Clipboard write access |
-
-## Other Resource Options
-
-<ResponseField name="prefersBorder" type="boolean">
-  Visual boundary preference. `true` requests a visible border and background from the host; `false` requests none. Omit to let the host decide.
-</ResponseField>
+See **[Resource `_meta`](/mcp-apps/server/resource-meta)** for the complete reference on CSP (`connectDomains`, `resourceDomains`, `frameDomains`, `baseUriDomains`), sandbox permissions (`camera`, `microphone`, `geolocation`, `clipboardWrite`), stable `domain` origins, `prefersBorder`, and listing-level vs content-item precedence.
 
 ## Constants
 

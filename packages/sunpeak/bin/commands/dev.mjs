@@ -179,7 +179,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     sunpeakDiscovery = await import(pathToFileURL(join(sunpeakBase, 'dist/lib/discovery-cli.js')).href);
   }
   const { FAVICON_BUFFER: faviconBuffer, runMCPServer } = sunpeakMcp;
-  const { findResourceDirs, findSimulationFiles, extractResourceExport } = sunpeakDiscovery;
+  const { findResourceDirs, findSimulationFilesFlat, findToolFiles, extractResourceExport, extractToolExport } = sunpeakDiscovery;
 
   // Vite plugin to serve the sunpeak favicon
   const sunpeakFaviconPlugin = () => ({
@@ -229,26 +229,71 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // Discover simulations using sunpeak's discovery utilities
   const resourcesDir = join(projectRoot, 'src/resources');
   const simulationsDir = join(projectRoot, 'tests/simulations');
-  const resourceDirs = findResourceDirs(resourcesDir, (key) => `${key}-resource.tsx`, fs);
+  const toolsDir = join(projectRoot, 'src/tools');
 
-  const simulations = [];
-  for (const { key: resourceKey, dir: resourceDir, resourcePath } of resourceDirs) {
+  const resourceDirs = findResourceDirs(resourcesDir, (key) => `${key}.tsx`, fs);
+
+  // Build resource metadata map
+  const resourceMap = new Map();
+  for (const { key, resourcePath } of resourceDirs) {
     const resource = await extractResourceExport(resourcePath);
-    const resourceSimDir = join(simulationsDir, resourceKey);
-    const simulationFiles = findSimulationFiles(resourceSimDir, resourceKey, fs);
+    // Inject name from directory key if not explicitly set
+    resource.name = resource.name ?? key;
+    resourceMap.set(key, resource);
+  }
 
-    for (const { filename, path: simPath } of simulationFiles) {
-      const simulationKey = filename.replace(/-simulation\.json$/, '');
-      const simulation = JSON.parse(readFileSync(simPath, 'utf-8'));
-
-      simulations.push({
-        ...simulation,
-        name: simulationKey,
-        distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
-        srcPath: `/src/resources/${resourceKey}/${resourceKey}-resource.tsx`,
-        resource,
-      });
+  // Discover tool files and extract metadata
+  const toolFiles = findToolFiles(toolsDir, fs);
+  const toolMap = new Map();
+  for (const { name: toolName, path: toolPath } of toolFiles) {
+    try {
+      const { tool } = await extractToolExport(toolPath);
+      toolMap.set(toolName, tool);
+    } catch (err) {
+      console.warn(`Warning: Could not extract metadata from tool ${toolName}: ${err.message}`);
     }
+  }
+
+  // Discover simulations from flat directory
+  const simulations = [];
+  const simFiles = findSimulationFilesFlat(simulationsDir, fs);
+
+  for (const { name: simName, path: simPath } of simFiles) {
+    const simulation = JSON.parse(readFileSync(simPath, 'utf-8'));
+    const toolName = typeof simulation.tool === 'string' ? simulation.tool : simName;
+
+    // Look up tool metadata
+    const tool = toolMap.get(toolName);
+    if (!tool) {
+      console.warn(`Warning: Tool "${toolName}" not found for simulation "${simName}". Skipping.`);
+      continue;
+    }
+
+    // tool.resource is the resource name string — find matching resource key
+    const resourceName = tool.resource;
+    const resourceKey = resourceName
+      ? Array.from(resourceMap.keys()).find((k) => resourceMap.get(k).name === resourceName)
+      : undefined;
+
+    if (!resourceKey) {
+      console.warn(`Warning: No resource found for tool "${toolName}" in simulation "${simName}". Skipping.`);
+      continue;
+    }
+
+    // Determine source path for the resource
+    const resourceDir = resourceDirs.find((d) => d.key === resourceKey);
+    const srcPath = resourceDir
+      ? `/src/resources/${resourceKey}/${basename(resourceDir.resourcePath)}`
+      : undefined;
+
+    simulations.push({
+      ...simulation,
+      ...(typeof simulation.tool === 'string' ? { tool: { name: toolName, ...tool } } : {}),
+      name: simName,
+      distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
+      srcPath,
+      resource: resourceMap.get(resourceKey),
+    });
   }
 
   // Start MCP server with its own Vite instance (unless --prod-mcp is set)

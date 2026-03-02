@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Albums Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render album cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
@@ -27,7 +27,7 @@ for (const host of hosts) {
       });
 
       test('should have album image with correct aspect ratio', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const albumImage = iframe.locator('button:has-text("Summer Slice") img').first();
@@ -54,7 +54,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render album cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
@@ -73,7 +73,7 @@ for (const host of hosts) {
       });
 
       test('should have text with appropriate contrast', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'albums-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe');
         const albumTitle = iframe.locator('button:has-text("Summer Slice") div').first();
@@ -96,7 +96,7 @@ for (const host of hosts) {
       test('should render correctly in fullscreen displayMode', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'albums-show',
+            simulation: 'show-albums',
             theme: 'light',
             displayMode: 'fullscreen',
             host,
@@ -114,7 +114,7 @@ for (const host of hosts) {
       test('should maintain album card styles in fullscreen', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'albums-show',
+            simulation: 'show-albums',
             theme: 'dark',
             displayMode: 'fullscreen',
             host,

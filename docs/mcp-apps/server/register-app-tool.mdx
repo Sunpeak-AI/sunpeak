@@ -53,13 +53,13 @@ function registerAppTool(
     MCP tool annotations (e.g., `readOnlyHint`).
   </ResponseField>
   <ResponseField name="_meta" type="object" required>
-    UI metadata linking this tool to a resource.
+    UI metadata linking this tool to a resource. See [_meta Reference](#_meta-reference) below for full details.
     <ResponseField name="ui" type="McpUiToolMeta" required>
       <ResponseField name="resourceUri" type="string">
-        URI of the UI resource to display (e.g., `"ui://weather/view.html"`).
+        URI of the UI resource to display (e.g., `"ui://weather/view.html"`). Must match a URI registered via [`registerAppResource`](/mcp-apps/server/register-app-resource).
       </ResponseField>
       <ResponseField name="visibility" type="McpUiToolVisibility[]">
-        Who can access this tool. Default: `["model", "app"]`.
+        Who can access this tool. Default: `["model", "app"]`. See [visibility](#visibility) below.
       </ResponseField>
     </ResponseField>
   </ResponseField>
@@ -144,6 +144,6 @@ registerAppTool(
 );
 ```
 
-## Metadata Normalization
+## `_meta` Reference
 
-`registerAppTool` automatically normalizes between the current format (`_meta.ui.resourceUri`) and the deprecated flat key (`_meta["ui/resourceUri"]`) for backward compatibility with older hosts.
+See **[Tool `_meta`](/mcp-apps/server/tool-meta)** for the complete reference on `resourceUri`, `visibility`, host behavior rules, and metadata normalization.

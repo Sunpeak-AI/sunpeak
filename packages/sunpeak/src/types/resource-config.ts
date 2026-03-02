@@ -4,12 +4,14 @@ import type { McpUiResourceMeta } from '@modelcontextprotocol/ext-apps';
 /**
  * Configuration for an MCP App resource, exported from resource .tsx files.
  *
- * Composes the official MCP SDK `Resource` type (without `uri`, which is
- * generated at build time) with ext-apps `McpUiResourceMeta` for typed
- * CSP and permissions configuration.
+ * Composes the official MCP SDK `Resource` type (without `uri` and `name`,
+ * which are derived from the directory name at discovery time).
+ *
+ * `name` is optional — when omitted, it's derived from the directory name
+ * (e.g., `src/resources/albums/albums.tsx` → `'albums'`).
  */
-export type ResourceConfig = Omit<Resource, 'uri'> & {
-  name: string;
+export type ResourceConfig = Omit<Resource, 'uri' | 'name'> & {
+  name?: string;
   title?: string;
   _meta?: {
     ui?: McpUiResourceMeta;

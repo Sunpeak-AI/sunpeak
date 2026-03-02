@@ -134,15 +134,14 @@ Your existing project needs:
 ```
   </Step>
 
-  <Step title="Create resource and simulation files">
+  <Step title="Create resource, tool, and simulation files">
     Create a resource folder with a `.tsx` file that exports both the metadata and the React component:
 
     ```tsx
-    // src/resources/example/example-resource.tsx
+    // src/resources/example/example.tsx
     import type { ResourceConfig } from 'sunpeak';
 
     export const resource: ResourceConfig = {
-      name: 'example',
       title: 'Example',
       description: 'My example component',
       mimeType: 'text/html;profile=mcp-app',
@@ -161,22 +160,38 @@ Your existing project needs:
     }
     ```
 
+    Create a tool file in `src/tools/`:
+
+    ```ts
+    // src/tools/show-example.ts
+    import { z } from 'zod';
+    import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+    export const tool: AppToolConfig = {
+      resource: 'example',
+      title: 'Show Example',
+      description: 'Show an example app',
+      annotations: { readOnlyHint: true },
+      _meta: { ui: { visibility: ['model', 'app'] } },
+    };
+
+    export const schema = {
+      query: z.string().describe('Search query'),
+    };
+
+    export default async function (_args: Record<string, unknown>, _extra: ToolHandlerExtra) {
+      return { structuredContent: { message: 'Hello from handler!' } };
+    }
+    ```
+
     Create a simulation JSON file in `tests/simulations/`:
 
     ```json
-    // tests/simulations/example/example-show-simulation.json
+    // tests/simulations/show-example.json
     {
+      "tool": "show-example",
       "userMessage": "Show me an example",
-      "tool": {
-        "name": "show-example",
-        "description": "Show an example app",
-        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-        "title": "Show Example",
-        "annotations": { "readOnlyHint": true },
-        "_meta": {
-          "ui": { "visibility": ["model", "app"] }
-        }
-      },
+      "toolInput": { "query": "hello" },
       "toolResult": {
         "structuredContent": { "message": "Hello from simulation!" }
       }
@@ -191,8 +206,8 @@ Your existing project needs:
     import { StrictMode } from 'react';
     import { createRoot } from 'react-dom/client';
     import { Simulator } from 'sunpeak/simulator';
-    import { resource } from '../src/resources/example/example-resource';
-    import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
+    import { resource } from '../src/resources/example/example';
+    import exampleSimulation from '../tests/simulations/show-example.json';
     import '../src/styles/globals.css';
 
     // Combine simulation with resource
@@ -252,8 +267,8 @@ Your existing project needs:
     import { runMCPServer } from 'sunpeak/mcp';
     import path from 'path';
     import { fileURLToPath } from 'url';
-    import { resource } from '../src/resources/example/example-resource';
-    import exampleSimulation from '../tests/simulations/example/example-show-simulation.json';
+    import { resource } from '../src/resources/example/example';
+    import exampleSimulation from '../tests/simulations/show-example.json';
 
     const __dirname = path.dirname(fileURLToPath(import.meta.url));
 

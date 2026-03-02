@@ -18,16 +18,20 @@ When you create a new project with `sunpeak new`, the sunpeak framework gives yo
 - `src/resources/` - Directory containing all your MCP Resources (MCP App UIs).
     - Each resource lives in its own folder: `src/resources/{name}/`
     - Each folder contains:
-        - `{name}-resource.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
+        - `{name}.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
         - `components/` - Optional subfolder for resource-specific components
+- `src/tools/` - Directory containing tool files.
+    - Each tool is a `.ts` file that exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler.
+    - Multiple tools can reference the same resource.
+- `src/server.ts` - Optional server entry for auth and server configuration.
 - `tests/simulations/` - Directory containing simulation files for local development and testing.
-    - Each resource's simulations live in their own folder: `tests/simulations/{name}/`
-    - Simulation files follow the naming convention: `{name}-{scenario}-simulation.json`
+    - Simulation files are flat `*.json` files with a `tool` string field referencing a tool filename.
+    - Any filename works — multiple simulations can reference the same tool.
 - `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource.
     Uses the Simulator to test your resources render properly across hosts (ChatGPT, Claude) and states (tool calls, saved state, dark mode, pip display mode, etc.).
 
 <Note>
-No entry point files needed! The framework automatically discovers your simulations and resources using conventions.
+No entry point files needed! The framework automatically discovers your resources, tools, and simulations using conventions.
 </Note>
 
 <Examples />

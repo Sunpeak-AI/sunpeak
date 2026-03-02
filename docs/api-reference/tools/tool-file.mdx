@@ -1,0 +1,162 @@
+---
+title: "Tool File"
+description: "Define tool metadata, schemas, and handlers."
+keywords: ["MCP Apps", "ChatGPT Apps", "MCP tools", "tool handlers", "Zod schema"]
+---
+
+## Overview
+
+Tool files define your MCP tools — metadata, input validation, and request handlers. Each `.ts` file in `src/tools/` is auto-discovered by the framework.
+
+## File Convention
+
+```
+src/tools/{tool-name}.ts
+```
+
+The filename (without `.ts`) becomes the tool name used by the MCP server. For example, `src/tools/show-albums.ts` registers a tool named `show-albums`.
+
+## Structure
+
+Each tool file exports three things:
+
+```ts
+// src/tools/show-albums.ts
+
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+// 1. Tool metadata with resource name
+export const tool: AppToolConfig = {
+  resource: 'albums',
+  title: 'Show Albums',
+  description: 'Show photo albums',
+  annotations: { readOnlyHint: true },
+  _meta: { ui: { visibility: ['model', 'app'] } },
+};
+
+// 2. Input schema (Zod)
+export const schema = {
+  category: z.string().describe('Filter by category'),
+  search: z.string().describe('Search term'),
+  limit: z.number().describe('Max albums to return'),
+};
+
+// 3. Handler
+export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+  return { structuredContent: { albums: [] } };
+}
+```
+
+## Exports
+
+### `tool` (AppToolConfig)
+
+<ResponseField name="resource" type="string" required>
+  The resource name, matching a directory in `src/resources/` (e.g., `'albums'` for `src/resources/albums/`). Links this tool to its UI.
+</ResponseField>
+
+<ResponseField name="title" type="string">
+  Human-readable title for the tool, shown in host UIs.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Description of what the tool does.
+</ResponseField>
+
+<ResponseField name="annotations" type="object">
+  MCP tool annotations.
+
+  ```typescript
+  {
+    readOnlyHint?: boolean;
+    destructiveHint?: boolean;
+    idempotentHint?: boolean;
+    openWorldHint?: boolean;
+  }
+  ```
+</ResponseField>
+
+<ResponseField name="_meta" type="object">
+  Tool metadata, including UI visibility.
+
+  ```typescript
+  {
+    ui?: {
+      visibility?: ('model' | 'app')[];
+    }
+  }
+  ```
+
+  - `"model"` — The AI model can call this tool
+  - `"app"` — The app can call this tool (via `useCallServerTool`)
+</ResponseField>
+
+### `schema` (Zod record)
+
+A record of Zod types defining the tool's input parameters. Automatically converted to JSON Schema for the MCP server.
+
+```ts
+export const schema = {
+  query: z.string().describe('Search query'),
+  limit: z.number().optional().describe('Max results'),
+};
+```
+
+### `default` (handler)
+
+The default export is the tool handler function. It receives the validated input arguments and a `ToolHandlerExtra` object.
+
+```ts
+export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+  // args contains the validated input
+  // extra has authInfo, sessionId, signal
+  return { structuredContent: { data: [] } };
+}
+```
+
+**Return types:**
+- `{ structuredContent: unknown }` — Structured data passed to the resource via `useToolData()`
+- `{ content: [{ type: 'text', text: string }] }` — Text content
+- A plain string is normalized to `{ content: [{ type: 'text', text }] }`
+
+## ToolHandlerExtra
+
+The `extra` parameter provides context from the MCP SDK:
+
+<ResponseField name="authInfo" type="AuthInfo">
+  Authentication info from the optional `src/server.ts` auth function.
+</ResponseField>
+
+<ResponseField name="sessionId" type="string">
+  Unique session identifier.
+</ResponseField>
+
+<ResponseField name="signal" type="AbortSignal">
+  Abort signal for cancellation.
+</ResponseField>
+
+## Multiple Tools Per Resource
+
+Multiple tool files can reference the same resource by name:
+
+```
+src/resources/review/
+  review.tsx              # Shared resource (directory name: 'review')
+
+src/tools/
+  review-diff.ts          # resource: 'review'
+  review-post.ts          # resource: 'review'
+  review-purchase.ts      # resource: 'review'
+```
+
+Each tool provides different data to the same UI via `useToolData()`.
+
+## See Also
+
+<Card horizontal title="Server Entry" icon="server" href="/api-reference/tools/server-entry">
+  Optional auth and server configuration.
+</Card>
+<Card horizontal title="Simulation" icon="code" href="/api-reference/simulations/simulation">
+  Define test fixtures for your tools.
+</Card>

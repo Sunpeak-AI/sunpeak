@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Map Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render map container with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -26,7 +26,7 @@ for (const host of hosts) {
       test('should have rounded border in inline mode', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'light',
             displayMode: 'inline',
             host,
@@ -52,7 +52,7 @@ for (const host of hosts) {
       test('should have fullscreen expand button in inline mode', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'light',
             displayMode: 'inline',
             host,
@@ -83,7 +83,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -103,7 +103,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render map container with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -113,7 +113,7 @@ for (const host of hosts) {
       test('should have appropriate border color for dark mode', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'dark',
             displayMode: 'inline',
             host,
@@ -143,7 +143,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'map-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -165,7 +165,7 @@ for (const host of hosts) {
       test('should not have rounded border in fullscreen mode', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'light',
             displayMode: 'fullscreen',
             host,
@@ -189,7 +189,7 @@ for (const host of hosts) {
       test('should not show fullscreen button when already in fullscreen', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'light',
             displayMode: 'fullscreen',
             host,
@@ -208,7 +208,7 @@ for (const host of hosts) {
       test('should show place list sidebar in fullscreen', async ({ page }) => {
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'dark',
             displayMode: 'fullscreen',
             host,
@@ -225,7 +225,7 @@ for (const host of hosts) {
         await page.setViewportSize({ width: 1024, height: 768 });
         await page.goto(
           createSimulatorUrl({
-            simulation: 'map-show',
+            simulation: 'show-map',
             theme: 'light',
             displayMode: 'fullscreen',
             host,

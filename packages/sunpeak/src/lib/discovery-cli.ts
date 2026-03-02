@@ -6,9 +6,8 @@
  */
 export {
   findResourceDirs,
-  findSimulationFiles,
-  isSimulationFile,
-  extractSimulationName,
+  findSimulationFilesFlat,
+  findToolFiles,
   extractResourceKey,
   extractSimulationKey,
   toPascalCase,
@@ -16,6 +15,7 @@ export {
   findResourceKey,
 } from './discovery';
 
-export type { ResourceDirInfo, FsOps } from './discovery';
+export type { ResourceDirInfo, ToolFileInfo, SimulationFileInfo, FsOps } from './discovery';
 
 export { extractResourceExport } from './extract-resource';
+export { extractToolExport } from './extract-tool';

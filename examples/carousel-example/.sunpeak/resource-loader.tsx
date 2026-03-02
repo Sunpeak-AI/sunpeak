@@ -17,6 +17,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProvider } from 'sunpeak';
+import pkg from '../package.json';
 import '../src/styles/globals.css';
 import resourceComponents from '../src/resources';
 
@@ -39,7 +40,7 @@ if (!componentName) {
 
     root.render(
       <StrictMode>
-        <AppProvider appInfo={{ name: componentName, version: '1.0.0' }}>
+        <AppProvider appInfo={{ name: pkg.name || componentName, version: pkg.version || '1.0.0' }}>
           <Component />
         </AppProvider>
       </StrictMode>

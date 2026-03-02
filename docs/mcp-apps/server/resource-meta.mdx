@@ -1,0 +1,273 @@
+---
+title: "MCP App Resource _meta — CSP, Permissions, Domain & Border"
+sidebarTitle: "Resource _meta"
+description: "Complete reference for MCP App resource _meta.ui fields: Content Security Policy (CSP), sandbox permissions (camera, microphone, geolocation, clipboard), stable domain origins, and visual border preferences."
+keywords: ["MCP App _meta", "MCP resource metadata", "content security policy", "CSP", "iframe permissions", "sandbox permissions", "MCP App resource", "McpUiResourceMeta", "connectDomains", "resourceDomains", "frameDomains", "prefersBorder", "domain", "camera", "microphone", "geolocation", "clipboardWrite"]
+---
+
+## Overview
+
+Resource `_meta.ui` controls security, rendering, and sandbox behavior for MCP App Views. All fields are optional.
+
+This metadata is set on resources registered via [`registerAppResource`](/mcp-apps/server/register-app-resource).
+
+```ts
+_meta: {
+  ui: {
+    csp: { connectDomains: ["https://api.example.com"] },
+    permissions: { camera: {} },
+    domain: "a904794854a047f6.claudemcpcontent.com",
+    prefersBorder: false,
+  },
+}
+```
+
+## Where to Set `_meta`
+
+Set `_meta.ui` on the resource config exported from your resource file. Sunpeak passes it through to both the `resources/list` and `resources/read` responses automatically.
+
+```ts
+// src/resources/player/player.tsx
+export const resource: ResourceConfig = {
+  title: "Music Player",
+  _meta: {
+    ui: {
+      csp: { connectDomains: ["https://api.spotify.com"] },
+      permissions: { microphone: {} },
+      prefersBorder: false,
+    },
+  },
+};
+```
+
+<Accordion title="Advanced: listing-level vs content-item (raw registerAppResource)">
+When using [`registerAppResource`](/mcp-apps/server/register-app-resource) directly (without the Sunpeak framework), you can set `_meta` in two places:
+
+1. **Listing-level** — in the config object. Hosts see this in the `resources/list` response at connection time.
+2. **Content-item level** — on individual `contents[]` items returned by the read callback. Content-item values take precedence.
+
+This distinction matters when metadata varies per read. Most apps set the same values for both.
+</Accordion>
+
+## Fields
+
+### `csp` — Content Security Policy
+
+<ResponseField name="csp" type="McpUiResourceCsp">
+  Declares which external origins your View needs. The host uses these to build CSP headers for the sandboxed iframe.
+</ResponseField>
+
+<Warning>
+MCP App HTML runs in a sandboxed iframe with **no same-origin server**. You must declare **all** origins — including where your bundled JS/CSS is served from (`localhost` in dev, your CDN in production).
+</Warning>
+
+| Field | CSP Directive | Purpose |
+|-------|--------------|---------|
+| `connectDomains` | `connect-src` | fetch, XHR, and WebSocket origins |
+| `resourceDomains` | `img-src`, `script-src`, `style-src`, `font-src`, `media-src` | Static resource origins (images, scripts, stylesheets, fonts, media) |
+| `frameDomains` | `frame-src` | Nested iframe origins (e.g., YouTube embeds) |
+| `baseUriDomains` | `base-uri` | Allowed base URIs for the document |
+
+All fields accept arrays of origin strings. Wildcard subdomains are supported (e.g., `https://*.example.com`). Empty or omitted fields default to no external access — this is the secure default.
+
+```ts
+_meta: {
+  ui: {
+    csp: {
+      connectDomains: ["https://api.example.com", "wss://realtime.example.com"],
+      resourceDomains: ["https://cdn.example.com", "https://*.cloudflare.com"],
+      frameDomains: ["https://www.youtube.com", "https://player.vimeo.com"],
+      baseUriDomains: ["https://cdn.example.com"],
+    },
+  },
+}
+```
+
+#### `connectDomains`
+
+Origins for network requests — `fetch()`, `XMLHttpRequest`, and `WebSocket` connections. Maps to the CSP `connect-src` directive.
+
+If omitted, no network connections are allowed from the View (secure default).
+
+#### `resourceDomains`
+
+Origins for static resources — images, scripts, stylesheets, fonts, and media files. Maps to CSP `img-src`, `script-src`, `style-src`, `font-src`, and `media-src` directives.
+
+If omitted, no external resources can be loaded (secure default).
+
+#### `frameDomains`
+
+Origins for nested iframes within your View. Maps to the CSP `frame-src` directive. Use this for embedding third-party content like YouTube or Vimeo players.
+
+If omitted, nested iframes are blocked (`frame-src 'none'`).
+
+#### `baseUriDomains`
+
+Allowed base URIs for the document. Maps to the CSP `base-uri` directive.
+
+If omitted, only the same origin is allowed (`base-uri 'self'`).
+
+### `permissions` — Sandbox Permissions
+
+<ResponseField name="permissions" type="McpUiResourcePermissions">
+  Requests browser capabilities for the View's iframe. Each permission is declared as an empty object `{}` — its presence requests the capability.
+</ResponseField>
+
+| Field | Permission Policy | Purpose |
+|-------|------------------|---------|
+| `camera` | `camera` | Camera access (e.g., for photo capture, video calls) |
+| `microphone` | `microphone` | Microphone access (e.g., for voice input, audio recording) |
+| `geolocation` | `geolocation` | Location access (e.g., for maps, local search) |
+| `clipboardWrite` | `clipboard-write` | Clipboard write access (e.g., for "copy to clipboard" buttons) |
+
+<Note>
+Hosts **MAY** honor these permissions by setting appropriate iframe `allow` attributes, but are not required to. Your View should use JavaScript feature detection as a fallback and degrade gracefully when permissions are not granted.
+</Note>
+
+```ts
+_meta: {
+  ui: {
+    permissions: {
+      camera: {},
+      microphone: {},
+      geolocation: {},
+      clipboardWrite: {},
+    },
+  },
+}
+```
+
+### `domain` — Stable Sandbox Origin
+
+<ResponseField name="domain" type="string">
+  Requests a stable, dedicated origin for the View's sandbox iframe. The value is **not** your server's domain — it's a subdomain within the **host's** sandbox domain space.
+</ResponseField>
+
+By default, hosts assign each View an ephemeral sandbox origin (typically per-conversation). Setting `domain` tells the host to use a stable, deterministic origin instead — useful when external services need to recognize your app by origin.
+
+**Use cases:**
+- **OAuth callbacks** — redirect URIs require a stable origin on the allowlist
+- **CORS policies** — API servers that check `Origin` headers need a known value to allowlist
+- **API key restrictions** — external services that restrict by origin
+
+<Warning>
+This field is **host-specific**. The value is a subdomain within the host's own sandbox domain — not your server's domain. Each host has its own format:
+
+| Host | Domain format | Example |
+|------|--------------|---------|
+| Claude | `{sha256-hash}.claudemcpcontent.com` | `a904794854a047f6.claudemcpcontent.com` |
+| ChatGPT | `{url-derived}.oaiusercontent.com` | `www-example-com.oaiusercontent.com` |
+
+A cross-platform server must compute different values per host. For APIs using `Access-Control-Allow-Origin: *` or API key auth, you don't need `domain` at all.
+</Warning>
+
+```ts
+import crypto from "node:crypto";
+
+// Claude: hash-based subdomain derived from your MCP server URL
+function computeDomainForClaude(mcpServerUrl: string): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(mcpServerUrl)
+    .digest("hex")
+    .slice(0, 32);
+  return `${hash}.claudemcpcontent.com`;
+}
+
+// Usage
+_meta: {
+  ui: {
+    domain: computeDomainForClaude("https://example.com/mcp"),
+  },
+}
+```
+
+If omitted, the host uses its default sandbox origin.
+
+### `prefersBorder` — Visual Boundary
+
+<ResponseField name="prefersBorder" type="boolean">
+  Controls whether the host renders a visible border and background around the View.
+</ResponseField>
+
+| Value | Behavior |
+|-------|----------|
+| `true` | Request visible border and background from the host |
+| `false` | Request no visible border or background (seamless appearance) |
+| omitted | Host decides — defaults vary by platform |
+
+```ts
+_meta: { ui: { prefersBorder: false } }
+```
+
+<Tip>
+Explicitly set `prefersBorder` rather than relying on the host default, since defaults vary between ChatGPT and Claude.
+</Tip>
+
+## Complete Example
+
+```ts
+import { registerAppResource, RESOURCE_MIME_TYPE } from "sunpeak/mcp";
+
+registerAppResource(
+  server,
+  "Music Player",
+  "ui://music/player.html",
+  {
+    description: "Interactive music player",
+    _meta: {
+      ui: { prefersBorder: false },
+    },
+  },
+  async () => ({
+    contents: [
+      {
+        uri: "ui://music/player.html",
+        mimeType: RESOURCE_MIME_TYPE,
+        text: musicPlayerHtml,
+        _meta: {
+          ui: {
+            csp: {
+              connectDomains: ["https://api.spotify.com"],
+              resourceDomains: ["https://i.scdn.co"],
+            },
+            permissions: { microphone: {} },
+            prefersBorder: false,
+          },
+        },
+      },
+    ],
+  }),
+);
+```
+
+## TypeScript Types
+
+```ts
+import type {
+  McpUiResourceMeta,
+  McpUiResourceCsp,
+  McpUiResourcePermissions,
+} from "@modelcontextprotocol/ext-apps";
+
+interface McpUiResourceMeta {
+  csp?: McpUiResourceCsp;
+  permissions?: McpUiResourcePermissions;
+  domain?: string;
+  prefersBorder?: boolean;
+}
+
+interface McpUiResourceCsp {
+  connectDomains?: string[];
+  resourceDomains?: string[];
+  frameDomains?: string[];
+  baseUriDomains?: string[];
+}
+
+interface McpUiResourcePermissions {
+  camera?: {};
+  microphone?: {};
+  geolocation?: {};
+  clipboardWrite?: {};
+}
+```

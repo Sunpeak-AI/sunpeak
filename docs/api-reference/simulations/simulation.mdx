@@ -10,83 +10,82 @@ Simulations define test scenarios for your resources—combining tool definition
 
 <Tabs>
   <Tab title="Framework (JSON)">
-    In the sunpeak framework, simulations are **JSON files** that live in the `tests/simulations/` directory. The resource URL and metadata are automatically linked based on directory structure.
+    In the sunpeak framework, simulations are **JSON files** that live in the `tests/simulations/` directory. Each simulation references a tool file by name — tool metadata and resource linkage are handled by the tool files in `src/tools/`.
 
-    ## File Naming Convention
+    ## File Convention
 
-    Simulation files live in `tests/simulations/{name}/`:
+    Simulation files live in a flat `tests/simulations/` directory:
 
     ```
-    tests/simulations/{name}/{name}-{scenario}-simulation.json
+    tests/simulations/*.json
     ```
 
     For example:
-    - `tests/simulations/albums/albums-show-simulation.json`
-    - `tests/simulations/review/review-diff-simulation.json`
-    - `tests/simulations/review/review-post-simulation.json`
+    - `tests/simulations/show-albums.json`
+    - `tests/simulations/review-diff.json`
+    - `tests/simulations/review-post.json`
+
+    Any `*.json` filename works. Multiple simulations can reference the same tool with different fixture data.
+
+    Tool files live in `src/tools/`:
+    - Each `.ts` file exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler.
 
     Resource files live in `src/resources/{name}/`:
-    - **Component + Metadata**: `src/resources/{name}/{name}-resource.tsx` (exports both the React component and `export const resource: ResourceConfig`)
-
-    You can have multiple simulations per resource (e.g., `albums-show-simulation.json` and `albums-empty-simulation.json` in the same folder).
+    - **Component + Metadata**: `src/resources/{name}/{name}.tsx` (exports both the React component and `export const resource: ResourceConfig`)
 
     ## JSON Schema
 
     Each simulation JSON file contains:
 
     ```json
-    // tests/simulations/example/example-show-simulation.json
+    // tests/simulations/show-example.json
     {
+      "tool": "show-example",
       "userMessage": "Show me an example",
-      "tool": {
-        "name": "show-example",
-        "description": "Show an example",
-        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-        "title": "Show Example",
-        "annotations": { "readOnlyHint": true },
-        "_meta": {
-          "ui": {
-            "visibility": ["model", "app"]
-          }
-        }
+      "toolInput": {
+        "query": "example search"
       },
       "toolResult": {
         "structuredContent": {
           "items": ["item1", "item2"]
-        },
-        "_meta": {}
+        }
       }
     }
     ```
 
+    The `tool` field is a string referencing a tool filename (without `.ts`) in `src/tools/`. Tool metadata (name, description, schema, annotations, visibility) lives in the tool file, not in the simulation.
+
     ## Auto-Discovery
 
-    The framework automatically discovers and links simulations:
+    The framework automatically discovers and links everything:
 
-    1. **Discovery**: Scans `tests/simulations/{name}/` folders for `*-simulation.json` files
-    2. **Linking**: Simulations are automatically linked to the corresponding resource in `src/resources/{name}/`
-    3. **No imports needed**: Everything is wired automatically
+    1. **Tools**: Scans `src/tools/*.ts` for tool files with metadata, schemas, and handlers
+    2. **Simulations**: Scans `tests/simulations/*.json` and links each to its tool via the `tool` string field
+    3. **Resources**: Each tool file references its resource by directory name (e.g., `resource: 'albums'`)
 
     This means you never need to:
+    - Duplicate tool metadata in simulations
     - Import resource metadata into simulations
-    - Specify `resource` in the simulation JSON
-    - Maintain an index file of simulations
+    - Maintain an index file of simulations or tools
 
     ## Multiple Scenarios
 
-    Create multiple simulations per resource to test different scenarios:
+    Create multiple simulations for the same tool to test different scenarios:
 
     ```
     src/resources/albums/
-      albums-resource.tsx              # Component + resource metadata
+      albums.tsx                       # Component + resource metadata
 
-    tests/simulations/albums/
-      albums-show-simulation.json      # Default view
-      albums-empty-simulation.json     # Empty state
-      albums-error-simulation.json     # Error state
+    src/tools/
+      show-albums.ts                   # Tool metadata, schema, handler
+
+    tests/simulations/
+      show-albums.json                 # Default view
+      show-albums-empty.json           # Empty state
+      show-albums-error.json           # Error state
     ```
 
-    Each simulation can have different `toolResult.structuredContent` to test various data scenarios.
+    Each simulation can have different `toolInput` and `toolResult.structuredContent` to test various data scenarios.
   </Tab>
   <Tab title="Library (TypeScript)">
     When using the library directly, create simulations as TypeScript objects.
@@ -144,8 +143,8 @@ Simulations define test scenarios for your resources—combining tool definition
     import type { Simulation } from 'sunpeak';
 
     const simulations: Record<string, Simulation> = {
-      'albums-show': {
-        name: 'albums-show',
+      'show-albums': {
+        name: 'show-albums',
         resourceUrl: '/resources/albums/index.html',
         userMessage: 'Show me some albums',
         tool: {
@@ -194,10 +193,14 @@ Simulations define test scenarios for your resources—combining tool definition
   A decorative message shown in the simulator interface. Has no functional purpose.
 </ResponseField>
 
-<ResponseField name="tool" type="Tool" required>
-  MCP Tool definition from `@modelcontextprotocol/sdk`. Defines the tool's name, description, input schema, and metadata.
+<ResponseField name="tool" type="string | Tool" required>
+  In the framework, a string referencing a tool filename (without `.ts`) in `src/tools/`. In the library, an MCP Tool definition from `@modelcontextprotocol/sdk`.
 
   ```typescript
+  // Framework (JSON): string reference
+  { "tool": "show-albums" }
+
+  // Library (TypeScript): Tool object
   import type { Tool } from '@modelcontextprotocol/sdk/types.js';
   ```
 </ResponseField>
@@ -325,8 +328,8 @@ interface McpUiResourceCsp {
 Example resource config with metadata:
 
 ```tsx
+// src/resources/map/map.tsx — name auto-derived as 'map' from directory
 export const resource: ResourceConfig = {
-  name: 'map',
   description: 'Interactive map',
   _meta: {
     ui: {

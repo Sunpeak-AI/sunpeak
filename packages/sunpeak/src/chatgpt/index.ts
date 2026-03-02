@@ -63,9 +63,6 @@ export {
   findResourceKey,
   getComponentName,
   findResourceDirs,
-  isSimulationFile,
-  extractSimulationName,
-  findSimulationFiles,
 } from '../lib/discovery';
 export type {
   BuildSimulationsOptions,

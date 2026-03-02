@@ -115,7 +115,7 @@ import { createSimulatorUrl } from 'sunpeak/simulator';
 
 test('should render in light mode', async ({ page }) => {
   await page.goto(createSimulatorUrl({
-    simulation: 'albums-show',
+    simulation: 'show-albums',
     theme: 'light',
   }));
 
@@ -125,7 +125,7 @@ test('should render in light mode', async ({ page }) => {
 
 test('should render in fullscreen mode', async ({ page }) => {
   await page.goto(createSimulatorUrl({
-    simulation: 'albums-show',
+    simulation: 'show-albums',
     theme: 'dark',
     displayMode: 'fullscreen',
   }));
@@ -160,7 +160,7 @@ test.describe('Albums Resource', () => {
   test.describe('Light Mode', () => {
     test('should render album cards with correct styles', async ({ page }) => {
       await page.goto(createSimulatorUrl({
-        simulation: 'albums-show',
+        simulation: 'show-albums',
         theme: 'light',
       }));
 
@@ -184,7 +184,7 @@ test.describe('Albums Resource', () => {
   test.describe('Dark Mode', () => {
     test('should render with dark theme', async ({ page }) => {
       await page.goto(createSimulatorUrl({
-        simulation: 'albums-show',
+        simulation: 'show-albums',
         theme: 'dark',
       }));
 
@@ -195,7 +195,7 @@ test.describe('Albums Resource', () => {
   test.describe('Fullscreen Mode', () => {
     test('should render in fullscreen', async ({ page }) => {
       await page.goto(createSimulatorUrl({
-        simulation: 'albums-show',
+        simulation: 'show-albums',
         theme: 'light',
         displayMode: 'fullscreen',
       }));

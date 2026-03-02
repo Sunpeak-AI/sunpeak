@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Carousel Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render carousel cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl').first();
@@ -26,7 +26,7 @@ for (const host of hosts) {
       });
 
       test('should have card with border styling', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl.border').first();
@@ -45,7 +45,7 @@ for (const host of hosts) {
       });
 
       test('should have interactive buttons', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'light', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe');
         const visitButton = iframe.locator('button:has-text("Visit")').first();
@@ -64,7 +64,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render carousel cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl').first();
@@ -83,7 +83,7 @@ for (const host of hosts) {
       });
 
       test('should have appropriate styling for dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe');
         // Select card by its border + rounded combo
@@ -110,7 +110,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'carousel-show', theme: 'dark', host }));
+        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         // Wait for iframe content to render
         const iframe = page.frameLocator('iframe');

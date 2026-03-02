@@ -53,31 +53,21 @@ Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
 
 <Tabs>
   <Tab title="Framework (JSON)">
-    In the sunpeak framework, simulations are **JSON files** that live in `tests/simulations/`.
-
-    Simulations live in `tests/simulations/{name}/`:
+    In the sunpeak framework, simulations are **JSON files** in a flat `tests/simulations/` directory. Each simulation references a tool file by name.
 
     ```json
-    // tests/simulations/example/example-show-simulation.json
+    // tests/simulations/show-example.json
     {
+      "tool": "show-example",
       "userMessage": "Show me an example",
-      "tool": {
-        "name": "show-example",
-        "description": "Show an example simulation",
-        "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-        "title": "Show Example",
-        "annotations": { "readOnlyHint": true },
-        "_meta": {
-          "ui": { "visibility": ["model", "app"] }
-        }
-      },
+      "toolInput": { "query": "example" },
       "toolResult": {
-        "structuredContent": null
+        "structuredContent": { "items": [] }
       }
     }
     ```
 
-    The resource component and metadata are co-located in a single file (`src/resources/example/example-resource.tsx`) and automatically linked to simulations based on matching folder names.
+    Tool metadata (name, description, schema, annotations) lives in `src/tools/show-example.ts`, not in the simulation. The resource component and metadata live in `src/resources/example/example.tsx` and are linked via the tool file's `resource: 'example'` field.
 
     <Note>
     For library users not using the framework, see the [Simulation API Reference](/api-reference/simulations/simulation) for creating simulations programmatically in TypeScript.
@@ -92,8 +82,8 @@ Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
     import type { Simulation } from 'sunpeak';
 
     const simulations: Record<string, Simulation> = {
-      'albums-show': {
-        name: 'albums-show',
+      'show-albums': {
+        name: 'show-albums',
         resourceUrl: 'http://localhost:3000/resources/albums',
         tool: { name: 'show-albums', description: '...', inputSchema: {} },
         resource: { name: 'albums', uri: 'ui://albums', mimeType: 'text/html;profile=mcp-app' },

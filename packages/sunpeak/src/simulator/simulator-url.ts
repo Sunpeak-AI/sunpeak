@@ -11,7 +11,7 @@ import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
  *
  * // In e2e tests:
  * await page.goto(createSimulatorUrl({
- *   simulation: 'albums-show',
+ *   simulation: 'show-albums',
  *   theme: 'dark',
  *   displayMode: 'fullscreen',
  *   host: 'claude',
@@ -20,8 +20,8 @@ import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
  */
 export interface SimulatorUrlParams {
   /**
-   * The simulation name to load (e.g., 'albums-show', 'review-diff').
-   * Corresponds to the simulation JSON filename without the '-simulation.json' suffix.
+   * The simulation name to load (e.g., 'show-albums', 'review-diff').
+   * Corresponds to the simulation JSON filename without the `.json` extension.
    */
   simulation?: string;
 
@@ -110,8 +110,8 @@ export interface SimulatorUrlParams {
  * @example
  * ```ts
  * // Basic usage
- * createSimulatorUrl({ simulation: 'albums-show', theme: 'light' })
- * // Returns: '/?simulation=albums-show&theme=light'
+ * createSimulatorUrl({ simulation: 'show-albums', theme: 'light' })
+ * // Returns: '/?simulation=show-albums&theme=light'
  *
  * // With display mode
  * createSimulatorUrl({
@@ -123,20 +123,20 @@ export interface SimulatorUrlParams {
  *
  * // With device simulation
  * createSimulatorUrl({
- *   simulation: 'map-show',
+ *   simulation: 'show-map',
  *   deviceType: 'mobile',
  *   touch: true,
  *   hover: false,
  * })
- * // Returns: '/?simulation=map-show&deviceType=mobile&touch=true&hover=false'
+ * // Returns: '/?simulation=show-map&deviceType=mobile&touch=true&hover=false'
  *
  * // With safe area insets (for notch simulation)
  * createSimulatorUrl({
- *   simulation: 'carousel-show',
+ *   simulation: 'show-carousel',
  *   safeAreaTop: 44,
  *   safeAreaBottom: 34,
  * })
- * // Returns: '/?simulation=carousel-show&safeAreaTop=44&safeAreaBottom=34'
+ * // Returns: '/?simulation=show-carousel&safeAreaTop=44&safeAreaBottom=34'
  * ```
  */
 export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): string {

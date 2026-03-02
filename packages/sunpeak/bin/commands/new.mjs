@@ -153,9 +153,19 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
         if (src.includes('/resources/') && name === resource) {
           return false;
         }
-        // Skip simulation directories for excluded resources: tests/simulations/{resource}/
-        if (src.includes('/tests/simulations/') && name === resource) {
-          return false;
+        // Skip flat simulation files for excluded resources: tests/simulations/*.json
+        if (src.includes('/tests/simulations/') && name.endsWith('.json')) {
+          const baseName = name.replace(/\.json$/, '');
+          if (baseName === resource || baseName.startsWith(resource + '-') || baseName.endsWith('-' + resource)) {
+            return false;
+          }
+        }
+        // Skip tool files for excluded resources: src/tools/*.ts
+        if (src.includes('/src/tools/') && name.endsWith('.ts')) {
+          const baseName = name.replace(/\.ts$/, '');
+          if (baseName === resource || baseName.startsWith(resource + '-') || baseName.endsWith('-' + resource)) {
+            return false;
+          }
         }
         // Skip e2e test files for excluded resources
         if (src.includes('/tests/e2e/') && name === `${resource}.spec.ts`) {

@@ -4,8 +4,8 @@
  * This file bootstraps the multi-host simulator for development.
  *
  * Auto-discovers simulations and resources by file naming convention:
- * - tests/simulations/{resource}/{resource}-{scenario}-simulation.json
- * - src/resources/{resource}/{resource}-resource.tsx (component + resource metadata)
+ * - tests/simulations/*.json
+ * - src/resources/{resource}/{resource}.tsx (component + resource metadata)
  * - src/resources/{resource}/{Resource}Resource component (PascalCase)
  */
 import { StrictMode } from 'react';
@@ -18,9 +18,13 @@ const { Simulator, buildDevSimulations } = simulator;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
-  simulationModules: import.meta.glob('../tests/simulations/*/*-simulation.json', { eager: true }),
-  resourceModules: import.meta.glob('../src/resources/*/*-resource.tsx', { eager: true }),
+  simulationModules: import.meta.glob('../tests/simulations/*.json', { eager: true }),
   resourceComponents: resourceComponents as Record<string, React.ComponentType>,
+  toolModules: import.meta.glob('../src/tools/*.ts', { eager: true }),
+  resourceModules: import.meta.glob(
+    ['../src/resources/*/*.tsx', '!../src/resources/*/*.test.tsx'],
+    { eager: true }
+  ),
 });
 
 // Read app config from environment or use defaults

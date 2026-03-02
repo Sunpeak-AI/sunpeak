@@ -65,8 +65,8 @@ sunpeak new my-app review,carousel
 
 The framework includes:
 
-- **Convention-based structure** - MCP Resources auto-discovered from `src/resources/{name}/`
-- **Simulations in tests/** - Simulation JSON files live in `tests/simulations/{name}/`
+- **Convention-based structure** - Resources auto-discovered from `src/resources/{name}/`, tools from `src/tools/`, simulations from `tests/simulations/`
+- **Tool files** - Real tool handlers with Zod schemas in `src/tools/`
 - **Pre-configured tooling** - Vite, TypeScript, Tailwind CSS 4, Vitest
 - **Development scripts** - Ready-to-use `dev`, `build`, `mcp`, and `test` commands
 - **Example components** - Sample MCP Resources to get started quickly
@@ -75,12 +75,15 @@ The framework includes:
 
 ```
 my-app/
-├── src/resources/
-│   └── review/
-│       └── review-resource.tsx
+├── src/
+│   ├── resources/
+│   │   └── review/
+│   │       └── review.tsx
+│   ├── tools/
+│   │   └── review-diff.ts
+│   └── server.ts
 ├── tests/simulations/
-│   └── review/
-│       └── review-{scenario}-simulation.json
+│   └── review-diff.json
 └── package.json
 ```
 

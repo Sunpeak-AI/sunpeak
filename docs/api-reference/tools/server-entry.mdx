@@ -1,0 +1,97 @@
+---
+title: "Server Entry"
+description: "Optional auth and server configuration."
+keywords: ["MCP Apps", "ChatGPT Apps", "MCP server", "authentication", "server config"]
+---
+
+## Overview
+
+The optional `src/server.ts` file configures authentication and server metadata. When present, the framework uses it to populate `extra.authInfo` in tool handlers.
+
+## File Convention
+
+```
+src/server.ts
+```
+
+## Example
+
+```ts
+// src/server.ts
+
+import type { IncomingMessage } from 'node:http';
+import type { AuthInfo } from 'sunpeak/mcp';
+
+export function auth(req: IncomingMessage): AuthInfo {
+  const token = req.headers.authorization?.replace('Bearer ', '') ?? '';
+  return { token, clientId: 'my-app', scopes: [] };
+}
+
+export const server = { name: 'My App', version: '1.0.0' };
+```
+
+## Exports
+
+### `auth` (function, optional)
+
+Extracts authentication info from incoming HTTP requests. The returned `AuthInfo` is available as `extra.authInfo` in tool handlers.
+
+```ts
+export function auth(req: IncomingMessage): AuthInfo {
+  const token = req.headers.authorization?.replace('Bearer ', '') ?? '';
+  return { token, clientId: 'my-app', scopes: [] };
+}
+```
+
+<ResponseField name="req" type="IncomingMessage" required>
+  The incoming HTTP request from Node's `http` module.
+</ResponseField>
+
+**Returns** `AuthInfo` from the MCP SDK:
+
+```typescript
+interface AuthInfo {
+  token: string;
+  clientId: string;
+  scopes: string[];
+}
+```
+
+### `server` (object, optional)
+
+Server metadata reported to hosts during the MCP handshake.
+
+```ts
+export const server = { name: 'My App', version: '1.0.0' };
+```
+
+<ResponseField name="name" type="string">
+  Server name displayed in the host.
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  Server version.
+</ResponseField>
+
+## Using Auth in Tool Handlers
+
+The `authInfo` from the server entry is available in every tool handler:
+
+```ts
+// src/tools/show-albums.ts
+
+export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+  const token = extra.authInfo?.token;
+  const data = await fetchAlbums(token, args.category);
+  return { structuredContent: data };
+}
+```
+
+## See Also
+
+<Card horizontal title="Tool File" icon="code" href="/api-reference/tools/tool-file">
+  Define tool metadata, schemas, and handlers.
+</Card>
+<Card horizontal title="runMCPServer" icon="server" href="/api-reference/simulations/run-mcp-server">
+  MCP server API reference.
+</Card>

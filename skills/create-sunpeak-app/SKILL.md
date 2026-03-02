@@ -24,13 +24,15 @@ my-sunpeak-app/
 ├── src/
 │   ├── resources/
 │   │   └── {name}/
-│   │       └── {name}-resource.tsx   # Resource component + ResourceConfig export
+│   │       └── {name}.tsx            # Resource component + ResourceConfig export
+│   ├── tools/
+│   │   └── {name}.ts                 # Tool metadata, Zod schema, handler
+│   ├── server.ts                     # Optional server entry (auth, config)
 │   └── styles/
 │       └── globals.css               # Tailwind imports
 ├── tests/
 │   ├── simulations/
-│   │   └── {name}/
-│   │       └── {name}-{scenario}-simulation.json  # Simulation fixture files
+│   │   └── *.json                    # Simulation fixture files (flat directory)
 │   └── e2e/
 │       └── {name}.spec.ts            # Playwright tests
 ├── package.json
@@ -38,23 +40,23 @@ my-sunpeak-app/
 ```
 
 Discovery is convention-based:
-- Resources: `src/resources/{name}/{name}-resource.tsx`
-- Simulations: `tests/simulations/{name}/{name}-{scenario}-simulation.json`
+- Resources: `src/resources/{name}/{name}.tsx` (name derived from directory)
+- Tools: `src/tools/{name}.ts` (name derived from filename)
+- Simulations: `tests/simulations/*.json` (flat directory, `"tool"` string references tool filename)
 
 ## Resource Component Pattern
 
 Every resource file exports two things:
 
-1. **`resource`** — A `ResourceConfig` object with MCP metadata
+1. **`resource`** — A `ResourceConfig` object with MCP metadata (name is auto-derived from directory)
 2. **A named React component** — The UI (`{Name}Resource`)
 
 ```tsx
 import { useToolData, useHostContext, useDisplayMode, SafeArea } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 
-// MCP resource metadata
+// MCP resource metadata (name auto-derived from directory: src/resources/weather/)
 export const resource: ResourceConfig = {
-  name: 'weather',
   title: 'Weather',
   description: 'Show current weather conditions',
   mimeType: 'text/html;profile=mcp-app',
@@ -111,31 +113,50 @@ export function WeatherResource() {
 - All hooks must be called before any early `return` (React rules of hooks)
 - Do NOT mutate `app` directly inside hooks — use `eslint-disable-next-line react-hooks/immutability` for class setters
 
+## Tool Files
+
+Each tool `.ts` file exports metadata (with a resource name string), a Zod schema, and a handler:
+
+```ts
+// src/tools/show-weather.ts
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+// 1. Tool metadata with resource name (matches directory: src/resources/weather/)
+export const tool: AppToolConfig = {
+  resource: 'weather',
+  title: 'Show Weather',
+  description: 'Show current weather conditions',
+  annotations: { readOnlyHint: true },
+  _meta: { ui: { visibility: ['model', 'app'] } },
+};
+
+// 2. Zod schema (auto-converted to JSON Schema for MCP)
+export const schema = {
+  city: z.string().describe('City name'),
+  units: z.enum(['metric', 'imperial']).describe('Temperature units'),
+};
+
+// 3. Handler — return structured data for the UI
+export default async function (args: { city: string; units?: string }, extra: ToolHandlerExtra) {
+  return {
+    structuredContent: {
+      temperature: 72,
+      condition: 'Partly Cloudy',
+      humidity: 55,
+    },
+  };
+}
+```
+
 ## Simulation Files
 
-Simulations are JSON fixtures that power the dev simulator and MCP server. Place them at:
-`tests/simulations/{name}/{name}-{scenario}-simulation.json`
+Simulations are JSON fixtures that power the dev simulator. Place them in `tests/simulations/` as flat JSON files:
 
 ```json
 {
+  "tool": "show-weather",
   "userMessage": "Show me the weather in Austin, TX.",
-  "tool": {
-    "name": "show-weather",
-    "description": "Show current weather conditions",
-    "inputSchema": {
-      "type": "object",
-      "properties": {
-        "city": { "type": "string" },
-        "units": { "type": "string", "enum": ["metric", "imperial"] }
-      },
-      "required": ["city"],
-      "additionalProperties": false
-    },
-    "annotations": { "readOnlyHint": true },
-    "_meta": {
-      "ui": { "visibility": ["model", "app"] }
-    }
-  },
   "toolInput": {
     "city": "Austin",
     "units": "imperial"
@@ -151,14 +172,13 @@ Simulations are JSON fixtures that power the dev simulator and MCP server. Place
 ```
 
 Key fields:
+- `tool` — String referencing a tool filename in `src/tools/` (without `.ts`)
 - `userMessage` — Decorative text shown in simulator (no functional purpose)
-- `tool` — Full MCP Tool definition (used in `tools/list`)
 - `toolInput` — Arguments sent to the tool (shown as input to `useToolData`)
 - `toolResult.structuredContent` — The data rendered by `useToolData().output`
 - `toolResult.content[]` — Text fallback for non-UI hosts
-- `hostContext` — Optional overrides for `McpUiHostContext` (theme, locale, etc.)
 
-Multiple simulations per resource are supported: `review-diff-simulation.json`, `review-post-simulation.json` sharing the same resource.
+Multiple simulations per tool are supported: `review-diff.json`, `review-post.json` sharing the same resource via the same tool's `resource` field.
 
 ## Core Hooks Reference
 
@@ -271,7 +291,7 @@ dist/
 └── ...
 ```
 
-The `.json` file contains the `ResourceConfig` extracted from your `.tsx` file and a generated `uri` (e.g. `ui://weather?v=abc123`). Host both files and reference the `.html` in your production MCP server's `registerAppResource` call.
+The `.json` file contains the `ResourceConfig` extracted from your `.tsx` file and a generated `uri` (e.g. `ui://weather-abc123`). Host both files and reference the `.html` in your production MCP server's `registerAppResource` call.
 
 ## Platform Detection
 
@@ -356,7 +376,7 @@ import { test, expect } from '@playwright/test';
 import { createSimulatorUrl } from 'sunpeak/chatgpt';
 
 test('renders weather card', async ({ page }) => {
-  await page.goto(createSimulatorUrl({ simulation: 'weather-show', theme: 'light' }));
+  await page.goto(createSimulatorUrl({ simulation: 'show-weather', theme: 'light' }));
 
   // Access elements INSIDE the resource iframe
   const iframe = page.frameLocator('iframe');
@@ -369,7 +389,7 @@ test('loads without console errors', async ({ page }) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  await page.goto(createSimulatorUrl({ simulation: 'weather-show', theme: 'dark' }));
+  await page.goto(createSimulatorUrl({ simulation: 'show-weather', theme: 'dark' }));
 
   // Wait for content to render
   const iframe = page.frameLocator('iframe');
@@ -391,7 +411,7 @@ test('loads without console errors', async ({ page }) => {
 
 | Param | Type | Description |
 |-------|------|-------------|
-| `simulation` | `string` | Simulation name without `-simulation.json` (e.g. `'carousel-show'`) |
+| `simulation` | `string` | Simulation filename without `.json` (e.g. `'show-weather'`) |
 | `host` | `'chatgpt' \| 'claude'` | Host shell (default: `'chatgpt'`) |
 | `theme` | `'light' \| 'dark'` | Color theme (default: `'dark'`) |
 | `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode (default: `'inline'`) |
@@ -406,8 +426,8 @@ test('loads without console errors', async ({ page }) => {
 ```typescript
 import type { ResourceConfig } from 'sunpeak';
 
+// name is auto-derived from the directory (src/resources/my-resource/)
 export const resource: ResourceConfig = {
-  name: 'my-resource',            // Unique resource name (kebab-case)
   title: 'My Resource',           // Human-readable title
   description: 'What it shows',   // Description for MCP hosts
   mimeType: 'text/html;profile=mcp-app',  // Required for MCP App resources
@@ -451,7 +471,7 @@ When using the sunpeak CLI (`sunpeak dev` / `sunpeak build`), `AppProvider` wrap
 2. **Missing `<SafeArea>`** — Always wrap content in `<SafeArea>` to respect host safe area insets.
 3. **Wrong Playwright locator** — Use `page.frameLocator('iframe').locator(...)` for resource content, never `page.locator(...)`.
 4. **Hardcoded colors** — Use MCP standard CSS variables via Tailwind arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`) not raw colors.
-5. **Simulation name mismatch** — The simulation key is the filename without `-simulation.json`: `carousel-show-simulation.json` → `carousel-show`.
+5. **Simulation tool mismatch** — The `"tool"` field in simulation JSON must match a tool filename in `src/tools/` (e.g. `"tool": "show-weather"` matches `src/tools/show-weather.ts`).
 6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).
 7. **Forgetting text fallback** — Include `toolResult.content[]` in simulations for non-UI hosts.
 

@@ -16,7 +16,7 @@ import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
  * - `resourceScript`: URL to a built resource file (production builds)
  */
 export interface Simulation {
-  // Unique identifier derived from the simulation filename (e.g., 'albums-show')
+  // Unique identifier derived from the simulation filename (e.g., 'show-albums')
   name: string;
 
   // URL to an HTML page to load in an iframe (dev mode).

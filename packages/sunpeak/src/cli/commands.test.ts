@@ -176,10 +176,10 @@ describe('CLI Commands', () => {
       expect(cpSyncFilter!('/template/src/resources/review')).toBe(false);
       expect(cpSyncFilter!('/template/src/resources/map')).toBe(false);
 
-      // Verify filter excludes simulations for non-selected resources
-      expect(cpSyncFilter!('/template/tests/simulations/carousel')).toBe(true);
-      expect(cpSyncFilter!('/template/tests/simulations/review')).toBe(false);
-      expect(cpSyncFilter!('/template/tests/simulations/map')).toBe(false);
+      // Verify filter excludes flat simulation files for non-selected resources
+      expect(cpSyncFilter!('/template/tests/simulations/show-carousel.json')).toBe(true);
+      expect(cpSyncFilter!('/template/tests/simulations/review-diff.json')).toBe(false);
+      expect(cpSyncFilter!('/template/tests/simulations/show-map.json')).toBe(false);
 
       // Verify filter excludes e2e tests for non-selected resources
       expect(cpSyncFilter!('/template/tests/e2e/carousel.spec.ts')).toBe(true);

@@ -1,19 +1,18 @@
 ## Examples
 
-Example sunpeak resource & simulation files for an MCP App called "Review".
+Example sunpeak resource, tool, & simulation files for an MCP App called "Review".
 
 ### Resource
 
 Each resource `.tsx` file exports both a `ResourceConfig` metadata object and the React component:
 
 ```tsx
-// src/resources/review/review-resource.tsx
+// src/resources/review/review.tsx
 
 import { useToolData } from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
 
 export const resource: ResourceConfig = {
-  name: 'review',
   description: 'Visualize and review a code change',
   _meta: { ui: { csp: { resourceDomains: ['https://cdn.example.com'] } } },
 };
@@ -25,40 +24,53 @@ export function ReviewResource() {
 }
 ```
 
+### Tool
+
+Each tool `.ts` file exports metadata (with a resource name), a Zod schema, and a handler:
+
+```ts
+// src/tools/review-diff.ts
+
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+export const tool: AppToolConfig = {
+  resource: 'review',
+  title: 'Diff Review',
+  description: 'Show a review dialog for a proposed code diff',
+  annotations: { readOnlyHint: false },
+  _meta: { ui: { visibility: ['model', 'app'] } },
+};
+
+export const schema = {
+  changesetId: z.string().describe('Unique identifier for the changeset'),
+  title: z.string().describe('Title describing the changes'),
+};
+
+export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+  return { structuredContent: { title: args.title, sections: [] } };
+}
+```
+
 ### Simulation
 
-Testing an MCP App requires setting a lot of state: state in your backend (accessed via MCP tool), the app runtime, and the host agent itself.
-
-Simulation files let you define key App states for development, automated testing, and demo purposes.
-
-Simulation files contain an [official MCP Tool object](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#tool) and tool result data with [structured content](https://modelcontextprotocol.io/specification/2025-11-25/server/tools#structured-content). Host state (like light/dark mode) is not set on the simulation, but rather on the sunpeak simulator itself via UI, props, or URL params.
+Simulation files provide fixture data for testing. Each references a tool by filename and contains the mock input/output:
 
 ```jsonc
-// tests/simulations/review-diff-simulation.json
+// tests/simulations/review-diff.json
 
 {
-  // Official MCP tool object.
-  "tool": {
-    "name": "review-diff",
-    "description": "Show a review dialog for a proposed code diff",
-    "inputSchema": { "type": "object", "properties": {}, "additionalProperties": false },
-    "title": "Diff Review",
-    "annotations": { "readOnlyHint": false },
-    "_meta": {
-      "ui": { "visibility": ["model", "app"] },
-    },
-  },
-  // Tool input arguments (sent to CallTool).
+  "tool": "review-diff",                      // References src/tools/review-diff.ts
+  "userMessage": "Refactor the auth module to use JWT tokens.",
   "toolInput": {
     "changesetId": "cs_789",
-    "title": "Refactor Authentication Module",
+    "title": "Refactor Authentication Module"
   },
-  // Tool result data (CallToolResult response).
   "toolResult": {
     "structuredContent": {
-      "title": "Refactor Authentication Module",
+      "title": "Refactor Authentication Module"
       // ...
-    },
-  },
+    }
+  }
 }
 ```

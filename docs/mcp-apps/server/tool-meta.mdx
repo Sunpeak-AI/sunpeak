@@ -1,0 +1,125 @@
+---
+title: "MCP App Tool _meta — Visibility & Resource Linking"
+sidebarTitle: "Tool _meta"
+description: "Complete reference for MCP App tool _meta.ui fields: resourceUri for linking tools to HTML Views, and visibility for controlling access by model vs app."
+keywords: ["MCP App _meta", "MCP tool metadata", "tool visibility", "resourceUri", "MCP App tool", "app-only tool", "model-only tool", "McpUiToolMeta"]
+---
+
+## Overview
+
+Every MCP App tool uses `_meta.ui` to link the tool to an HTML View and control who can access it. This metadata is set in the tool config passed to [`registerAppTool`](/mcp-apps/server/register-app-tool).
+
+```ts
+registerAppTool(server, "get-weather", {
+  description: "Get current weather for a location",
+  _meta: {
+    ui: {
+      resourceUri: "ui://weather/view.html",
+      visibility: ["model", "app"],
+    },
+  },
+}, handler);
+```
+
+## Fields
+
+### `_meta.ui.resourceUri`
+
+<ResponseField name="resourceUri" type="string">
+  URI of the HTML resource to render when this tool is called. Uses the `ui://` protocol.
+</ResponseField>
+
+```ts
+_meta: { ui: { resourceUri: "ui://weather/view.html" } }
+```
+
+Must match a URI registered via [`registerAppResource`](/mcp-apps/server/register-app-resource). When the host invokes this tool, it calls `resources/read` with this URI to fetch the HTML content, then renders it in a sandboxed iframe.
+
+### `_meta.ui.visibility`
+
+<ResponseField name="visibility" type="McpUiToolVisibility[]" default='["model", "app"]'>
+  Who can discover and call this tool. An array containing `"model"`, `"app"`, or both.
+</ResponseField>
+
+| Value | Meaning |
+|-------|---------|
+| `"model"` | Tool is included in the agent's tool list and callable by the LLM |
+| `"app"` | Tool is callable by the View (your UI) via [`useAppTools`](/mcp-apps/app/use-app-tools) on the same server connection |
+
+**Default:** `["model", "app"]` — both model and app can access.
+
+## Visibility Examples
+
+### Model + App (default)
+
+Both the LLM and the View can call this tool. This is the default when `visibility` is omitted.
+
+```ts
+registerAppTool(server, "show-cart", {
+  description: "Display the user's shopping cart",
+  _meta: {
+    ui: { resourceUri: "ui://shop/cart.html" },
+  },
+}, handler);
+```
+
+### App-only (hidden from model)
+
+The View can call this tool, but it's hidden from the agent's tool list. Use this for UI-driven server interactions — polling, pagination, form submissions, or any action the user triggers directly in the View.
+
+```ts
+registerAppTool(server, "update-quantity", {
+  description: "Update item quantity in cart",
+  inputSchema: { itemId: z.string(), quantity: z.number() },
+  _meta: {
+    ui: {
+      resourceUri: "ui://shop/cart.html",
+      visibility: ["app"],
+    },
+  },
+}, async ({ itemId, quantity }) => {
+  const cart = await updateCartItem(itemId, quantity);
+  return { content: [{ type: "text", text: JSON.stringify(cart) }] };
+});
+```
+
+### Model-only
+
+The model can call this tool, but the View cannot. Use this when the tool should only be triggered by the LLM in conversation, never by the UI directly.
+
+```ts
+registerAppTool(server, "show-cart", {
+  description: "Display the user's shopping cart",
+  _meta: {
+    ui: {
+      resourceUri: "ui://shop/cart.html",
+      visibility: ["model"],
+    },
+  },
+}, handler);
+```
+
+## Host Behavior
+
+Hosts enforce visibility rules:
+
+- The host **MUST NOT** include tools with `visibility: ["app"]` in the agent's tool list.
+- The host **MUST** reject `tools/call` requests from Views for tools that don't include `"app"` in visibility.
+- Cross-server tool calls are always blocked for app-only tools — a View can only call app-visible tools on its **own** MCP server.
+
+## Metadata Normalization
+
+[`registerAppTool`](/mcp-apps/server/register-app-tool) automatically normalizes between the current format (`_meta.ui.resourceUri`) and the deprecated flat key (`_meta["ui/resourceUri"]`) for backward compatibility with older hosts. You don't need to set both.
+
+## TypeScript Types
+
+```ts
+import type { McpUiToolMeta, McpUiToolVisibility } from "@modelcontextprotocol/ext-apps";
+
+type McpUiToolVisibility = "model" | "app";
+
+interface McpUiToolMeta {
+  resourceUri?: string;
+  visibility?: McpUiToolVisibility[];
+}
+```

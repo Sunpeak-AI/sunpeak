@@ -1,11 +1,15 @@
 ```bash
 my-app/
-├── src/resources/
-│   └── review/
-│       └── review-resource.tsx # Review UI component + resource metadata.
+├── src/
+│   ├── resources/
+│   │   └── review/
+│   │       └── review.tsx                   # Review UI component + resource metadata.
+│   ├── tools/
+│   │   ├── review-diff.ts                   # Tool with handler, schema, and resource reference.
+│   │   └── review-post.ts                   # Multiple tools can share one resource.
+│   └── server.ts                            # Optional: auth, server config.
 ├── tests/simulations/
-│   └── review/
-│       ├── review-{scenario1}-simulation.json  # Mock state for testing.
-│       └── review-{scenario2}-simulation.json  # Mock state for testing.
+│   ├── review-diff.json                     # Mock state for testing.
+│   └── review-post.json                     # Mock state for testing.
 └── package.json
 ```
