@@ -1,0 +1,680 @@
+import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { URL } from 'node:url';
+import { randomUUID } from 'node:crypto';
+
+import { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
+
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import {
+  registerAppTool,
+  registerAppResource,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
+
+import type { AuthInfo, CallToolResult, ToolHandlerExtra } from './types.js';
+
+// ============================================================================
+// Public types
+// ============================================================================
+
+/**
+ * A tool loaded from a compiled tool module (`dist/tools/*.js`).
+ */
+export interface ProductionTool {
+  /** Tool name (derived from filename, e.g. 'show-albums') */
+  name: string;
+  /** Tool config from the `tool` export */
+  tool: {
+    resource: string;
+    title?: string;
+    description?: string;
+    annotations?: Record<string, unknown>;
+    _meta?: Record<string, unknown>;
+  };
+  /** Zod shape from the `schema` export (passed to SDK as inputSchema) */
+  schema?: Record<string, unknown>;
+  /** Handler from the `default` export */
+  handler: (
+    args: Record<string, unknown>,
+    extra: ToolHandlerExtra
+  ) => CallToolResult | Promise<CallToolResult> | string | Promise<string>;
+}
+
+/**
+ * A resource loaded from the build output (`dist/{name}/{name}.html` + `.json`).
+ */
+export interface ProductionResource {
+  /** Resource name (from .json metadata) */
+  name: string;
+  /** Resource URI (from .json metadata, includes cache-bust timestamp) */
+  uri: string;
+  /** Pre-built HTML content (self-contained, JS+CSS inlined) */
+  html: string;
+  /** Resource _meta (CSP, permissions, domain, etc.) */
+  _meta?: Record<string, unknown>;
+  /** Resource description */
+  description?: string;
+}
+
+/**
+ * Auth function signature for `src/server.ts` (Node.js).
+ * Called on every MCP request. Return AuthInfo to authenticate, null to reject (401).
+ */
+export type AuthFunction = (req: IncomingMessage) => Promise<AuthInfo | null> | AuthInfo | null;
+
+/**
+ * Auth function signature for Web Standard handlers (Cloudflare Workers, Deno, Bun).
+ */
+export type WebAuthFunction = (req: Request) => Promise<AuthInfo | null> | AuthInfo | null;
+
+/**
+ * Configuration for creating a production MCP server and Node.js handler.
+ */
+export interface ProductionServerConfig {
+  /** Server name reported to hosts */
+  name?: string;
+  /** Server version reported to hosts */
+  version?: string;
+  /** Tool registrations with real handlers */
+  tools: ProductionTool[];
+  /** Resource registrations with pre-built HTML */
+  resources: ProductionResource[];
+  /** Auth function from server entry (populates extra.authInfo via req.auth) */
+  auth?: AuthFunction;
+}
+
+/**
+ * Configuration for creating a Web Standard MCP handler (serverless/edge).
+ */
+export interface WebHandlerConfig {
+  /** Server name reported to hosts */
+  name?: string;
+  /** Server version reported to hosts */
+  version?: string;
+  /** Tool registrations with real handlers */
+  tools: ProductionTool[];
+  /** Resource registrations with pre-built HTML */
+  resources: ProductionResource[];
+  /** Auth function for Web Standard Request objects */
+  auth?: WebAuthFunction;
+}
+
+// ============================================================================
+// MCP server creation
+// ============================================================================
+
+/**
+ * Create an MCP server with production tool handlers and pre-built resources.
+ *
+ * Tools are registered with real Zod schemas (input validation) and handlers.
+ * Resources serve pre-built HTML with their _meta preserved.
+ */
+export function createProductionMcpServer(config: ProductionServerConfig): McpServer {
+  const { name = 'sunpeak-app', version = '0.1.0', tools, resources } = config;
+
+  const mcpServer = new McpServer(
+    {
+      name,
+      version,
+      icons: [
+        {
+          src: `data:image/png;base64,${FAVICON_BASE64}`,
+          mimeType: 'image/png',
+          sizes: ['128x128'],
+        },
+      ],
+    },
+    { capabilities: { resources: {}, tools: {} } }
+  );
+
+  // Build resource lookup: resource name → ProductionResource
+  const resourceByName = new Map<string, ProductionResource>();
+  for (const res of resources) {
+    resourceByName.set(res.name, res);
+  }
+
+  // Track registered resource URIs to avoid duplicates
+  // (multiple tools can reference the same resource, e.g. review-diff and review-post)
+  const registeredResources = new Set<string>();
+
+  for (const tool of tools) {
+    const res = resourceByName.get(tool.tool.resource);
+    if (!res) {
+      console.warn(
+        `[MCP] Warning: Resource "${tool.tool.resource}" not found for tool "${tool.name}". Skipping.`
+      );
+      continue;
+    }
+
+    // Register resource (once per URI)
+    if (!registeredResources.has(res.uri)) {
+      registeredResources.add(res.uri);
+      registerAppResource(
+        mcpServer,
+        res.name,
+        res.uri,
+        {
+          description: res.description,
+          _meta: res._meta,
+        },
+        async () => ({
+          contents: [
+            {
+              uri: res.uri,
+              mimeType: RESOURCE_MIME_TYPE,
+              text: res.html,
+              _meta: res._meta,
+            },
+          ],
+        })
+      );
+    }
+
+    // Register tool with real handler and Zod schema
+    // Cast inputSchema — at runtime it's a Zod shape from the tool module,
+    // but typed as Record<string, unknown> since we load dynamically
+    const toolConfig: Record<string, unknown> = {
+      title: tool.tool.title,
+      description: tool.tool.description,
+      annotations: tool.tool.annotations,
+      ...(tool.schema ? { inputSchema: tool.schema } : {}),
+      _meta: {
+        ...tool.tool._meta,
+        ui: {
+          resourceUri: res.uri,
+          ...((tool.tool._meta?.ui as Record<string, unknown>) ?? {}),
+        },
+      },
+    };
+    // The registerAppTool callback signature depends on whether inputSchema is provided:
+    // - With inputSchema: (args, extra) => CallToolResult
+    // - Without inputSchema: (extra) => CallToolResult
+    // We always pass through to the user's handler which expects (args, extra).
+    const callback = async (
+      ...cbArgs: [Record<string, unknown>, ToolHandlerExtra] | [ToolHandlerExtra]
+    ) => {
+      const hasSchema = !!tool.schema;
+      const args: Record<string, unknown> = hasSchema ? (cbArgs[0] as Record<string, unknown>) : {};
+      const extra = (hasSchema ? cbArgs[1] : cbArgs[0]) as ToolHandlerExtra;
+
+      const argKeys = Object.keys(args);
+      const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
+      console.log(`[MCP] CallTool: ${tool.name}${argsStr}`);
+
+      const result = await tool.handler(args, extra);
+
+      // Normalize string returns to CallToolResult
+      if (typeof result === 'string') {
+        return { content: [{ type: 'text' as const, text: result }] };
+      }
+      return result;
+    };
+    // Cast config and callback — tool modules are loaded dynamically at runtime,
+    // so Zod shapes and callback generics can't be statically verified.
+    registerAppTool(
+      mcpServer,
+      tool.name,
+      toolConfig as Parameters<typeof registerAppTool>[2],
+      callback as Parameters<typeof registerAppTool>[3]
+    );
+  }
+
+  const toolCount = tools.filter((t) => resourceByName.has(t.tool.resource)).length;
+  const resourceCount = registeredResources.size;
+  console.log(`[MCP] Registered ${toolCount} tool(s) and ${resourceCount} resource(s)`);
+
+  return mcpServer;
+}
+
+// ============================================================================
+// Constants
+// ============================================================================
+
+const MCP_PATH = '/mcp';
+
+/** How long an idle session lives before being cleaned up (5 minutes). */
+const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
+
+interface JsonRpcMessage {
+  method: string;
+  params?: Record<string, unknown>;
+}
+
+function isJsonRpcMessage(value: unknown): value is JsonRpcMessage {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as JsonRpcMessage).method === 'string'
+  );
+}
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'content-type, accept, authorization, mcp-session-id, ngrok-skip-browser-warning',
+  'Access-Control-Expose-Headers': 'mcp-session-id',
+} as const;
+
+// ============================================================================
+// Composable Node.js MCP request handler (Streamable HTTP)
+// ============================================================================
+
+/**
+ * Create a request handler that manages MCP sessions over Streamable HTTP.
+ *
+ * The returned handler responds to:
+ * - `POST /mcp` — Initialize a session or send messages
+ * - `GET /mcp` — Open an SSE stream for server-initiated notifications
+ * - `DELETE /mcp` — Terminate a session
+ * - `OPTIONS /mcp` — CORS preflight
+ *
+ * For any other request, the handler does nothing (doesn't write to `res`),
+ * so callers can chain it with their own routing.
+ *
+ * @example
+ * ```ts
+ * import express from 'express';
+ * import { createMcpHandler } from 'sunpeak/mcp';
+ *
+ * const app = express();
+ * app.get('/health', (req, res) => res.json({ ok: true }));
+ *
+ * const mcpHandler = createMcpHandler({ tools, resources, auth });
+ * app.use((req, res, next) => {
+ *   mcpHandler(req, res).then(() => {
+ *     if (!res.headersSent) next();
+ *   });
+ * });
+ *
+ * app.listen(3000);
+ * ```
+ */
+export function createMcpHandler(
+  config: ProductionServerConfig
+): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
+  interface Session {
+    server: McpServer;
+    transport: StreamableHTTPServerTransport;
+    lastActivity: number;
+  }
+
+  const sessions = new Map<string, Session>();
+  const authFn = config.auth;
+
+  // Periodically clean up idle sessions
+  const cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
+        sessions.delete(id);
+        session.transport.close?.();
+        session.server.close();
+        console.log(`[MCP] Session expired: ${id.substring(0, 8)}... (${sessions.size} active)`);
+      }
+    }
+  }, 60_000);
+  cleanupInterval.unref(); // Don't prevent process exit
+
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    if (!req.url) return;
+
+    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+
+    // Only handle /mcp path
+    if (url.pathname !== MCP_PATH) return;
+
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
+      res.end();
+      return;
+    }
+
+    // Set CORS headers for all MCP responses
+    for (const [key, value] of Object.entries(CORS_HEADERS)) {
+      res.setHeader(key, value);
+    }
+
+    // Auth
+    if (authFn) {
+      const authInfo = await authFn(req);
+      if (!authInfo) {
+        res.writeHead(401, { 'WWW-Authenticate': 'Bearer' });
+        res.end('Unauthorized');
+        return;
+      }
+      (req as IncomingMessage & { auth?: AuthInfo }).auth = authInfo;
+    }
+
+    // Parse body for POST requests (needed for logging + transport)
+    let parsedBody: unknown;
+    if (req.method === 'POST') {
+      const chunks: Buffer[] = [];
+      await new Promise<void>((resolve, reject) => {
+        req.on('data', (chunk: Buffer | string) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+        });
+        req.on('end', resolve);
+        req.on('error', reject);
+      });
+      const rawBody = Buffer.concat(chunks).toString('utf8');
+      try {
+        parsedBody = JSON.parse(rawBody);
+        if (isJsonRpcMessage(parsedBody)) {
+          const sid = req.headers['mcp-session-id'] as string | undefined;
+          const sidStr = sid ? ` (${sid.substring(0, 8)}...)` : '';
+          const extra =
+            parsedBody.method === 'resources/read'
+              ? ` uri=${JSON.stringify(parsedBody.params?.uri)}`
+              : '';
+          console.log(`[MCP] ← ${parsedBody.method}${extra}${sidStr}`);
+        }
+      } catch {
+        res.writeHead(400).end('Invalid JSON');
+        return;
+      }
+    }
+
+    const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+    // Route to existing session
+    if (sessionId) {
+      const session = sessions.get(sessionId);
+      if (!session) {
+        res.writeHead(404).end('Unknown session');
+        return;
+      }
+      session.lastActivity = Date.now();
+      await session.transport.handleRequest(req, res, parsedBody);
+      return;
+    }
+
+    // New session (POST without session ID = initialization)
+    if (req.method === 'POST') {
+      const server = createProductionMcpServer(config);
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (id) => {
+          sessions.set(id, { server, transport, lastActivity: Date.now() });
+          console.log(`[MCP] Session started: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        },
+        onsessionclosed: (id) => {
+          sessions.delete(id);
+          console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        },
+      });
+
+      transport.onerror = (error) => {
+        const id = transport.sessionId;
+        console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
+      };
+
+      // Fallback cleanup for unexpected disconnects
+      transport.onclose = async () => {
+        const id = transport.sessionId;
+        if (id && sessions.has(id)) {
+          sessions.delete(id);
+          console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        }
+        await server.close();
+      };
+
+      await server.connect(transport);
+      await transport.handleRequest(req, res, parsedBody);
+      return;
+    }
+
+    // No session ID and not POST → invalid
+    res.writeHead(400).end('Bad Request: session ID required');
+  };
+}
+
+// ============================================================================
+// Composable Web Standard MCP handler (serverless / edge)
+// ============================================================================
+
+/**
+ * Create a Web Standard request handler for MCP over Streamable HTTP.
+ *
+ * Returns a `(req: Request) => Promise<Response>` handler that works on any
+ * Web Standard runtime: Cloudflare Workers, Deno, Bun, Vercel Edge, etc.
+ *
+ * Unlike `createMcpHandler`, this handler does NOT do path matching — it handles
+ * every request it receives. Mount it behind your own router.
+ *
+ * @example
+ * ```ts
+ * // Cloudflare Worker
+ * import { createHandler } from 'sunpeak/mcp';
+ *
+ * const handler = createHandler({ tools, resources, auth });
+ * export default { fetch: handler };
+ * ```
+ *
+ * @example
+ * ```ts
+ * // Hono
+ * import { Hono } from 'hono';
+ * import { createHandler } from 'sunpeak/mcp';
+ *
+ * const app = new Hono();
+ * const handler = createHandler({ tools, resources });
+ * app.all('/mcp', (c) => handler(c.req.raw));
+ * export default app;
+ * ```
+ */
+export function createHandler(config: WebHandlerConfig): (req: Request) => Promise<Response> {
+  interface WebSession {
+    server: McpServer;
+    transport: WebStandardStreamableHTTPServerTransport;
+    lastActivity: number;
+  }
+
+  const sessions = new Map<string, WebSession>();
+  const authFn = config.auth;
+
+  // Periodically clean up idle sessions
+  const cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
+        sessions.delete(id);
+        session.transport.close?.();
+        session.server.close();
+        console.log(`[MCP] Session expired: ${id.substring(0, 8)}... (${sessions.size} active)`);
+      }
+    }
+  }, 60_000);
+  cleanupInterval.unref();
+
+  return async (req: Request): Promise<Response> => {
+    // CORS preflight
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
+    // Auth
+    let authInfo: AuthInfo | undefined;
+    if (authFn) {
+      const result = await authFn(req);
+      if (!result) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 'WWW-Authenticate': 'Bearer', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+      authInfo = result;
+    }
+
+    // Parse body for POST
+    let parsedBody: unknown;
+    if (req.method === 'POST') {
+      try {
+        parsedBody = await req.json();
+      } catch {
+        return new Response('Invalid JSON', { status: 400 });
+      }
+    }
+
+    const sessionId = req.headers.get('mcp-session-id');
+
+    // Route to existing session
+    if (sessionId) {
+      const session = sessions.get(sessionId);
+      if (!session) {
+        return new Response('Unknown session', { status: 404 });
+      }
+      session.lastActivity = Date.now();
+      const response = await session.transport.handleRequest(req, { parsedBody, authInfo });
+      return addCorsHeaders(response);
+    }
+
+    // New session (POST without session ID = initialization)
+    if (req.method === 'POST') {
+      const { name, version, tools, resources } = config;
+      const server = createProductionMcpServer({ name, version, tools, resources });
+      const transport = new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: () => randomUUID(),
+        onsessioninitialized: (id) => {
+          sessions.set(id, { server, transport, lastActivity: Date.now() });
+          console.log(`[MCP] Session started: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        },
+        onsessionclosed: (id) => {
+          sessions.delete(id);
+          console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+        },
+      });
+
+      transport.onerror = (error) => {
+        console.error('[MCP] Transport error:', error);
+      };
+
+      transport.onclose = async () => {
+        const id = transport.sessionId;
+        if (id && sessions.has(id)) {
+          sessions.delete(id);
+        }
+        await server.close();
+      };
+
+      await server.connect(transport);
+      const response = await transport.handleRequest(req, { parsedBody, authInfo });
+      return addCorsHeaders(response);
+    }
+
+    return new Response('Bad Request: session ID required', { status: 400 });
+  };
+}
+
+/** Add CORS headers to a response (including streaming SSE responses). */
+function addCorsHeaders(response: Response): Response {
+  const headers = new Headers(response.headers);
+  headers.set('Access-Control-Allow-Origin', '*');
+  headers.set('Access-Control-Expose-Headers', 'mcp-session-id');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
+// ============================================================================
+// Built-in HTTP server (used by `sunpeak start`)
+// ============================================================================
+
+/**
+ * Start a production HTTP server with Streamable HTTP transport.
+ *
+ * This is a convenience wrapper around `createMcpHandler` that adds
+ * a root HTML page, favicon, and graceful shutdown. For custom HTTP
+ * servers (Express, Fastify, etc.), use `createMcpHandler` directly.
+ *
+ * @param config - Production server configuration (tools, resources, auth)
+ * @param port - HTTP port to listen on
+ */
+export function startProductionHttpServer(config: ProductionServerConfig, port: number): void {
+  const mcpHandler = createMcpHandler(config);
+
+  const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
+    if (!req.url) {
+      res.writeHead(400).end('Missing URL');
+      return;
+    }
+
+    const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+
+    // OPTIONS preflight for non-MCP paths
+    if (req.method === 'OPTIONS') {
+      res.writeHead(204, CORS_HEADERS);
+      res.end();
+      return;
+    }
+
+    // Root path
+    if (req.method === 'GET' && url.pathname === '/') {
+      res.writeHead(200, {
+        'Content-Type': 'text/html',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(`<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8" />
+<link rel="icon" type="image/png" href="/favicon.ico" />
+<title>Sunpeak MCP Server</title>
+</head>
+<body><h1>Sunpeak MCP Server</h1><p>Connect via <a href="/mcp">/mcp</a></p></body>
+</html>`);
+      return;
+    }
+
+    // Favicon
+    if (req.method === 'GET' && url.pathname === '/favicon.ico') {
+      res.writeHead(200, {
+        'Content-Type': 'image/png',
+        'Content-Length': FAVICON_BUFFER.length,
+        'Cache-Control': 'public, max-age=86400',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(FAVICON_BUFFER);
+      return;
+    }
+
+    // MCP handler
+    await mcpHandler(req, res);
+
+    // 404 if handler didn't respond
+    if (!res.headersSent) {
+      res.writeHead(404).end('Not Found');
+    }
+  });
+
+  httpServer.on('clientError', (err: Error, socket) => {
+    console.error('HTTP client error', err);
+    socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  });
+
+  httpServer.listen(port, () => {
+    console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
+    console.log(`  MCP endpoint: http://localhost:${port}${MCP_PATH}`);
+  });
+
+  // Graceful shutdown
+  const shutdown = async () => {
+    console.log('\nShutting down MCP server...');
+    httpServer.close(() => {
+      console.log('MCP server closed');
+      process.exit(0);
+    });
+    setTimeout(() => {
+      console.error('Force closing MCP server');
+      process.exit(1);
+    }, 5000);
+  };
+
+  process.on('SIGTERM', () => void shutdown());
+  process.on('SIGINT', () => void shutdown());
+}

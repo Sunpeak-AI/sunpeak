@@ -67,6 +67,7 @@
               "api-reference/cli/new",
               "api-reference/cli/dev",
               "api-reference/cli/build",
+              "api-reference/cli/start",
               "api-reference/cli/upgrade"
             ]
           },
@@ -74,7 +75,8 @@
             "group": "Tools & Server",
             "pages": [
               "api-reference/tools/tool-file",
-              "api-reference/tools/server-entry"
+              "api-reference/tools/server-entry",
+              "api-reference/tools/production-server"
             ]
           },
           {

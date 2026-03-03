@@ -16,7 +16,8 @@ The CLI includes commands for project management and development:
 |---------|-------------|
 | `sunpeak new` | Create a new sunpeak project |
 | `sunpeak dev` | Start the development server (includes simulator and MCP server) |
-| `sunpeak build` | Build production bundles |
+| `sunpeak build` | Build resources and compile tools for production |
+| `sunpeak start` | Start the production MCP server |
 | `sunpeak upgrade` | Upgrade sunpeak to the latest version |
 
 <Note>
@@ -29,9 +30,9 @@ The typical development workflow with sunpeak:
 
 1. **Create** a new project with `sunpeak new`
 2. **Develop** your resources using `sunpeak dev` for live preview in the simulator
-3. **Test** your app with automated e2e tests using the ChatGPT simulator
+3. **Test** your app with automated e2e tests using the simulator
 4. **Build** for production with `sunpeak build`
-5. **Deploy** your MCP server with the built resources
+5. **Start** the production server with `sunpeak start`
 
 ## Dive Deeper
 

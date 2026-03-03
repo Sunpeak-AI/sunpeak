@@ -65,8 +65,23 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framewo
     You can then connect to the tunnel `Forwarding URL` at the `/mcp` path (e.g. `https://your-random-subdomain.ngrok-free.dev/mcp`) from ChatGPT
     **in developer mode**: `User > Settings > Apps & Connectors > Create`.
   </Step>
+
+  <Step title="Build & start for production">
+    Build your resources and tools, then start the production MCP server:
+
+    ```bash
+    pnpm build && pnpm start
+    ```
+
+    This compiles your tool handlers, Zod schemas, and optional auth from `src/server.ts`, then starts a production MCP server on port `8000`.
+  </Step>
 </Steps>
 
-<Card horizontal title="Project Scaffold" icon="page" href="/template/project-scaffold">
-  Explore your new MCP App project.
-</Card>
+<CardGroup cols={2}>
+  <Card horizontal title="Project Scaffold" icon="page" href="/template/project-scaffold">
+    Explore your new MCP App project.
+  </Card>
+  <Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
+    Deploy your app to production.
+  </Card>
+</CardGroup>

@@ -12,7 +12,109 @@ Build your app for production using the Sunpeak CLI:
 sunpeak build
 ```
 
-This generates optimized JavaScript bundles in your `dist/` directory. Each resource gets its own bundle file that can be served by your MCP server.
+This generates a `dist/` directory with built resources and compiled tools:
+
+```
+dist/
+├── albums/
+│   ├── albums.html    # Self-contained HTML (JS + CSS inlined)
+│   └── albums.json    # Resource metadata (_meta, name, uri)
+├── tools/
+│   ├── show-albums.js # Compiled tool handler + schema
+│   └── ...
+├── server.js          # Compiled server entry (if src/server.ts exists)
+└── ...
+```
+
+Each `.html` file is a complete, self-contained app bundle — no external scripts or stylesheets. Tool files are compiled to standard ESM JavaScript with `node_modules` resolved at runtime.
+
+## Start the Production Server
+
+```bash
+sunpeak start
+```
+
+This loads your compiled tool handlers, Zod schemas, and optional auth from `dist/`, registers them with the MCP protocol, and starts a Streamable HTTP server on port 8000.
+
+```bash
+sunpeak start --port 3000   # Custom port
+PORT=3000 sunpeak start     # Or via environment variable
+```
+
+The production server:
+- Registers each tool from `dist/tools/` with its real handler and Zod schema (input validation)
+- Serves pre-built resource HTML from `dist/{name}/{name}.html`
+- Calls your `auth()` function from `src/server.ts` on every request (if present)
+- Uses MCP Streamable HTTP transport on a single `/mcp` endpoint
+
+## Testing Locally
+
+Use `sunpeak dev --prod-mcp` to test production behavior without deploying:
+
+```bash
+sunpeak build && sunpeak dev --prod-mcp
+```
+
+This runs the dev simulator alongside a production-like MCP server that uses real handlers instead of simulation fixtures.
+
+## Custom Server Setup
+
+For full control over the HTTP server (custom middleware, CORS, health checks, etc.), use `createMcpHandler` to mount the MCP protocol handler on your own server.
+
+Unlike `sunpeak start` which auto-discovers from `dist/`, these handlers accept pre-loaded config objects — you load tools, resources, and auth yourself. See [Production Server API](/api-reference/tools/production-server) for config types.
+
+```typescript
+import express from 'express';
+import cors from 'cors';
+import { createMcpHandler } from 'sunpeak/mcp';
+
+const app = express();
+
+// Your middleware
+app.use(cors({ origin: 'https://chatgpt.com' }));
+app.get('/health', (req, res) => res.json({ ok: true }));
+
+// tools: ProductionTool[], resources: ProductionResource[], auth: AuthFunction
+const mcpHandler = createMcpHandler({ tools, resources, auth });
+app.use((req, res, next) => {
+  mcpHandler(req, res).then(() => {
+    if (!res.headersSent) next();
+  });
+});
+
+app.listen(3000);
+```
+
+The handler manages Streamable HTTP sessions, auth propagation via `req.auth`, and CORS preflights for the `/mcp` path. For unmatched routes it does nothing, so your server handles them.
+
+## Serverless / Edge Deployment
+
+For serverless and edge runtimes (Cloudflare Workers, Deno, Bun, Vercel Edge), use `createHandler` which returns a Web Standard `(Request) => Promise<Response>` handler:
+
+```typescript
+// Cloudflare Worker
+import { createHandler } from 'sunpeak/mcp';
+
+const handler = createHandler({ tools, resources, auth });
+export default { fetch: handler };
+```
+
+```typescript
+// Hono (any runtime)
+import { Hono } from 'hono';
+import { createHandler } from 'sunpeak/mcp';
+
+const app = new Hono();
+const handler = createHandler({ tools, resources });
+app.all('/mcp', (c) => handler(c.req.raw));
+export default app;
+```
+
+Unlike `createMcpHandler`, the web handler does **not** do path matching — it handles every request it receives. Mount it behind your own router.
+
+<Info>
+For fully custom MCP server setups, `sunpeak/mcp` also re-exports `registerAppTool`, `registerAppResource`, and `RESOURCE_MIME_TYPE` from the [MCP Apps SDK](https://github.com/anthropics/ext-apps). See [Server Helpers](/api-reference/simulations/run-mcp-server#server-helpers) for the full list.
+</Info>
 
 ## Publish to ChatGPT
 
@@ -21,38 +123,11 @@ Publish your MCP App to ChatGPT via the [OpenAI Platform](https://platform.opena
 ### Prerequisites
 
 - A ChatGPT App created on the OpenAI Platform
-- Your MCP server configured and accessible to ChatGPT
+- Your MCP server deployed and accessible via HTTPS
 - Built resources (run `sunpeak build`)
 
-### Serving Resources
-
-Your production MCP server needs to serve the built resource bundles. The resources should be accessible via HTTP(S) URLs that ChatGPT can fetch.
-
-Example server setup:
-
-```typescript
-import { readFileSync, readdirSync } from 'fs';
-import { join } from 'path';
-
-// Load all built resources
-const distDir = './dist';
-const files = readdirSync(distDir).filter(f => f.endsWith('.js'));
-
-const resources = files.map(file => {
-  const name = file.replace('.js', '');
-  const bundle = readFileSync(join(distDir, file), 'utf-8');
-  return { name, bundle };
-});
-```
-
-### Environment Variables
-
-Configure your production environment:
+### Production Checklist
 
 - Set appropriate [CSP (Content Security Policy)](/mcp-apps/server/resource-meta#csp--content-security-policy) for your resources
 - Configure CORS if serving from a different domain
 - Set up HTTPS for secure communication
-
-<Info>
-See the [MCP Server guide](/library/mcp-server) for more details on setting up your production MCP server.
-</Info>

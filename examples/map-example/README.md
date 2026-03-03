@@ -18,7 +18,8 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 pnpm test              # Run tests with Vitest.
 pnpm test:e2e          # Run end-to-end tests with Playwright.
 sunpeak dev            # Start dev server + MCP endpoint.
-sunpeak build          # Build all resources for production.
+sunpeak build          # Build resources and compile tools for production.
+sunpeak start          # Start the production MCP server.
 sunpeak upgrade        # Upgrade sunpeak to latest version.
 ```
 
@@ -62,31 +63,31 @@ Once your app is connected, send the name of the app and a tool, like `/sunpeak 
 
 ## Build & Deploy
 
-Build your app for production:
+Build and start your app for production:
 
 ```bash
-sunpeak build
+sunpeak build && sunpeak start
 ```
 
-This creates optimized builds in `dist/`, organized by resource:
+`sunpeak build` creates optimized builds in `dist/`:
 
 ```bash
 dist/
 ├── albums/
 │   ├── albums.html           # Built resource bundle.
 │   └── albums.json           # ResourceConfig (extracted from .tsx).
-├── review/
-│   ├── review.html
-│   └── review.json
+├── tools/
+│   ├── show-albums.js        # Compiled tool handler + schema.
+│   └── ...
+├── server.js                 # Compiled server entry (if src/server.ts exists).
 └── ...
 ```
 
-Each resource folder contains:
+`sunpeak start` loads the compiled tools and resources, then starts a production MCP server with real handlers, Zod input validation, and optional auth.
 
-- **`.html` file**: Self-contained bundle with JS and CSS inlined
-- **`.json` file**: Resource metadata (extracted from the `resource` export in your `.tsx` file) with a generated `uri` for cache-busting
-
-Host these files and reference them as resources in your production MCP server.
+```bash
+sunpeak start --port 3000     # Custom port (default: 8000)
+```
 
 ## Add a new UI (Resource)
 

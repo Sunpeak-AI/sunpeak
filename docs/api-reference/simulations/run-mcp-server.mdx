@@ -9,7 +9,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP server", "Model Context Protocol", "
 The `runMCPServer` function creates an MCP server that serves your built apps to hosts like ChatGPT. It's designed for local development and testing against real MCP App hosts.
 
 <Warning>
-This server is for **local development only**. For production, create your own MCP server that returns your published resource URL. See the [Deployment Guide](/guides/deployment).
+This server is for **local development only**. For production, use `sunpeak start` which runs your real tool handlers. See the [Deployment Guide](/guides/deployment).
 </Warning>
 
 ## Quick Start
@@ -123,10 +123,10 @@ The MCP server exposes:
 
 ## How It Works
 
-The server creates MCP Tools and Resources from your tool files and simulations:
+The dev server creates MCP Tools and Resources from your tool files and simulations:
 
-1. **Tools** - One per tool file, using the `tool` and `schema` exports. When called in dev mode, the real handler runs. When called via simulations, returns `toolResult.structuredContent`. Tool metadata including `visibility` is preserved.
-2. **Resources** - One per resource, containing the built resource HTML from `distPath`. Resource metadata including `permissions`, `csp`, `prefersBorder`, and `domain` is preserved.
+1. **Tools** — One per simulation, using metadata from the corresponding `src/tools/` file (`tool` config, `schema`). When called, returns the simulation's `toolResult.structuredContent` as fixture data. Tool metadata including `visibility` is preserved.
+2. **Resources** — One per resource, containing the built resource HTML from `distPath` (or Vite HMR HTML for local connections). Resource metadata including `permissions`, `csp`, `prefersBorder`, and `domain` is preserved.
 
 Your app accesses the mock data via runtime hooks:
 
@@ -155,7 +155,7 @@ import {
 } from 'sunpeak/mcp';
 ```
 
-These are useful when building your own production MCP server instead of using `runMCPServer`. See the [MCP Apps documentation](https://sunpeak.ai/docs/mcp-apps/introduction) for details.
+These are useful when building a fully custom MCP server. For most projects, `sunpeak start` handles production serving automatically. See the [Deployment Guide](/guides/deployment) for details.
 
 ## See Also
 

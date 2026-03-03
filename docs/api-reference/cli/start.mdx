@@ -1,0 +1,84 @@
+---
+title: "sunpeak start"
+description: "Start the production MCP server."
+keywords: ["MCP Apps", "ChatGPT Apps", "production server", "deployment", "MCP server"]
+---
+
+## Overview
+
+The `sunpeak start` command starts a production MCP server that serves your built resources and executes real tool handlers. Run `sunpeak build` first to compile your resources and tools.
+
+```bash
+sunpeak build && sunpeak start
+```
+
+## What It Does
+
+The production server loads everything from `dist/`:
+
+1. **Resources** — Pre-built HTML bundles from `dist/{name}/{name}.html` with metadata from `dist/{name}/{name}.json`
+2. **Tools** — Compiled tool modules from `dist/tools/*.js`, registered with real handlers and Zod schemas for input validation
+3. **Server entry** — Optional `dist/server.js` for authentication and server metadata
+
+Tools are registered with the MCP protocol using `registerAppTool` from the MCP Apps SDK. When a host calls a tool, the real handler executes — not simulation fixture data.
+
+## Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--port <number>` | `-p` | Server port (default: 8000, also respects `PORT` env var) |
+
+## Usage
+
+```bash
+# Default port (8000)
+sunpeak start
+
+# Custom port
+sunpeak start --port 3000
+
+# Via environment variable
+PORT=3000 sunpeak start
+```
+
+## Server Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Server info page |
+| `/mcp` | POST | Initialize a session or send messages |
+| `/mcp` | GET | Open an SSE stream for server-initiated notifications |
+| `/mcp` | DELETE | Terminate a session |
+
+The production server uses the MCP Streamable HTTP transport. Session IDs are managed via the `mcp-session-id` header.
+
+## Authentication
+
+If your project includes a `src/server.ts` with an `auth()` export, the production server calls it on every MCP request. See [Server Entry](/api-reference/tools/server-entry) for details.
+
+## Testing Locally
+
+Use `sunpeak dev --prod-mcp` to test production behavior alongside the dev simulator:
+
+```bash
+sunpeak build && sunpeak dev --prod-mcp
+```
+
+This runs the simulator at port 3000 with a production-like MCP server that uses real handlers instead of simulation fixtures.
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak build" icon="hammer" href="/api-reference/cli/build">
+    Build resources and compile tools.
+  </Card>
+  <Card horizontal title="Production Server API" icon="server" href="/api-reference/tools/production-server">
+    createMcpHandler, createHandler, and config types.
+  </Card>
+  <Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
+    Full deployment walkthrough with custom server examples.
+  </Card>
+  <Card horizontal title="sunpeak dev" icon="code" href="/api-reference/cli/dev">
+    Development server with simulator.
+  </Card>
+</CardGroup>

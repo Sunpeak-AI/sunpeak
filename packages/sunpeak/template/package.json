@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "sunpeak dev",
     "build": "sunpeak build",
+    "start": "sunpeak start",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },

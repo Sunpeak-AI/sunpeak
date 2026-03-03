@@ -6,6 +6,20 @@ export type {
   CallToolResult,
   AuthInfo,
 } from './types.js';
+export {
+  createMcpHandler,
+  createHandler,
+  createProductionMcpServer,
+  startProductionHttpServer,
+} from './production-server.js';
+export type {
+  ProductionTool,
+  ProductionResource,
+  ProductionServerConfig,
+  AuthFunction,
+  WebAuthFunction,
+  WebHandlerConfig,
+} from './production-server.js';
 export { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
 
 // Re-export ext-apps server helpers for custom MCP server setups

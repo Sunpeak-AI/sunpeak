@@ -5,7 +5,7 @@ description: Use when working with sunpeak, or when the user asks to "build an M
 
 # Create Sunpeak App
 
-Sunpeak is a React framework built on `@modelcontextprotocol/ext-apps` for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). It provides React hooks, a dev simulator, a CLI (`sunpeak dev` / `sunpeak build`), and a structured project convention.
+Sunpeak is a React framework built on `@modelcontextprotocol/ext-apps` for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). It provides React hooks, a dev simulator, a CLI (`sunpeak dev` / `sunpeak build` / `sunpeak start`), and a structured project convention.
 
 ## Getting Reference Code
 
@@ -269,29 +269,33 @@ Use `inputPartial` for progressive rendering during LLM generation. Use `output`
 
 ```bash
 pnpm dev      # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
-pnpm build    # Build all resources to dist/
+pnpm build    # Build resources + compile tools to dist/
+pnpm start    # Start production MCP server (real handlers, auth, Zod validation)
 pnpm test     # Run unit tests (vitest)
 pnpm test:e2e # Run Playwright e2e tests
 ```
 
 The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The simulator runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
 
+Use `sunpeak dev --prod-mcp` to test production behavior locally (real handlers instead of simulation fixtures). Requires `sunpeak build` first.
+
 ## Production Build Output
 
-`sunpeak build` generates optimized bundles in `dist/`, one folder per resource:
+`sunpeak build` generates optimized bundles in `dist/`:
 
 ```
 dist/
 ├── weather/
 │   ├── weather.html   # Self-contained bundle (JS + CSS inlined)
 │   └── weather.json   # ResourceConfig with generated uri for cache-busting
-├── review/
-│   ├── review.html
-│   └── review.json
+├── tools/
+│   ├── show-weather.js  # Compiled tool handler + Zod schema
+│   └── ...
+├── server.js          # Compiled server entry (if src/server.ts exists)
 └── ...
 ```
 
-The `.json` file contains the `ResourceConfig` extracted from your `.tsx` file and a generated `uri` (e.g. `ui://weather-abc123`). Host both files and reference the `.html` in your production MCP server's `registerAppResource` call.
+`sunpeak start` loads everything from `dist/` and starts a production MCP server with real tool handlers, Zod input validation, and optional auth from `src/server.ts`.
 
 ## Platform Detection
 

@@ -32,9 +32,22 @@ dist/
 ├── calendar/
 │   ├── calendar.html
 │   └── calendar.json
+├── tools/
+│   ├── show-search.js                   # Compiled tool handler + schema
+│   └── show-calendar.js
+└── server.js                            # Compiled server entry (if src/server.ts exists)
 ```
 
 Each resource folder from `src/resources/{name}/` is built to `dist/{name}/`, containing the HTML bundle and metadata. The `.json` file is extracted from the `resource` export in your `.tsx` file. Simulation files are not included in the build output.
+
+### Tool & Server Compilation
+
+In addition to resource HTML bundles, the build compiles server-side code:
+
+- **Tools** — Each `src/tools/*.ts` file is compiled via esbuild to `dist/tools/{name}.js`. These are ESM bundles with relative imports resolved and `node_modules` resolved at runtime.
+- **Server entry** — If `src/server.ts` exists, it's compiled to `dist/server.js`.
+
+These compiled files are loaded by `sunpeak start` to run your production MCP server.
 
 ## Automatic Discovery
 
@@ -107,10 +120,15 @@ Tailwind CSS automatically removes unused utility classes:
 sunpeak build
 ```
 
-## Deployment
+## Next Steps
 
-After building, deploy the `dist/` directory to any static hosting service:
+After building, start the production server or deploy:
 
-<Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
-  Learn how to deploy your built apps to production.
-</Card>
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak start" icon="play" href="/api-reference/cli/start">
+    Start the production MCP server.
+  </Card>
+  <Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
+    Deploy your app to production.
+  </Card>
+</CardGroup>

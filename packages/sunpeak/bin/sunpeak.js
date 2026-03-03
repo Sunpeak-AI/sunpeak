@@ -65,6 +65,13 @@ function getVersion() {
       }
       break;
 
+    case 'start':
+      {
+        const { start } = await import(join(COMMANDS_DIR, 'start.mjs'));
+        await start(process.cwd(), args);
+      }
+      break;
+
     case 'upgrade':
       {
         const { upgrade } = await import(join(COMMANDS_DIR, 'upgrade.mjs'));
@@ -90,7 +97,10 @@ Usage:
   sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server + MCP endpoint
     --no-begging           Suppress GitHub star message
-  sunpeak build            Build resources
+    --prod-mcp             Use real tool handlers (not fixtures)
+  sunpeak build            Build resources + tools for production
+  sunpeak start            Start production MCP server
+    --port, -p             Server port (default: 8000, or PORT env)
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 

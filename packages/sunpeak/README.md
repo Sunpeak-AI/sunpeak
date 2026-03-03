@@ -88,7 +88,8 @@ Commands for managing MCP Apps:
 
 - `sunpeak new [name] [resources]` - Create a new project
 - `sunpeak dev` - Start dev server with MCP endpoint and live simulator
-- `sunpeak build` - Build resources for production
+- `sunpeak build` - Build resources and compile tools for production
+- `sunpeak start` - Start the production MCP server (real handlers, auth, Zod validation)
 - `sunpeak upgrade` - Upgrade sunpeak to latest version
 
 ## Example App

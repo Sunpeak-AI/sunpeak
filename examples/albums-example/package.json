@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "sunpeak dev",
     "build": "sunpeak build",
+    "start": "sunpeak start",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },
@@ -13,7 +14,7 @@
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
-    "sunpeak": "^0.16.0",
+    "sunpeak": "^0.16.1",
     "tailwind-merge": "^3.4.0",
     "zod": "^3.25.0"
   },

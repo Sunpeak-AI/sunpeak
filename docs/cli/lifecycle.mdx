@@ -14,6 +14,7 @@ The sunpeak CLI commands support a complete development lifecycle, from project 
 flowchart LR
     A[sunpeak new] --> B[sunpeak dev]
     B --> C[sunpeak build]
+    C --> D[sunpeak start]
 ```
 
 ### 1. Create
@@ -68,11 +69,17 @@ Create production-ready bundles:
 sunpeak build
 ```
 
-This compiles and optimizes your Resources for deployment.
+This compiles and optimizes your Resources, Tools, and optional server entry for production.
 
-### 4. Deploy
+### 4. Start
 
-Deploy your built resources to your production MCP server. See the [Deployment Guide](/guides/deployment) for details on publishing to ChatGPT and hosting your resources.
+Start the production MCP server:
+
+```bash
+sunpeak start
+```
+
+This loads your compiled tools (with real handlers and Zod schemas), serves pre-built resource HTML, and runs your `auth()` function if present. See the [Deployment Guide](/guides/deployment) for details on publishing to ChatGPT.
 
 ## Dive Deeper
 

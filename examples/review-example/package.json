@@ -6,12 +6,13 @@
   "scripts": {
     "dev": "sunpeak dev",
     "build": "sunpeak build",
+    "start": "sunpeak start",
     "test": "vitest run",
     "test:e2e": "playwright test"
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "sunpeak": "^0.16.0",
+    "sunpeak": "^0.16.1",
     "tailwind-merge": "^3.4.0",
     "zod": "^3.25.0"
   },

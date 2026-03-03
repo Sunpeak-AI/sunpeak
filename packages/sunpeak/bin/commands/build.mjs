@@ -340,10 +340,114 @@ ${jsContents}
 
   console.log('\n✓ All resources built successfully!');
   console.log('\nBuilt resources:');
-  for (const { kebabName, distOutDir } of resourceFiles) {
-    const files = readdirSync(distOutDir);
+  for (const { kebabName } of resourceFiles) {
     console.log(`  ${kebabName}`);
   }
+
+  // ========================================================================
+  // Compile server-side code (tools + server entry) for `sunpeak start`
+  // ========================================================================
+
+  const toolsDir = path.join(projectRoot, 'src/tools');
+  const serverEntryPath = path.join(projectRoot, 'src/server.ts');
+
+  // Find tool files
+  const toolFiles = existsSync(toolsDir)
+    ? readdirSync(toolsDir).filter(f => f.endsWith('.ts'))
+    : [];
+
+  const hasServerEntry = existsSync(serverEntryPath);
+
+  if (toolFiles.length > 0 || hasServerEntry) {
+    console.log('\nCompiling server-side code...');
+
+    let esbuild;
+    try {
+      const esbuildPath = resolveEsmEntry(require, 'esbuild');
+      esbuild = await import(esbuildPath);
+    } catch {
+      console.warn('Warning: esbuild not found — skipping tool/server compilation.');
+      console.warn('Install esbuild to enable `sunpeak start`: npm install -D esbuild');
+      esbuild = null;
+    }
+
+    if (esbuild) {
+      const toolsOutDir = path.join(distDir, 'tools');
+      if (toolFiles.length > 0) {
+        mkdirSync(toolsOutDir, { recursive: true });
+      }
+
+      // Compile each tool file
+      for (const toolFile of toolFiles) {
+        const toolName = toolFile.replace(/\.ts$/, '');
+        const toolPath = path.join(toolsDir, toolFile);
+
+        try {
+          await esbuild.build({
+            entryPoints: [toolPath],
+            bundle: true,
+            format: 'esm',
+            platform: 'node',
+            target: 'node18',
+            outfile: path.join(toolsOutDir, `${toolName}.js`),
+            // Externalize bare specifiers (node_modules) — resolve at runtime
+            plugins: [{
+              name: 'externalize-bare-specifiers',
+              setup(build) {
+                build.onResolve({ filter: /.*/ }, (args) => {
+                  if (args.kind !== 'import-statement') return;
+                  if (!args.path.startsWith('.') && !args.path.startsWith('/')) {
+                    return { external: true };
+                  }
+                  return undefined;
+                });
+              },
+            }],
+            loader: { '.tsx': 'tsx', '.ts': 'ts' },
+            logLevel: 'warning',
+          });
+          console.log(`✓ Compiled tools/${toolName}.js`);
+        } catch (err) {
+          console.error(`Failed to compile tool ${toolName}:`, err.message);
+          process.exit(1);
+        }
+      }
+
+      // Compile server entry if present
+      if (hasServerEntry) {
+        try {
+          await esbuild.build({
+            entryPoints: [serverEntryPath],
+            bundle: true,
+            format: 'esm',
+            platform: 'node',
+            target: 'node18',
+            outfile: path.join(distDir, 'server.js'),
+            plugins: [{
+              name: 'externalize-bare-specifiers',
+              setup(build) {
+                build.onResolve({ filter: /.*/ }, (args) => {
+                  if (args.kind !== 'import-statement') return;
+                  if (!args.path.startsWith('.') && !args.path.startsWith('/')) {
+                    return { external: true };
+                  }
+                  return undefined;
+                });
+              },
+            }],
+            loader: { '.tsx': 'tsx', '.ts': 'ts' },
+            logLevel: 'warning',
+          });
+          console.log(`✓ Compiled server.js`);
+        } catch (err) {
+          console.error(`Failed to compile server entry:`, err.message);
+          process.exit(1);
+        }
+      }
+    }
+  }
+
+  console.log('\n✓ Build complete!');
 }
 
 // Allow running directly

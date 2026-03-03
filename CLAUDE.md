@@ -58,7 +58,7 @@ packages/sunpeak/
 │   │   ├── claude-conversation.tsx   # Claude conversation chrome
 │   │   └── claude-host.ts    # Host registration (theme, capabilities)
 │   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, useAppState, useUpdateModelContext, useAppTools, etc.)
-│   ├── mcp/                  # MCP server (runMCPServer, resource registration)
+│   ├── mcp/                  # MCP server (runMCPServer, production-server, resource registration)
 │   ├── platform/             # Platform detection (detectPlatform, isChatGPT, isClaude)
 │   │   └── chatgpt/          # ChatGPT-specific: useUploadFile, useRequestModal, useRequestCheckout
 │   ├── lib/                  # Utilities (discovery, cn(), media queries)
@@ -80,7 +80,7 @@ packages/sunpeak/
 - `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
 - `sunpeak/chatgpt` — ChatGPTSimulator (backwards compat alias), ChatGPT shell
 - `sunpeak/claude` — ClaudeSimulator alias, Claude shell
-- `sunpeak/mcp` — Server utilities (`runMCPServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
+- `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/platform` — Platform detection
 - `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/style.css` — Main stylesheet
