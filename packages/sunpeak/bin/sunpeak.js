@@ -97,7 +97,6 @@ Usage:
   sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server + MCP endpoint
     --no-begging           Suppress GitHub star message
-    --prod-mcp             Use real tool handlers (not fixtures)
   sunpeak build            Build resources + tools for production
   sunpeak start            Start production MCP server
     --port, -p             Server port (default: 8000, or PORT env)

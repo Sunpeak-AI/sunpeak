@@ -277,7 +277,7 @@ pnpm test:e2e # Run Playwright e2e tests
 
 The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The simulator runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
 
-Use `sunpeak dev --prod-mcp` to test production behavior locally (real handlers instead of simulation fixtures). Requires `sunpeak build` first.
+Use `sunpeak build && sunpeak start` to test production behavior locally with real handlers instead of simulation fixtures.
 
 ## Production Build Output
 

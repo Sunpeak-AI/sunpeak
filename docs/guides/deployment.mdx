@@ -49,13 +49,13 @@ The production server:
 
 ## Testing Locally
 
-Use `sunpeak dev --prod-mcp` to test production behavior without deploying:
+Use `sunpeak build` and `sunpeak start` to test production behavior locally:
 
 ```bash
-sunpeak build && sunpeak dev --prod-mcp
+sunpeak build && sunpeak start
 ```
 
-This runs the dev simulator alongside a production-like MCP server that uses real handlers instead of simulation fixtures.
+Then expose the MCP server with a tunnel (e.g., `ngrok http 8000`) and connect from ChatGPT.
 
 ## Custom Server Setup
 

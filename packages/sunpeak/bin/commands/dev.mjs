@@ -149,9 +149,6 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // Parse --no-begging flag
   const noBegging = args.includes('--no-begging');
 
-  // Parse --prod-mcp flag (serve production build files over MCP instead of Vite HMR)
-  const prodMcp = args.includes('--prod-mcp');
-
   console.log(`Starting Vite dev server on port ${port}...`);
 
   // Check if we're in the sunpeak workspace (directory is named "template")
@@ -178,7 +175,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     sunpeakMcp = await import(pathToFileURL(join(sunpeakBase, 'dist/mcp/index.js')).href);
     sunpeakDiscovery = await import(pathToFileURL(join(sunpeakBase, 'dist/lib/discovery-cli.js')).href);
   }
-  const { FAVICON_BUFFER: faviconBuffer, runMCPServer, startProductionHttpServer } = sunpeakMcp;
+  const { FAVICON_BUFFER: faviconBuffer, runMCPServer } = sunpeakMcp;
   const { findResourceDirs, findSimulationFilesFlat, findToolFiles, extractResourceExport, extractToolExport } = sunpeakDiscovery;
 
   // Vite plugin to serve the sunpeak favicon
@@ -296,33 +293,29 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     });
   }
 
-  // Start MCP server with its own Vite instance (unless --prod-mcp is set)
+  // Start MCP server with its own Vite instance for HMR
   if (simulations.length > 0) {
-    const mcpMode = prodMcp ? 'production build' : 'Vite HMR';
-    console.log(`\nStarting MCP server with ${simulations.length} simulation(s) (${mcpMode})...`);
+    console.log(`\nStarting MCP server with ${simulations.length} simulation(s) (Vite HMR)...`);
 
-    let mcpViteServer = null;
+    // Virtual entry module plugin for MCP
+    const sunpeakEntryPlugin = () => ({
+      name: 'sunpeak-entry',
+      resolveId(id) {
+        if (id.startsWith('virtual:sunpeak-entry')) {
+          return id;
+        }
+      },
+      load(id) {
+        if (id.startsWith('virtual:sunpeak-entry')) {
+          const url = new URL(id.replace('virtual:sunpeak-entry', 'http://x'));
+          const srcPath = url.searchParams.get('src');
+          const componentName = url.searchParams.get('component');
 
-    if (!prodMcp) {
-      // Virtual entry module plugin for MCP
-      const sunpeakEntryPlugin = () => ({
-        name: 'sunpeak-entry',
-        resolveId(id) {
-          if (id.startsWith('virtual:sunpeak-entry')) {
-            return id;
+          if (!srcPath || !componentName) {
+            return 'console.error("Missing src or component param");';
           }
-        },
-        load(id) {
-          if (id.startsWith('virtual:sunpeak-entry')) {
-            const url = new URL(id.replace('virtual:sunpeak-entry', 'http://x'));
-            const srcPath = url.searchParams.get('src');
-            const componentName = url.searchParams.get('component');
 
-            if (!srcPath || !componentName) {
-              return 'console.error("Missing src or component param");';
-            }
-
-            return `
+          return `
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import { AppProvider } from 'sunpeak';
@@ -349,149 +342,53 @@ if (import.meta.hot) {
   import.meta.hot.accept();
 }
 `;
-          }
-        },
-      });
+        }
+      },
+    });
 
-      // Create Vite dev server in middleware mode for MCP
-      // Use separate cache directory to avoid conflicts with main dev server
-      mcpViteServer = await createServer({
-        root: projectRoot,
-        cacheDir: 'node_modules/.vite-mcp',
-        plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
-        resolve: {
-          alias: {
-            ...(isTemplate && {
-              sunpeak: parentSrc,
-            }),
+    // Create Vite dev server in middleware mode for MCP
+    // Use separate cache directory to avoid conflicts with main dev server
+    const mcpViteServer = await createServer({
+      root: projectRoot,
+      cacheDir: 'node_modules/.vite-mcp',
+      plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
+      resolve: {
+        alias: {
+          ...(isTemplate && {
+            sunpeak: parentSrc,
+          }),
+        },
+      },
+      server: {
+        middlewareMode: true,
+        allowedHosts: true,
+        watch: {
+          // Only watch files that affect the UI bundle (not JSON, tests, etc.)
+          // MCP resources reload on next tool call, not on file change
+          ignored: (filePath) => {
+            if (!filePath.includes('.')) return false; // Watch directories
+            if (/\.(tsx?|css)$/.test(filePath)) {
+              return /\.(test|spec)\.tsx?$/.test(filePath); // Ignore tests
+            }
+            return true; // Ignore everything else
           },
         },
-        server: {
-          middlewareMode: true,
-          allowedHosts: true,
-          watch: {
-            // Only watch files that affect the UI bundle (not JSON, tests, etc.)
-            // MCP resources reload on next tool call, not on file change
-            ignored: (filePath) => {
-              if (!filePath.includes('.')) return false; // Watch directories
-              if (/\.(tsx?|css)$/.test(filePath)) {
-                return /\.(test|spec)\.tsx?$/.test(filePath); // Ignore tests
-              }
-              return true; // Ignore everything else
-            },
-          },
-        },
-        optimizeDeps: {
-          include: ['react', 'react-dom/client'],
-        },
-        appType: 'custom',
-      });
-    }
+      },
+      optimizeDeps: {
+        include: ['react', 'react-dom/client'],
+      },
+      appType: 'custom',
+    });
 
     const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
 
-    let mcpHandle = null;
-
-    if (prodMcp) {
-      // --prod-mcp: Use real tool handlers via Vite SSR
-      // Load full tool modules (handler + schema + config) from TypeScript source
-      const ssrLoader = await createServer({
-        root: projectRoot,
-        server: { middlewareMode: true },
-        appType: 'custom',
-        logLevel: 'silent',
-        resolve: {
-          alias: {
-            ...(isTemplate && { sunpeak: parentSrc }),
-          },
-        },
-      });
-
-      const prodTools = [];
-      for (const { name: toolName, path: toolPath } of toolFiles) {
-        try {
-          const relativePath = './' + toolPath.replace(projectRoot + '/', '').replace(projectRoot + '\\', '');
-          const mod = await ssrLoader.ssrLoadModule(relativePath);
-          if (mod.tool && mod.default) {
-            prodTools.push({
-              name: toolName,
-              tool: mod.tool,
-              schema: mod.schema,
-              handler: mod.default,
-            });
-          }
-        } catch (err) {
-          console.warn(`Warning: Could not load tool handler ${toolName}: ${err.message}`);
-        }
-      }
-
-      // Load server entry if present
-      const serverEntryPath = join(projectRoot, 'src/server.ts');
-      let auth = undefined;
-      let serverConfig = {};
-      if (existsSync(serverEntryPath)) {
-        try {
-          const serverMod = await ssrLoader.ssrLoadModule('./src/server.ts');
-          if (typeof serverMod.auth === 'function') {
-            auth = serverMod.auth;
-            console.log('Loaded auth from src/server.ts');
-          }
-          if (serverMod.server) serverConfig = serverMod.server;
-        } catch (err) {
-          console.warn(`Warning: Could not load server entry: ${err.message}`);
-        }
-      }
-
-      await ssrLoader.close();
-
-      // Build production resources from dist/
-      const prodResources = [];
-      for (const { key } of resourceDirs) {
-        const meta = resourceMap.get(key);
-        if (!meta) continue;
-        const htmlPath = join(projectRoot, `dist/${key}/${key}.html`);
-        const jsonPath = join(projectRoot, `dist/${key}/${key}.json`);
-        if (!existsSync(htmlPath)) continue;
-
-        const html = readFileSync(htmlPath, 'utf-8');
-        let uri = `ui://${meta.name ?? key}`;
-        let _meta = meta._meta;
-
-        // Use URI from build JSON if available (has cache-bust timestamp)
-        if (existsSync(jsonPath)) {
-          try {
-            const buildMeta = JSON.parse(readFileSync(jsonPath, 'utf-8'));
-            if (buildMeta.uri) uri = buildMeta.uri;
-          } catch {}
-        }
-
-        prodResources.push({
-          name: meta.name ?? key,
-          uri,
-          html,
-          description: meta.description,
-          _meta,
-        });
-      }
-
-      const name = serverConfig.name ?? pkg.name ?? 'Sunpeak';
-      const version = serverConfig.version ?? pkg.version ?? '0.1.0';
-
-      console.log(`Starting production MCP server with ${prodTools.length} tool(s)...`);
-      startProductionHttpServer(
-        { name, version, tools: prodTools, resources: prodResources, auth },
-        8000
-      );
-    } else {
-      // Default: simulation-based MCP server with fixture data
-      mcpHandle = runMCPServer({
-        name: pkg.name || 'Sunpeak',
-        version: pkg.version || '0.1.0',
-        simulations,
-        port: 8000,
-        ...(mcpViteServer && { viteServer: mcpViteServer }),
-      });
-    }
+    const mcpHandle = runMCPServer({
+      name: pkg.name || 'Sunpeak',
+      version: pkg.version || '0.1.0',
+      simulations,
+      port: 8000,
+      viteServer: mcpViteServer,
+    });
 
     // Build production bundles and watch for changes.
     // Tunnel clients (e.g. Claude via ngrok) get the pre-built HTML since they can't
@@ -502,13 +399,13 @@ if (import.meta.hot) {
 
     // Handle signals - close both servers
     process.on('SIGINT', async () => {
-      if (mcpViteServer) await mcpViteServer.close();
+      await mcpViteServer.close();
       await server.close();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
-      if (mcpViteServer) await mcpViteServer.close();
+      await mcpViteServer.close();
       await server.close();
       process.exit(0);
     });

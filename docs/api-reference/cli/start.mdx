@@ -58,13 +58,13 @@ If your project includes a `src/server.ts` with an `auth()` export, the producti
 
 ## Testing Locally
 
-Use `sunpeak dev --prod-mcp` to test production behavior alongside the dev simulator:
+To test production behavior locally, run the build and start commands together:
 
 ```bash
-sunpeak build && sunpeak dev --prod-mcp
+sunpeak build && sunpeak start
 ```
 
-This runs the simulator at port 3000 with a production-like MCP server that uses real handlers instead of simulation fixtures.
+Then expose the server with a tunnel (e.g., `ngrok http 8000`) and connect from ChatGPT.
 
 ## Related Commands
 

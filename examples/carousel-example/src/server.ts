@@ -9,8 +9,9 @@ import type { AuthInfo } from 'sunpeak/mcp';
  */
 export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
   const token = req.headers.authorization?.replace('Bearer ', '');
-  if (!token) return null;
-  return { token, clientId: 'my-app', scopes: [] };
+  // Allow unauthenticated requests (no token = anonymous access).
+  // To require auth, return null here instead.
+  return { token: token ?? '', clientId: 'anonymous', scopes: [] };
 }
 
 export const server = { name: 'Sunpeak', version: '1.0.0' };

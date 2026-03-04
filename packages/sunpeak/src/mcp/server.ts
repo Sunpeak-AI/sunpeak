@@ -6,7 +6,8 @@ import path from 'node:path';
 import { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
+import { randomUUID } from 'node:crypto';
 import {
   registerAppTool,
   registerAppResource,
@@ -117,7 +118,6 @@ function getViteResourceHtml(srcPath: string): string {
  *
  * - Direct connections (ChatGPT): Vite dev server HTML with HMR
  * - Tunnel connections (Claude via ngrok): Pre-built HTML with everything inlined
- * - Production mode (--prod-mcp): Pre-built HTML always
  */
 function getResourceHtml(
   simulation: SimulationWithDist,
@@ -302,10 +302,14 @@ function createAppServer(
 
 type SessionRecord = {
   server: McpServer;
-  transport: SSEServerTransport;
+  transport: StreamableHTTPServerTransport;
   /** True for localhost connections (ChatGPT, simulator) — they use Vite HMR. */
   isLocal: boolean;
+  lastActivity: number;
 };
+
+/** How long an idle session lives before being cleaned up (5 minutes). */
+const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Check if the request originates from localhost.
@@ -319,100 +323,124 @@ function isLocalConnection(req: IncomingMessage): boolean {
 
 const sessions = new Map<string, SessionRecord>();
 
-const ssePath = '/mcp';
-const postPath = '/mcp/messages';
+const MCP_PATH = '/mcp';
 
-async function handleSseRequest(
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'content-type, accept, authorization, mcp-session-id, ngrok-skip-browser-warning',
+  'Access-Control-Expose-Headers': 'mcp-session-id',
+} as const;
+
+// Periodically clean up idle sessions
+const cleanupInterval = setInterval(() => {
+  const now = Date.now();
+  for (const [id, session] of sessions) {
+    if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
+      sessions.delete(id);
+      session.transport.close?.();
+      session.server.close();
+      console.log(`[MCP] Session expired: ${id.substring(0, 8)}... (${sessions.size} active)`);
+    }
+  }
+}, 60_000);
+cleanupInterval.unref();
+
+async function handleMcpRequest(
   req: IncomingMessage,
   res: ServerResponse,
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
   viteMode: boolean
 ) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  const server = createAppServer(config, simulations, viteMode);
-  const transport = new SSEServerTransport(postPath, res);
-  const sessionId = transport.sessionId;
-  const isLocal = isLocalConnection(req);
-
-  sessions.set(sessionId, { server, transport, isLocal });
-  const origin = isLocal ? 'local' : 'tunnel';
-  console.log(
-    `[MCP] Session started: ${sessionId.substring(0, 8)}... (${origin}, ${sessions.size} active)`
-  );
-
-  transport.onclose = async () => {
-    // Guard against re-entrancy (server.close() may trigger onclose again)
-    if (!sessions.has(sessionId)) return;
-    sessions.delete(sessionId);
-    console.log(`[MCP] Session closed: ${sessionId.substring(0, 8)}... (${sessions.size} active)`);
-    await server.close();
-  };
-
-  transport.onerror = (error) => {
-    console.error(`[MCP] SSE transport error (${sessionId.substring(0, 8)}...):`, error);
-  };
-
-  try {
-    await server.connect(transport);
-  } catch (error) {
-    sessions.delete(sessionId);
-    console.error(`[MCP] Failed to start session (${sessionId.substring(0, 8)}...):`, error);
-    if (!res.headersSent) {
-      res.writeHead(500).end('Failed to establish SSE connection');
-    }
-  }
-}
-
-async function handlePostMessage(req: IncomingMessage, res: ServerResponse, url: URL) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Headers', 'content-type, ngrok-skip-browser-warning');
-  const sessionId = url.searchParams.get('sessionId');
-
-  if (!sessionId) {
-    res.writeHead(400).end('Missing sessionId query parameter');
-    return;
+  // Set CORS headers for all MCP responses
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    res.setHeader(key, value);
   }
 
-  const session = sessions.get(sessionId);
-
-  if (!session) {
-    res.writeHead(404).end('Unknown session');
-    return;
-  }
-
-  // Buffer body to log the MCP method, then pass pre-parsed to avoid re-reading the stream
-  const chunks: Buffer[] = [];
-  await new Promise<void>((resolve, reject) => {
-    req.on('data', (chunk: Buffer | string) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+  // Parse body for POST requests
+  let parsedBody: unknown;
+  if (req.method === 'POST') {
+    const chunks: Buffer[] = [];
+    await new Promise<void>((resolve, reject) => {
+      req.on('data', (chunk: Buffer | string) => {
+        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+      });
+      req.on('end', resolve);
+      req.on('error', reject);
     });
-    req.on('end', resolve);
-    req.on('error', reject);
-  });
-  const rawBody = Buffer.concat(chunks).toString('utf8');
-
-  try {
-    const parsed = JSON.parse(rawBody) as {
-      method?: string;
-      id?: string | number;
-      params?: Record<string, unknown>;
-    };
-    if (parsed.method) {
-      const extra =
-        parsed.method === 'resources/read' ? ` uri=${JSON.stringify(parsed.params?.uri)}` : '';
-      console.log(`[MCP] ← ${parsed.method}${extra} (${sessionId.substring(0, 8)}...)`);
-    }
-  } catch {}
-
-  try {
-    await session.transport.handlePostMessage(req, res, rawBody);
-  } catch (error) {
-    console.error('Failed to process message', error);
-    if (!res.headersSent) {
-      res.writeHead(500).end('Failed to process message');
+    const rawBody = Buffer.concat(chunks).toString('utf8');
+    try {
+      parsedBody = JSON.parse(rawBody);
+      const parsed = parsedBody as { method?: string; params?: Record<string, unknown> };
+      if (parsed.method) {
+        const sid = req.headers['mcp-session-id'] as string | undefined;
+        const sidStr = sid ? ` (${sid.substring(0, 8)}...)` : '';
+        const extra =
+          parsed.method === 'resources/read' ? ` uri=${JSON.stringify(parsed.params?.uri)}` : '';
+        console.log(`[MCP] ← ${parsed.method}${extra}${sidStr}`);
+      }
+    } catch {
+      res.writeHead(400).end('Invalid JSON');
+      return;
     }
   }
+
+  const sessionId = req.headers['mcp-session-id'] as string | undefined;
+
+  // Route to existing session
+  if (sessionId) {
+    const session = sessions.get(sessionId);
+    if (!session) {
+      res.writeHead(404).end('Unknown session');
+      return;
+    }
+    session.lastActivity = Date.now();
+    await session.transport.handleRequest(req, res, parsedBody);
+    return;
+  }
+
+  // New session (POST without session ID = initialization)
+  if (req.method === 'POST') {
+    const isLocal = isLocalConnection(req);
+    const server = createAppServer(config, simulations, viteMode);
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      onsessioninitialized: (id) => {
+        sessions.set(id, { server, transport, isLocal, lastActivity: Date.now() });
+        const origin = isLocal ? 'local' : 'tunnel';
+        console.log(
+          `[MCP] Session started: ${id.substring(0, 8)}... (${origin}, ${sessions.size} active)`
+        );
+      },
+      onsessionclosed: (id) => {
+        sessions.delete(id);
+        console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+      },
+    });
+
+    transport.onerror = (error: Error) => {
+      const id = transport.sessionId;
+      console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
+    };
+
+    transport.onclose = async () => {
+      const id = transport.sessionId;
+      if (id && sessions.has(id)) {
+        sessions.delete(id);
+        console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+      }
+      await server.close();
+    };
+
+    await server.connect(transport);
+    await transport.handleRequest(req, res, parsedBody);
+    return;
+  }
+
+  // No session ID and not POST → invalid
+  res.writeHead(400).end('Bad Request: session ID required');
 }
 
 // Type for Vite dev server (minimal interface we need)
@@ -454,11 +482,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
 
     // CORS preflight for all routes
     if (req.method === 'OPTIONS') {
-      res.writeHead(204, {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'content-type, ngrok-skip-browser-warning',
-      });
+      res.writeHead(204, CORS_HEADERS);
       res.end();
       return;
     }
@@ -493,17 +517,9 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       return;
     }
 
-    // MCP SSE endpoint
-    if (req.method === 'GET' && url.pathname === ssePath) {
-      console.log(`[HTTP] ${req.method} ${url.pathname}`);
-      await handleSseRequest(req, res, config, simulations, viteMode);
-      return;
-    }
-
-    // MCP message endpoint
-    if (req.method === 'POST' && url.pathname === postPath) {
-      console.log(`[HTTP] ${req.method} ${url.pathname}`);
-      await handlePostMessage(req, res, url);
+    // MCP endpoint (Streamable HTTP transport)
+    if (url.pathname === MCP_PATH) {
+      await handleMcpRequest(req, res, config, simulations, viteMode);
       return;
     }
 
@@ -536,7 +552,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
 
   httpServer.listen(port, () => {
     console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
-    console.log(`  SSE stream: GET http://localhost:${port}${ssePath}`);
+    console.log(`  MCP endpoint: http://localhost:${port}${MCP_PATH}`);
     if (viteMode) {
       console.log(`  Vite HMR: enabled (source files served with hot reload)`);
     }
