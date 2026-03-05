@@ -2,26 +2,59 @@
 import { existsSync, mkdirSync, cpSync, readFileSync, writeFileSync, renameSync } from 'fs';
 import { join, dirname, basename } from 'path';
 import { fileURLToPath } from 'url';
-import { createInterface } from 'readline';
-import { execSync } from 'child_process';
+import { execSync, exec } from 'child_process';
+import { promisify } from 'util';
+
+const execAsync = promisify(exec);
+import * as clack from '@clack/prompts';
 import { discoverResources } from '../lib/patterns.mjs';
 import { detectPackageManager } from '../utils.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 /**
- * Default prompt implementation using readline
- * @param {string} question
+ * Default prompt for project name using clack text input.
  * @returns {Promise<string>}
  */
-function defaultPrompt(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  return new Promise((resolve) => {
-    rl.question(question, (answer) => {
-      rl.close();
-      resolve(answer.trim());
-    });
+async function defaultPromptName() {
+  const value = await clack.text({
+    message: 'Project name',
+    placeholder: 'my-app',
+    defaultValue: 'my-app',
+    validate: (v) => {
+      if (v === 'template') return '"template" is a reserved name';
+    },
   });
+  if (clack.isCancel(value)) {
+    clack.cancel('Cancelled.');
+    process.exit(0);
+  }
+  return value;
+}
+
+/**
+ * Default resource selection using clack multiselect.
+ * @param {string[]} availableResources
+ * @returns {Promise<string[]>}
+ */
+async function defaultSelectResources(availableResources) {
+  const selected = await clack.multiselect({
+    message: 'Resources (UIs) to include (space to toggle)',
+    options: (() => {
+      const maxLen = Math.max(...availableResources.map((r) => r.length));
+      return availableResources.map((r) => ({
+        value: r,
+        label: `${r.padEnd(maxLen)}  (https://sunpeak.ai/docs/api-reference/resources/${r})`,
+      }));
+    })(),
+    initialValues: availableResources,
+    required: true,
+  });
+  if (clack.isCancel(selected)) {
+    clack.cancel('Cancelled.');
+    process.exit(0);
+  }
+  return selected;
 }
 
 /**
@@ -37,7 +70,12 @@ export const defaultDeps = {
   writeFileSync,
   renameSync,
   execSync,
-  prompt: defaultPrompt,
+  execAsync,
+  promptName: defaultPromptName,
+  selectResources: defaultSelectResources,
+  intro: clack.intro,
+  outro: clack.outro,
+  spinner: clack.spinner,
   console,
   process,
   cwd: () => process.cwd(),
@@ -88,6 +126,8 @@ export function parseResourcesInput(input, validResources, deps = defaultDeps) {
 export async function init(projectName, resourcesArg, deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
 
+  d.intro('☀️ sunpeak');
+
   // Discover available resources from template
   const availableResources = d.discoverResources();
   if (availableResources.length === 0) {
@@ -96,10 +136,7 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
   }
 
   if (!projectName) {
-    projectName = await d.prompt('☀️ 🏔️ Project name [my-app]: ');
-    if (!projectName) {
-      projectName = 'my-app';
-    }
+    projectName = await d.promptName();
   }
 
   if (projectName === 'template') {
@@ -107,17 +144,13 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     d.process.exit(1);
   }
 
-  // Use resources from args or ask for them
-  let resourcesInput;
-  if (resourcesArg) {
-    resourcesInput = resourcesArg;
-    d.console.log(`☀️ 🏔️ Resources: ${resourcesArg}`);
+  // Use resources from args or interactively select them
+  let selectedResources;
+  if (resourcesArg !== undefined) {
+    selectedResources = parseResourcesInput(resourcesArg, availableResources, d);
   } else {
-    resourcesInput = await d.prompt(
-      `☀️ 🏔️ Resources (UIs) to include [${availableResources.join(', ')}]: `
-    );
+    selectedResources = await d.selectResources(availableResources);
   }
-  const selectedResources = parseResourcesInput(resourcesInput, availableResources, d);
 
   const targetDir = join(d.cwd(), projectName);
 
@@ -126,12 +159,10 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     d.process.exit(1);
   }
 
-  d.console.log(`☀️ 🏔️ Creating ${projectName}...`);
-
-  d.mkdirSync(targetDir, { recursive: true });
-
   // Filter resource directories based on selection
   const excludedResources = availableResources.filter((r) => !selectedResources.includes(r));
+
+  d.mkdirSync(targetDir, { recursive: true });
 
   d.cpSync(d.templateDir, targetDir, {
     recursive: true,
@@ -223,32 +254,30 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
 
   d.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
-  // Detect package manager and run install
+  // Install dependencies with spinner
   const pm = d.detectPackageManager();
-  d.console.log(`☀️ 🏔️ Installing dependencies with ${pm}...`);
+  const s = d.spinner();
+  s.start(`Installing dependencies with ${pm}...`);
 
   try {
-    d.execSync(`${pm} install`, { cwd: targetDir, stdio: 'inherit' });
+    await d.execAsync(`${pm} install`, { cwd: targetDir });
+    s.stop(`Installed dependencies with ${pm}`);
   } catch {
-    d.console.error(`\nInstall failed. You can try running "${pm} install" manually in the project directory.`);
+    s.stop(`Install failed. You can try running "${pm} install" manually.`);
   }
 
   const runCmd = pm === 'npm' ? 'npm run' : pm;
 
-  d.console.log(`
-Done! To get started:
+  d.outro(`Done! To get started:
 
   cd ${projectName}
   sunpeak dev
 
-That's it! Your project commands:
+Your project commands:
 
   sunpeak dev       # Start dev server + MCP endpoint
   sunpeak build     # Build for production
-  ${runCmd} test         # Run tests
-
-See README.md for more details.
-`);
+  ${runCmd} test         # Run tests`);
 }
 
 // Allow running directly

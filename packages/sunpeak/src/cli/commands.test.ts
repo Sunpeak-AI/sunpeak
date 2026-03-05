@@ -27,6 +27,12 @@ const createThrowingMockProcess = () => ({
   cwd: () => '/test/project',
 });
 
+// No-op clack mocks for tests
+const noopIntro = vi.fn();
+const noopOutro = vi.fn();
+const noopSpinner = () => ({ start: vi.fn(), stop: vi.fn() });
+const noopExecAsync = vi.fn().mockResolvedValue({});
+
 describe('CLI Commands', () => {
   describe('new command', () => {
     it('should error when no resources are discovered', async () => {
@@ -39,6 +45,9 @@ describe('CLI Commands', () => {
           discoverResources: () => [],
           console: mockConsole,
           process: mockProcess,
+          intro: noopIntro,
+          outro: noopOutro,
+          spinner: noopSpinner,
         })
       ).rejects.toThrow('process.exit(1)');
 
@@ -57,6 +66,9 @@ describe('CLI Commands', () => {
           discoverResources: () => ['carousel', 'review'],
           console: mockConsole,
           process: mockProcess,
+          intro: noopIntro,
+          outro: noopOutro,
+          spinner: noopSpinner,
         })
       ).rejects.toThrow('process.exit(1)');
 
@@ -77,6 +89,9 @@ describe('CLI Commands', () => {
           cwd: () => '/test',
           console: mockConsole,
           process: mockProcess,
+          intro: noopIntro,
+          outro: noopOutro,
+          spinner: noopSpinner,
         })
       ).rejects.toThrow('process.exit(1)');
 
@@ -93,11 +108,14 @@ describe('CLI Commands', () => {
       await expect(
         init(undefined, 'carousel', {
           discoverResources: () => ['carousel', 'review'],
-          prompt: async () => 'prompted-name',
+          promptName: async () => 'prompted-name',
           existsSync: (path: string) => path.includes('prompted-name'), // Target dir exists
           cwd: () => '/test',
           console: mockConsole,
           process: mockProcess,
+          intro: noopIntro,
+          outro: noopOutro,
+          spinner: noopSpinner,
         })
       ).rejects.toThrow('process.exit(1)');
 
@@ -107,23 +125,42 @@ describe('CLI Commands', () => {
       );
     });
 
-    it('should default to "my-app" when prompt returns empty', async () => {
+    it('should use interactive multiselect when no resources arg provided', async () => {
       const { init } = await importNew();
       const mockConsole = createMockConsole();
-      const mockProcess = createThrowingMockProcess();
+      const mockProcess = createMockProcess();
+      const selectResources = vi.fn().mockResolvedValue(['carousel']);
 
-      await expect(
-        init(undefined, 'carousel', {
-          discoverResources: () => ['carousel', 'review'],
-          prompt: async () => '',
-          existsSync: (path: string) => path.includes('my-app'), // Target dir exists
-          cwd: () => '/test',
-          console: mockConsole,
-          process: mockProcess,
-        })
-      ).rejects.toThrow('process.exit(1)');
+      let cpSyncFilter: ((src: string) => boolean) | null = null;
 
-      expect(mockConsole.error).toHaveBeenCalledWith('Error: Directory "my-app" already exists');
+      await init('my-project', undefined, {
+        discoverResources: () => ['carousel', 'review'],
+        detectPackageManager: () => 'npm',
+        selectResources,
+        existsSync: () => false,
+        mkdirSync: vi.fn(),
+        cpSync: (_src: string, _dest: string, options: { filter: (src: string) => boolean }) => {
+          cpSyncFilter = options.filter;
+        },
+        readFileSync: () => JSON.stringify({ version: '1.0.0', name: 'test' }),
+        writeFileSync: vi.fn(),
+        renameSync: vi.fn(),
+        execSync: vi.fn(),
+        execAsync: noopExecAsync,
+        cwd: () => '/test',
+        templateDir: '/template',
+        rootPkgPath: '/root/package.json',
+        console: mockConsole,
+        process: mockProcess,
+        intro: noopIntro,
+        outro: noopOutro,
+        spinner: noopSpinner,
+      });
+
+      expect(selectResources).toHaveBeenCalledWith(['carousel', 'review']);
+      expect(cpSyncFilter).not.toBeNull();
+      expect(cpSyncFilter!('/template/src/resources/carousel')).toBe(true);
+      expect(cpSyncFilter!('/template/src/resources/review')).toBe(false);
     });
 
     it('should create project with selected resources', async () => {
@@ -163,11 +200,15 @@ describe('CLI Commands', () => {
           renamedFiles.push({ from, to });
         },
         execSync: vi.fn(),
+        execAsync: noopExecAsync,
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',
         console: mockConsole,
         process: mockProcess,
+        intro: noopIntro,
+        outro: noopOutro,
+        spinner: noopSpinner,
       });
 
       // Verify filter excludes non-selected resources
@@ -201,11 +242,11 @@ describe('CLI Commands', () => {
         to: '/test/my-project/.gitignore',
       });
 
-      // Verify success message
-      expect(mockConsole.log).toHaveBeenCalledWith(expect.stringContaining('Done! To get started'));
+      // Verify outro was called
+      expect(noopOutro).toHaveBeenCalled();
     });
 
-    it('should include all resources when none specified', async () => {
+    it('should include all resources when empty string passed as arg', async () => {
       const { init } = await importNew();
       const mockConsole = createMockConsole();
       const mockProcess = createMockProcess();
@@ -215,7 +256,6 @@ describe('CLI Commands', () => {
       await init('my-project', '', {
         discoverResources: () => ['carousel', 'review'],
         detectPackageManager: () => 'npm',
-        prompt: async () => '', // Empty input means "all resources"
         existsSync: () => false,
         mkdirSync: vi.fn(),
         cpSync: (_src: string, _dest: string, options: { filter: (src: string) => boolean }) => {
@@ -225,11 +265,15 @@ describe('CLI Commands', () => {
         writeFileSync: vi.fn(),
         renameSync: vi.fn(),
         execSync: vi.fn(),
+        execAsync: noopExecAsync,
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',
         console: mockConsole,
         process: mockProcess,
+        intro: noopIntro,
+        outro: noopOutro,
+        spinner: noopSpinner,
       });
 
       // All resources should be included
