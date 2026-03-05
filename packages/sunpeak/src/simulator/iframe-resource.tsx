@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo, useCallback, useState } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
 import { createMockOpenAIRuntime, MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
 import type { McpUiHostContext, McpUiResourcePermissions } from '@modelcontextprotocol/ext-apps';
@@ -408,9 +408,15 @@ export function IframeResource({
 }: IframeResourceProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
+
+  // Reset loaded state when resource changes to avoid flash of stale content
+  useEffect(() => {
+    setLoaded(false);
+  }, [resourceUrl]);
 
   // Track whether we've received an initial size report
   const hasReceivedSizeRef = useRef(false);
@@ -485,6 +491,7 @@ export function IframeResource({
         // Cross-origin iframe — contentWindow access blocked
       }
     }
+    setLoaded(true);
   }, [src, injectOpenAIRuntime]);
 
   // Update host context when props change.
@@ -591,6 +598,8 @@ export function IframeResource({
           ...borderStyle,
           background: 'transparent',
           colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
+          opacity: loaded ? 1 : 0,
+          transition: loaded ? 'opacity 100ms' : 'none',
           width: '100%',
           // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
           // Don't use height: 100% as it requires explicit height in parent chain.
@@ -614,6 +623,8 @@ export function IframeResource({
         ...borderStyle,
         background: 'transparent',
         colorScheme: hostContext?.theme === 'light' ? 'light dark' : 'dark light',
+        opacity: loaded ? 1 : 0,
+        transition: loaded ? 'opacity 100ms' : 'none',
         width: '100%',
         // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
         // Don't use height: 100% as it requires explicit height in parent chain.

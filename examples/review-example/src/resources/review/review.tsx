@@ -354,7 +354,7 @@ function AlertBanner({ alert }: { alert: Alert }) {
   const config = alertTypeConfig[alert.type];
   return (
     <div
-      className="flex items-start gap-2 p-3 rounded-lg"
+      className="flex items-center gap-2 p-3 rounded-lg"
       style={{
         backgroundColor: config.bg,
         borderWidth: 1,
@@ -362,12 +362,12 @@ function AlertBanner({ alert }: { alert: Alert }) {
         borderColor: config.border,
       }}
     >
-      <span className="flex-shrink-0" style={{ color: config.text }}>
+      <span className="flex-shrink-0 text-base leading-none" style={{ color: config.text }}>
         {config.icon}
       </span>
-      <p className="text-sm" style={{ color: config.text }}>
+      <span className="text-sm" style={{ color: config.text }}>
         {alert.message}
-      </p>
+      </span>
     </div>
   );
 }
