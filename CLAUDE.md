@@ -1,6 +1,18 @@
-# Sunpeak
+# sunpeak
 
-Sunpeak is a framework for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). Built on top of the MCP Apps SDK (`@modelcontextprotocol/ext-apps`).
+Note that "sunpeak", except where required in URLs or code, is always lowercase.
+
+sunpeak is a framework for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude, and future major hosts). Built on top of the MCP Apps SDK (`@modelcontextprotocol/ext-apps`).
+
+The value proposition of the sunpeak framework is to help developers and their agents:
+
+1. Test MCP Apps locally and automatically (in CI/CD) using a replica of the ChatGPT and Claude runtimes.
+   1. Save time manually testing all possible host, server, app, ui, and backend states.
+   2. Protect developers from 4-click manual refreshes on every code change in each host.
+   3. Cancel all the $20 per person per host per month testing accounts.
+   4. Avoid burning host credits on every test and code change.
+2. Build multi-platform MCP Apps in a structured way that's easy to understand and get started.
+3. Test their MCPs in ChatGPT with HMR and Claude with automatic rebuilds and refresh notifications.
 
 ## Quick Reference
 
