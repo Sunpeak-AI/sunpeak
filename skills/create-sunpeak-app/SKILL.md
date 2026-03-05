@@ -446,29 +446,6 @@ export const resource: ResourceConfig = {
 };
 ```
 
-## AppProvider (Library Use)
-
-When using sunpeak as a library (without the CLI framework), wrap your app in `AppProvider` to establish the MCP connection:
-
-```tsx
-import { AppProvider, useApp } from 'sunpeak';
-
-// AppProvider handles App creation, PostMessageTransport, and connection
-createRoot(document.getElementById('root')!).render(
-  <AppProvider appInfo={{ name: 'MyApp', version: '1.0.0' }} capabilities={{}}>
-    <MyApp />
-  </AppProvider>
-);
-
-function MyApp() {
-  const app = useApp(); // Reads from AppProvider context
-  if (!app) return <div>Connecting...</div>;
-  return <div>Connected!</div>;
-}
-```
-
-When using the sunpeak CLI (`sunpeak dev` / `sunpeak build`), `AppProvider` wrapping is handled automatically by the framework's resource loader.
-
 ## Common Mistakes
 
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.

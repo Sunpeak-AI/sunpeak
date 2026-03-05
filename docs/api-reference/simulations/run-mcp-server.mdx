@@ -14,44 +14,14 @@ This server is for **local development only**. For production, use `sunpeak star
 
 ## Quick Start
 
-<Tabs>
-  <Tab title="Framework">
-    The sunpeak framework handles MCP server configuration automatically:
+sunpeak handles MCP server configuration automatically:
 
-    ```bash
-    sunpeak dev
-    ```
+```bash
+sunpeak dev
+```
 
-    This starts the ChatGPT simulator and an MCP server with Hot Module Reload.
-    The MCP server discovers tools from `src/tools/` and simulations from `tests/simulations/`, and serves the apps with automatic rebuilding.
-  </Tab>
-  <Tab title="Library">
-    For custom setups, configure the MCP server manually:
-
-    ```typescript
-    import { runMCPServer } from 'sunpeak/mcp';
-    import path from 'path';
-    import { fileURLToPath } from 'url';
-    import { resource } from '../src/resources/example/example';
-    import exampleSimulation from '../tests/simulations/show-example.json';
-
-    const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-    const simulations = [{
-      ...exampleSimulation,
-      resource,
-      distPath: path.resolve(__dirname, '../dist/example/example.html'),
-    }];
-
-    runMCPServer({
-      name: 'My App',
-      version: '0.1.0',
-      simulations,
-      port: 8000,
-    });
-    ```
-  </Tab>
-</Tabs>
+This starts the simulator and an MCP server with Hot Module Reload.
+The MCP server discovers tools from `src/tools/` and simulations from `tests/simulations/`, and serves the apps with automatic rebuilding.
 
 ## Connecting to ChatGPT
 

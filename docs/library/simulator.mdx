@@ -32,16 +32,11 @@ The simulator is a local development environment that replicates MCP App host ru
 
 ## Quick Start
 
-If you set up your project via the sunpeak framework, the simulator is already set up!
-Simply run it with:
+The simulator is already set up in sunpeak projects. Simply run:
 
 ```bash
 sunpeak dev
 ```
-
-<Note>
-To configure the simulator manually, see [Add to Existing Project](/add-to-existing-project).
-</Note>
 
 ## Simulations
 
@@ -51,50 +46,23 @@ Simulations define test scenarios for your resources — combining tool definiti
 Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
 </Tip>
 
-<Tabs>
-  <Tab title="Framework (JSON)">
-    In the sunpeak framework, simulations are **JSON files** in a flat `tests/simulations/` directory. Each simulation references a tool file by name.
+Simulations are **JSON files** in a flat `tests/simulations/` directory. Each simulation references a tool file by name.
 
-    ```json
-    // tests/simulations/show-example.json
-    {
-      "tool": "show-example",
-      "userMessage": "Show me an example",
-      "toolInput": { "query": "example" },
-      "toolResult": {
-        "structuredContent": { "items": [] }
-      }
-    }
-    ```
+```json
+// tests/simulations/show-example.json
+{
+  "tool": "show-example",
+  "userMessage": "Show me an example",
+  "toolInput": { "query": "example" },
+  "toolResult": {
+    "structuredContent": { "items": [] }
+  }
+}
+```
 
-    Tool metadata (name, description, schema, annotations) lives in `src/tools/show-example.ts`, not in the simulation. The resource component and metadata live in `src/resources/example/example.tsx` and are linked via the tool file's `resource: 'example'` field.
+Tool metadata (name, description, schema, annotations) lives in `src/tools/show-example.ts`, not in the simulation. The resource component and metadata live in `src/resources/example/example.tsx` and are linked via the tool file's `resource: 'example'` field.
 
-    <Note>
-    For library users not using the framework, see the [Simulation API Reference](/api-reference/simulations/simulation) for creating simulations programmatically in TypeScript.
-    </Note>
-
-    See [Framework Simulations](/api-reference/simulations/simulation) for the complete JSON schema and conventions.
-  </Tab>
-  <Tab title="Library (TypeScript)">
-    When using the library directly, create simulations as TypeScript objects:
-
-    ```typescript
-    import type { Simulation } from 'sunpeak';
-
-    const simulations: Record<string, Simulation> = {
-      'show-albums': {
-        name: 'show-albums',
-        resourceUrl: 'http://localhost:3000/resources/albums',
-        tool: { name: 'show-albums', description: '...', inputSchema: {} },
-        resource: { name: 'albums', uri: 'ui://albums', mimeType: 'text/html;profile=mcp-app' },
-        toolResult: { structuredContent: { albums: [] } },
-      },
-    };
-    ```
-
-    See [Simulation API Reference](/api-reference/simulations/simulation) for the complete TypeScript interface.
-  </Tab>
-</Tabs>
+See [Simulations API Reference](/api-reference/simulations/simulation) for the complete JSON schema and conventions.
 
 
 Simulations can be passed into:
@@ -112,10 +80,7 @@ Simulations can be passed into:
     The `runMCPServer` function serves your simulations to hosts like ChatGPT via the Model Context Protocol.
 
     ```bash
-    # Framework - dev server includes MCP server with HMR
     sunpeak dev
-
-    # Library - see runMCPServer API Reference for manual setup
     ```
 
     See [runMCPServer API Reference](/api-reference/simulations/run-mcp-server) for configuration options and connecting to a host.
@@ -127,11 +92,8 @@ Simulations can be passed into:
 
 ## Dive Deeper
 
-<Card horizontal title="Framework Simulations" icon="folder" href="/api-reference/simulations/simulation">
-  JSON-based simulations with auto-discovery for framework users.
-</Card>
-<Card horizontal title="Simulation API Reference" icon="code" href="/api-reference/simulations/simulation">
-  TypeScript interface for library users.
+<Card horizontal title="Simulations API Reference" icon="folder" href="/api-reference/simulations/simulation">
+  JSON schema, conventions, and auto-discovery.
 </Card>
 <Card horizontal title="Simulator API Reference" icon="desktop" href="/api-reference/simulations/simulator">
   Full component documentation and configuration options.

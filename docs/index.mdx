@@ -43,23 +43,18 @@ npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
 
 ## Overview
 
-sunpeak is an npm package that helps you build MCP Apps — interactive UIs that run inside AI chat hosts like ChatGPT and Claude. sunpeak consists of:
+sunpeak is a framework for building MCP Apps — interactive UIs that run inside AI chat hosts like ChatGPT and Claude. Think Next.js for MCP Apps.
 
-### The sunpeak Library
+Using a Review page as an example, sunpeak projects look like:
+
+<ProjectStructure />
 
 1. **[Runtime APIs](/library/runtime-apis)**: Strongly typed APIs for the MCP Apps runtime, **architected for multi-platform support** (ChatGPT, Claude, and more).
 2. **[Simulator](/library/simulator)**: React component replicating the host runtime to **test Apps locally and automatically**.
 3. **[MCP Server](/library/mcp-server)**: Serve Resources with mock data to real hosts with HMR (**no more cache issues or 5-click manual refreshes**).
-
-### The sunpeak Framework
-
-Next.js for MCP Apps. Using a Review page as an example, sunpeak projects look like:
-
-<ProjectStructure />
-
-1. **[Project Scaffold](/template/project-scaffold)**: Complete development setup with the sunpeak library.
-2. **[UI Components](/template/ui-components)**: Production-ready components following MCP App design guidelines.
-3. **Convention over configuration**:
+4. **[Project Scaffold](/template/project-scaffold)**: Complete development setup with pre-configured tooling.
+5. **[UI Components](/template/ui-components)**: Production-ready components following MCP App design guidelines.
+6. **Convention over configuration**:
    - Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example](#resource)).
    - Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler ([example](#tool)).
    - Create test state (simulations) by creating a `.json` file in `tests/simulations/` ([example](#simulation)).

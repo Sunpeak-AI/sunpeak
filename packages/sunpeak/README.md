@@ -43,8 +43,6 @@ pnpm add -g sunpeak
 sunpeak new
 ```
 
-To add `sunpeak` to an existing project, refer to the [documentation](https://sunpeak.ai/docs/add-to-existing-project).
-
 ## Overview
 
 `sunpeak` is an npm package that helps you build MCP Apps (interactive UI resources) while keeping your MCP server client-agnostic. Built on the [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:

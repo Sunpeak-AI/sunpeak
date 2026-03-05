@@ -17,12 +17,11 @@
             "group": "Getting Started",
             "pages": [
               "index",
-              "quickstart",
-              "add-to-existing-project"
+              "quickstart"
             ]
           },
           {
-            "group": "sunpeak Library",
+            "group": "Concepts",
             "pages": [
               "library/runtime-apis",
               "library/simulator",
@@ -30,7 +29,7 @@
             ]
           },
           {
-            "group": "sunpeak Framework",
+            "group": "Project Structure",
             "pages": [
               "template/project-scaffold",
               "template/ui-components"

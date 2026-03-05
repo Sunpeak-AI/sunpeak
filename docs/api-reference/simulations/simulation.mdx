@@ -8,208 +8,98 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app testing", "ChatGPT app testing",
 
 Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the Simulator for local development or runMCPServer for platform testing with hosts like ChatGPT and Claude.
 
-<Tabs>
-  <Tab title="Framework (JSON)">
-    In the sunpeak framework, simulations are **JSON files** that live in the `tests/simulations/` directory. Each simulation references a tool file by name — tool metadata and resource linkage are handled by the tool files in `src/tools/`.
+Simulations are **JSON files** that live in the `tests/simulations/` directory. Each simulation references a tool file by name — tool metadata and resource linkage are handled by the tool files in `src/tools/`.
 
-    ## File Convention
+## File Convention
 
-    Simulation files live in a flat `tests/simulations/` directory:
+Simulation files live in a flat `tests/simulations/` directory:
 
-    ```
-    tests/simulations/*.json
-    ```
+```
+tests/simulations/*.json
+```
 
-    For example:
-    - `tests/simulations/show-albums.json`
-    - `tests/simulations/review-diff.json`
-    - `tests/simulations/review-post.json`
+For example:
+- `tests/simulations/show-albums.json`
+- `tests/simulations/review-diff.json`
+- `tests/simulations/review-post.json`
 
-    Any `*.json` filename works. Multiple simulations can reference the same tool with different fixture data.
+Any `*.json` filename works. Multiple simulations can reference the same tool with different fixture data.
 
-    Tool files live in `src/tools/`:
-    - Each `.ts` file exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler.
+Tool files live in `src/tools/`:
+- Each `.ts` file exports `tool` (metadata with resource reference), `schema` (Zod), and a `default` handler.
 
-    Resource files live in `src/resources/{name}/`:
-    - **Component + Metadata**: `src/resources/{name}/{name}.tsx` (exports both the React component and `export const resource: ResourceConfig`)
+Resource files live in `src/resources/{name}/`:
+- **Component + Metadata**: `src/resources/{name}/{name}.tsx` (exports both the React component and `export const resource: ResourceConfig`)
 
-    ## JSON Schema
+## JSON Schema
 
-    Each simulation JSON file contains:
+Each simulation JSON file contains:
 
-    ```json
-    // tests/simulations/show-example.json
-    {
-      "tool": "show-example",
-      "userMessage": "Show me an example",
-      "toolInput": {
-        "query": "example search"
-      },
-      "toolResult": {
-        "structuredContent": {
-          "items": ["item1", "item2"]
-        }
-      }
+```json
+// tests/simulations/show-example.json
+{
+  "tool": "show-example",
+  "userMessage": "Show me an example",
+  "toolInput": {
+    "query": "example search"
+  },
+  "toolResult": {
+    "structuredContent": {
+      "items": ["item1", "item2"]
     }
-    ```
+  }
+}
+```
 
-    The `tool` field is a string referencing a tool filename (without `.ts`) in `src/tools/`. Tool metadata (name, description, schema, annotations, visibility) lives in the tool file, not in the simulation.
+The `tool` field is a string referencing a tool filename (without `.ts`) in `src/tools/`. Tool metadata (name, description, schema, annotations, visibility) lives in the tool file, not in the simulation.
 
-    ## Auto-Discovery
+## Auto-Discovery
 
-    The framework automatically discovers and links everything:
+The framework automatically discovers and links everything:
 
-    1. **Tools**: Scans `src/tools/*.ts` for tool files with metadata, schemas, and handlers
-    2. **Simulations**: Scans `tests/simulations/*.json` and links each to its tool via the `tool` string field
-    3. **Resources**: Each tool file references its resource by directory name (e.g., `resource: 'albums'`)
+1. **Tools**: Scans `src/tools/*.ts` for tool files with metadata, schemas, and handlers
+2. **Simulations**: Scans `tests/simulations/*.json` and links each to its tool via the `tool` string field
+3. **Resources**: Each tool file references its resource by directory name (e.g., `resource: 'albums'`)
 
-    This means you never need to:
-    - Duplicate tool metadata in simulations
-    - Import resource metadata into simulations
-    - Maintain an index file of simulations or tools
+This means you never need to:
+- Duplicate tool metadata in simulations
+- Import resource metadata into simulations
+- Maintain an index file of simulations or tools
 
-    ## Multiple Scenarios
+## Multiple Scenarios
 
-    Create multiple simulations for the same tool to test different scenarios:
+Create multiple simulations for the same tool to test different scenarios:
 
-    ```
-    src/resources/albums/
-      albums.tsx                       # Component + resource metadata
+```
+src/resources/albums/
+  albums.tsx                       # Component + resource metadata
 
-    src/tools/
-      show-albums.ts                   # Tool metadata, schema, handler
+src/tools/
+  show-albums.ts                   # Tool metadata, schema, handler
 
-    tests/simulations/
-      show-albums.json                 # Default view
-      show-albums-empty.json           # Empty state
-      show-albums-error.json           # Error state
-    ```
+tests/simulations/
+  show-albums.json                 # Default view
+  show-albums-empty.json           # Empty state
+  show-albums-error.json           # Error state
+```
 
-    Each simulation can have different `toolInput` and `toolResult.structuredContent` to test various data scenarios.
-  </Tab>
-  <Tab title="Library (TypeScript)">
-    When using the library directly, create simulations as TypeScript objects.
-
-    ## Import
-
-    ```typescript
-    import type { Simulation } from 'sunpeak';
-    ```
-
-    ## Interface
-
-    ```typescript
-    interface Simulation {
-      // Unique identifier for the simulation
-      name: string;
-
-      // Dev mode: HTML page URL (with Vite HMR)
-      resourceUrl?: string;
-
-      // Prod mode: JS bundle URL
-      resourceScript?: string;
-
-      // Decorative message for simulator UI
-      userMessage?: string;
-
-      // MCP Tool definition (from @modelcontextprotocol/sdk)
-      tool: Tool;
-
-      // MCP Resource definition (from @modelcontextprotocol/sdk)
-      resource: Resource;
-
-      // Mock input parameters for the tool call
-      toolInput?: Record<string, unknown>;
-
-      // Mock data for the tool response
-      toolResult?: {
-        content?: Array<{ type: string; text: string }>;
-        structuredContent?: unknown;
-        isError?: boolean;
-      };
-
-      // Initial host context
-      hostContext?: Partial<McpUiHostContext>;
-    }
-    ```
-
-    ## Usage with Simulator
-
-    Pass simulations to the `Simulator` component:
-
-    ```tsx
-    import 'sunpeak/style.css';
-    import { Simulator } from 'sunpeak/simulator';
-    import type { Simulation } from 'sunpeak';
-
-    const simulations: Record<string, Simulation> = {
-      'show-albums': {
-        name: 'show-albums',
-        resourceUrl: '/resources/albums/index.html',
-        userMessage: 'Show me some albums',
-        tool: {
-          name: 'show-albums',
-          description: 'Display photo albums',
-          inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-          annotations: { readOnlyHint: true },
-        },
-        resource: {
-          name: 'albums',
-          uri: 'resource://albums',
-          mimeType: 'text/html;profile=mcp-app',
-        },
-        toolResult: {
-          structuredContent: {
-            albums: [{ id: '1', title: 'Summer', cover: '/cover.jpg' }],
-          },
-        },
-      },
-    };
-
-    function App() {
-      return <Simulator simulations={simulations} appName="My App" />;
-    }
-    ```
-
-    Simulations can also be passed to [runMCPServer](/api-reference/simulations/run-mcp-server) for testing against real MCP App hosts like ChatGPT.
-  </Tab>
-</Tabs>
+Each simulation can have different `toolInput` and `toolResult.structuredContent` to test various data scenarios.
 
 ## Properties
 
 <ResponseField name="name" type="string" required>
-  Unique identifier for the simulation. Used to select simulations in the UI and URL parameters. (Library only - auto-generated from filename in framework)
-</ResponseField>
-
-<ResponseField name="resourceUrl" type="string">
-  URL to the resource HTML page for dev mode (with Vite HMR). (Library only - auto-linked in framework)
-</ResponseField>
-
-<ResponseField name="resourceScript" type="string">
-  URL to the resource JS bundle for prod mode. (Library only - auto-linked in framework)
+  Unique identifier for the simulation. Auto-generated from the filename.
 </ResponseField>
 
 <ResponseField name="userMessage" type="string">
   A decorative message shown in the simulator interface. Has no functional purpose.
 </ResponseField>
 
-<ResponseField name="tool" type="string | Tool" required>
-  In the framework, a string referencing a tool filename (without `.ts`) in `src/tools/`. In the library, an MCP Tool definition from `@modelcontextprotocol/sdk`.
+<ResponseField name="tool" type="string" required>
+  A string referencing a tool filename (without `.ts`) in `src/tools/`.
 
-  ```typescript
-  // Framework (JSON): string reference
+  ```json
   { "tool": "show-albums" }
-
-  // Library (TypeScript): Tool object
-  import type { Tool } from '@modelcontextprotocol/sdk/types.js';
-  ```
-</ResponseField>
-
-<ResponseField name="resource" type="Resource" required>
-  MCP Resource definition from `@modelcontextprotocol/sdk`. Defines the resource's name, URI, MIME type, and metadata. (Library only - auto-linked in framework)
-
-  ```typescript
-  import type { Resource } from '@modelcontextprotocol/sdk/types.js';
   ```
 </ResponseField>
 
