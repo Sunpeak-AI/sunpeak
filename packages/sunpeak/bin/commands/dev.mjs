@@ -66,17 +66,17 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle) {
   let activeChild = null;
   const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
 
-  const runBuild = (reason) => {
+  const runBuild = () => {
     // Kill any in-progress build and start fresh
     if (activeChild) {
       activeChild.kill('SIGTERM');
       activeChild = null;
     }
 
-    console.log(`[build] ${reason}`);
-    const child = spawn(process.execPath, [sunpeakBin, 'build'], {
+    console.log(`[build] Building resources for the MCP server for non-ChatGPT hosts...`);
+    const child = spawn(process.execPath, [sunpeakBin, 'build', '--quiet'], {
       cwd: projectRoot,
-      stdio: ['ignore', 'inherit', 'inherit'],
+      stdio: ['ignore', 'pipe', 'inherit'],
       env: { ...process.env, NODE_ENV: 'production' },
     });
     activeChild = child;
@@ -85,6 +85,7 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle) {
       if (child !== activeChild) return; // Superseded by a newer build
       activeChild = null;
       if (code === 0) {
+        console.log(`[build] Built resources for the MCP server for non-ChatGPT hosts.`);
         // Notify non-local sessions (Claude, etc.) that resources changed
         mcpHandle?.invalidateResources();
       } else if (code !== null) {
@@ -94,7 +95,7 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle) {
   };
 
   // Initial build
-  runBuild('Initial production build for tunnel clients...');
+  runBuild();
 
   // Watch src/resources/ for changes using fs.watch (recursive supported on macOS/Windows)
   let debounceTimer = null;
@@ -108,7 +109,7 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle) {
 
       clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
-        runBuild(`Rebuilding (${filename} changed)...`);
+        runBuild();
       }, 500);
     });
     console.log('[build] Watching src/resources/ for changes...');

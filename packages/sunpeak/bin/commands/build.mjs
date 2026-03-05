@@ -49,7 +49,8 @@ function resolveEsmEntry(require, packageName) {
  * Build all resources for a Sunpeak project
  * Runs in the context of a user's project directory
  */
-export async function build(projectRoot = process.cwd()) {
+export async function build(projectRoot = process.cwd(), { quiet = false } = {}) {
+  const log = quiet ? () => {} : console.log.bind(console);
 
   // Check for package.json first
   const pkgJsonPath = path.join(projectRoot, 'package.json');
@@ -191,7 +192,7 @@ export async function build(projectRoot = process.cwd()) {
     process.exit(1);
   }
 
-  console.log('Building all resources...\n');
+  log('Building all resources...\n');
 
   // Read and validate the template
   const template = readFileSync(templateFile, 'utf-8');
@@ -214,7 +215,7 @@ export async function build(projectRoot = process.cwd()) {
   // Build all resources (but don't copy yet)
   for (let i = 0; i < resourceFiles.length; i++) {
     const { componentName, componentFile, kebabName, entry, jsOutput, buildOutDir } = resourceFiles[i];
-    console.log(`[${i + 1}/${resourceFiles.length}] Building ${kebabName}...`);
+    log(`[${i + 1}/${resourceFiles.length}] Building ${kebabName}...`);
 
     try {
       // Create build directory if it doesn't exist
@@ -234,6 +235,7 @@ export async function build(projectRoot = process.cwd()) {
       await viteBuild({
         mode: 'production',
         root: projectRoot,
+        ...(quiet && { logLevel: 'silent' }),
         plugins: [react(), tailwindcss(), inlineCssPlugin(buildOutDir)],
         define: {
           'process.env.NODE_ENV': JSON.stringify('production'),
@@ -277,7 +279,7 @@ export async function build(projectRoot = process.cwd()) {
   }
 
   // Now copy all files from build-output to dist/{resource}/
-  console.log('\nCopying built files to dist/...');
+  log('\nCopying built files to dist/...');
   const timestamp = Date.now().toString(36);
 
   for (const { jsOutput, htmlOutput, buildOutDir, distOutDir, kebabName, componentFile, resourceDir } of resourceFiles) {
@@ -296,7 +298,7 @@ export async function build(projectRoot = process.cwd()) {
     // Generate URI using resource name and build timestamp
     meta.uri = `ui://${meta.name}-${timestamp}`;
     writeFileSync(destJson, JSON.stringify(meta, null, 2));
-    console.log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
+    log(`✓ Generated ${kebabName}/${kebabName}.json (uri: ${meta.uri})`);
 
     // Read built JS file and wrap in HTML shell
     const builtJsFile = path.join(buildOutDir, jsOutput);
@@ -318,13 +320,13 @@ ${jsContents}
 </body>
 </html>`;
       writeFileSync(destHtmlFile, html);
-      console.log(`✓ Built ${kebabName}/${htmlOutput}`);
+      log(`✓ Built ${kebabName}/${htmlOutput}`);
     } else {
       console.error(`Built file not found: ${builtJsFile}`);
       if (existsSync(buildOutDir)) {
-        console.log(`  Files in ${buildOutDir}:`, readdirSync(buildOutDir));
+        log(`  Files in ${buildOutDir}:`, readdirSync(buildOutDir));
       } else {
-        console.log(`  Build directory doesn't exist: ${buildOutDir}`);
+        log(`  Build directory doesn't exist: ${buildOutDir}`);
       }
       process.exit(1);
     }
@@ -339,10 +341,10 @@ ${jsContents}
     rmSync(buildDir, { recursive: true });
   }
 
-  console.log('\n✓ All resources built successfully!');
-  console.log('\nBuilt resources:');
+  log('\n✓ All resources built successfully!');
+  log('\nBuilt resources:');
   for (const { kebabName } of resourceFiles) {
-    console.log(`  ${kebabName}`);
+    log(`  ${kebabName}`);
   }
 
   // ========================================================================
@@ -360,7 +362,7 @@ ${jsContents}
   const hasServerEntry = existsSync(serverEntryPath);
 
   if (toolFiles.length > 0 || hasServerEntry) {
-    console.log('\nCompiling server-side code...');
+    log('\nCompiling server-side code...');
 
     let esbuild;
     try {
@@ -407,7 +409,7 @@ ${jsContents}
             loader: { '.tsx': 'tsx', '.ts': 'ts' },
             logLevel: 'warning',
           });
-          console.log(`✓ Compiled tools/${toolName}.js`);
+          log(`✓ Compiled tools/${toolName}.js`);
         } catch (err) {
           console.error(`Failed to compile tool ${toolName}:`, err.message);
           process.exit(1);
@@ -439,7 +441,7 @@ ${jsContents}
             loader: { '.tsx': 'tsx', '.ts': 'ts' },
             logLevel: 'warning',
           });
-          console.log(`✓ Compiled server.js`);
+          log(`✓ Compiled server.js`);
         } catch (err) {
           console.error(`Failed to compile server entry:`, err.message);
           process.exit(1);
@@ -448,12 +450,13 @@ ${jsContents}
     }
   }
 
-  console.log('\n✓ Build complete!');
+  log('\n✓ Build complete!');
 }
 
 // Allow running directly
 if (import.meta.url === `file://${process.argv[1]}`) {
-  build().catch(error => {
+  const quiet = process.argv.includes('--quiet');
+  build(process.cwd(), { quiet }).catch(error => {
     console.error(error);
     process.exit(1);
   });
