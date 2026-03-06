@@ -413,10 +413,13 @@ export function IframeResource({
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
 
-  // Reset loaded state when resource changes to avoid flash of stale content
-  useEffect(() => {
-    setLoaded(false);
-  }, [resourceUrl]);
+  // Reset loaded state synchronously when resource changes so there's no
+  // render frame where the new (white) iframe is shown at full opacity.
+  const prevResourceUrl = useRef(resourceUrl);
+  if (prevResourceUrl.current !== resourceUrl) {
+    prevResourceUrl.current = resourceUrl;
+    if (loaded) setLoaded(false);
+  }
 
   // Track whether we've received an initial size report
   const hasReceivedSizeRef = useRef(false);
