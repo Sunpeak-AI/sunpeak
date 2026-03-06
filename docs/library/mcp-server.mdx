@@ -11,19 +11,16 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP server", "Model Context Protocol", "
 
 ## Overview
 
-The MCP (Model Context Protocol) server lets you serve your apps to AI hosts like ChatGPT and Claude. Once running, the host can discover and render your MCP Apps.
+The [MCP (Model Context Protocol)](/mcp-apps/mcp/overview) server lets you serve your apps to AI hosts like ChatGPT and Claude. Once running, the host can discover and render your MCP Apps.
 
 During development, `sunpeak dev` runs an MCP server that serves simulation fixture data. For production, use `sunpeak build` followed by `sunpeak start` to run your real tool handlers — see the [Deployment Guide](/guides/deployment).
 
 ## What is MCP?
 
-MCP is the protocol AI hosts use to communicate with your servers. It handles:
-
-- Resource & Tool registration and discovery
-- Tool invocation and state synchronization
+MCP is the protocol AI hosts use to communicate with your servers. It handles [tool](/mcp-apps/mcp/tools) and [resource](/mcp-apps/mcp/resources) registration, discovery, and invocation.
 
 <Info>
-Learn more in the [Model Context Protocol documentation](https://modelcontextprotocol.io/).
+Learn more in the [MCP primer](/mcp-apps/mcp/overview) or the [Model Context Protocol documentation](https://modelcontextprotocol.io/).
 </Info>
 
 For details on how MCP Apps extends the protocol with interactive UIs, see the [MCP Apps documentation](/mcp-apps/introduction).

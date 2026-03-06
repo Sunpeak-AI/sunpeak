@@ -133,10 +133,18 @@
         "tab": "MCP Apps",
         "groups": [
           {
-            "group": "Overview",
+            "group": "MCP Apps",
             "pages": [
               "mcp-apps/introduction",
               "mcp-apps/lifecycle"
+            ]
+          },
+          {
+            "group": "MCP",
+            "pages": [
+              "mcp-apps/mcp/overview",
+              "mcp-apps/mcp/tools",
+              "mcp-apps/mcp/resources"
             ]
           },
           {

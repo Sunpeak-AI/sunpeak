@@ -47,7 +47,7 @@ my-app/
 
 ## Testing in ChatGPT
 
-Test your app directly in ChatGPT using the built-in MCP endpoint (starts automatically with `sunpeak dev`):
+Test your app directly in ChatGPT using the built-in [MCP](https://sunpeak.ai/docs/mcp-apps/mcp/overview) endpoint (starts automatically with `sunpeak dev`):
 
 ```bash
 # Start the dev server + MCP endpoint.
@@ -91,7 +91,7 @@ sunpeak start --port 3000     # Custom port (default: 8000)
 
 ## Add a new UI (Resource)
 
-To add a new UI (MCP Resource), create a new directory under `src/resources/` with the following files:
+To add a new UI ([MCP Resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources)), create a new directory under `src/resources/` with the following files:
 
 ```
 src/resources/NAME/
@@ -116,5 +116,6 @@ npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
 
 - [sunpeak](https://github.com/Sunpeak-AI/sunpeak)
 - [MCP Apps Documentation](https://sunpeak.ai/docs/mcp-apps/introduction)
+- [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)

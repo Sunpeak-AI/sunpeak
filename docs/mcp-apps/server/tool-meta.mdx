@@ -33,7 +33,7 @@ registerAppTool(server, "get-weather", {
 _meta: { ui: { resourceUri: "ui://weather/view.html" } }
 ```
 
-Must match a URI registered via [`registerAppResource`](/mcp-apps/server/register-app-resource). When the host invokes this tool, it calls `resources/read` with this URI to fetch the HTML content, then renders it in a sandboxed iframe.
+Must match a URI registered via [`registerAppResource`](/mcp-apps/server/register-app-resource). When the host invokes this tool, it calls [`resources/read`](/mcp-apps/mcp/resources#reading-resourcesread) with this URI to fetch the HTML content, then renders it in a sandboxed iframe.
 
 ### `_meta.ui.visibility`
 
@@ -44,7 +44,7 @@ Must match a URI registered via [`registerAppResource`](/mcp-apps/server/registe
 | Value | Meaning |
 |-------|---------|
 | `"model"` | Tool is included in the agent's tool list and callable by the LLM |
-| `"app"` | Tool is callable by the View (your UI) via [`useAppTools`](/mcp-apps/app/use-app-tools) on the same server connection |
+| `"app"` | Tool is callable by the View (your UI) via [`useAppTools`](/api-reference/hooks/use-app-tools) on the same server connection |
 
 **Default:** `["model", "app"]` — both model and app can access.
 
@@ -104,7 +104,7 @@ registerAppTool(server, "show-cart", {
 Hosts enforce visibility rules:
 
 - The host **MUST NOT** include tools with `visibility: ["app"]` in the agent's tool list.
-- The host **MUST** reject `tools/call` requests from Views for tools that don't include `"app"` in visibility.
+- The host **MUST** reject [`tools/call`](/mcp-apps/mcp/tools#invocation-toolscall) requests from Views for tools that don't include `"app"` in visibility.
 - Cross-server tool calls are always blocked for app-only tools — a View can only call app-visible tools on its **own** MCP server.
 
 ## Metadata Normalization

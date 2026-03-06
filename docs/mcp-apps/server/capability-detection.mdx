@@ -80,4 +80,4 @@ The extension identifier used in the MCP `extensions` field for capability negot
 const EXTENSION_ID = "io.modelcontextprotocol/ui";
 ```
 
-Hosts advertise MCP Apps support by including this key in their `extensions` capabilities during the MCP [initialization handshake](/mcp-apps/lifecycle#2-initialization). `getUiCapability` reads from this key internally.
+Hosts advertise MCP Apps support by including this key in their `extensions` capabilities during the [MCP initialization](/mcp-apps/mcp/overview#connection-lifecycle) [handshake](/mcp-apps/lifecycle#2-initialization). `getUiCapability` reads from this key internally.

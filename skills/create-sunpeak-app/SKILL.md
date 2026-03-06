@@ -48,7 +48,7 @@ Discovery is convention-based:
 
 Every resource file exports two things:
 
-1. **`resource`** — A `ResourceConfig` object with MCP metadata (name is auto-derived from directory)
+1. **`resource`** — A `ResourceConfig` object with [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) metadata (name is auto-derived from directory)
 2. **A named React component** — The UI (`{Name}Resource`)
 
 ```tsx
@@ -194,7 +194,7 @@ All hooks are imported from `sunpeak`:
 | `useLocale()` | `string \| undefined` | Host locale (e.g. `'en-US'`) |
 | `useViewport()` | `{ width, height }` | Viewport dimensions |
 | `useIsMobile()` | `boolean` | True if viewport is mobile-sized |
-| `useApp()` | `App \| null` | Raw MCP App instance for direct SDK calls |
+| `useApp()` | `App \| null` | Raw [MCP App](https://sunpeak.ai/docs/mcp-apps/mcp/overview) instance for direct SDK calls |
 | `useCallServerTool()` | `(params) => Promise<result>` | Returns a function to call a server-side tool by name |
 | `useSendMessage()` | `(params) => Promise<void>` | Returns a function to send a message to the conversation |
 | `useOpenLink()` | `(params) => Promise<void>` | Returns a function to open a URL through the host |
@@ -460,5 +460,6 @@ export const resource: ResourceConfig = {
 
 - [sunpeak Documentation](https://sunpeak.ai/docs)
 - [MCP Apps Documentation](https://sunpeak.ai/docs/mcp-apps/introduction)
+- [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)

@@ -41,9 +41,11 @@ sequenceDiagram
     V-->>H: acknowledgment
 ```
 
+This sequence builds on standard [MCP tool](/mcp-apps/mcp/tools) and [resource](/mcp-apps/mcp/resources) discovery.
+
 ## 1. Discovery
 
-The Host learns about tools and their UI resources when connecting to the server. Tools with `_meta.ui.resourceUri` are identified as MCP App tools.
+The Host learns about tools and their UI resources via the MCP [`tools/list`](/mcp-apps/mcp/tools#discovery-toolslist) call when connecting to the server. Tools with `_meta.ui.resourceUri` are identified as MCP App tools.
 
 ```ts
 registerAppTool(server, "weather", {
@@ -92,7 +94,7 @@ The user interacts with the View. The View can:
 | Change display mode | [`requestDisplayMode()`](/mcp-apps/app/requests#requestdisplaymode) |
 | Send logs | [`sendLog()`](/mcp-apps/app/requests#sendlog) |
 
-The Host proxies tool calls to the MCP server and forwards responses back to the View.
+The Host proxies [tool calls](/mcp-apps/mcp/tools#invocation-toolscall) to the MCP server and forwards responses back to the View.
 
 ## 5. Teardown
 

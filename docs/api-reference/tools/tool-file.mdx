@@ -6,7 +6,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP tools", "tool handlers", "Zod schema
 
 ## Overview
 
-Tool files define your MCP tools — metadata, input validation, and request handlers. Each `.ts` file in `src/tools/` is auto-discovered by the framework.
+Tool files define your [MCP tools](/mcp-apps/mcp/tools) — metadata, input validation, and request handlers. Each `.ts` file in `src/tools/` is auto-discovered by the framework.
 
 ## File Convention
 
@@ -67,7 +67,7 @@ export default async function (args: Args, extra: ToolHandlerExtra) {
 </ResponseField>
 
 <ResponseField name="annotations" type="object">
-  MCP tool annotations.
+  [MCP tool annotations](/mcp-apps/mcp/tools#annotations).
 
   ```typescript
   {

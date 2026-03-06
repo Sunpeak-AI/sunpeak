@@ -34,7 +34,7 @@ Each `.html` file is a complete, self-contained app bundle — no external scrip
 sunpeak start
 ```
 
-This loads your compiled tool handlers, Zod schemas, and optional auth from `dist/`, registers them with the MCP protocol, and starts a Streamable HTTP server on port 8000.
+This loads your compiled tool handlers, Zod schemas, and optional auth from `dist/`, registers them with the [MCP protocol](/mcp-apps/mcp/overview), and starts a [Streamable HTTP](/mcp-apps/mcp/overview#transports) server on port 8000.
 
 ```bash
 sunpeak start --port 3000   # Custom port
@@ -45,7 +45,7 @@ The production server:
 - Registers each tool from `dist/tools/` with its real handler and Zod schema (input validation)
 - Serves pre-built resource HTML from `dist/{name}/{name}.html`
 - Calls your `auth()` function from `src/server.ts` on every request (if present)
-- Uses MCP Streamable HTTP transport on a single `/mcp` endpoint
+- Uses [MCP Streamable HTTP](/mcp-apps/mcp/overview#transports) transport on a single `/mcp` endpoint
 
 ## Testing Locally
 

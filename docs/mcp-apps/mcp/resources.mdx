@@ -1,0 +1,81 @@
+---
+title: "MCP Resources — URIs, MIME Types & Reading"
+sidebarTitle: "Resources"
+description: "How MCP resources work: discovery via resources/list, URI schemes, MIME types, reading via resources/read, and how MCP Apps uses resources for UI delivery."
+keywords: ["MCP resources", "resources/list", "resources/read", "URI", "MIME type", "Model Context Protocol"]
+---
+
+## What Are MCP Resources?
+
+Resources are data that an [MCP server](/mcp-apps/mcp/overview) exposes for reading. Each resource is identified by a URI and has a MIME type. Unlike [tools](/mcp-apps/mcp/tools) (which execute actions), resources represent data that can be fetched — files, structured data, or (in MCP Apps) interactive HTML UIs.
+
+## Discovery (`resources/list`)
+
+The host calls `resources/list` to discover available resources. Each resource declares:
+
+| Field | Description |
+|-------|-------------|
+| `uri` | Unique identifier (e.g., `"ui://weather/view.html"`) |
+| `name` | Human-readable name |
+| `description` | What the resource contains |
+| `mimeType` | Content type (e.g., `"text/html"`, `"application/json"`) |
+
+```json
+{
+  "uri": "ui://weather/view.html",
+  "name": "Weather View",
+  "description": "Interactive weather display",
+  "mimeType": "text/html;profile=mcp-app"
+}
+```
+
+## URIs
+
+Resources are identified by URIs. Servers can use any URI scheme. MCP Apps uses the `ui://` scheme to identify UI resources that should be rendered in iframes.
+
+## MIME Types
+
+Each resource declares its content type via `mimeType`. MCP Apps uses the MIME type `text/html;profile=mcp-app` (exported as `RESOURCE_MIME_TYPE`) to identify HTML resources that hosts should render as interactive Views.
+
+## Reading (`resources/read`)
+
+The host calls `resources/read` with a resource URI to fetch its contents. The server returns an array of content items.
+
+```json
+// Request
+{ "method": "resources/read", "params": { "uri": "ui://weather/view.html" } }
+
+// Response
+{
+  "contents": [{
+    "uri": "ui://weather/view.html",
+    "mimeType": "text/html;profile=mcp-app",
+    "text": "<!DOCTYPE html>..."
+  }]
+}
+```
+
+## In MCP Apps
+
+MCP Apps extends resources with `_meta.ui` metadata on content items. This lets servers declare security policies (CSP), iframe permissions, rendering preferences, and stable sandbox origins for their UIs.
+
+```json
+{
+  "uri": "ui://weather/view.html",
+  "mimeType": "text/html;profile=mcp-app",
+  "text": "<!DOCTYPE html>...",
+  "_meta": {
+    "ui": {
+      "csp": { "connectDomains": ["https://api.example.com"] },
+      "permissions": { "geolocation": {} }
+    }
+  }
+}
+```
+
+<Card horizontal title="registerAppResource" icon="page" href="/mcp-apps/server/register-app-resource">
+  Register HTML resources on the MCP server.
+</Card>
+<Card horizontal title="Resource _meta" icon="page" href="/mcp-apps/server/resource-meta">
+  CSP, permissions, domain, and rendering metadata.
+</Card>

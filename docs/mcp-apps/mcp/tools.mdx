@@ -1,0 +1,78 @@
+---
+title: "MCP Tools — Discovery, Schemas & Invocation"
+sidebarTitle: "Tools"
+description: "How MCP tools work: discovery via tools/list, input validation with JSON Schema, invocation via tools/call, and structured results."
+keywords: ["MCP tools", "tools/list", "tools/call", "JSON Schema", "tool invocation", "Model Context Protocol"]
+---
+
+## What Are MCP Tools?
+
+Tools are functions that an [MCP server](/mcp-apps/mcp/overview) exposes for AI models to call. They're the primary way servers provide actions — fetching data, running computations, modifying state, or triggering side effects. Hosts discover available tools when connecting and present them to the model as callable functions.
+
+## Discovery (`tools/list`)
+
+When a client connects, the host calls `tools/list` to discover the server's tools. Each tool declares:
+
+| Field | Description |
+|-------|-------------|
+| `name` | Unique identifier (e.g., `"get-weather"`) |
+| `description` | What the tool does, for the model to read |
+| `inputSchema` | JSON Schema defining accepted parameters |
+| `annotations` | Hints about behavior (read-only, destructive, etc.) |
+
+```json
+{
+  "name": "get-weather",
+  "description": "Get current weather for a location",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "location": { "type": "string", "description": "City name" }
+    },
+    "required": ["location"]
+  }
+}
+```
+
+## Input Schemas
+
+Tools declare their parameters using [JSON Schema](https://json-schema.org/). The host validates arguments against the schema before invoking the tool. In sunpeak, you define schemas with [Zod](https://zod.dev/) and the framework auto-converts them to JSON Schema.
+
+## Invocation (`tools/call`)
+
+The host calls `tools/call` with the tool name and validated arguments. The server executes the tool and returns a result.
+
+```json
+// Request
+{ "method": "tools/call", "params": { "name": "get-weather", "arguments": { "location": "Tokyo" } } }
+
+// Response
+{ "content": [{ "type": "text", "text": "Tokyo: 22C, partly cloudy" }] }
+```
+
+## Results
+
+Tool results contain two fields:
+
+- **`content`** — An array of content blocks (`text`, `image`, `audio`) that go into the model's context. This is what the AI sees.
+- **`structuredContent`** — Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass data to Views via [`useToolData()`](/api-reference/hooks/use-tool-data).
+
+## Annotations
+
+Tools can include annotations that help hosts decide how to handle them:
+
+| Annotation | Description |
+|------------|-------------|
+| `readOnlyHint` | Tool does not modify state. |
+| `destructiveHint` | Tool may perform destructive operations (deletes, overwrites). |
+| `idempotentHint` | Calling the tool multiple times with the same arguments has the same effect. |
+| `openWorldHint` | Tool interacts with external systems outside the server's control. |
+
+## In sunpeak
+
+<Card horizontal title="Tool File Reference" icon="code" href="/api-reference/tools/tool-file">
+  Define tool metadata, Zod schemas, and handlers in sunpeak projects.
+</Card>
+<Card horizontal title="registerAppTool" icon="page" href="/mcp-apps/server/register-app-tool">
+  Register tools with UI metadata on the MCP server.
+</Card>

@@ -24,7 +24,7 @@ _meta: {
 
 ## Where to Set `_meta`
 
-Set `_meta.ui` on the resource config exported from your resource file. Sunpeak passes it through to both the `resources/list` and `resources/read` responses automatically.
+Set `_meta.ui` on the resource config exported from your resource file. Sunpeak passes it through to both the [`resources/list`](/mcp-apps/mcp/resources#discovery-resourceslist) and [`resources/read`](/mcp-apps/mcp/resources#reading-resourcesread) responses automatically.
 
 ```ts
 // src/resources/player/player.tsx
@@ -43,7 +43,7 @@ export const resource: ResourceConfig = {
 <Accordion title="Advanced: listing-level vs content-item (raw registerAppResource)">
 When using [`registerAppResource`](/mcp-apps/server/register-app-resource) directly (without the Sunpeak framework), you can set `_meta` in two places:
 
-1. **Listing-level** — in the config object. Hosts see this in the `resources/list` response at connection time.
+1. **Listing-level** — in the config object. Hosts see this in the [`resources/list`](/mcp-apps/mcp/resources#discovery-resourceslist) response at connection time.
 2. **Content-item level** — on individual `contents[]` items returned by the read callback. Content-item values take precedence.
 
 This distinction matters when metadata varies per read. Most apps set the same values for both.

@@ -93,7 +93,7 @@ The MCP server exposes:
 
 ## How It Works
 
-The dev server creates MCP Tools and Resources from your tool files and simulations:
+The dev server creates MCP [Tools](/mcp-apps/mcp/tools) and [Resources](/mcp-apps/mcp/resources) from your tool files and simulations:
 
 1. **Tools** — One per simulation, using metadata from the corresponding `src/tools/` file (`tool` config, `schema`). When called, returns the simulation's `toolResult.structuredContent` as fixture data. Tool metadata including `visibility` is preserved.
 2. **Resources** — One per resource, containing the built resource HTML from `distPath` (or Vite HMR HTML for local connections). Resource metadata including `permissions`, `csp`, `prefersBorder`, and `domain` is preserved.

@@ -22,7 +22,7 @@ Quickstart, build, test, and ship your Claude or ChatGPT App!
 
 [Demo (Hosted)](https://sunpeak.ai/simulator) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
-[Discord (NEW)](https://discord.gg/FB2QNXqRnw) ~
+[Discord](https://discord.gg/FB2QNXqRnw) ~
 [Documentation](https://sunpeak.ai/docs) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
@@ -45,7 +45,7 @@ sunpeak new
 
 ## Overview
 
-`sunpeak` is an npm package that helps you build MCP Apps (interactive UI resources) while keeping your MCP server client-agnostic. Built on the [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:
+`sunpeak` is an npm package that helps you build MCP Apps (interactive UI [resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)) while keeping your [MCP server](https://sunpeak.ai/docs/mcp-apps/mcp/overview) client-agnostic. Built on the [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:
 
 ### The `sunpeak` library
 
@@ -55,21 +55,21 @@ sunpeak new
 
 ### The `sunpeak` framework
 
-Next.js for MCP Apps. Using an example App `my-app` with a `Review` UI (MCP resource), `sunpeak` projects look like:
+Next.js for MCP Apps. Using an example App `my-app` with a `Review` UI ([MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources)), `sunpeak` projects look like:
 
 ```bash
 my-app/
 ├── src/
 │   ├── resources/
 │   │   └── review/
-│   │       └── review.tsx           # Review UI component + resource metadata.
+│   │       └── review.tsx   # Review UI component + resource metadata.
 │   ├── tools/
-│   │   ├── review-diff.ts           # Tool with handler, schema, and resource reference.
-│   │   └── review-post.ts           # Multiple tools can share one resource.
-│   └── server.ts                    # Optional: auth, server config.
+│   │   ├── review-diff.ts   # Tool with handler, schema, and resource reference.
+│   │   └── review-post.ts   # Multiple tools can share one resource.
+│   └── server.ts            # Optional: auth, server config.
 ├── tests/simulations/
-│   ├── review-diff.json             # Mock state for testing.
-│   └── review-post.json             # Mock state for testing.
+│   ├── review-diff.json     # Mock state for testing.
+│   └── review-post.json     # Mock state for testing.
 └── package.json
 ```
 
@@ -92,11 +92,11 @@ Commands for managing MCP Apps:
 
 ## Example App
 
-Example `Resource`, `Simulation`, and testing file (using the `Simulator`) for an MCP resource called "Review".
+Example `Resource`, `Simulation`, and testing file (using the `Simulator`) for an [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) called "Review".
 
 ### `Resource` Component
 
-Each resource `.tsx` file exports both the React component and the MCP resource metadata:
+Each resource `.tsx` file exports both the React component and the [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) metadata:
 
 ```tsx
 // src/resources/review/review.tsx
@@ -222,5 +222,6 @@ npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
 ## Resources
 
 - [MCP Apps Documentation](https://sunpeak.ai/docs/mcp-apps/introduction)
+- [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)

@@ -18,7 +18,7 @@ Sunpeak provides three ways to run a production MCP server, from zero-config to 
 
 `createMcpHandler` and `createHandler` accept these as config objects — you load and pass them yourself. This gives full control over how tools, resources, and auth are provided.
 
-All three use MCP Streamable HTTP transport on a single `/mcp` endpoint.
+All three use [MCP Streamable HTTP](/mcp-apps/mcp/overview#transports) transport on a single `/mcp` endpoint.
 
 ## `createMcpHandler`
 
@@ -57,7 +57,7 @@ app.listen(3000);
 ### `ProductionServerConfig`
 
 <ResponseField name="name" type="string" default="sunpeak-app">
-  Server name reported to hosts during MCP handshake.
+  Server name reported to hosts during [MCP handshake](/mcp-apps/mcp/overview#connection-lifecycle).
 </ResponseField>
 
 <ResponseField name="version" type="string" default="0.1.0">
