@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "custom fonts", "typography", "font-face"
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { applyHostFonts } from "sunpeak";
+import { applyHostFonts } from "@modelcontextprotocol/ext-apps";
 ```
 
 <Tip>
@@ -92,7 +92,7 @@ import {
   applyDocumentTheme,
   applyHostStyleVariables,
   applyHostFonts,
-} from "sunpeak";
+} from "@modelcontextprotocol/ext-apps";
 
 function applyHostContext(ctx) {
   if (ctx.theme) {
@@ -112,3 +112,7 @@ await app.connect();
 const ctx = app.getHostContext();
 if (ctx) applyHostContext(ctx);
 ```
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useHostContext`](/api-reference/hooks/use-host-context) which auto-applies host styles in React components.
+</Tip>

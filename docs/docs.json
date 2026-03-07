@@ -154,8 +154,8 @@
             "group": "Server API",
             "pages": [
               "mcp-apps/server/register-app-tool",
-              "mcp-apps/server/tool-meta",
               "mcp-apps/server/register-app-resource",
+              "mcp-apps/server/tool-meta",
               "mcp-apps/server/resource-meta",
               "mcp-apps/server/capability-detection"
             ]

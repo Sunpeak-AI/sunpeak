@@ -34,7 +34,7 @@ flowchart LR
 MCP defines two standard transports:
 
 - **stdio** — Communication over standard input/output. Used for local servers running as subprocesses.
-- **Streamable HTTP** — Communication over HTTP with server-sent events. Used for remote servers accessible over the network. This is the transport sunpeak uses.
+- **Streamable HTTP** — Communication over HTTP with server-sent events. Used for remote servers accessible over the network.
 
 ## Connection Lifecycle
 
@@ -64,7 +64,7 @@ MCP defines three types of capabilities that servers can expose:
 
 - **[Tools](/mcp-apps/mcp/tools)** — Functions the model can call. Used for actions like fetching data, running computations, or modifying state.
 - **[Resources](/mcp-apps/mcp/resources)** — Data the model can read. Identified by URIs with MIME types. Used for structured data, files, and (in MCP Apps) interactive HTML UIs.
-- **Prompts** — Reusable prompt templates. Not used by sunpeak.
+- **Prompts** — Reusable prompt templates. Not currently used by MCP Apps.
 
 ## Learn More
 

@@ -25,7 +25,7 @@ import type {
   McpUiResourceCsp,
   McpUiResourcePermissions,
   McpUiSupportedContentBlockModalities,
-} from "sunpeak";
+} from "@modelcontextprotocol/ext-apps";
 ```
 
 ## McpUiHostContext
@@ -233,3 +233,7 @@ interface McpUiSupportedContentBlockModalities {
   structuredContent?: {};
 }
 ```
+
+<Tip>
+The [sunpeak framework](/quickstart) provides convenience hooks for accessing these types reactively: [`useHostContext`](/api-reference/hooks/use-host-context), [`useHostInfo`](/api-reference/hooks/use-host-info), and [`useTheme`](/api-reference/hooks/use-theme).
+</Tip>

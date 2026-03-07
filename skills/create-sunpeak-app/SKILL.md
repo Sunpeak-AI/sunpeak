@@ -191,7 +191,7 @@ All hooks are imported from `sunpeak`:
 | `useTheme()` | `'light' \| 'dark' \| undefined` | Current theme |
 | `useDisplayMode()` | `'inline' \| 'pip' \| 'fullscreen'` | Current display mode (defaults to `'inline'`) |
 | `useSafeArea()` | `{ top, right, bottom, left }` | Safe area insets |
-| `useLocale()` | `string \| undefined` | Host locale (e.g. `'en-US'`) |
+| `useLocale()` | `string` | Host locale (e.g. `'en-US'`, defaults to `'en-US'`) |
 | `useViewport()` | `{ width, height }` | Viewport dimensions |
 | `useIsMobile()` | `boolean` | True if viewport is mobile-sized |
 | `useApp()` | `App \| null` | Raw [MCP App](https://sunpeak.ai/docs/mcp-apps/mcp/overview) instance for direct SDK calls |
@@ -199,8 +199,14 @@ All hooks are imported from `sunpeak`:
 | `useSendMessage()` | `(params) => Promise<void>` | Returns a function to send a message to the conversation |
 | `useOpenLink()` | `(params) => Promise<void>` | Returns a function to open a URL through the host |
 | `useRequestDisplayMode()` | `{ requestDisplayMode, availableModes }` | Request `'inline'`, `'pip'`, or `'fullscreen'`; check `availableModes` first |
+| `useDownloadFile()` | `(params) => Promise<result>` | Download files through the host (works cross-platform) |
+| `useReadServerResource()` | `(params) => Promise<result>` | Read a resource from the MCP server by URI |
+| `useListServerResources()` | `(params?) => Promise<result>` | List available resources on the MCP server |
+| `useUpdateModelContext()` | `(params) => Promise<void>` | Push state to the host's model context directly |
 | `useSendLog()` | `(params) => Promise<void>` | Send debug log to host |
+| `useHostInfo()` | `{ hostVersion, hostCapabilities }` | Host name, version, and supported capabilities |
 | `useTeardown(fn)` | `void` | Register a teardown handler |
+| `useAppTools(config)` | `void` | Register tools the app provides to the host (bidirectional tool calling) |
 | `useAppState(initial)` | `[state, setState]` | React state that auto-syncs to host model context via `updateModelContext()` |
 
 ### `useRequestDisplayMode` details
@@ -264,6 +270,73 @@ const {
 ```
 
 Use `inputPartial` for progressive rendering during LLM generation. Use `output` for the final data.
+
+### `useDownloadFile` details
+
+```tsx
+const downloadFile = useDownloadFile();
+
+// Download embedded text content
+await downloadFile({
+  contents: [{
+    type: 'resource',
+    resource: {
+      uri: 'file:///export.json',
+      mimeType: 'application/json',
+      text: JSON.stringify(data, null, 2),
+    },
+  }],
+});
+
+// Download embedded binary content
+await downloadFile({
+  contents: [{
+    type: 'resource',
+    resource: {
+      uri: 'file:///image.png',
+      mimeType: 'image/png',
+      blob: base64EncodedPng,
+    },
+  }],
+});
+```
+
+### `useReadServerResource` / `useListServerResources` details
+
+```tsx
+const readResource = useReadServerResource();
+const listResources = useListServerResources();
+
+// List available resources
+const result = await listResources();
+for (const resource of result?.resources ?? []) {
+  console.log(resource.name, resource.uri);
+}
+
+// Read a specific resource by URI
+const content = await readResource({ uri: 'videos://bunny-1mb' });
+```
+
+### `useAppTools` details
+
+Register tools the app provides to the host for bidirectional tool calling. Requires `tools` capability.
+
+```tsx
+import { useAppTools } from 'sunpeak';
+
+function MyResource() {
+  useAppTools({
+    tools: [{
+      name: 'get-selection',
+      description: 'Get current user selection',
+      inputSchema: { type: 'object', properties: {} },
+      handler: async () => ({
+        content: [{ type: 'text', text: selectedText }],
+      }),
+    }],
+  });
+}
+```
 
 ## Commands
 
@@ -331,7 +404,7 @@ function MyResource() {
 | Hook | Description |
 |------|-------------|
 | `useUploadFile()` | Upload a file to ChatGPT, returns file ID |
-| `useGetFileDownloadUrl(fileId)` | Get a download URL for an uploaded file |
+| `useGetFileDownloadUrl(fileId)` | **Deprecated** — use `useDownloadFile()` from `sunpeak` instead |
 | `useRequestModal(params)` | Open a host-native modal dialog |
 | `useRequestCheckout(session)` | Trigger ChatGPT instant checkout |
 

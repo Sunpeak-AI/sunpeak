@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "dark mode", "light mode", "theme detecti
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { applyDocumentTheme, getDocumentTheme } from "sunpeak";
+import { applyDocumentTheme, getDocumentTheme } from "@modelcontextprotocol/ext-apps";
 ```
 
 <Tip>
@@ -95,3 +95,7 @@ type McpUiTheme = "light" | "dark";
 ```
 
 See also: [CSS Variables](/mcp-apps/styling/css-variables) for host-provided color tokens, and [Fonts](/mcp-apps/styling/fonts) for host typography.
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useTheme`](/api-reference/hooks/use-theme) for reactive theme access in React components.
+</Tip>

@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "CSS variables", "custom properties", "ho
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { applyHostStyleVariables } from "sunpeak";
+import { applyHostStyleVariables } from "@modelcontextprotocol/ext-apps";
 ```
 
 <Tip>
@@ -179,3 +179,7 @@ All variables are optional — hosts may provide any subset.
 | `--shadow-lg` | Large shadow |
 
 See also: [Theme](/mcp-apps/styling/theme) for light/dark mode detection, and [Fonts](/mcp-apps/styling/fonts) for host typography.
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useHostContext`](/api-reference/hooks/use-host-context) which auto-applies host styles in React components.
+</Tip>

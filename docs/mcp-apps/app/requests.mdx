@@ -8,12 +8,8 @@ keywords: ["MCP Apps", "ChatGPT Apps", "app requests", "server tools", "send mes
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { App } from "sunpeak";
+import { App } from "@modelcontextprotocol/ext-apps";
 ```
-
-<Note>
-sunpeak provides convenience hooks for most of these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useDownloadFile`](/api-reference/hooks/use-download-file), [`useListServerResources`](/api-reference/hooks/use-list-server-resources), [`useReadServerResource`](/api-reference/hooks/use-read-server-resource), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), and [`useSendLog`](/api-reference/hooks/use-send-log). Use those instead of calling `app` methods directly in React components.
-</Note>
 
 ## Overview
 
@@ -271,3 +267,7 @@ sendSizeChanged(params: { width?: number; height?: number }): Promise<void>
 ```ts
 app.sendSizeChanged({ width: 400, height: 600 });
 ```
+
+<Tip>
+The [sunpeak framework](/quickstart) provides React convenience hooks that wrap these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useDownloadFile`](/api-reference/hooks/use-download-file), [`useListServerResources`](/api-reference/hooks/use-list-server-resources), [`useReadServerResource`](/api-reference/hooks/use-read-server-resource), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), and [`useSendLog`](/api-reference/hooks/use-send-log).
+</Tip>

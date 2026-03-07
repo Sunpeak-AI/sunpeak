@@ -154,7 +154,16 @@ Docs are built with [Mintlify](https://mintlify.com). Structure:
 - **`docs/mcp-apps/`** — MCP Apps SDK documentation (protocol-level, not sunpeak-specific). Badge: `<Badge color="green">MCP Apps SDK</Badge>`.
 - **`docs/mcp-apps/types/protocol-reference.mdx`** — Complete protocol type/schema reference.
 
-When adding new hooks or features, you must: create the hook doc page, add it to `docs.json` navigation (alphabetical within its group), and update cross-references (e.g., the `<Note>` in `mcp-apps/app/requests.mdx` that lists convenience hooks).
+When adding new hooks or features, you must: create the hook doc page, add it to `docs.json` navigation (alphabetical within its group), and update cross-references (e.g., the `<Tip>` in `mcp-apps/app/requests.mdx` that lists convenience hooks).
+
+### Places to Update When User-Facing Functionality Changes
+
+When sunpeak package APIs change (new hooks, new features, deprecations, etc.), these locations may need updating:
+
+1. **`docs/`** — Mintlify docs pages (hook docs, MCP Apps SDK docs, cross-references)
+2. **READMEs** — `README.md` files throughout the monorepo (`packages/sunpeak/README.md`, root `README.md`, template `README.md`)
+3. **`skills/create-sunpeak-app/SKILL.md`** — Agent skill reference with hook tables, code examples, and usage patterns
+4. **Marketing website** — Separate repository (`../sunpeak-website/` or similar) with feature descriptions and code samples
 
 ## Upgrading Dependencies
 

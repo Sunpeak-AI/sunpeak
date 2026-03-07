@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useDocumentTheme", "dark 
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { useDocumentTheme } from "sunpeak";
+import { useDocumentTheme } from "@modelcontextprotocol/ext-apps/react";
 ```
 
 ## Overview
@@ -68,4 +68,8 @@ The observer is automatically disconnected when the component unmounts.
 
 <Tip>
 In most cases, prefer using CSS variables (`var(--color-background-primary)`) or `[data-theme="dark"]` selectors instead of this hook. Reserve `useDocumentTheme` for logic that must branch on the theme value (e.g., choosing between different chart color palettes).
+</Tip>
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useTheme`](/api-reference/hooks/use-theme) for reactive theme access in React components.
 </Tip>

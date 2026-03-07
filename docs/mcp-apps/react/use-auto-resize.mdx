@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useAutoResize", "ResizeOb
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { useAutoResize } from "sunpeak";
+import { useAutoResize } from "@modelcontextprotocol/ext-apps/react";
 ```
 
 ## Overview
@@ -16,7 +16,7 @@ import { useAutoResize } from "sunpeak";
 `useAutoResize` enables automatic size reporting to the host via `ResizeObserver`. It watches `document.body` and `document.documentElement` for size changes and sends `ui/notifications/size-changed` notifications.
 
 <Note>
-This hook is **rarely needed**. The `useApp` hook creates the `App` with `autoResize: true` by default, which handles this automatically. Only use `useAutoResize` if you create the `App` manually with `autoResize: false`.
+This hook is **rarely needed**. The [`useApp`](/mcp-apps/react/use-app) hook creates the `App` with `autoResize: true` by default, which handles this automatically. Only use `useAutoResize` if you create the `App` manually with `autoResize: false`.
 </Note>
 
 ## Signature

@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useHostStyles", "CSS vari
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { useHostStyles, useHostStyleVariables, useHostFonts } from "sunpeak";
+import { useHostStyles, useHostStyleVariables, useHostFonts } from "@modelcontextprotocol/ext-apps/react";
 ```
 
 ## useHostStyles
@@ -28,7 +28,10 @@ function useHostStyles(
 
 ```tsx
 function MyApp() {
-  const app = useApp();
+  const { app } = useApp({
+    appInfo: { name: "MyApp", version: "1.0.0" },
+    capabilities: {},
+  });
 
   useHostStyles(app, app?.getHostContext());
 
@@ -87,7 +90,10 @@ function useHostFonts(
 
 ```tsx
 function MyApp() {
-  const app = useApp();
+  const { app } = useApp({
+    appInfo: { name: "MyApp", version: "1.0.0" },
+    capabilities: {},
+  });
 
   useHostFonts(app, app?.getHostContext());
 
@@ -102,3 +108,7 @@ function MyApp() {
 | `useHostStyles` | CSS variables + theme + fonts (recommended) |
 | `useHostStyleVariables` | CSS variables + theme only |
 | `useHostFonts` | Fonts only |
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useHostContext`](/api-reference/hooks/use-host-context) which auto-applies host styles in React components.
+</Tip>

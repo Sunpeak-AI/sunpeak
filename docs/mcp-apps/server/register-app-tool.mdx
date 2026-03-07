@@ -6,10 +6,9 @@ keywords: ["MCP Apps", "ChatGPT Apps", "register tool", "MCP server", "tool visi
 ---
 
 <Badge color="green">MCP Apps SDK</Badge>
-<Badge color="yellow">sunpeak API</Badge>
 
 ```ts
-import { registerAppTool } from "sunpeak/mcp";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 ```
 
 ## Overview
@@ -77,7 +76,7 @@ function registerAppTool(
 ### Basic tool with UI
 
 ```ts
-import { registerAppTool } from "sunpeak/mcp";
+import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
 import { z } from "zod";
 
 registerAppTool(
@@ -150,3 +149,7 @@ registerAppTool(
 ## `_meta` Reference
 
 See **[Tool `_meta`](/mcp-apps/server/tool-meta)** for the complete reference on `resourceUri`, `visibility`, host behavior rules, and metadata normalization.
+
+<Tip>
+In the [sunpeak framework](/quickstart), tools are defined as auto-discovered files. See the [Tool File Reference](/api-reference/tools/tool-file).
+</Tip>

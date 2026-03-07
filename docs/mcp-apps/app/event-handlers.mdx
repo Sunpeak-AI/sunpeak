@@ -8,12 +8,8 @@ keywords: ["MCP Apps", "ChatGPT Apps", "event handlers", "tool input", "tool res
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { App } from "sunpeak";
+import { App } from "@modelcontextprotocol/ext-apps";
 ```
-
-<Note>
-In sunpeak, register event handlers in the `onAppCreated` callback of [`useApp`](/mcp-apps/react/use-app) to ensure they're set before the connection handshake.
-</Note>
 
 ## Overview
 
@@ -176,9 +172,13 @@ app.onlisttools = async () => {
 The setter properties above are convenience wrappers. You can also use the underlying MCP SDK methods directly:
 
 ```ts
-import { McpUiToolInputNotificationSchema } from "sunpeak";
+import { McpUiToolInputNotificationSchema } from "@modelcontextprotocol/ext-apps";
 
 app.setNotificationHandler(McpUiToolInputNotificationSchema, (notification) => {
   console.log("Tool input:", notification.params.arguments);
 });
 ```
+
+<Tip>
+Register event handlers in the `onAppCreated` callback of [`useApp`](/mcp-apps/react/use-app) to ensure they're set before the handshake. The [sunpeak framework](/quickstart) provides convenience hooks: [`useToolData`](/api-reference/hooks/use-tool-data), [`useTeardown`](/api-reference/hooks/use-teardown), and [`useAppTools`](/api-reference/hooks/use-app-tools).
+</Tip>

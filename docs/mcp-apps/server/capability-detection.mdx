@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "capability detection", "f
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { getUiCapability, EXTENSION_ID, RESOURCE_MIME_TYPE } from "sunpeak/mcp";
+import { getUiCapability, EXTENSION_ID, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 ```
 
 ## Overview
@@ -46,7 +46,7 @@ import {
   getUiCapability,
   registerAppTool,
   RESOURCE_MIME_TYPE,
-} from "sunpeak/mcp";
+} from "@modelcontextprotocol/ext-apps/server";
 
 server.server.oninitialized = () => {
   const clientCapabilities = server.server.getClientCapabilities();
@@ -83,3 +83,7 @@ const EXTENSION_ID = "io.modelcontextprotocol/ui";
 ```
 
 Hosts advertise MCP Apps support by including this key in their `extensions` capabilities during the [MCP initialization](/mcp-apps/mcp/overview#connection-lifecycle) [handshake](/mcp-apps/lifecycle#2-initialization). `getUiCapability` reads from this key internally.
+
+<Tip>
+In the [sunpeak framework](/quickstart), capability detection is handled in the [Server Entry](/api-reference/tools/server-entry).
+</Tip>

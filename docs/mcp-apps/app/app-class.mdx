@@ -8,12 +8,8 @@ keywords: ["MCP Apps", "ChatGPT Apps", "App class", "PostMessageTransport", "hos
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { App, PostMessageTransport } from "sunpeak";
+import { App, PostMessageTransport } from "@modelcontextprotocol/ext-apps";
 ```
-
-<Note>
-In sunpeak, the [`useApp`](/mcp-apps/react/use-app) hook handles `App` creation and connection automatically. The details below are useful for understanding the underlying API or for non-React usage.
-</Note>
 
 ## Overview
 
@@ -114,7 +110,7 @@ if (ctx?.theme === "dark") {
 The transport layer for iframe-to-parent communication using `window.postMessage`. In most cases you never need to use this directly — `App.connect()` creates one automatically when no transport is provided.
 
 ```ts
-import { PostMessageTransport } from "sunpeak";
+import { PostMessageTransport } from "@modelcontextprotocol/ext-apps";
 
 new PostMessageTransport(eventTarget?, eventSource)
 ```
@@ -149,3 +145,7 @@ Manually notify the host of a size change:
 ```ts
 app.sendSizeChanged({ width: 400, height: 600 });
 ```
+
+<Tip>
+In React, the SDK's [`useApp`](/mcp-apps/react/use-app) hook handles App creation and connection automatically. The [sunpeak framework](/quickstart) provides additional convenience hooks like [`useApp`](/api-reference/hooks/use-app).
+</Tip>

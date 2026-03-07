@@ -36,7 +36,7 @@ When a client connects, the host calls `tools/list` to discover the server's too
 
 ## Input Schemas
 
-Tools declare their parameters using [JSON Schema](https://json-schema.org/). The host validates arguments against the schema before invoking the tool. In sunpeak, you define schemas with [Zod](https://zod.dev/) and the framework auto-converts them to JSON Schema.
+Tools declare their parameters using [JSON Schema](https://json-schema.org/). The host validates arguments against the schema before invoking the tool. Schemas can also be defined with [Zod](https://zod.dev/) — the SDK auto-converts them to JSON Schema.
 
 ## Invocation (`tools/call`)
 
@@ -55,7 +55,7 @@ The host calls `tools/call` with the tool name and validated arguments. The serv
 Tool results contain two fields:
 
 - **`content`** — An array of content blocks (`text`, `image`, `audio`) that go into the model's context. This is what the AI sees.
-- **`structuredContent`** — Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass data to Views via [`useToolData()`](/api-reference/hooks/use-tool-data).
+- **`structuredContent`** — Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass data to Views (see [Event Handlers](/mcp-apps/app/event-handlers#ontoolresult)).
 
 ## Annotations
 
@@ -68,11 +68,12 @@ Tools can include annotations that help hosts decide how to handle them:
 | `idempotentHint` | Calling the tool multiple times with the same arguments has the same effect. |
 | `openWorldHint` | Tool interacts with external systems outside the server's control. |
 
-## In sunpeak
+## Related
 
-<Card horizontal title="Tool File Reference" icon="code" href="/api-reference/tools/tool-file">
-  Define tool metadata, Zod schemas, and handlers in sunpeak projects.
-</Card>
 <Card horizontal title="registerAppTool" icon="page" href="/mcp-apps/server/register-app-tool">
   Register tools with UI metadata on the MCP server.
 </Card>
+
+<Tip>
+In the [sunpeak framework](/quickstart), tools are defined as individual files that are auto-discovered. See the [Tool File Reference](/api-reference/tools/tool-file).
+</Tip>
