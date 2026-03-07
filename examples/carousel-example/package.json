@@ -14,26 +14,26 @@
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
-    "sunpeak": "^0.16.11",
-    "tailwind-merge": "^3.4.0",
-    "zod": "^3.25.0"
+    "sunpeak": "^0.16.12",
+    "tailwind-merge": "^3.5.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@playwright/test": "^1.57.0",
-    "@tailwindcss/vite": "^4.1.18",
+    "@playwright/test": "^1.58.2",
+    "@tailwindcss/vite": "^4.2.1",
     "@testing-library/jest-dom": "^6.9.1",
-    "@testing-library/react": "^16.3.1",
+    "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^22.15.3",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.5.2",
-    "jsdom": "^27.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "tailwindcss": "^4.1.18",
+    "@types/node": "^22.19.6",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "jsdom": "^28.1.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3",
-    "vite": "^5.4.21",
-    "vitest": "^4.0.12"
+    "vite": "^7.3.1",
+    "vitest": "^4.0.18"
   }
 }

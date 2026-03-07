@@ -158,18 +158,19 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
   // Import sunpeak modules (MCP server and discovery utilities)
   // Use discovery-cli which only exports Node.js-safe utilities (no React components)
-  let sunpeakMcp, sunpeakDiscovery;
+  let sunpeakMcp, sunpeakDiscovery, loaderServer;
   if (isTemplate) {
-    // In workspace dev mode, use Vite to load TypeScript source directly
-    const loaderServer = await createServer({
+    // In workspace dev mode, use Vite to load TypeScript source directly.
+    // Keep the loader server alive — Vite 7's module runner invalidates loaded
+    // modules on close, breaking dynamic imports (e.g. `await import('esbuild')`).
+    loaderServer = await createServer({
       root: resolve(projectRoot, '..'),
-      server: { middlewareMode: true },
+      server: { middlewareMode: true, hmr: false },
       appType: 'custom',
       logLevel: 'silent',
     });
     sunpeakMcp = await loaderServer.ssrLoadModule('./src/mcp/index.ts');
     sunpeakDiscovery = await loaderServer.ssrLoadModule('./src/lib/discovery-cli.ts');
-    await loaderServer.close();
   } else {
     // Import from installed sunpeak package
     const sunpeakBase = require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, '');
@@ -364,6 +365,7 @@ if (import.meta.hot) {
       },
       server: {
         middlewareMode: true,
+        hmr: { port: 24679 },
         allowedHosts: true,
         watch: {
           // Only watch files that affect the UI bundle (not JSON, tests, etc.)
@@ -400,26 +402,30 @@ if (import.meta.hot) {
     // On successful builds, mcpHandle.invalidateResources() notifies tunnel sessions.
     startBuildWatcher(projectRoot, resourcesDir, mcpHandle);
 
-    // Handle signals - close both servers
+    // Handle signals - close all servers
     process.on('SIGINT', async () => {
       await mcpViteServer.close();
+      if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
       await mcpViteServer.close();
+      if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
     });
   } else {
     // No simulations - just handle signals for the dev server
     process.on('SIGINT', async () => {
+      if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
     });
 
     process.on('SIGTERM', async () => {
+      if (loaderServer) await loaderServer.close();
       await server.close();
       process.exit(0);
     });
