@@ -44,7 +44,9 @@ export interface DownloadFileResult {
  * }
  * ```
  */
-export function useDownloadFile(): (params: DownloadFileParams) => Promise<DownloadFileResult | undefined> {
+export function useDownloadFile(): (
+  params: DownloadFileParams
+) => Promise<DownloadFileResult | undefined> {
   const app = useApp();
   return useCallback(
     async (params: DownloadFileParams) => {

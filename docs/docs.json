@@ -45,8 +45,10 @@
           {
             "group": "Guides",
             "pages": [
-              "guides/testing",
-              "guides/deployment"
+              "guides/authorization",
+              "guides/deployment",
+              "guides/patterns",
+              "guides/testing"
             ]
           },
           {
@@ -158,6 +160,12 @@
               "mcp-apps/server/tool-meta",
               "mcp-apps/server/resource-meta",
               "mcp-apps/server/capability-detection"
+            ]
+          },
+          {
+            "group": "Security",
+            "pages": [
+              "mcp-apps/security/csp-cors"
             ]
           },
           {

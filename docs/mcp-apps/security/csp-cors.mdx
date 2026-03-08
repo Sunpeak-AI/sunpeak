@@ -1,0 +1,124 @@
+---
+title: "CSP & CORS"
+description: "Configure Content Security Policy and CORS for MCP Apps that make network requests from sandboxed iframes."
+keywords: ["MCP Apps", "ChatGPT Apps", "CSP", "CORS", "Content Security Policy", "security", "sandbox"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+## Overview
+
+Unlike regular web apps, MCP Apps run in sandboxed iframes with no same-origin server. Any app that makes network requests must configure Content Security Policy (CSP) and possibly CORS.
+
+**CSP** controls what the _browser_ allows. Declare all origins in [`_meta.ui.csp`](/mcp-apps/server/resource-meta#csp--content-security-policy) — including `localhost` during development. No external connections are allowed by default.
+
+**CORS** controls what the _API server_ allows. Public APIs that respond with `Access-Control-Allow-Origin: *` work without CORS configuration. For APIs that allowlist specific origins, use `_meta.ui.domain` to give the app a stable origin.
+
+## CSP configuration
+
+Set CSP fields in [`McpUiResourceCsp`](/mcp-apps/types/core-types#mcpuiresourcecsp) via `_meta.ui.csp` on resource content items:
+
+| Field | Controls | Example |
+|-------|----------|---------|
+| `connectDomains` | `fetch`, `XHR`, `WebSocket` | `["https://api.example.com"]` |
+| `resourceDomains` | Scripts, images, fonts, stylesheets | `["https://cdn.example.com"]` |
+| `frameDomains` | Nested iframes | `["https://embed.example.com"]` |
+| `baseUriDomains` | Allowed base URIs | `["https://example.com"]` |
+
+```ts
+import { registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
+
+registerAppResource(server, "Dashboard", "ui://dashboard/view.html", {
+  description: "Interactive dashboard",
+}, async () => ({
+  contents: [{
+    uri: "ui://dashboard/view.html",
+    mimeType: RESOURCE_MIME_TYPE,
+    text: dashboardHtml,
+    _meta: {
+      ui: {
+        csp: {
+          connectDomains: ["https://api.example.com"],
+          resourceDomains: ["https://cdn.example.com"],
+        },
+      },
+    },
+  }],
+}));
+```
+
+<Warning>
+CSP is restrictive by default. If you don't declare domains, no external connections are allowed. This prevents data exfiltration to undeclared servers.
+</Warning>
+
+## CORS
+
+Public APIs with `Access-Control-Allow-Origin: *` or API key authentication work without CORS configuration.
+
+For APIs that allowlist specific origins, you need a stable origin. MCP Apps served as `srcdoc` or `blob:` URLs don't have a meaningful origin by default. Use `_meta.ui.domain` to assign one.
+
+### Stable origins for Claude
+
+Claude computes a stable origin from the MCP server URL. Use this pattern to set `_meta.ui.domain`:
+
+```ts
+import crypto from "node:crypto";
+
+function computeAppDomainForClaude(mcpServerUrl: string): string {
+  const hash = crypto
+    .createHash("sha256")
+    .update(mcpServerUrl)
+    .digest("hex")
+    .slice(0, 32);
+  return `${hash}.claudemcpcontent.com`;
+}
+
+const APP_DOMAIN = computeAppDomainForClaude("https://example.com/mcp");
+```
+
+Then set both CSP and domain in the resource read callback:
+
+```ts
+registerAppResource(server, "Dashboard", "ui://dashboard/view.html", {
+  description: "Dashboard with API access",
+}, async () => ({
+  contents: [{
+    uri: "ui://dashboard/view.html",
+    mimeType: RESOURCE_MIME_TYPE,
+    text: dashboardHtml,
+    _meta: {
+      ui: {
+        // CSP: tell browser the app is allowed to make requests
+        csp: {
+          connectDomains: ["https://api.example.com"],
+        },
+        // CORS: give app a stable origin for the API server to allowlist
+        domain: APP_DOMAIN,
+      },
+    },
+  }],
+}));
+```
+
+<Info>
+The `domain` format is host-specific. Check each host's documentation for its supported format. The Claude pattern above uses SHA-256 hashing of the MCP server URL.
+</Info>
+
+## Metadata location
+
+`_meta.ui.csp` and `_meta.ui.domain` are set in the `contents[]` objects returned by the resource read callback — not in `registerAppResource()`'s config object. This allows dynamic CSP based on request context.
+
+CSP can also be declared in `resources/list` responses as static defaults. When both are present, the value in `resources/read` (content item) takes precedence.
+
+## See also
+
+<Card horizontal title="Resource Metadata" icon="shield" href="/mcp-apps/server/resource-meta">
+  Full reference for `McpUiResourceMeta` including CSP and permissions.
+</Card>
+<Card horizontal title="McpUiResourceCsp" icon="code" href="/mcp-apps/types/core-types#mcpuiresourcecsp">
+  TypeScript type definition for CSP fields.
+</Card>
+
+<Tip>
+In the [sunpeak framework](/quickstart), set CSP in your resource file's `_meta.ui.csp` field. See the [resource file reference](/api-reference/resources/albums) for an example.
+</Tip>

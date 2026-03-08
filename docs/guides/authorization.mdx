@@ -1,0 +1,181 @@
+---
+title: "Authorization"
+description: "Add OAuth authorization to your sunpeak MCP App — per-server auth, per-tool auth, and UI-initiated step-up flows."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "authorization", "OAuth", "authentication", "auth", "JWT"]
+---
+
+## Overview
+
+MCP Apps can protect tools behind OAuth-based authorization, as defined in the [MCP specification](https://modelcontextprotocol.io/specification/latest/basic/authorization). There are two approaches:
+
+- **Per-server authorization** — every MCP request requires a valid token. Simple when all tools are sensitive.
+- **Per-tool authorization** — only specific tools require authorization. Public tools work without a token, and the OAuth flow triggers only when the user calls a protected tool.
+
+sunpeak supports both approaches through the [`src/server.ts`](/api-reference/tools/server-entry) auth export.
+
+## Server auth with `src/server.ts`
+
+Export an `auth()` function from `src/server.ts`. sunpeak calls it on every MCP request and populates `extra.authInfo` in tool handlers.
+
+```ts
+// src/server.ts
+import type { IncomingMessage } from 'node:http';
+import type { AuthInfo } from 'sunpeak/mcp';
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+const JWKS = createRemoteJWKSet(new URL('https://auth.example.com/.well-known/jwks.json'));
+
+export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return null; // → 401 Unauthorized
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS, {
+      issuer: 'https://auth.example.com',
+    });
+    return { token, clientId: payload.sub as string, scopes: [] };
+  } catch {
+    return null; // Invalid token → 401
+  }
+}
+```
+
+Return `AuthInfo` to authenticate, or `null` to reject with 401.
+
+## Per-tool authorization
+
+Check `extra.authInfo` in tool handlers to scope data to the authenticated user. For per-tool auth, return a valid `AuthInfo` even without a token (for public tools), but include the token data when present.
+
+```ts
+// src/tools/get-account.ts
+import { z } from 'zod';
+import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
+
+export const tool: AppToolConfig = {
+  resource: 'account',
+  title: 'Get Account',
+  description: 'Get account details (requires login)',
+};
+
+export const schema = {
+  accountId: z.string(),
+};
+
+export default async function (args: { accountId: string }, extra: ToolHandlerExtra) {
+  // Defence-in-depth: always check auth even with HTTP-level enforcement
+  if (!extra.authInfo) {
+    return {
+      isError: true,
+      content: [{ type: 'text', text: 'Authorization required to access account data.' }],
+    };
+  }
+
+  const data = await getAccount(extra.authInfo.token, args.accountId);
+  return { structuredContent: data };
+}
+```
+
+## UI-initiated auth escalation
+
+A powerful pattern: load the app with public data (no auth required), then trigger the OAuth flow only when the user performs a protected action.
+
+1. A public tool loads the UI without authorization
+2. The user clicks a button that calls a protected tool via [`useCallServerTool`](/api-reference/hooks/use-call-server-tool)
+3. The host receives HTTP 401, automatically runs the OAuth flow
+4. After the user completes OAuth, the host retries the tool call with the token
+5. The protected data appears in the UI
+
+```tsx
+import { useCallServerTool } from 'sunpeak';
+
+function BranchItem({ branch }: { branch: Branch }) {
+  const callTool = useCallServerTool();
+  const [adminData, setAdminData] = useState(null);
+
+  async function handleManage() {
+    // This may trigger OAuth if the user hasn't authenticated yet.
+    // The host handles the flow transparently.
+    const result = await callTool({
+      name: 'manage-branch-admin',
+      arguments: { branch_id: branch.id },
+    });
+    setAdminData(result.structuredContent);
+  }
+
+  return (
+    <div>
+      <span className="text-[var(--color-text-primary)]">{branch.name}</span>
+      <button onClick={handleManage}>Manage</button>
+      {adminData && <AdminPanel data={adminData} />}
+    </div>
+  );
+}
+```
+
+This keeps the initial experience fast (no login wall) while securing sensitive operations.
+
+## OAuth discovery endpoints
+
+The [MCP specification](https://modelcontextprotocol.io/specification/latest/basic/authorization#authorization-server-discovery) requires servers to implement OAuth discovery so hosts know how to obtain authorization.
+
+**Protected Resource Metadata** (`/.well-known/oauth-protected-resource`) — describes the resource server and identifies which authorization server(s) can issue tokens. The MCP SDK's `mcpAuthRouter` handles this automatically.
+
+**Authorization Server Metadata** (`/.well-known/oauth-authorization-server`) — advertises authorization and token endpoints, supported scopes, and client registration support.
+
+For custom server setups (using [`createMcpHandler`](/api-reference/tools/production-server)), you may need to implement these endpoints yourself. See the [MCP authorization spec](https://modelcontextprotocol.io/specification/latest/basic/authorization) for full requirements.
+
+## Token verification
+
+Verify access tokens as JWTs against the identity provider's JWKS endpoint. The [jose](https://github.com/panva/jose) library handles key fetching and caching:
+
+```ts
+import { createRemoteJWKSet, jwtVerify } from 'jose';
+
+const JWKS = createRemoteJWKSet(
+  new URL('https://auth.example.com/.well-known/jwks.json')
+);
+
+export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return null;
+
+  const { payload } = await jwtVerify(token, JWKS, {
+    issuer: 'https://auth.example.com',
+  });
+
+  return {
+    token,
+    clientId: payload.sub as string,
+    scopes: (payload.scope as string)?.split(' ') ?? [],
+  };
+}
+```
+
+<Warning>
+MCP servers must validate that tokens were issued specifically for them. See [Token Handling](https://modelcontextprotocol.io/specification/latest/basic/authorization#token-handling) and [Access Token Privilege Restriction](https://modelcontextprotocol.io/specification/latest/basic/authorization#access-token-privilege-restriction) in the spec.
+</Warning>
+
+## Best practices
+
+<AccordionGroup>
+  <Accordion title="Defence-in-depth">
+    Always check `extra.authInfo` in protected tool handlers, even with HTTP-level enforcement. If the HTTP layer is misconfigured or bypassed, the tool handler catches unauthorized access.
+  </Accordion>
+
+  <Accordion title="Prefer per-tool auth for mixed apps">
+    If your app has both public and protected features, use per-tool auth. The initial load is fast (no login wall), and OAuth triggers only when needed. This creates a better user experience.
+  </Accordion>
+
+  <Accordion title="Keep auth stateless">
+    Use JWTs and verify them on every request. Don't store session state on the server — MCP connections may be distributed across multiple instances.
+  </Accordion>
+</AccordionGroup>
+
+## See also
+
+<Card horizontal title="Server Entry" icon="lock" href="/api-reference/tools/server-entry">
+  The `src/server.ts` auth export and `AuthInfo` type reference.
+</Card>
+<Card horizontal title="MCP Auth Specification" icon="link" href="https://modelcontextprotocol.io/specification/latest/basic/authorization">
+  Full OAuth authorization specification for MCP servers.
+</Card>
