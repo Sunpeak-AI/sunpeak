@@ -37,8 +37,10 @@ sunpeak start
 This loads your compiled tool handlers, Zod schemas, and optional auth from `dist/`, registers them with the [MCP protocol](/mcp-apps/mcp/overview), and starts a [Streamable HTTP](/mcp-apps/mcp/overview#transports) server on port 8000.
 
 ```bash
-sunpeak start --port 3000   # Custom port
-PORT=3000 sunpeak start     # Or via environment variable
+sunpeak start --port 3000          # Custom port
+sunpeak start --host 127.0.0.1     # Bind to localhost only
+sunpeak start --json-logs           # Structured JSON logging
+PORT=3000 HOST=127.0.0.1 sunpeak start  # Or via environment variables
 ```
 
 The production server:
@@ -46,6 +48,8 @@ The production server:
 - Serves pre-built resource HTML from `dist/{name}/{name}.html`
 - Calls your `auth()` function from `src/server.ts` on every request (if present)
 - Uses [MCP Streamable HTTP](/mcp-apps/mcp/overview#transports) transport on a single `/mcp` endpoint
+- Provides a `/health` endpoint for load balancer probes and uptime monitoring
+- Handles graceful shutdown on SIGTERM/SIGINT
 
 ## Testing Locally
 
@@ -115,6 +119,88 @@ Unlike `createMcpHandler`, the web handler does **not** do path matching — it 
 <Info>
 For fully custom MCP server setups, `sunpeak/mcp` also re-exports `registerAppTool`, `registerAppResource`, and `RESOURCE_MIME_TYPE` from the [MCP Apps SDK](https://github.com/anthropics/ext-apps). See [Server Helpers](/api-reference/simulations/run-mcp-server#server-helpers) for the full list.
 </Info>
+
+## Production Operations
+
+### Health Checks
+
+The built-in server exposes a `GET /health` endpoint that returns:
+
+```json
+{ "status": "ok", "uptime": 3600 }
+```
+
+Use this for load balancer probes, Kubernetes liveness/readiness checks, and uptime monitoring. The endpoint is always unauthenticated.
+
+### Structured Logging
+
+Pass `--json-logs` to output structured JSON lines instead of human-readable logs:
+
+```bash
+sunpeak start --json-logs
+```
+
+Each line is a JSON object with `ts`, `level`, and `msg` fields, plus contextual data:
+
+```json
+{"ts":"2025-01-15T10:30:00.000Z","level":"info","msg":"Session started: a1b2c3d4...","sessionId":"a1b2c3d4-...","active":1}
+{"ts":"2025-01-15T10:30:01.000Z","level":"info","msg":"CallTool: show-albums{artist}"}
+```
+
+This format is compatible with log aggregation tools like Datadog, CloudWatch, Loki, and Elasticsearch. Errors go to stderr, everything else to stdout.
+
+### Binding Interface
+
+By default, the server binds to `0.0.0.0` (all interfaces). To restrict it to localhost only:
+
+```bash
+sunpeak start --host 127.0.0.1
+HOST=127.0.0.1 sunpeak start
+```
+
+### Process Management
+
+`sunpeak start` handles SIGTERM and SIGINT for graceful shutdown (5-second drain timeout). It works with any process manager:
+
+```bash
+# Docker
+CMD ["sunpeak", "start", "--json-logs"]
+
+# PM2
+pm2 start "sunpeak start --json-logs" --name my-app
+
+# systemd
+ExecStart=/usr/bin/sunpeak start --json-logs
+```
+
+### Reverse Proxy
+
+For TLS, rate limiting, and request size limits, put `sunpeak start` behind a reverse proxy. The server's CORS headers allow all origins by default, which is correct for MCP servers called by AI hosts from various origins.
+
+```nginx
+# nginx
+location /mcp {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Connection '';
+    proxy_buffering off;       # Required for SSE streaming
+}
+
+location /health {
+    proxy_pass http://127.0.0.1:8000;
+}
+```
+
+### What Not to Worry About
+
+These are handled at the infrastructure layer, not by `sunpeak start`:
+
+- **TLS/HTTPS** — Use a reverse proxy (nginx, Caddy, Cloudflare)
+- **Rate limiting** — Configure at the proxy or CDN level
+- **Request body limits** — Handled by the proxy or platform
+- **Horizontal scaling** — Use load balancer with sticky sessions based on `mcp-session-id`
+
+For full control over the HTTP server (custom middleware, metrics, etc.), use [`createMcpHandler`](/api-reference/tools/production-server#createmcphandler) to mount the MCP handler on your own Express, Fastify, or http server.
 
 ## Publish to ChatGPT
 

@@ -29,12 +29,20 @@ export async function start(projectRoot = process.cwd(), args = []) {
     process.exit(1);
   }
 
-  // Parse port from args or env
+  // Parse CLI flags
   let port = parseInt(process.env.PORT || '8000');
   const portArgIndex = args.findIndex(arg => arg === '--port' || arg === '-p');
   if (portArgIndex !== -1 && args[portArgIndex + 1]) {
     port = parseInt(args[portArgIndex + 1]);
   }
+
+  let host = process.env.HOST || '0.0.0.0';
+  const hostArgIndex = args.findIndex(arg => arg === '--host');
+  if (hostArgIndex !== -1 && args[hostArgIndex + 1]) {
+    host = args[hostArgIndex + 1];
+  }
+
+  const jsonLogs = args.includes('--json-logs');
 
   // Import production server from sunpeak
   const isTemplate = projectRoot.endsWith('/template') || projectRoot.endsWith('\\template');
@@ -59,7 +67,12 @@ export async function start(projectRoot = process.cwd(), args = []) {
     sunpeakMcp = await import(pathToFileURL(join(sunpeakBase, 'dist/mcp/index.js')).href);
   }
 
-  const { startProductionHttpServer } = sunpeakMcp;
+  const { startProductionHttpServer, setJsonLogging } = sunpeakMcp;
+
+  // Enable structured JSON logging if requested
+  if (jsonLogs) {
+    setJsonLogging(true);
+  }
 
   // ========================================================================
   // Discover built resources
@@ -171,11 +184,11 @@ export async function start(projectRoot = process.cwd(), args = []) {
   const name = serverConfig.name ?? pkg.name ?? 'sunpeak-app';
   const version = serverConfig.version ?? pkg.version ?? '0.1.0';
 
-  console.log(`\nStarting ${name} v${version} on port ${port}...`);
+  console.log(`\nStarting ${name} v${version} on ${host}:${port}...`);
 
   startProductionHttpServer(
     { name, version, tools, resources, auth },
-    port
+    { port, host }
   );
 }
 

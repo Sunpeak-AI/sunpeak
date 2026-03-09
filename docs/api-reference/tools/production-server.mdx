@@ -123,15 +123,41 @@ Same shape as `ProductionServerConfig`, except `auth` takes a Web Standard `Requ
 
 ## `startProductionHttpServer`
 
-The built-in HTTP server used by `sunpeak start`. A convenience wrapper around `createMcpHandler` that adds a root page, favicon, and graceful shutdown.
+The built-in HTTP server used by `sunpeak start`. A convenience wrapper around `createMcpHandler` that adds a health check endpoint (`/health`), root page, favicon, and graceful shutdown.
 
 ```ts
 import { startProductionHttpServer } from 'sunpeak/mcp';
 
+// Simple: port only
 startProductionHttpServer(config, 3000);
+
+// Full options
+startProductionHttpServer(config, { port: 3000, host: '127.0.0.1' });
 ```
 
+The second argument accepts either a port number or an `HttpServerOptions` object:
+
+<ResponseField name="port" type="number" default="8000">
+  HTTP port to listen on.
+</ResponseField>
+
+<ResponseField name="host" type="string" default="0.0.0.0">
+  Host/interface to bind to. Use `127.0.0.1` to restrict to localhost.
+</ResponseField>
+
 For most projects, use `sunpeak start` instead of calling this directly.
+
+## `setJsonLogging`
+
+Enable structured JSON logging for all production server log output.
+
+```ts
+import { setJsonLogging } from 'sunpeak/mcp';
+
+setJsonLogging(true);
+```
+
+When enabled, all log messages are written as JSON lines (`{"ts":"...","level":"info","msg":"..."}`) to stdout (info/warn) or stderr (errors). This is useful for log aggregation tools like Datadog, CloudWatch, or Loki. The `sunpeak start --json-logs` flag calls this automatically.
 
 ## See Also
 

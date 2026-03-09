@@ -27,28 +27,36 @@ Tools are registered with the MCP protocol using `registerAppTool` from the MCP 
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--port <number>` | `-p` | Server port (default: 8000, also respects `PORT` env var) |
+| `--host <address>` | | Bind address (default: `0.0.0.0`, also respects `HOST` env var) |
+| `--json-logs` | | Output structured JSON lines to stdout/stderr |
 
 ## Usage
 
 ```bash
-# Default port (8000)
+# Default port (8000) on all interfaces
 sunpeak start
 
-# Custom port
-sunpeak start --port 3000
+# Custom port and host
+sunpeak start --port 3000 --host 127.0.0.1
 
-# Via environment variable
-PORT=3000 sunpeak start
+# Structured logging for production
+sunpeak start --json-logs
+
+# Via environment variables
+PORT=3000 HOST=127.0.0.1 sunpeak start
 ```
 
 ## Server Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
+| `/health` | GET | Health check — returns `{"status":"ok","uptime":N}` |
 | `/` | GET | Server info page |
 | `/mcp` | POST | Initialize a session or send messages |
 | `/mcp` | GET | Open an SSE stream for server-initiated notifications |
 | `/mcp` | DELETE | Terminate a session |
+
+The `/health` endpoint is for load balancer probes, Kubernetes liveness/readiness checks, and uptime monitoring. It is always unauthenticated.
 
 The production server uses the MCP Streamable HTTP transport. Session IDs are managed via the `mcp-session-id` header.
 

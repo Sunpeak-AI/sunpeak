@@ -86,8 +86,12 @@ dist/
 `sunpeak start` loads the compiled tools and resources, then starts a production MCP server with real handlers, Zod input validation, and optional auth.
 
 ```bash
-sunpeak start --port 3000     # Custom port (default: 8000)
+sunpeak start --port 3000              # Custom port (default: 8000)
+sunpeak start --host 127.0.0.1         # Bind to localhost only
+sunpeak start --json-logs              # Structured JSON logging for production
 ```
+
+The server includes a `/health` endpoint for load balancer probes and monitoring. See the [Deployment Guide](https://sunpeak.ai/docs/guides/deployment) for production operations details (reverse proxy, process management, Docker).
 
 ## Add a new UI (Resource)
 

@@ -11,11 +11,13 @@ export {
   createHandler,
   createProductionMcpServer,
   startProductionHttpServer,
+  setJsonLogging,
 } from './production-server.js';
 export type {
   ProductionTool,
   ProductionResource,
   ProductionServerConfig,
+  HttpServerOptions,
   AuthFunction,
   WebAuthFunction,
   WebHandlerConfig,

@@ -352,6 +352,22 @@ The `sunpeak dev` command starts both the Vite dev server and the MCP server tog
 
 Use `sunpeak build && sunpeak start` to test production behavior locally with real handlers instead of simulation fixtures.
 
+### Production Server Options
+
+```bash
+sunpeak start                          # Default: port 8000, all interfaces
+sunpeak start --port 3000              # Custom port
+sunpeak start --host 127.0.0.1         # Bind to localhost only
+sunpeak start --json-logs              # Structured JSON logging
+PORT=3000 HOST=127.0.0.1 sunpeak start # Via environment variables
+```
+
+The production server provides:
+- `/health` — Health check endpoint (`{"status":"ok","uptime":N}`) for load balancer probes and monitoring
+- `/mcp` — MCP Streamable HTTP endpoint
+- Graceful shutdown on SIGTERM/SIGINT (5-second drain)
+- Structured JSON logging (`--json-logs`) for log aggregation (Datadog, CloudWatch, etc.)
+
 ## Production Build Output
 
 `sunpeak build` generates optimized bundles in `dist/`:

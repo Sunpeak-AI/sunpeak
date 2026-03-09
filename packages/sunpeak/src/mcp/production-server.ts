@@ -16,6 +16,49 @@ import {
 import type { AuthInfo, CallToolResult, ToolHandlerExtra } from './types.js';
 
 // ============================================================================
+// Structured logging
+// ============================================================================
+
+let jsonLogging = false;
+
+/**
+ * Enable or disable structured JSON logging.
+ *
+ * When enabled, all server log messages are written as JSON lines to stdout/stderr,
+ * making them easy to parse with log aggregation tools (Datadog, CloudWatch,
+ * Loki, etc.).
+ */
+export function setJsonLogging(enabled: boolean): void {
+  jsonLogging = enabled;
+}
+
+function log(level: 'info' | 'warn' | 'error', msg: string, extra?: Record<string, unknown>): void {
+  if (jsonLogging) {
+    const entry: Record<string, unknown> = {
+      ts: new Date().toISOString(),
+      level,
+      msg,
+      ...extra,
+    };
+    const line = JSON.stringify(entry) + '\n';
+    if (level === 'error') {
+      process.stderr.write(line);
+    } else {
+      process.stdout.write(line);
+    }
+  } else {
+    const prefix = '[MCP]';
+    if (level === 'error') {
+      console.error(extra ? `${prefix} ${msg} ${JSON.stringify(extra)}` : `${prefix} ${msg}`);
+    } else if (level === 'warn') {
+      console.warn(extra ? `${prefix} ${msg} ${JSON.stringify(extra)}` : `${prefix} ${msg}`);
+    } else {
+      console.log(extra ? `${prefix} ${msg} ${JSON.stringify(extra)}` : `${prefix} ${msg}`);
+    }
+  }
+}
+
+// ============================================================================
 // Public types
 // ============================================================================
 
@@ -142,9 +185,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   for (const tool of tools) {
     const res = resourceByName.get(tool.tool.resource);
     if (!res) {
-      console.warn(
-        `[MCP] Warning: Resource "${tool.tool.resource}" not found for tool "${tool.name}". Skipping.`
-      );
+      log('warn', `Resource "${tool.tool.resource}" not found for tool "${tool.name}". Skipping.`);
       continue;
     }
 
@@ -201,7 +242,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
 
       const argKeys = Object.keys(args);
       const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
-      console.log(`[MCP] CallTool: ${tool.name}${argsStr}`);
+      log('info', `CallTool: ${tool.name}${argsStr}`);
 
       const result = await tool.handler(args, extra);
 
@@ -223,7 +264,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
 
   const toolCount = tools.filter((t) => resourceByName.has(t.tool.resource)).length;
   const resourceCount = registeredResources.size;
-  console.log(`[MCP] Registered ${toolCount} tool(s) and ${resourceCount} resource(s)`);
+  log('info', `Registered ${toolCount} tool(s) and ${resourceCount} resource(s)`);
 
   return mcpServer;
 }
@@ -310,7 +351,10 @@ export function createMcpHandler(
     const now = Date.now();
     for (const [id, session] of sessions) {
       if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
-        console.log(`[MCP] Session expired: ${id.substring(0, 8)}...`);
+        log('info', `Session expired: ${id.substring(0, 8)}...`, {
+          sessionId: id,
+          active: sessions.size - 1,
+        });
         void session.server.close();
       }
     }
@@ -369,7 +413,7 @@ export function createMcpHandler(
             parsedBody.method === 'resources/read'
               ? ` uri=${JSON.stringify(parsedBody.params?.uri)}`
               : '';
-          console.log(`[MCP] ← ${parsedBody.method}${extra}${sidStr}`);
+          log('info', `← ${parsedBody.method}${extra}${sidStr}`);
         }
       } catch {
         res.writeHead(400).end('Invalid JSON');
@@ -398,17 +442,26 @@ export function createMcpHandler(
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
           sessions.set(id, { server, transport, lastActivity: Date.now() });
-          console.log(`[MCP] Session started: ${id.substring(0, 8)}... (${sessions.size} active)`);
+          log('info', `Session started: ${id.substring(0, 8)}...`, {
+            sessionId: id,
+            active: sessions.size,
+          });
         },
         onsessionclosed: (id) => {
           sessions.delete(id);
-          console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+          log('info', `Session closed: ${id.substring(0, 8)}...`, {
+            sessionId: id,
+            active: sessions.size,
+          });
         },
       });
 
       transport.onerror = (error) => {
         const id = transport.sessionId;
-        console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
+        log('error', `Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}`, {
+          sessionId: id,
+          error: String(error),
+        });
       };
 
       // Clean up session map on disconnect (don't call server.close — it triggers
@@ -417,7 +470,10 @@ export function createMcpHandler(
         const id = transport.sessionId;
         if (id && sessions.has(id)) {
           sessions.delete(id);
-          console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+          log('info', `Session closed: ${id.substring(0, 8)}...`, {
+            sessionId: id,
+            active: sessions.size,
+          });
         }
       };
 
@@ -481,7 +537,10 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
     const now = Date.now();
     for (const [id, session] of sessions) {
       if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
-        console.log(`[MCP] Session expired: ${id.substring(0, 8)}...`);
+        log('info', `Session expired: ${id.substring(0, 8)}...`, {
+          sessionId: id,
+          active: sessions.size - 1,
+        });
         void session.server.close();
       }
     }
@@ -538,16 +597,22 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
           sessions.set(id, { server, transport, lastActivity: Date.now() });
-          console.log(`[MCP] Session started: ${id.substring(0, 8)}... (${sessions.size} active)`);
+          log('info', `Session started: ${id.substring(0, 8)}...`, {
+            sessionId: id,
+            active: sessions.size,
+          });
         },
         onsessionclosed: (id) => {
           sessions.delete(id);
-          console.log(`[MCP] Session closed: ${id.substring(0, 8)}... (${sessions.size} active)`);
+          log('info', `Session closed: ${id.substring(0, 8)}...`, {
+            sessionId: id,
+            active: sessions.size,
+          });
         },
       });
 
       transport.onerror = (error) => {
-        console.error('[MCP] Transport error:', error);
+        log('error', 'Transport error', { error: String(error) });
       };
 
       transport.onclose = () => {
@@ -583,16 +648,35 @@ function addCorsHeaders(response: Response): Response {
 // ============================================================================
 
 /**
+ * Options for `startProductionHttpServer`.
+ */
+export interface HttpServerOptions {
+  /** HTTP port to listen on (default: 8000) */
+  port?: number;
+  /** Host/interface to bind to (default: '0.0.0.0') */
+  host?: string;
+}
+
+/**
  * Start a production HTTP server with Streamable HTTP transport.
  *
  * This is a convenience wrapper around `createMcpHandler` that adds
- * a root HTML page, favicon, and graceful shutdown. For custom HTTP
- * servers (Express, Fastify, etc.), use `createMcpHandler` directly.
+ * a health check endpoint, root HTML page, favicon, and graceful shutdown.
+ * For custom HTTP servers (Express, Fastify, etc.), use `createMcpHandler` directly.
  *
  * @param config - Production server configuration (tools, resources, auth)
- * @param port - HTTP port to listen on
+ * @param portOrOptions - HTTP port number, or an options object with port and host
  */
-export function startProductionHttpServer(config: ProductionServerConfig, port: number): void {
+export function startProductionHttpServer(
+  config: ProductionServerConfig,
+  portOrOptions: number | HttpServerOptions
+): void {
+  const options: HttpServerOptions =
+    typeof portOrOptions === 'number' ? { port: portOrOptions } : portOrOptions;
+  const port = options.port ?? 8000;
+  const host = options.host ?? '0.0.0.0';
+
+  const startTime = Date.now();
   const mcpHandler = createMcpHandler(config);
 
   const httpServer = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -607,6 +691,22 @@ export function startProductionHttpServer(config: ProductionServerConfig, port: 
     if (req.method === 'OPTIONS') {
       res.writeHead(204, CORS_HEADERS);
       res.end();
+      return;
+    }
+
+    // Health check endpoint — for load balancer probes, k8s liveness/readiness,
+    // and uptime monitoring
+    if (req.method === 'GET' && url.pathname === '/health') {
+      const body = JSON.stringify({
+        status: 'ok',
+        uptime: Math.floor((Date.now() - startTime) / 1000),
+      });
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-cache',
+        'Access-Control-Allow-Origin': '*',
+      });
+      res.end(body);
       return;
     }
 
@@ -645,29 +745,32 @@ export function startProductionHttpServer(config: ProductionServerConfig, port: 
 
     // 404 if handler didn't respond
     if (!res.headersSent) {
+      log('info', `${req.method} ${url.pathname} → 404`);
       res.writeHead(404).end('Not Found');
     }
   });
 
   httpServer.on('clientError', (err: Error, socket) => {
-    console.error('HTTP client error', err);
+    log('error', 'HTTP client error', { error: err.message });
     socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
   });
 
-  httpServer.listen(port, () => {
-    console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
-    console.log(`  MCP endpoint: http://localhost:${port}${MCP_PATH}`);
+  const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+  httpServer.listen(port, host, () => {
+    log('info', `Server listening on http://${displayHost}:${port}`);
+    log('info', `MCP endpoint: http://${displayHost}:${port}${MCP_PATH}`);
+    log('info', `Health check: http://${displayHost}:${port}/health`);
   });
 
   // Graceful shutdown
   const shutdown = async () => {
-    console.log('\nShutting down MCP server...');
+    log('info', 'Shutting down MCP server...');
     httpServer.close(() => {
-      console.log('MCP server closed');
+      log('info', 'MCP server closed');
       process.exit(0);
     });
     setTimeout(() => {
-      console.error('Force closing MCP server');
+      log('error', 'Force closing MCP server');
       process.exit(1);
     }, 5000);
   };
