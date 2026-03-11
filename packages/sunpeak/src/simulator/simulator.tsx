@@ -38,6 +38,15 @@ export interface SimulatorProps {
   appIcon?: string;
   /** Which host shell to use initially. Defaults to 'chatgpt'. */
   defaultHost?: HostId;
+  /** Override callServerTool resolution. When provided, bypasses simulation serverTools mocks (e.g., for --live mode). */
+  onCallTool?: (params: {
+    name: string;
+    arguments?: Record<string, unknown>;
+  }) => Promise<CallToolResult> | CallToolResult;
+  /** Initial live mode state. Defaults to false. */
+  defaultLive?: boolean;
+  /** Hide the Live mode toggle in the sidebar (e.g., for marketing/embedded use). */
+  hideLiveToggle?: boolean;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
@@ -48,8 +57,73 @@ export function Simulator({
   appName = 'Sunpeak',
   appIcon,
   defaultHost = 'chatgpt',
+  onCallTool,
+  defaultLive = false,
+  hideLiveToggle = false,
 }: SimulatorProps) {
   const state = useSimulatorState({ simulations, defaultHost });
+  const [live, setLive] = React.useState(defaultLive);
+  const [isRunning, setIsRunning] = React.useState(false);
+  const [hasRun, setHasRun] = React.useState(false);
+  const [showCheck, setShowCheck] = React.useState(false);
+  const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Reset hasRun when tool selection changes in live mode
+  React.useEffect(() => {
+    if (live) setHasRun(false);
+  }, [live, state.selectedSimulationName]);
+
+  // Cleanup check timer
+  React.useEffect(() => () => clearTimeout(checkTimerRef.current), []);
+
+  // In live mode, deduplicate simulations by tool name for the Tool dropdown
+  const toolOptions = React.useMemo(() => {
+    if (!live) return [];
+    const seen = new Map<string, string>(); // toolName → first simulationName
+    for (const simName of state.simulationNames) {
+      const sim = simulations[simName];
+      const toolName = sim.tool.name;
+      if (!seen.has(toolName)) {
+        seen.set(toolName, simName);
+      }
+    }
+    return Array.from(seen.entries()).map(([toolName, simName]) => ({
+      value: simName,
+      label: (simulations[simName].tool.title as string | undefined) || toolName,
+    }));
+  }, [live, state.simulationNames, simulations]);
+
+  // Run button handler: call the real tool handler with current toolInput
+  const handleRun = React.useCallback(async () => {
+    if (!onCallTool || !state.selectedSim) return;
+    const toolName = state.selectedSim.tool.name;
+    setIsRunning(true);
+    try {
+      const result = await onCallTool({ name: toolName, arguments: state.toolInput });
+      state.setToolResult(result);
+      state.setToolResultJson(JSON.stringify(result, null, 2));
+      state.setToolResultError('');
+      setHasRun(true);
+      setShowCheck(true);
+      clearTimeout(checkTimerRef.current);
+      checkTimerRef.current = setTimeout(() => setShowCheck(false), 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      state.setToolResult({
+        content: [{ type: 'text', text: `Error: ${message}` }],
+        isError: true,
+      });
+      state.setToolResultJson(
+        JSON.stringify(
+          { content: [{ type: 'text', text: `Error: ${message}` }], isError: true },
+          null,
+          2
+        )
+      );
+    } finally {
+      setIsRunning(false);
+    }
+  }, [onCallTool, state]);
 
   // Resolve the active host shell
   const activeShell = getHostShell(state.activeHost);
@@ -101,11 +175,16 @@ export function Simulator({
     }
   }, [activeShell]);
 
-  // Handle callServerTool from the iframe by resolving mock responses from the
-  // current simulation's `serverTools` map. Supports both simple (single result)
-  // and conditional (`when` / `result` array) forms.
+  // Handle callServerTool from the iframe. When onCallTool is provided (--live mode),
+  // forward to real tool handlers. Otherwise resolve from simulation serverTools mocks.
   const handleCallTool = React.useCallback(
-    (params: { name: string; arguments?: Record<string, unknown> }): CallToolResult => {
+    (params: {
+      name: string;
+      arguments?: Record<string, unknown>;
+    }): CallToolResult | Promise<CallToolResult> => {
+      if (onCallTool) {
+        return onCallTool(params);
+      }
       const mock = state.selectedSim?.serverTools?.[params.name];
       if (mock) {
         const result = resolveServerToolResult(mock, params.arguments);
@@ -120,15 +199,34 @@ export function Simulator({
         ],
       };
     },
-    [state.selectedSim, state.selectedSimulationName]
+    [onCallTool, state.selectedSim, state.selectedSimulationName]
   );
+
+  // In live mode, derive user message from the selected tool
+  const liveUserMessage =
+    live && state.selectedSim
+      ? `Call my ${(state.selectedSim.tool.title as string | undefined) || state.selectedSim.tool.name} tool`
+      : undefined;
 
   // Build content.
   // The wrapper div stays mounted across key changes, providing a themed
   // background while the iframe (opacity: 0) loads new content.
+  // In live mode, show empty state until the tool has been run.
+  const showEmptyState = live && !hasRun;
   let content: React.ReactNode;
   const iframeBg = 'var(--sim-bg-conversation, var(--color-background-primary, transparent))';
-  if (state.resourceUrl) {
+  if (showEmptyState) {
+    content = (
+      <div
+        className="h-full w-full flex items-center justify-center"
+        style={{ background: iframeBg }}
+      >
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Press <strong>Run</strong> to call the tool
+        </span>
+      </div>
+    );
+  } else if (state.resourceUrl) {
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
@@ -191,8 +289,13 @@ export function Simulator({
   return (
     <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
       <SimpleSidebar
+        headerRight={
+          !hideLiveToggle && onCallTool ? (
+            <SidebarCheckbox checked={live} onChange={setLive} label="Live" />
+          ) : undefined
+        }
         controls={
-          <div className="space-y-2">
+          <div className="space-y-1">
             {/* ── Host selector ── */}
             {registeredHosts.length > 1 && (
               <SidebarControl label="Host">
@@ -207,8 +310,17 @@ export function Simulator({
               </SidebarControl>
             )}
 
-            {/* ── Simulation selector ── */}
-            {state.simulationNames.length > 1 && (
+            {/* ── Tool / Simulation selector ── */}
+            {live && toolOptions.length > 1 && (
+              <SidebarControl label="Tool">
+                <SidebarSelect
+                  value={state.selectedSimulationName}
+                  onChange={(value) => state.setSelectedSimulationName(value)}
+                  options={toolOptions}
+                />
+              </SidebarControl>
+            )}
+            {!live && state.simulationNames.length > 1 && (
               <SidebarControl label="Simulation">
                 <SidebarSelect
                   value={state.selectedSimulationName}
@@ -228,7 +340,7 @@ export function Simulator({
               </SidebarControl>
             )}
 
-            <SidebarControl label="Simulation Width">
+            <SidebarControl label="Width">
               <SidebarSelect
                 value={state.screenWidth}
                 onChange={(value) => state.setScreenWidth(value as ScreenWidth)}
@@ -242,7 +354,7 @@ export function Simulator({
             </SidebarControl>
 
             <SidebarCollapsibleControl label="Host Context" defaultCollapsed={false}>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <SidebarControl label="Theme">
                   <SidebarToggle
                     value={state.theme}
@@ -438,7 +550,11 @@ export function Simulator({
               />
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Tool Input (JSON)">
+            <SidebarCollapsibleControl
+              key={`tool-input-${live}`}
+              label="Tool Input (JSON)"
+              defaultCollapsed={!live}
+            >
               <SidebarTextarea
                 value={state.toolInputJson}
                 onChange={(json) =>
@@ -457,7 +573,7 @@ export function Simulator({
                 type="button"
                 onClick={state.sendToolInputPartial}
                 disabled={!!state.toolInputError}
-                className="mt-1 w-full rounded px-2 py-1 text-xs disabled:opacity-40"
+                className="mt-1 w-full rounded px-2 py-1 text-xs disabled:opacity-40 cursor-pointer"
                 style={{
                   backgroundColor: 'var(--color-background-tertiary)',
                   color: 'var(--color-text-secondary)',
@@ -468,33 +584,35 @@ export function Simulator({
               </button>
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Tool Result (JSON)" defaultCollapsed={false}>
-              <SidebarTextarea
-                value={state.toolResultJson}
-                onChange={(json) =>
-                  state.validateJSON(json, state.setToolResultJson, state.setToolResultError)
-                }
-                onFocus={() => state.setEditingField('toolResult')}
-                onBlur={() =>
-                  state.commitJSON(state.toolResultJson, state.setToolResultError, (parsed) => {
-                    if (parsed === null) {
-                      state.setToolResult(undefined);
-                    } else {
-                      const result = parsed as Record<string, unknown>;
-                      if ('content' in result || 'structuredContent' in result) {
-                        state.setToolResult(
-                          result as import('@modelcontextprotocol/sdk/types.js').CallToolResult
-                        );
+            {!live && (
+              <SidebarCollapsibleControl label="Tool Result (JSON)" defaultCollapsed={false}>
+                <SidebarTextarea
+                  value={state.toolResultJson}
+                  onChange={(json) =>
+                    state.validateJSON(json, state.setToolResultJson, state.setToolResultError)
+                  }
+                  onFocus={() => state.setEditingField('toolResult')}
+                  onBlur={() =>
+                    state.commitJSON(state.toolResultJson, state.setToolResultError, (parsed) => {
+                      if (parsed === null) {
+                        state.setToolResult(undefined);
                       } else {
-                        state.setToolResult({ content: [], structuredContent: result });
+                        const result = parsed as Record<string, unknown>;
+                        if ('content' in result || 'structuredContent' in result) {
+                          state.setToolResult(
+                            result as import('@modelcontextprotocol/sdk/types.js').CallToolResult
+                          );
+                        } else {
+                          state.setToolResult({ content: [], structuredContent: result });
+                        }
                       }
-                    }
-                  })
-                }
-                error={state.toolResultError}
-                maxRows={8}
-              />
-            </SidebarCollapsibleControl>
+                    })
+                  }
+                  error={state.toolResultError}
+                  maxRows={8}
+                />
+              </SidebarCollapsibleControl>
+            )}
           </div>
         }
       >
@@ -506,8 +624,42 @@ export function Simulator({
             onRequestDisplayMode={state.handleDisplayModeChange}
             appName={appName}
             appIcon={appIcon}
-            userMessage={state.selectedSim?.userMessage}
+            userMessage={liveUserMessage ?? state.selectedSim?.userMessage}
             isTransitioning={state.isTransitioning}
+            headerAction={
+              live && onCallTool ? (
+                <button
+                  type="button"
+                  onClick={handleRun}
+                  disabled={isRunning}
+                  className="rounded-full px-3 py-1 text-sm font-medium transition-opacity disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
+                  style={{
+                    backgroundColor: 'var(--color-text-primary)',
+                    color: 'var(--color-background-primary)',
+                  }}
+                >
+                  {showCheck ? (
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 12 12"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M2 6L5 9L10 3" />
+                    </svg>
+                  ) : (
+                    <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+                      <path d="M0 0L10 6L0 12V0Z" />
+                    </svg>
+                  )}
+                  Run
+                </button>
+              ) : undefined
+            }
           >
             {content}
           </ShellConversation>

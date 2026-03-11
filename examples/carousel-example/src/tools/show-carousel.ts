@@ -22,6 +22,23 @@ export const schema = {
 
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
-export default async function (_args: Args, _extra: ToolHandlerExtra) {
-  return { structuredContent: { places: [] } };
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  const city = args.city || 'Austin';
+  const category = args.categories?.[0] || 'landmark';
+
+  return {
+    structuredContent: {
+      places: [
+        {
+          id: '1',
+          name: `${city} ${category.charAt(0).toUpperCase() + category.slice(1)}`,
+          rating: 4.7,
+          category,
+          location: `${city}${args.state ? `, ${args.state}` : ''}`,
+          image: 'https://cdn.sunpeak.ai/demo/austin1.jpeg',
+          description: `A popular ${category} in ${city}`,
+        },
+      ],
+    },
+  };
 }

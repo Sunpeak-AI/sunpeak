@@ -29,6 +29,30 @@ describe('SimpleSidebar', () => {
     expect(screen.getByTestId('controls-content')).toBeInTheDocument();
     expect(screen.getByText('Control Panel')).toBeInTheDocument();
   });
+
+  it('renders headerRight content in the Controls header row', () => {
+    render(
+      <SimpleSidebar
+        controls={<div>Controls</div>}
+        headerRight={<span data-testid="header-right">Live Toggle</span>}
+      >
+        <div>Content</div>
+      </SimpleSidebar>
+    );
+
+    expect(screen.getByTestId('header-right')).toBeInTheDocument();
+    expect(screen.getByText('Live Toggle')).toBeInTheDocument();
+  });
+
+  it('does not render headerRight when not provided', () => {
+    render(
+      <SimpleSidebar controls={<div>Controls</div>}>
+        <div>Content</div>
+      </SimpleSidebar>
+    );
+
+    expect(screen.queryByTestId('header-right')).not.toBeInTheDocument();
+  });
 });
 
 describe('SidebarControl', () => {

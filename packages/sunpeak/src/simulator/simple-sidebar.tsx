@@ -3,6 +3,8 @@ import * as React from 'react';
 interface SimpleSidebarProps {
   children: React.ReactNode;
   controls: React.ReactNode;
+  /** Optional element rendered right-aligned in the Controls header row */
+  headerRight?: React.ReactNode;
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 224; // w-56 = 14rem = 224px
@@ -19,7 +21,7 @@ function ChevronRightIcon() {
   );
 }
 
-export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
+export function SimpleSidebar({ children, controls, headerRight }: SimpleSidebarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [sidebarWidth, setSidebarWidth] = React.useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = React.useState(false);
@@ -92,29 +94,32 @@ export function SimpleSidebar({ children, controls }: SimpleSidebarProps) {
                 >
                   Controls
                 </h2>
-                {/* Close button for mobile */}
-                <button
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="md:hidden p-1 transition-colors"
-                  style={{ color: 'var(--color-text-secondary)' }}
-                  type="button"
-                  aria-label="Close sidebar"
-                >
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 16 16"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
+                <div className="flex items-center gap-2">
+                  {headerRight}
+                  {/* Close button for mobile */}
+                  <button
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="md:hidden p-1 transition-colors"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                    type="button"
+                    aria-label="Close sidebar"
                   >
-                    <path
-                      d="M12 4L4 12M4 4L12 12"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                </button>
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M12 4L4 12M4 4L12 12"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
               </div>
               {controls}
             </div>
@@ -186,7 +191,7 @@ export function SidebarCollapsibleControl({
     <div className="space-y-1">
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
-        className="w-full flex items-center justify-between text-[10px] font-medium leading-tight transition-colors py-1"
+        className="w-full flex items-center justify-between text-[10px] font-medium leading-tight transition-colors py-1 cursor-pointer"
         style={{ color: 'var(--color-text-secondary)' }}
         type="button"
       >
@@ -203,6 +208,7 @@ export function SidebarCollapsibleControl({
 const formElementStyle: React.CSSProperties = {
   color: 'var(--color-text-primary)',
   backgroundColor: 'var(--color-background-primary)',
+  cursor: 'pointer',
 };
 
 interface SidebarSelectProps {
@@ -261,7 +267,7 @@ export function SidebarInput({
       placeholder={placeholder}
       disabled={disabled}
       className="w-full h-7 text-xs rounded-md px-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
-      style={formElementStyle}
+      style={{ ...formElementStyle, cursor: disabled ? undefined : 'text' }}
     />
   );
 }
@@ -281,7 +287,7 @@ export function SidebarCheckbox({ checked, onChange, label }: SidebarCheckboxPro
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
-        className="outline-none"
+        className="outline-none cursor-pointer"
       />
       <label
         htmlFor={id}
@@ -328,6 +334,7 @@ export function SidebarTextarea({
         className="w-full text-[10px] font-mono rounded-md px-2 py-1.5 outline-none resize-y"
         style={{
           ...formElementStyle,
+          cursor: 'text',
           whiteSpace: 'pre',
           overflowX: 'auto',
           overflowWrap: 'normal',
@@ -365,7 +372,7 @@ export function SidebarToggle({ value, onChange, options }: SidebarToggleProps) 
             key={option.value}
             onClick={() => onChange(option.value)}
             aria-pressed={isSelected}
-            className="flex-1 text-[10px] font-medium h-[22px] px-2 rounded-full outline-none transition-all duration-150"
+            className="flex-1 text-[10px] font-medium h-[22px] px-2 rounded-full outline-none transition-all duration-150 cursor-pointer"
             style={{
               backgroundColor: isSelected ? 'var(--color-background-primary)' : 'transparent',
               color: isSelected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',

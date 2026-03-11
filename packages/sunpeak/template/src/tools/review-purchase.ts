@@ -28,6 +28,39 @@ export const schema = {
 
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
-export default async function (_args: Args, _extra: ToolHandlerExtra) {
-  return { structuredContent: { title: 'Confirm Your Order', sections: [] } };
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  const rawItems = args.items ?? [{ productId: 'DEMO-001', quantity: 1 }];
+  const items = rawItems.map((item, i) => ({
+    id: String(i + 1),
+    title: `Item ${item.productId}`,
+    subtitle: `Qty: ${item.quantity}`,
+  }));
+
+  const shippingLabels: Record<string, string> = {
+    standard: 'Standard (5-7 days)',
+    express: 'Express (2-3 days)',
+    overnight: 'Overnight',
+  };
+
+  const shippingMethod = args.shippingMethod || 'standard';
+
+  return {
+    structuredContent: {
+      title: 'Confirm Your Order',
+      sections: [
+        { type: 'items', title: 'Items', content: items },
+        {
+          type: 'details',
+          title: 'Shipping',
+          content: [{ label: 'Method', value: shippingLabels[shippingMethod] || shippingMethod }],
+        },
+      ],
+      acceptLabel: 'Place Order',
+      rejectLabel: 'Cancel',
+      reviewTool: {
+        name: 'review',
+        arguments: { action: 'place_order', cartId: args.cartId || 'cart-1' },
+      },
+    },
+  };
 }

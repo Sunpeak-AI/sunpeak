@@ -217,7 +217,6 @@ function createAppServer(
       if (!registeredUriSet.has(uri)) {
         registeredUriSet.add(uri);
         const listMeta = viteMode ? injectViteCSP(resourceMeta) : resourceMeta;
-        console.log(`[MCP] RegisterResource: ${uri}`);
         const handle = mcpServer.registerResource(
           resourceName,
           uri,
@@ -245,8 +244,9 @@ function createAppServer(
               throw error;
             }
             const sizeKB = (content.length / 1024).toFixed(1);
+            const servedVite = viteMode && simulation.srcPath && !prodBuild;
             console.log(
-              `[MCP] ReadResource: ${readUri.href} → ${sizeKB}KB${prodBuild ? ' (prod build)' : ' (vite)'}`
+              `[MCP] ReadResource: ${readUri.href} → ${sizeKB}KB${servedVite ? ' (vite)' : ' (built)'}`
             );
 
             return {
@@ -293,8 +293,30 @@ function createAppServer(
               ?.params?.arguments ?? {};
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
-          const hasStructuredContent = toolResult?.structuredContent != null;
 
+          // Use real handler when available (--live mode), fall back to simulation mock
+          const realHandler = simulation.handler;
+          if (realHandler) {
+            console.log(`[MCP] CallTool: ${tool.name}${argsStr} → live handler`);
+            try {
+              const result = await (
+                realHandler as (args: Record<string, unknown>, extra: unknown) => unknown
+              )(args, extra);
+              if (typeof result === 'string') {
+                return { content: [{ type: 'text' as const, text: result }] };
+              }
+              return result as { content: { type: 'text'; text: string }[] };
+            } catch (error) {
+              const msg = error instanceof Error ? error.message : String(error);
+              console.error(`[MCP] CallTool error (${tool.name}): ${msg}`);
+              return {
+                content: [{ type: 'text' as const, text: `Error: ${msg}` }],
+                isError: true,
+              };
+            }
+          }
+
+          const hasStructuredContent = toolResult?.structuredContent != null;
           console.log(
             `[MCP] CallTool: ${tool.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
           );
@@ -324,8 +346,6 @@ function createAppServer(
       // to fail. A passthrough schema from the same Zod instance as the SDK
       // accepts any arguments and forwards them to the handler.
       const realHandler = simulation.handler;
-      console.log(`[MCP] RegisterTool (no UI): ${tool.name}${realHandler ? '' : ' (mock)'}`);
-
       mcpServer.registerTool(
         tool.name as string,
         {
@@ -379,12 +399,10 @@ function createAppServer(
     }
   }
 
-  const registeredUris = Array.from(registeredUriSet);
   const uiToolCount = simulations.filter((s) => s.resource).length;
   const plainToolCount = simulations.length - uiToolCount;
-  const uriStr = registeredUris.length > 0 ? `: ${registeredUris.join(', ')}` : '';
   console.log(
-    `[MCP] Registered ${simulations.length} tool(s) (${uiToolCount} UI, ${plainToolCount} plain) and ${registeredUris.length} resource(s)${viteMode ? ' (vite mode)' : ''}${uriStr}`
+    `[MCP] Registered ${simulations.length} tool(s) (${uiToolCount} UI, ${plainToolCount} plain), ${registeredUriSet.size} resource(s)`
   );
 
   return { server: mcpServer, resourceHandles, toolHandles };

@@ -408,6 +408,11 @@ The `sunpeak dev` command starts both the Vite dev server and the MCP server tog
 
 Use `sunpeak build && sunpeak start` to test production behavior locally with real handlers instead of simulation fixtures.
 
+The `sunpeak dev` command supports two orthogonal flags for testing different combinations:
+- `--live` — Route `callServerTool` to real tool handlers instead of simulation mocks
+- `--built` — Serve production-built HTML from `dist/` instead of Vite HMR
+- `--live --built` — Full smoke test: production bundles with real handlers
+
 ### Production Server Options
 
 ```bash

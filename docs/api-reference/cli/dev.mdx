@@ -56,6 +56,32 @@ No manual configuration or entry point files needed!
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--port <number>` | `-p` | Port for the simulator (default: 3000, also respects `PORT` env var) |
+| `--live` | | Start with the simulator's **Live** mode enabled (real tool handlers). Can also be toggled from the sidebar at runtime. |
+| `--built` | | Serve production-built HTML from `dist/` instead of Vite HMR |
+
+### `--live` and `--built` flags
+
+These two orthogonal flags let you test different combinations of UI and tool behavior:
+
+| Flags | UI | Tools | Use case |
+|-------|-----|-------|----------|
+| *(none)* | HMR | Mocked | Day-to-day development |
+| `--live` | HMR | Real handlers | Integration testing with real backend logic |
+| `--built` | Production bundle | Mocked | Catch build regressions, CI/E2E testing |
+| `--live --built` | Production bundle | Real handlers | Final smoke test (simulator shell around production behavior) |
+
+```bash
+# Integration test: real tool handlers with HMR UI
+sunpeak dev --live
+
+# CI/E2E: production bundles with mock data
+sunpeak dev --built
+
+# Full smoke test: production bundles with real handlers
+sunpeak dev --live --built
+```
+
+When `--built` is used, `sunpeak build` runs automatically before the dev server starts. The built HTML is served from `dist/`.
 
 ## Configuration
 

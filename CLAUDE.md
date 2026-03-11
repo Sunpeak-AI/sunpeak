@@ -152,6 +152,19 @@ The `sunpeak dev` command runs a multi-server architecture:
 
 Port management: The loaderServer disables HMR entirely. The mcpViteServer uses port 24679 for its WebSocket. The main dev server listens on the user-facing port (default 5173).
 
+### `--live` and `--built` flags
+
+Two orthogonal flags that toggle real tool handlers and production resource bundles independently:
+
+| Flags | UI | Tools | Use case |
+|-------|-----|-------|----------|
+| *(none)* | HMR | Mocked | Day-to-day dev |
+| `--live` | HMR | Real handlers | Integration testing |
+| `--built` | Built | Mocked | CI/E2E, catch build regressions |
+| `--live --built` | Built | Real handlers | Final smoke test |
+
+**Implementation**: The dev server always registers a Vite middleware plugin (`POST /__sunpeak/call-tool`) and loads all tool handlers, so the simulator's **Live** checkbox can toggle between mock and real tool execution at runtime. `--live` sets the initial state of the Live checkbox to on (`__SUNPEAK_LIVE__` Vite define → `defaultLive` prop). `--built` runs `sunpeak build` before starting and serves `dist/` HTML via another Vite plugin (`__SUNPEAK_BUILT__` define consumed by `dev.tsx` to override `resourceUrl` paths). The `Simulator` component accepts `onCallTool`, `defaultLive`, and `hideLiveToggle` props.
+
 ## Documentation (`docs/`)
 
 Docs are built with [Mintlify](https://mintlify.com). Structure:

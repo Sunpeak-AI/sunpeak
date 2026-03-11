@@ -46,6 +46,18 @@ import { Simulator } from 'sunpeak/simulator';
   Optional children to render when no simulations are selected.
 </ResponseField>
 
+<ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
+  Override `callServerTool` resolution. When provided, enables the **Live** mode toggle in the sidebar. In Live mode, tool calls are forwarded to this callback instead of using simulation mock data. The `sunpeak dev` command wires this up automatically.
+</ResponseField>
+
+<ResponseField name="defaultLive" type="boolean" default="false">
+  Initial state of the Live mode toggle. When `true`, the simulator starts in Live mode. Set by the `--live` CLI flag.
+</ResponseField>
+
+<ResponseField name="hideLiveToggle" type="boolean" default="false">
+  Hide the Live mode checkbox in the sidebar header. Useful for embedded or marketing contexts where Live mode is not applicable.
+</ResponseField>
+
 ## URL Parameters
 
 The Simulator supports URL parameters for configuring the initial state. This is especially useful for automated testing and sharing specific configurations.
@@ -183,9 +195,10 @@ test.describe('Albums Resource', () => {
 
 The simulator sidebar provides interactive controls for:
 
+- **Live**: Toggle Live mode — calls real tool handlers instead of simulation mocks (requires `onCallTool` prop)
 - **Host**: Switch between ChatGPT and Claude conversation shells
-- **Simulation**: Select which simulation to display
-- **Simulation Width**: Toggle between mobile (375px, 425px), tablet (768px), and full width (1024px)
+- **Simulation / Tool**: Select which simulation (or tool, in Live mode) to display
+- **Width**: Toggle between mobile (375px, 425px), tablet (768px), and full width (1024px)
 - **Theme**: Toggle between light and dark themes
 - **Display Mode**: Switch between inline, PiP, and fullscreen modes
 - **Locale**: Set the locale string

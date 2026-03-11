@@ -34,6 +34,15 @@ interface ChatGPTSimulatorProps {
   simulations?: Record<string, Simulation>;
   appName?: string;
   appIcon?: string;
+  /** Override callServerTool resolution. When provided, bypasses simulation serverTools mocks (e.g., for --live mode). */
+  onCallTool?: (params: {
+    name: string;
+    arguments?: Record<string, unknown>;
+  }) => Promise<CallToolResult> | CallToolResult;
+  /** Initial live mode state. Defaults to false. */
+  defaultLive?: boolean;
+  /** Hide the Live mode toggle in the sidebar (e.g., for marketing/embedded use). */
+  hideLiveToggle?: boolean;
 }
 
 /**
@@ -122,11 +131,36 @@ export function ChatGPTSimulator({
   simulations = {},
   appName = 'Sunpeak',
   appIcon,
+  onCallTool,
+  defaultLive = false,
+  hideLiveToggle = false,
 }: ChatGPTSimulatorProps) {
   // Only list simulations with a UI resource — backend-only tools have nothing to render.
   const simulationNames = Object.keys(simulations).filter((name) => simulations[name].resource);
   const urlParams = useMemo(() => parseUrlParams(), []);
+  const [live, setLive] = React.useState(defaultLive);
+  const [isRunning, setIsRunning] = React.useState(false);
+  const [hasRun, setHasRun] = React.useState(false);
+  const [showCheck, setShowCheck] = React.useState(false);
+  const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const [screenWidth, setScreenWidth] = React.useState<ScreenWidth>('full');
+
+  // In live mode, deduplicate simulations by tool name for the Tool dropdown
+  const toolOptions = useMemo(() => {
+    if (!live) return [];
+    const seen = new Map<string, string>();
+    for (const simName of simulationNames) {
+      const sim = simulations[simName];
+      const toolName = sim.tool.name;
+      if (!seen.has(toolName)) {
+        seen.set(toolName, simName);
+      }
+    }
+    return Array.from(seen.entries()).map(([toolName, simName]) => ({
+      value: simName,
+      label: (simulations[simName].tool.title as string | undefined) || toolName,
+    }));
+  }, [live, simulationNames, simulations]);
 
   const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
 
@@ -141,6 +175,14 @@ export function ChatGPTSimulator({
     React.useState<string>(initialSimulationName);
 
   const selectedSim = simulations[selectedSimulationName];
+
+  // Reset hasRun when tool selection changes in live mode
+  useEffect(() => {
+    if (live) setHasRun(false);
+  }, [live, selectedSimulationName]);
+
+  // Cleanup check timer
+  useEffect(() => () => clearTimeout(checkTimerRef.current), []);
 
   // ── Host context state ──────────────────────────────────────────
 
@@ -326,10 +368,48 @@ export function ChatGPTSimulator({
   // For non-iframe content (children), there's no async rendering so no transition.
   const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
 
+  // Run button handler: call the real tool handler with current toolInput
+  const handleRun = useCallback(async () => {
+    if (!onCallTool || !selectedSim) return;
+    const toolName = selectedSim.tool.name;
+    setIsRunning(true);
+    try {
+      const result = await onCallTool({ name: toolName, arguments: toolInput });
+      setToolResult(result);
+      setToolResultJson(JSON.stringify(result, null, 2));
+      setToolResultError('');
+      setHasRun(true);
+      setShowCheck(true);
+      clearTimeout(checkTimerRef.current);
+      checkTimerRef.current = setTimeout(() => setShowCheck(false), 2000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setToolResult({
+        content: [{ type: 'text', text: `Error: ${message}` }],
+        isError: true,
+      });
+      setToolResultJson(
+        JSON.stringify(
+          { content: [{ type: 'text', text: `Error: ${message}` }], isError: true },
+          null,
+          2
+        )
+      );
+    } finally {
+      setIsRunning(false);
+    }
+  }, [onCallTool, selectedSim, toolInput]);
+
   // Handle callServerTool from the iframe by resolving mock responses from the
   // current simulation's `serverTools` map.
   const handleCallTool = useCallback(
-    (params: { name: string; arguments?: Record<string, unknown> }): CallToolResult => {
+    (params: {
+      name: string;
+      arguments?: Record<string, unknown>;
+    }): CallToolResult | Promise<CallToolResult> => {
+      if (onCallTool) {
+        return onCallTool(params);
+      }
       const mock = selectedSim?.serverTools?.[params.name];
       if (mock) {
         const result = resolveServerToolResult(mock, params.arguments);
@@ -344,14 +424,33 @@ export function ChatGPTSimulator({
         ],
       };
     },
-    [selectedSim, selectedSimulationName]
+    [onCallTool, selectedSim, selectedSimulationName]
   );
+
+  // In live mode, derive user message from the selected tool
+  const liveUserMessage =
+    live && selectedSim
+      ? `Call my ${(selectedSim.tool.title as string | undefined) || selectedSim.tool.name} tool`
+      : undefined;
 
   // The wrapper div stays mounted across key changes, providing a themed
   // background while the iframe (opacity: 0) loads new content.
+  // In live mode, show empty state until the tool has been run.
+  const showEmptyState = live && !hasRun;
   const iframeBg = 'var(--sim-bg-conversation, var(--color-background-primary, transparent))';
   let content: React.ReactNode;
-  if (resourceUrl) {
+  if (showEmptyState) {
+    content = (
+      <div
+        className="h-full w-full flex items-center justify-center"
+        style={{ background: iframeBg }}
+      >
+        <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Press <strong>Run</strong> to call the tool
+        </span>
+      </div>
+    );
+  } else if (resourceUrl) {
     // Dev mode: load HTML page directly (supports Vite HMR)
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
@@ -401,9 +500,23 @@ export function ChatGPTSimulator({
   return (
     <ThemeProvider theme={theme}>
       <SimpleSidebar
+        headerRight={
+          !hideLiveToggle && onCallTool ? (
+            <SidebarCheckbox checked={live} onChange={setLive} label="Live" />
+          ) : undefined
+        }
         controls={
-          <div className="space-y-2">
-            {simulationNames.length > 1 && (
+          <div className="space-y-1">
+            {live && toolOptions.length > 1 && (
+              <SidebarControl label="Tool">
+                <SidebarSelect
+                  value={selectedSimulationName}
+                  onChange={(value) => setSelectedSimulationName(value)}
+                  options={toolOptions}
+                />
+              </SidebarControl>
+            )}
+            {!live && simulationNames.length > 1 && (
               <SidebarControl label="Simulation">
                 <SidebarSelect
                   value={selectedSimulationName}
@@ -423,7 +536,7 @@ export function ChatGPTSimulator({
               </SidebarControl>
             )}
 
-            <SidebarControl label="Simulation Width">
+            <SidebarControl label="Width">
               <SidebarSelect
                 value={screenWidth}
                 onChange={(value) => setScreenWidth(value as ScreenWidth)}
@@ -437,7 +550,7 @@ export function ChatGPTSimulator({
             </SidebarControl>
 
             <SidebarCollapsibleControl label="Host Context" defaultCollapsed={false}>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <SidebarControl label="Theme">
                   <SidebarToggle
                     value={theme}
@@ -606,7 +719,11 @@ export function ChatGPTSimulator({
               />
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Tool Input (JSON)">
+            <SidebarCollapsibleControl
+              key={`tool-input-${live}`}
+              label="Tool Input (JSON)"
+              defaultCollapsed={!live}
+            >
               <SidebarTextarea
                 value={toolInputJson}
                 onChange={(json) => validateJSON(json, setToolInputJson, setToolInputError)}
@@ -621,30 +738,32 @@ export function ChatGPTSimulator({
               />
             </SidebarCollapsibleControl>
 
-            <SidebarCollapsibleControl label="Tool Result (JSON)">
-              <SidebarTextarea
-                value={toolResultJson}
-                onChange={(json) => validateJSON(json, setToolResultJson, setToolResultError)}
-                onFocus={() => setEditingField('toolResult')}
-                onBlur={() =>
-                  commitJSON(toolResultJson, setToolResultError, (parsed) => {
-                    if (parsed === null) {
-                      setToolResult(undefined);
-                    } else {
-                      // Wrap raw object as structuredContent in a CallToolResult
-                      const result = parsed as Record<string, unknown>;
-                      if ('content' in result || 'structuredContent' in result) {
-                        setToolResult(result as CallToolResult);
+            {!live && (
+              <SidebarCollapsibleControl label="Tool Result (JSON)">
+                <SidebarTextarea
+                  value={toolResultJson}
+                  onChange={(json) => validateJSON(json, setToolResultJson, setToolResultError)}
+                  onFocus={() => setEditingField('toolResult')}
+                  onBlur={() =>
+                    commitJSON(toolResultJson, setToolResultError, (parsed) => {
+                      if (parsed === null) {
+                        setToolResult(undefined);
                       } else {
-                        setToolResult({ content: [], structuredContent: result });
+                        // Wrap raw object as structuredContent in a CallToolResult
+                        const result = parsed as Record<string, unknown>;
+                        if ('content' in result || 'structuredContent' in result) {
+                          setToolResult(result as CallToolResult);
+                        } else {
+                          setToolResult({ content: [], structuredContent: result });
+                        }
                       }
-                    }
-                  })
-                }
-                error={toolResultError}
-                maxRows={8}
-              />
-            </SidebarCollapsibleControl>
+                    })
+                  }
+                  error={toolResultError}
+                  maxRows={8}
+                />
+              </SidebarCollapsibleControl>
+            )}
           </div>
         }
       >
@@ -655,8 +774,42 @@ export function ChatGPTSimulator({
           onRequestDisplayMode={handleDisplayModeChange}
           appName={appName}
           appIcon={appIcon}
-          userMessage={selectedSim?.userMessage}
+          userMessage={liveUserMessage ?? selectedSim?.userMessage}
           isTransitioning={isTransitioning}
+          headerAction={
+            live && onCallTool ? (
+              <button
+                type="button"
+                onClick={handleRun}
+                disabled={isRunning}
+                className="rounded-full px-3 py-1 text-sm font-medium transition-opacity disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
+                style={{
+                  backgroundColor: 'var(--color-text-primary)',
+                  color: 'var(--color-background-primary)',
+                }}
+              >
+                {showCheck ? (
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M2 6L5 9L10 3" />
+                  </svg>
+                ) : (
+                  <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+                    <path d="M0 0L10 6L0 12V0Z" />
+                  </svg>
+                )}
+                Run
+              </button>
+            ) : undefined
+          }
         >
           {content}
         </Conversation>

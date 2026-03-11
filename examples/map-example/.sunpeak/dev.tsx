@@ -11,10 +11,15 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { simulator } from 'sunpeak';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import '../src/styles/globals.css';
 import resourceComponents from '../src/resources';
 
 const { Simulator, buildDevSimulations } = simulator;
+
+// Compile-time flags injected by sunpeak dev (via Vite define)
+declare const __SUNPEAK_LIVE__: boolean;
+declare const __SUNPEAK_BUILT__: boolean;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
@@ -27,6 +32,30 @@ const simulations = buildDevSimulations({
   ),
 });
 
+// --built: Override resource URLs to use production-built HTML from dist/
+if (__SUNPEAK_BUILT__) {
+  for (const sim of Object.values(simulations)) {
+    if (sim.resource && sim.resourceUrl) {
+      const resourceName = sim.resource.name as string;
+      sim.resourceUrl = `/dist/${resourceName}/${resourceName}.html`;
+    }
+  }
+}
+
+// Forward callServerTool to real handlers via dev server endpoint.
+// Always available — the Live checkbox in the sidebar controls whether it's used.
+const onCallTool = async (params: {
+  name: string;
+  arguments?: Record<string, unknown>;
+}): Promise<CallToolResult> => {
+  const res = await fetch('/__sunpeak/call-tool', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  return res.json();
+};
+
 // Read app config from environment or use defaults
 const appName = import.meta.env?.VITE_APP_NAME || 'Sunpeak';
 const appIcon = import.meta.env?.VITE_APP_ICON || '🌄';
@@ -38,7 +67,13 @@ if (import.meta.hot) import.meta.hot.data.root = root;
 
 root.render(
   <StrictMode>
-    <Simulator simulations={simulations} appName={appName} appIcon={appIcon} />
+    <Simulator
+      simulations={simulations}
+      appName={appName}
+      appIcon={appIcon}
+      onCallTool={onCallTool}
+      defaultLive={__SUNPEAK_LIVE__}
+    />
   </StrictMode>
 );
 

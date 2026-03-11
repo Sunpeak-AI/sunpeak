@@ -23,6 +23,34 @@ export const schema = {
 
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
-export default async function (_args: Args, _extra: ToolHandlerExtra) {
-  return { structuredContent: { title: 'Review Your Post', sections: [] } };
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  const platforms = args.platforms?.join(', ') || 'X, LinkedIn';
+  const content = args.content || 'Check out our latest update!';
+
+  return {
+    structuredContent: {
+      title: 'Review Your Post',
+      sections: [
+        { type: 'preview', title: 'Content', content },
+        {
+          type: 'details',
+          title: 'Publishing Details',
+          content: [
+            { label: 'Platforms', value: platforms },
+            {
+              label: 'Schedule',
+              value:
+                args.schedule === 'scheduled' && args.scheduledTime
+                  ? new Date(args.scheduledTime).toLocaleString()
+                  : 'Immediately',
+            },
+            { label: 'Visibility', value: args.visibility || 'public' },
+          ],
+        },
+      ],
+      acceptLabel: 'Publish',
+      rejectLabel: 'Cancel',
+      reviewTool: { name: 'review', arguments: { action: 'publish' } },
+    },
+  };
 }

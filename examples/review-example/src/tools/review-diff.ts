@@ -21,6 +21,33 @@ export const schema = {
 
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
-export default async function (_args: Args, _extra: ToolHandlerExtra) {
-  return { structuredContent: { title: 'Review', sections: [] } };
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  const files = args.files ?? ['src/app.tsx', 'src/utils/helpers.ts'];
+  const changes: Array<{ id: string; type: string; path?: string; description: string }> =
+    files.map((file, i) => ({
+      id: String(i + 1),
+      type: 'modify',
+      path: file,
+      description: `Changes to ${file.split('/').pop()}`,
+    }));
+
+  if (args.runMigrations) {
+    changes.push({
+      id: 'migration',
+      type: 'action',
+      description: 'Run database migrations',
+    });
+  }
+
+  return {
+    structuredContent: {
+      title: args.title || 'Code Review',
+      description: args.description || 'Review the proposed changes below',
+      sections: [{ type: 'changes', title: 'File Changes', content: changes }],
+      reviewTool: {
+        name: 'review',
+        arguments: { action: 'apply_changes', changesetId: args.changesetId || 'cs-1' },
+      },
+    },
+  };
 }

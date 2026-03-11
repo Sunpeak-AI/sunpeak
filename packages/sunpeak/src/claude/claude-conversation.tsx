@@ -14,6 +14,8 @@ interface ClaudeConversationProps {
   appIcon?: string;
   userMessage?: string;
   isTransitioning?: boolean;
+  /** Optional action element rendered in the conversation header (e.g., Run button) */
+  headerAction?: React.ReactNode;
 }
 
 function CloseIcon() {
@@ -59,6 +61,7 @@ export function ClaudeConversation({
   appIcon,
   userMessage = 'What have you got for me today?',
   isTransitioning = false,
+  headerAction,
 }: ClaudeConversationProps) {
   const isDesktop = platform === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
@@ -128,13 +131,14 @@ export function ClaudeConversation({
       {/* ─── Conversation header ─── */}
       {!isFullscreen && (
         <header
-          className="h-12 flex items-center px-4 text-sm font-medium sticky top-0 z-40 w-full"
+          className="h-12 flex items-center gap-3 px-4 text-sm font-medium sticky top-0 z-40 w-full"
           style={{
             maxWidth: containerWidth,
             backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
           }}
         >
           <span>sunpeak.ai</span>
+          {headerAction}
         </header>
       )}
 

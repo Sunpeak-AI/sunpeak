@@ -31,6 +31,8 @@ interface ConversationProps {
    * border from flashing at a stale height before the iframe resizes.
    */
   isTransitioning?: boolean;
+  /** Optional action element rendered in the conversation header (e.g., Run button) */
+  headerAction?: React.ReactNode;
 }
 
 /**
@@ -56,6 +58,7 @@ export function Conversation({
   appIcon,
   userMessage = 'What have you got for me today?',
   isTransitioning = false,
+  headerAction,
 }: ConversationProps) {
   const isDesktop = platform === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
@@ -132,13 +135,14 @@ export function Conversation({
       {/* ─── Conversation header ─── */}
       {!isFullscreen && (
         <header
-          className="h-12 flex items-center px-4 text-lg sticky top-0 z-40 w-full"
+          className="h-12 flex items-center gap-3 px-4 text-lg sticky top-0 z-40 w-full"
           style={{
             maxWidth: containerWidth,
             backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
           }}
         >
           <span>sunpeak.ai</span>
+          {headerAction}
         </header>
       )}
 

@@ -19,6 +19,26 @@ export const schema = {
 
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
-export default async function (_args: Args, _extra: ToolHandlerExtra) {
-  return { structuredContent: { albums: [] } };
+export default async function (args: Args, _extra: ToolHandlerExtra) {
+  const title = args.category
+    ? `${args.category.charAt(0).toUpperCase() + args.category.slice(1)} Photos`
+    : args.search
+      ? `"${args.search}" Results`
+      : 'My Albums';
+
+  return {
+    structuredContent: {
+      albums: [
+        {
+          id: '1',
+          title,
+          cover: 'https://cdn.sunpeak.ai/demo/pizza1.jpeg',
+          photos: [
+            { id: 'p1', title: 'Photo 1', url: 'https://cdn.sunpeak.ai/demo/pizza1.jpeg' },
+            { id: 'p2', title: 'Photo 2', url: 'https://cdn.sunpeak.ai/demo/pizza2.jpeg' },
+          ],
+        },
+      ],
+    },
+  };
 }
