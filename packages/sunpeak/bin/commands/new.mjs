@@ -73,6 +73,7 @@ export const defaultDeps = {
   execAsync,
   promptName: defaultPromptName,
   selectResources: defaultSelectResources,
+  confirm: clack.confirm,
   intro: clack.intro,
   outro: clack.outro,
   spinner: clack.spinner,
@@ -266,19 +267,21 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     s.stop(`Install failed. You can try running "${pm} install" manually.`);
   }
 
-  // Offer to install the sunpeak skill
-  const installSkill = await clack.confirm({
-    message: 'Install the sunpeak skill? (helps your coding agent build your app)',
-    initialValue: true,
-  });
-  if (!clack.isCancel(installSkill) && installSkill) {
-    try {
-      d.execSync('npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app', {
-        cwd: targetDir,
-        stdio: 'inherit',
-      });
-    } catch {
-      d.console.log('Skill install skipped. You can install later with: npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app');
+  // Offer to install the sunpeak skill (only in interactive mode)
+  if (resourcesArg === undefined) {
+    const installSkill = await d.confirm({
+      message: 'Install the sunpeak skill? (helps your coding agent build your app)',
+      initialValue: true,
+    });
+    if (!clack.isCancel(installSkill) && installSkill) {
+      try {
+        d.execSync('npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app', {
+          cwd: targetDir,
+          stdio: 'inherit',
+        });
+      } catch {
+        d.console.log('Skill install skipped. You can install later with: npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app');
+      }
     }
   }
 

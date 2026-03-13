@@ -31,6 +31,7 @@ const createThrowingMockProcess = () => ({
 const noopIntro = vi.fn();
 const noopOutro = vi.fn();
 const noopSpinner = () => ({ start: vi.fn(), stop: vi.fn() });
+const noopConfirm = vi.fn().mockResolvedValue(false);
 const noopExecAsync = vi.fn().mockResolvedValue({});
 
 describe('CLI Commands', () => {
@@ -147,6 +148,7 @@ describe('CLI Commands', () => {
         renameSync: vi.fn(),
         execSync: vi.fn(),
         execAsync: noopExecAsync,
+        confirm: noopConfirm,
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',
@@ -201,6 +203,7 @@ describe('CLI Commands', () => {
         },
         execSync: vi.fn(),
         execAsync: noopExecAsync,
+        confirm: noopConfirm,
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',
@@ -266,6 +269,7 @@ describe('CLI Commands', () => {
         renameSync: vi.fn(),
         execSync: vi.fn(),
         execAsync: noopExecAsync,
+        confirm: noopConfirm,
         cwd: () => '/test',
         templateDir: '/template',
         rootPkgPath: '/root/package.json',
