@@ -398,7 +398,7 @@ export function Simulator({
                 <SidebarControl
                   label="Host"
                   tooltip="Host runtime to simulate"
-                  docsPath="api-reference/hooks/platform-detection"
+                  docsPath="api-reference/functions/host-detection"
                 >
                   <SidebarSelect
                     value={state.activeHost}

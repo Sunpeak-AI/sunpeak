@@ -43,16 +43,28 @@
         "default": "./dist/mcp/index.js"
       }
     },
+    "./host": {
+      "import": {
+        "types": "./dist/host/index.d.ts",
+        "default": "./dist/host/index.js"
+      }
+    },
+    "./host/chatgpt": {
+      "import": {
+        "types": "./dist/host/chatgpt/index.d.ts",
+        "default": "./dist/host/chatgpt/index.js"
+      }
+    },
     "./platform": {
       "import": {
-        "types": "./dist/platform/index.d.ts",
-        "default": "./dist/platform/index.js"
+        "types": "./dist/host/index.d.ts",
+        "default": "./dist/host/index.js"
       }
     },
     "./platform/chatgpt": {
       "import": {
-        "types": "./dist/platform/chatgpt/index.d.ts",
-        "default": "./dist/platform/chatgpt/index.js"
+        "types": "./dist/host/chatgpt/index.d.ts",
+        "default": "./dist/host/chatgpt/index.js"
       }
     },
     "./package.json": "./package.json"

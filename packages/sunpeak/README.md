@@ -49,7 +49,7 @@ sunpeak new
 
 ### The `sunpeak` library
 
-1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`, `useUpdateModelContext`, `useAppTools`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.). Platform-specific hooks like `useUploadFile`, `useRequestModal`, and `useRequestCheckout` are available via `sunpeak/platform/chatgpt`, with `isChatGPT()` / `isClaude()` platform detection via `sunpeak/platform`.
+1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`, `useUpdateModelContext`, `useAppTools`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.). Host-specific hooks like `useUploadFile`, `useRequestModal`, and `useRequestCheckout` are available via `sunpeak/host/chatgpt`, with `isChatGPT()` / `isClaude()` host detection via `sunpeak/host`.
 2. Multi-host simulator: React component replicating host runtimes (ChatGPT, Claude) to **test Apps locally and automatically** via UI, props, or URL parameters.
 3. MCP server: Serve Resources with mock data to hosts like ChatGPT and Claude with HMR (**no more cache issues or 5-click manual refreshes**).
 

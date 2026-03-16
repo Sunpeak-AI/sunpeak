@@ -11,11 +11,11 @@ export type { OpenAIRequestModalParams as OpenModalParams };
  * Pass a `template` URL to load alternate UI content in the modal, or omit
  * it to reuse the current UI.
  *
- * Import from `sunpeak/platform/chatgpt`:
+ * Import from `sunpeak/host/chatgpt`:
  *
  * @example
  * ```tsx
- * import { useRequestModal } from 'sunpeak/platform/chatgpt';
+ * import { useRequestModal } from 'sunpeak/host/chatgpt';
  *
  * function CheckoutButton() {
  *   const requestModal = useRequestModal();

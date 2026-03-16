@@ -1,52 +1,52 @@
 ---
-title: "Platform Detection"
-description: "Detect which host platform is running your MCP App."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "platform detection", "host detection"]
+title: "Host Detection"
+description: "Detect which host is running your MCP App."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "host detection"]
 ---
 
 <Badge color="yellow">sunpeak API</Badge>
 
 ## Overview
 
-Platform detection utilities help you identify which host platform (ChatGPT, Claude, etc.) is running your app, so you can conditionally use platform-specific features.
+Host detection utilities help you identify which host (ChatGPT, Claude, etc.) is running your app, so you can conditionally use host-specific features.
 
 ## Import
 
 ```tsx
-import { detectPlatform, isChatGPT, isClaude } from 'sunpeak/platform';
+import { detectHost, isChatGPT, isClaude } from 'sunpeak/host';
 ```
 
-## detectPlatform
+## detectHost
 
-Detect the current host platform.
+Detect the current host.
 
 ### Signature
 
 ```tsx
-function detectPlatform(): Platform
+function detectHost(): Host
 ```
 
-### Platform Type
+### Host Type
 
 ```tsx
-type Platform = 'chatgpt' | 'claude' | 'unknown';
+type Host = 'chatgpt' | 'claude' | 'unknown';
 ```
 
 ### Detection Order
 
 1. **Runtime objects** — checks for `window.openai` (injected by ChatGPT and by the simulator when ChatGPT host is selected)
-2. **User agent** — checks `navigator.userAgent` for platform identifiers
+2. **User agent** — checks `navigator.userAgent` for host identifiers
 3. **Hostname** — checks `window.location.hostname` for known host domains
 
 ### Usage
 
 ```tsx
-import { detectPlatform } from 'sunpeak/platform';
+import { detectHost } from 'sunpeak/host';
 
 function MyResource() {
-  const platform = detectPlatform();
+  const host = detectHost();
 
-  switch (platform) {
+  switch (host) {
     case 'chatgpt':
       return <ChatGPTFeatures />;
     case 'claude':
@@ -72,8 +72,8 @@ function isChatGPT(): boolean
 ### Usage
 
 ```tsx
-import { isChatGPT } from 'sunpeak/platform';
-import { useUploadFile } from 'sunpeak/platform/chatgpt';
+import { isChatGPT } from 'sunpeak/host';
+import { useUploadFile } from 'sunpeak/host/chatgpt';
 
 function MyResource() {
   if (!isChatGPT()) {
@@ -103,7 +103,7 @@ function isClaude(): boolean
 ### Usage
 
 ```tsx
-import { isClaude } from 'sunpeak/platform';
+import { isClaude } from 'sunpeak/host';
 
 function MyResource() {
   if (isClaude()) {
@@ -116,9 +116,9 @@ function MyResource() {
 
 ## Simulator Behavior
 
-In the [Simulator](/api-reference/simulations/simulator), platform detection reflects the currently selected host:
+In the [Simulator](/api-reference/simulations/simulator), host detection reflects the currently selected host:
 
-| Host selected | `isChatGPT()` | `isClaude()` | `detectPlatform()` |
+| Host selected | `isChatGPT()` | `isClaude()` | `detectHost()` |
 |---|---|---|---|
 | ChatGPT | `true` | `false` | `'chatgpt'` |
 | Claude | `false` | `false`* | `'unknown'`* |
@@ -128,7 +128,7 @@ In the [Simulator](/api-reference/simulations/simulator), platform detection ref
 ## See Also
 
 <Card horizontal title="ChatGPT Hooks" icon="bolt" href="/api-reference/hooks/chatgpt-hooks">
-  Platform-specific hooks for ChatGPT features.
+  Host-specific hooks for ChatGPT features.
 </Card>
 <Card horizontal title="useHostContext" icon="circle-info" href="/api-reference/hooks/use-host-context">
   Read host identity and capabilities via the MCP protocol.

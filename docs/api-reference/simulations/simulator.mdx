@@ -220,7 +220,7 @@ The simulator sidebar provides interactive controls for:
 
 When the **ChatGPT** host is selected, the simulator automatically injects a mock `window.openai` runtime into the resource iframe. This enables:
 
-- **`isChatGPT()`** returns `true` — platform detection works correctly
+- **`isChatGPT()`** returns `true` — host detection works correctly
 - **ChatGPT-specific hooks** (`useUploadFile`, `useGetFileDownloadUrl`, `useRequestModal`, `useRequestCheckout`) work with stub implementations
 - All mock method calls are logged to the browser console with a `[Simulator]` prefix
 

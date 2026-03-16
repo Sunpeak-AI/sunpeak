@@ -10,11 +10,11 @@ export type { OpenAIUploadFileResult as CreateFileResult };
  * Wraps `window.openai.uploadFile` which is only available inside ChatGPT.
  * Supported formats: `image/png`, `image/jpeg`, `image/webp`.
  *
- * Import from `sunpeak/platform/chatgpt`:
+ * Import from `sunpeak/host/chatgpt`:
  *
  * @example
  * ```tsx
- * import { useUploadFile } from 'sunpeak/platform/chatgpt';
+ * import { useUploadFile } from 'sunpeak/host/chatgpt';
  *
  * function ImageUploader() {
  *   const uploadFile = useUploadFile();

@@ -14,7 +14,7 @@
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "mapbox-gl": "^3.20.0",
-    "sunpeak": "^0.16.19",
+    "sunpeak": "^0.16.20",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },

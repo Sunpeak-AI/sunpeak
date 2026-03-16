@@ -16,11 +16,11 @@ export type { OpenAICheckoutOrder as CheckoutOrder };
  * ChatGPT. Opens the host checkout UI, handles payment display, and
  * resolves with the finalized order. Rejects on error or user cancel.
  *
- * Import from `sunpeak/platform/chatgpt`:
+ * Import from `sunpeak/host/chatgpt`:
  *
  * @example
  * ```tsx
- * import { useRequestCheckout } from 'sunpeak/platform/chatgpt';
+ * import { useRequestCheckout } from 'sunpeak/host/chatgpt';
  *
  * function BuyButton() {
  *   const requestCheckout = useRequestCheckout();
