@@ -71,7 +71,7 @@ packages/sunpeak/
 │   │   └── claude-host.ts    # Host registration (theme, capabilities)
 │   ├── hooks/                # React hooks (useApp, useHostContext, useToolData, useAppState, useUpdateModelContext, useAppTools, etc.)
 │   ├── mcp/                  # MCP server (runMCPServer, production-server, resource registration)
-│   ├── platform/             # Platform detection (detectPlatform, isChatGPT, isClaude)
+│   ├── host/                 # Host detection (detectHost, isChatGPT, isClaude)
 │   │   └── chatgpt/          # ChatGPT-specific: useUploadFile, useRequestModal, useRequestCheckout
 │   ├── lib/                  # Utilities (discovery, cn(), media queries)
 │   ├── types/                # Type definitions (Simulation, runtime types)
@@ -93,8 +93,8 @@ packages/sunpeak/
 - `sunpeak/chatgpt` — ChatGPT host shell registration + Simulator re-export
 - `sunpeak/claude` — Claude host shell registration + Simulator re-export
 - `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
-- `sunpeak/platform` — Platform detection
-- `sunpeak/platform/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
+- `sunpeak/host` — Host detection
+- `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/style.css` — Main stylesheet
 - `sunpeak/chatgpt/globals.css` — Simulator globals stylesheet
 

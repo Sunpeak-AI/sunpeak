@@ -97,11 +97,11 @@ function MyResource() {
 
 ## ChatGPT-Specific Hooks
 
-Some ChatGPT features go beyond the MCP Apps standard. sunpeak provides typed hooks for these platform-specific APIs, imported from `sunpeak/platform/chatgpt`:
+Some ChatGPT features go beyond the MCP Apps standard. sunpeak provides typed hooks for these host-specific APIs, imported from `sunpeak/host/chatgpt`:
 
 ```tsx
-import { isChatGPT } from 'sunpeak/platform';
-import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/platform/chatgpt';
+import { isChatGPT } from 'sunpeak/host';
+import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/host/chatgpt';
 
 function MyResource() {
   if (!isChatGPT()) {
@@ -133,7 +133,7 @@ function ChatGPTFeatures() {
 | `useRequestCheckout` | Trigger the instant checkout flow |
 
 <Warning>
-These hooks throw if called outside ChatGPT. Always feature-detect with `isChatGPT()` first. See [Platform Detection](/api-reference/hooks/platform-detection).
+These hooks throw if called outside ChatGPT. Always feature-detect with `isChatGPT()` first. See [Host Detection](/api-reference/functions/host-detection).
 </Warning>
 
 ## Dive Deeper
@@ -144,6 +144,6 @@ These hooks throw if called outside ChatGPT. Always feature-detect with `isChatG
 <Card horizontal title="ChatGPT Hooks" icon="bolt" href="/api-reference/hooks/chatgpt-hooks">
   ChatGPT-specific hook API reference.
 </Card>
-<Card horizontal title="Platform Detection" icon="radar" href="/api-reference/hooks/platform-detection">
-  Detect which host platform is running your app.
+<Card horizontal title="Host Detection" icon="radar" href="/api-reference/functions/host-detection">
+  Detect which host is running your app.
 </Card>

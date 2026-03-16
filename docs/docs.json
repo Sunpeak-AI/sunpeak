@@ -18,7 +18,9 @@
     { "source": "/mcp-apps/app/events/ontoolinput", "destination": "/mcp-apps/app/event-handlers/ontoolinput" },
     { "source": "/mcp-apps/app/events/ontoolinputpartial", "destination": "/mcp-apps/app/event-handlers/ontoolinputpartial" },
     { "source": "/mcp-apps/app/events/ontoolresult", "destination": "/mcp-apps/app/event-handlers/ontoolresult" },
-    { "source": "/api-reference/hooks/safe-area", "destination": "/api-reference/components/safe-area" }
+    { "source": "/api-reference/hooks/safe-area", "destination": "/api-reference/components/safe-area" },
+    { "source": "/api-reference/hooks/platform-detection", "destination": "/api-reference/functions/host-detection" },
+    { "source": "/api-reference/hooks/host-detection", "destination": "/api-reference/functions/host-detection" }
   ],
   "navigation": {
     "tabs": [
@@ -91,10 +93,15 @@
             ]
           },
           {
+            "group": "Functions",
+            "pages": [
+              "api-reference/functions/host-detection"
+            ]
+          },
+          {
             "group": "Hooks",
             "pages": [
               "api-reference/hooks/chatgpt-hooks",
-              "api-reference/hooks/platform-detection",
               "api-reference/hooks/use-app",
               "api-reference/hooks/use-app-state",
               "api-reference/hooks/use-app-tools",

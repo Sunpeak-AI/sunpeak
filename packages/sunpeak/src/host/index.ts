@@ -1,12 +1,12 @@
 /**
- * Platform detection utilities for MCP Apps.
+ * Host detection utilities for MCP Apps.
  *
- * Use these functions to detect which host platform is running your app
- * and conditionally use platform-specific features.
+ * Use these functions to detect which host is running your app
+ * and conditionally use host-specific features.
  *
  * @example
  * ```tsx
- * import { isChatGPT } from 'sunpeak/platform';
+ * import { isChatGPT } from 'sunpeak/host';
  *
  * function MyResource() {
  *   // Only use ChatGPT-specific features when running on ChatGPT
@@ -18,22 +18,22 @@
  */
 
 /**
- * Supported host platforms.
+ * Supported hosts.
  */
-export type Platform = 'chatgpt' | 'claude' | 'unknown';
+export type Host = 'chatgpt' | 'claude' | 'unknown';
 
 /**
- * Detect the current host platform.
+ * Detect the current host.
  *
  * Detection is based on:
- * 1. Platform runtime objects (window.openai for ChatGPT — works in both
+ * 1. Host runtime objects (window.openai for ChatGPT — works in both
  *    real hosts and the simulator when the ChatGPT host shell is active)
  * 2. User agent patterns as fallback
  * 3. Hostname matching as final fallback
  *
- * @returns The detected platform
+ * @returns The detected host
  */
-export function detectPlatform(): Platform {
+export function detectHost(): Host {
   // Check if we're in a browser environment
   if (typeof window === 'undefined') {
     return 'unknown';
@@ -45,7 +45,7 @@ export function detectPlatform(): Platform {
     return 'chatgpt';
   }
 
-  // Check user agent patterns for platform detection
+  // Check user agent patterns for host detection
   const ua = navigator.userAgent.toLowerCase();
 
   // ChatGPT iOS/Android apps and web
@@ -68,7 +68,7 @@ export function detectPlatform(): Platform {
  *
  * @example
  * ```tsx
- * import { isChatGPT } from 'sunpeak/platform';
+ * import { isChatGPT } from 'sunpeak/host';
  *
  * function MyResource() {
  *   if (isChatGPT()) {
@@ -78,7 +78,7 @@ export function detectPlatform(): Platform {
  * ```
  */
 export function isChatGPT(): boolean {
-  return detectPlatform() === 'chatgpt';
+  return detectHost() === 'chatgpt';
 }
 
 /**
@@ -87,5 +87,11 @@ export function isChatGPT(): boolean {
  * @returns true if running in Claude
  */
 export function isClaude(): boolean {
-  return detectPlatform() === 'claude';
+  return detectHost() === 'claude';
 }
+
+/** @deprecated Use `Host` instead. */
+export type Platform = Host;
+
+/** @deprecated Use `detectHost` instead. */
+export const detectPlatform = detectHost;

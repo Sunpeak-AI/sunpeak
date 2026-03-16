@@ -14,11 +14,11 @@ export type { OpenAIFileDownloadUrlResult as FileDownloadUrlResult };
  * ChatGPT. Use this to retrieve URLs for files uploaded via {@link useUploadFile}
  * or file IDs received in tool parameters.
  *
- * Import from `sunpeak/platform/chatgpt`:
+ * Import from `sunpeak/host/chatgpt`:
  *
  * @example
  * ```tsx
- * import { useGetFileDownloadUrl } from 'sunpeak/platform/chatgpt';
+ * import { useGetFileDownloadUrl } from 'sunpeak/host/chatgpt';
  *
  * function FilePreview({ fileId }: { fileId: string }) {
  *   const getFileDownloadUrl = useGetFileDownloadUrl();

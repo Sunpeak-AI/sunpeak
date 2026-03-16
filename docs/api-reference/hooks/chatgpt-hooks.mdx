@@ -1,6 +1,6 @@
 ---
 title: "ChatGPT Hooks"
-description: "Platform-specific React hooks for ChatGPT features: file uploads, modals, and checkout."
+description: "Host-specific React hooks for ChatGPT features: file uploads, modals, and checkout."
 keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "file upload", "modal", "checkout"]
 ---
 
@@ -9,24 +9,24 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "file upload", "modal", "c
 
 ## Overview
 
-These hooks wrap the ChatGPT `window.openai` runtime APIs, providing typed React hooks for platform features that go beyond the MCP Apps standard. They are available **only when running inside ChatGPT** (or the simulator with the ChatGPT host selected).
+These hooks wrap the ChatGPT `window.openai` runtime APIs, providing typed React hooks for host-specific features that go beyond the MCP Apps standard. They are available **only when running inside ChatGPT** (or the simulator with the ChatGPT host selected).
 
 <Warning>
-These hooks throw if called outside ChatGPT. Always feature-detect with [`isChatGPT()`](/api-reference/hooks/platform-detection) before using them.
+These hooks throw if called outside ChatGPT. Always feature-detect with [`isChatGPT()`](/api-reference/functions/host-detection) before using them.
 </Warning>
 
 ## Import
 
 ```tsx
-import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/platform/chatgpt';
-import { isChatGPT } from 'sunpeak/platform';
+import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/host/chatgpt';
+import { isChatGPT } from 'sunpeak/host';
 ```
 
 ## Feature Detection Pattern
 
 ```tsx
-import { isChatGPT } from 'sunpeak/platform';
-import { useUploadFile } from 'sunpeak/platform/chatgpt';
+import { isChatGPT } from 'sunpeak/host';
+import { useUploadFile } from 'sunpeak/host/chatgpt';
 
 function MyResource() {
   // Only use ChatGPT hooks when running on ChatGPT
@@ -75,7 +75,7 @@ function useUploadFile(): (file: File) => Promise<CreateFileResult>
 ### Usage
 
 ```tsx
-import { useUploadFile } from 'sunpeak/platform/chatgpt';
+import { useUploadFile } from 'sunpeak/host/chatgpt';
 
 function ImageUploader() {
   const uploadFile = useUploadFile();
@@ -116,7 +116,7 @@ function useRequestModal(): (params: OpenModalParams) => Promise<void>
 ### Usage
 
 ```tsx
-import { useRequestModal } from 'sunpeak/platform/chatgpt';
+import { useRequestModal } from 'sunpeak/host/chatgpt';
 
 function SettingsButton() {
   const requestModal = useRequestModal();
@@ -225,7 +225,7 @@ function useRequestCheckout(): (session: CheckoutSession) => Promise<CheckoutOrd
 ### Usage
 
 ```tsx
-import { useRequestCheckout } from 'sunpeak/platform/chatgpt';
+import { useRequestCheckout } from 'sunpeak/host/chatgpt';
 
 function BuyButton() {
   const requestCheckout = useRequestCheckout();
@@ -262,8 +262,8 @@ function BuyButton() {
 For advanced use cases, you can access the `window.openai` runtime directly:
 
 ```tsx
-import { getOpenAIRuntime } from 'sunpeak/platform/chatgpt';
-import type { OpenAIRuntime } from 'sunpeak/platform/chatgpt';
+import { getOpenAIRuntime } from 'sunpeak/host/chatgpt';
+import type { OpenAIRuntime } from 'sunpeak/host/chatgpt';
 
 const runtime: OpenAIRuntime | undefined = getOpenAIRuntime();
 if (runtime?.openExternal) {
@@ -279,8 +279,8 @@ When a different host (e.g. Claude) is selected, `window.openai` is not injected
 
 ## See Also
 
-<Card horizontal title="Platform Detection" icon="radar" href="/api-reference/hooks/platform-detection">
-  Detect which host platform is running your app.
+<Card horizontal title="Host Detection" icon="radar" href="/api-reference/functions/host-detection">
+  Detect which host is running your app.
 </Card>
 <Card horizontal title="Simulator" icon="flask" href="/api-reference/simulations/simulator">
   Test ChatGPT hooks locally with the mock runtime.

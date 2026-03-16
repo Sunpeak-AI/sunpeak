@@ -47,8 +47,8 @@ export default defineConfig({
         'claude/index': resolve(__dirname, 'src/claude/index.ts'),
         'lib/discovery-cli': resolve(__dirname, 'src/lib/discovery-cli.ts'),
         'mcp/index': resolve(__dirname, 'src/mcp/index.ts'),
-        'platform/index': resolve(__dirname, 'src/platform/index.ts'),
-        'platform/chatgpt/index': resolve(__dirname, 'src/platform/chatgpt/index.ts'),
+        'host/index': resolve(__dirname, 'src/host/index.ts'),
+        'host/chatgpt/index': resolve(__dirname, 'src/host/chatgpt/index.ts'),
       },
       formats: ['es', 'cjs'],
       fileName: (format, entryName) => {

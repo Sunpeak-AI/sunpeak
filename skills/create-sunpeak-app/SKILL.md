@@ -453,14 +453,14 @@ dist/
 
 `sunpeak start` loads everything from `dist/` and starts a production MCP server with real tool handlers, Zod input validation, and optional auth from `src/server.ts`.
 
-## Platform Detection
+## Host Detection
 
 ```tsx
-import { isChatGPT, isClaude, detectPlatform } from 'sunpeak/platform';
+import { isChatGPT, isClaude, detectHost } from 'sunpeak/host';
 
 // In a resource component
 function MyResource() {
-  const platform = detectPlatform(); // 'chatgpt' | 'claude' | 'unknown'
+  const host = detectHost(); // 'chatgpt' | 'claude' | 'unknown'
 
   if (isChatGPT()) {
     // Safe to use ChatGPT-specific hooks
@@ -470,11 +470,11 @@ function MyResource() {
 
 ## ChatGPT-Specific Hooks
 
-Import from `sunpeak/platform/chatgpt`. Always feature-detect before use.
+Import from `sunpeak/host/chatgpt`. Always feature-detect before use.
 
 ```tsx
-import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/platform/chatgpt';
-import { isChatGPT } from 'sunpeak/platform';
+import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/host/chatgpt';
+import { isChatGPT } from 'sunpeak/host';
 
 function MyResource() {
   // Only call these when on ChatGPT

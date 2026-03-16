@@ -10,11 +10,11 @@
  *
  * @example
  * ```tsx
- * import { useUploadFile, useRequestModal } from 'sunpeak/platform/chatgpt';
+ * import { useUploadFile, useRequestModal } from 'sunpeak/host/chatgpt';
  * ```
  *
  * @see https://developers.openai.com/apps-sdk/mcp-apps-in-chatgpt
- * @module sunpeak/platform/chatgpt
+ * @module sunpeak/host/chatgpt
  */
 
 // === Types for the window.openai runtime ===

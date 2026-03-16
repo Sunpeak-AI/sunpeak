@@ -100,9 +100,13 @@ export * from './hooks';
 export * from './types';
 export * from './lib';
 
-// === Platform detection (top-level for easy access) ===
-export { isChatGPT, isClaude, detectPlatform } from './platform';
-export type { Platform } from './platform';
+// === Host detection (top-level for easy access) ===
+export { isChatGPT, isClaude, detectHost } from './host';
+export type { Host } from './host';
+
+// Deprecated aliases
+export { detectPlatform } from './host';
+export type { Platform } from './host';
 
 // === Generic simulator (multi-host) ===
 // Import as: import { simulator } from 'sunpeak';
