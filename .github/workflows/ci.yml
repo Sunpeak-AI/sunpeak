@@ -15,50 +15,48 @@ on:
       - 'pnpm-workspace.yaml'
 
 jobs:
-  ci:
+  validate:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: write
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
         with:
           version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'pnpm'
-
       - name: Run validation
         run: pnpm validate
         working-directory: packages/sunpeak
         env:
           CI: true
 
+  bump-version:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
       - name: Bump version and tag
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Bump patch version
           cd packages/sunpeak
           NEW_VERSION=$(pnpm version patch --no-git-tag-version | tail -n 1)
           NEW_VERSION=${NEW_VERSION#v}
           cd ../..
-
-          # Commit and tag
           git add packages/sunpeak/package.json
           git commit -m "chore: bump version to $NEW_VERSION [skip ci]"
           git tag v$NEW_VERSION
-
-          # Push changes and tag (tag push triggers publish workflow)
           git push origin main
           git push origin v$NEW_VERSION
