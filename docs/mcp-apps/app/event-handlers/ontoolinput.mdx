@@ -1,0 +1,84 @@
+---
+title: "MCP Apps ontoolinput - Complete Tool Arguments"
+sidebarTitle: "ontoolinput"
+description: "Handle complete tool call arguments sent by the host before the tool result arrives. Use ontoolinput to access finalized input for rendering or processing."
+keywords: ["MCP Apps", "ChatGPT Apps", "ontoolinput", "tool input", "tool arguments", "event handler", "notification handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+The `ontoolinput` notification handler is called when the host sends complete tool arguments. This event arrives after a tool call begins and before the tool result is available, giving your app a window to process or display the finalized input.
+
+Like all notification handlers, `ontoolinput` should be registered before calling `connect()` to ensure no events are missed during the initialization handshake.
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Signature
+
+```ts
+app.ontoolinput = (params) => void;
+```
+
+## Parameters
+
+<ResponseField name="params.arguments" type="Record<string, unknown>">
+  Complete tool call arguments as key-value pairs.
+</ResponseField>
+
+## Usage
+
+### Basic usage
+
+```ts
+const app = new App({ name: "MyApp", version: "1.0.0" });
+
+app.ontoolinput = (params) => {
+  console.log("Tool arguments:", params.arguments);
+};
+
+await app.connect();
+```
+
+### Rendering tool input in the UI
+
+```ts
+app.ontoolinput = (params) => {
+  const { code, language } = params.arguments as {
+    code: string;
+    language: string;
+  };
+
+  const editor = document.querySelector<HTMLPreElement>("#editor")!;
+  editor.textContent = code;
+  editor.dataset.language = language;
+
+  highlightCode(editor);
+};
+```
+
+### Using with the sunpeak framework
+
+The sunpeak framework provides the [`useToolData`](/api-reference/hooks/use-tool-data) hook, which wraps `ontoolinput` (along with related handlers) into a reactive value for React components. This is the recommended approach when building with sunpeak.
+
+```ts
+import { useToolData } from "sunpeak/hooks";
+
+function MyComponent() {
+  const toolData = useToolData();
+  // toolData.input contains the complete tool arguments
+}
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [ontoolinputpartial](/mcp-apps/app/event-handlers/ontoolinputpartial) -- stream partial arguments as they arrive
+- [ontoolresult](/mcp-apps/app/event-handlers/ontoolresult) -- handle the tool execution result

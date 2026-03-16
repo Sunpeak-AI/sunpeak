@@ -1,0 +1,116 @@
+---
+title: "MCP Apps onlisttools - Declare App-Side Tools"
+sidebarTitle: "onlisttools"
+description: "Declare the tools an MCP App View provides to the host. Return tool definitions so the host and model can discover and call them."
+keywords: ["MCP Apps", "ChatGPT Apps", "onlisttools", "tool list", "app tools", "event handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`onlisttools` is a request handler that returns the list of tools your app provides to the host. The host calls this to discover what tools are available, then invokes them through [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool).
+
+To use `onlisttools`, you must declare the `tools` capability when constructing the `App`. If you set `listChanged: true`, the host will re-query this handler whenever you send a tool list changed notification, allowing your app to dynamically add or remove tools at runtime.
+
+Because this is a **request** handler, the host waits for your response. Return an object with a `tools` array containing the tool names or definitions your app supports.
+
+## Signature
+
+```ts
+app.onlisttools = async () => Promise<{ tools: string[] }>;
+```
+
+## Parameters
+
+This handler receives no parameters.
+
+## Returns
+
+<ResponseField name="result" type="object">
+  <ResponseField name="tools" type="string[]" required>
+    Array of tool names that this app provides. Each name must correspond to a tool handled by [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool).
+  </ResponseField>
+</ResponseField>
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Usage
+
+### Static tool list
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  { tools: { listChanged: true } },
+);
+
+app.onlisttools = async () => {
+  return { tools: ["get-selection", "format-text"] };
+};
+
+await app.connect();
+```
+
+### Dynamic tools based on app state
+
+When `listChanged: true` is set, the host will re-query `onlisttools` after receiving a list-changed notification. This lets you add or remove tools based on the current state of your app:
+
+```ts
+let hasSelection = false;
+
+app.onlisttools = async () => {
+  const tools = ["format-text"];
+  if (hasSelection) {
+    tools.push("get-selection");
+  }
+  return { tools };
+};
+
+document.addEventListener("selectionchange", () => {
+  const newHasSelection = !!window.getSelection()?.toString();
+  if (newHasSelection !== hasSelection) {
+    hasSelection = newHasSelection;
+    // Notify the host to re-query the tool list
+    app.sendToolListChanged();
+  }
+});
+
+await app.connect();
+```
+
+### Pair with oncalltool
+
+The tools declared here must be handled in [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool):
+
+```ts
+app.onlisttools = async () => {
+  return { tools: ["get-selection", "format-text"] };
+};
+
+app.oncalltool = async (params) => {
+  switch (params.name) {
+    case "get-selection":
+      return { content: [{ type: "text", text: getSelectedText() }] };
+    case "format-text":
+      return { content: [{ type: "text", text: formatText(params.arguments) }] };
+    default:
+      throw new Error(`Unknown tool: ${params.name}`);
+  }
+};
+
+await app.connect();
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool) -- handle incoming tool calls
+- [`useAppTools`](/api-reference/hooks/use-app-tools) -- sunpeak React convenience hook for app-side tools
+- [App Class constructor](/mcp-apps/app/app-class#constructor) -- declaring `tools` capability

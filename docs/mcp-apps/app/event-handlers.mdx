@@ -21,7 +21,7 @@ Register handlers **before** calling `connect()` to avoid missing notifications 
 
 ## Notification Handlers
 
-### ontoolinput
+### [ontoolinput](/mcp-apps/app/event-handlers/ontoolinput)
 
 Called when the host sends complete tool arguments. This arrives after a tool call begins and before the tool result.
 
@@ -35,7 +35,7 @@ app.ontoolinput = (params) => {
   Complete tool call arguments as key-value pairs.
 </ResponseField>
 
-### ontoolinputpartial
+### [ontoolinputpartial](/mcp-apps/app/event-handlers/ontoolinputpartial)
 
 Called as the host streams partial tool arguments during tool call initialization. Use for progressive rendering before complete input is available.
 
@@ -55,7 +55,7 @@ app.ontoolinputpartial = (params) => {
 Partial arguments are "healed" JSON — the host closes unclosed brackets/braces to produce valid JSON. The last item in arrays or objects may be truncated. Use partial data only for preview UI, not for critical operations.
 </Warning>
 
-### ontoolresult
+### [ontoolresult](/mcp-apps/app/event-handlers/ontoolresult)
 
 Called when the host sends the result of a tool execution.
 
@@ -81,7 +81,7 @@ app.ontoolresult = (params) => {
 | `isError` | `boolean` | Whether the tool returned an error |
 | `_meta` | `object` | Metadata (e.g., `viewUUID` for state persistence) |
 
-### ontoolcancelled
+### [ontoolcancelled](/mcp-apps/app/event-handlers/ontoolcancelled)
 
 Called when tool execution is cancelled (user action, timeout, classifier intervention).
 
@@ -95,7 +95,7 @@ app.ontoolcancelled = (params) => {
   Optional reason for the cancellation.
 </ResponseField>
 
-### onhostcontextchanged
+### [onhostcontextchanged](/mcp-apps/app/event-handlers/onhostcontextchanged)
 
 Called when the host context changes (theme toggle, resize, locale change, etc.). Params are automatically merged into the internal context before the callback — `getHostContext()` returns updated values.
 
@@ -120,7 +120,7 @@ app.onhostcontextchanged = (ctx) => {
 
 ## Request Handlers
 
-### onteardown
+### [onteardown](/mcp-apps/app/event-handlers/onteardown)
 
 Called when the host requests graceful shutdown before unmounting the iframe. Return `{}` (or a promise resolving to `{}`) when ready.
 
@@ -132,7 +132,7 @@ app.onteardown = async () => {
 };
 ```
 
-### oncalltool
+### [oncalltool](/mcp-apps/app/event-handlers/oncalltool)
 
 Handle tool calls from the host directed at this app. Requires declaring `tools` capability in the constructor.
 
@@ -157,7 +157,7 @@ app.oncalltool = async (params) => {
   Tool arguments.
 </ResponseField>
 
-### onlisttools
+### [onlisttools](/mcp-apps/app/event-handlers/onlisttools)
 
 Return the list of tools this app provides. Requires declaring `tools` capability.
 

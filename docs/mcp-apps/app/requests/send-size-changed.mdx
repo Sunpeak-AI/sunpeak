@@ -1,0 +1,86 @@
+---
+title: "MCP Apps sendSizeChanged - Notify Host of Size Change"
+sidebarTitle: "sendSizeChanged"
+description: "Manually notify the host that an MCP App View's dimensions have changed. Typically handled automatically when autoResize is enabled."
+keywords: ["MCP Apps", "ChatGPT Apps", "sendSizeChanged", "resize", "size change", "dimensions", "autoResize", "iframe size"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`sendSizeChanged` manually notifies the host that the View's dimensions have changed. The host uses this information to resize the iframe containing the MCP App.
+
+In most cases, you do not need to call this method directly. The `App` class enables [auto-resize](/mcp-apps/app/app-class#auto-resize) by default, which automatically detects DOM changes and sends size updates to the host. Use `sendSizeChanged` only when you need explicit control over sizing -- for example, after an animation completes, when rendering canvas-based content, or when auto-resize is disabled.
+
+## Signature
+
+```ts
+sendSizeChanged(
+  params: { width?: number; height?: number },
+): Promise<void>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  <ResponseField name="width" type="number">
+    The new width in pixels. If omitted, the host retains the current width.
+  </ResponseField>
+  <ResponseField name="height" type="number">
+    The new height in pixels. If omitted, the host retains the current height.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+Returns `Promise<void>`. The method resolves when the size notification has been sent to the host.
+
+## Usage
+
+### Setting explicit dimensions
+
+```ts
+app.sendSizeChanged({ width: 400, height: 600 });
+```
+
+### Updating only the height
+
+```ts
+// Useful when content height changes but width should remain fluid
+app.sendSizeChanged({ height: 450 });
+```
+
+### After an animation or transition
+
+```ts
+element.addEventListener("transitionend", () => {
+  const rect = container.getBoundingClientRect();
+  app.sendSizeChanged({ width: rect.width, height: rect.height });
+});
+```
+
+### With canvas-based content
+
+```ts
+function resizeCanvas(width: number, height: number) {
+  canvas.width = width;
+  canvas.height = height;
+  render();
+  app.sendSizeChanged({ width, height });
+}
+```
+
+<Note>
+When `autoResize` is enabled (the default), calling `sendSizeChanged` is unnecessary for standard DOM changes. The auto-resize observer handles this automatically. Disable auto-resize only when you need precise manual control over reported dimensions.
+</Note>
+
+## Related
+
+- [Auto-Resize](/mcp-apps/app/app-class#auto-resize) -- How automatic size detection works in the `App` class.
+- [`useAutoResize`](/mcp-apps/react/use-auto-resize) -- React hook for auto-resize behavior.
+- [Requests](/mcp-apps/app/requests) -- Overview of all View-to-host request methods.

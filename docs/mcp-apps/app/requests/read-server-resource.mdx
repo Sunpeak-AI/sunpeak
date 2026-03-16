@@ -1,0 +1,93 @@
+---
+title: "MCP Apps readServerResource - Read Server Resources"
+sidebarTitle: "readServerResource"
+description: "Read a resource from the originating MCP server, proxied through the host. Retrieve text, binary, and structured content from server-registered resources."
+keywords: ["MCP Apps", "ChatGPT Apps", "readServerResource", "read resource", "server resource", "binary resource", "blob"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`readServerResource` reads a resource from the originating MCP server by URI. The request is proxied through the host, so the View never communicates directly with the server. This is useful for fetching data, binary assets (images, video, audio), or structured content that a server exposes via [MCP Resources](/mcp-apps/mcp/resources).
+
+The returned `ReadResourceResult` contains a `contents` array where each item is either a text resource (with a `text` field) or a binary resource (with a base64-encoded `blob` field).
+
+## Signature
+
+```ts
+async readServerResource(
+  params: { uri: string },
+  options?: RequestOptions,
+): Promise<ReadResourceResult>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  <ResponseField name="uri" type="string" required>
+    The URI of the resource to read. Must match a URI registered on the MCP server via [`registerAppResource`](/mcp-apps/server/register-app-resource) or a standard MCP resource.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration such as timeout or abort signal.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="ReadResourceResult" type="object">
+  <ResponseField name="contents" type="(TextResourceContents | BlobResourceContents)[]">
+    Array of resource contents. Each entry includes a `uri` and `mimeType`, plus either a `text` field (for text resources) or a `blob` field (base64-encoded binary).
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Reading a binary resource
+
+```ts
+const result = await app.readServerResource({ uri: "videos://bunny-1mb" });
+
+const content = result.contents[0];
+if (content && "blob" in content) {
+  const binary = Uint8Array.from(atob(content.blob), (c) => c.charCodeAt(0));
+  const blob = new Blob([binary], { type: content.mimeType });
+  videoElement.src = URL.createObjectURL(blob);
+}
+```
+
+### Reading a text resource
+
+```ts
+const result = await app.readServerResource({ uri: "config://app/settings" });
+
+const content = result.contents[0];
+if (content && "text" in content) {
+  const settings = JSON.parse(content.text);
+  applySettings(settings);
+}
+```
+
+### Error handling
+
+```ts
+try {
+  const result = await app.readServerResource({ uri: "data://reports/latest" });
+  renderReport(result.contents);
+} catch (error) {
+  console.error("Failed to read resource:", error);
+  showFallbackUI();
+}
+```
+
+## Related
+
+- [`useReadServerResource`](/api-reference/hooks/use-read-server-resource) -- React hook that wraps this method.
+- [MCP Resources](/mcp-apps/mcp/resources) -- How resources work in the MCP protocol.
+- [`listServerResources`](/mcp-apps/app/requests/list-server-resources) -- Discover available resources before reading them.
+- [`registerAppResource`](/mcp-apps/server/register-app-resource) -- Register resources on the server side.

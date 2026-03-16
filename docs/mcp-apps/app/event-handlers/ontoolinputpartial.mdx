@@ -1,0 +1,94 @@
+---
+title: "MCP Apps ontoolinputpartial - Streaming Partial Tool Arguments"
+sidebarTitle: "ontoolinputpartial"
+description: "Handle streaming partial tool arguments for progressive UI rendering. Use ontoolinputpartial to display preview content while the host is still generating tool input."
+keywords: ["MCP Apps", "ChatGPT Apps", "ontoolinputpartial", "partial input", "streaming", "progressive rendering", "event handler", "notification handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+The `ontoolinputpartial` notification handler is called as the host streams partial tool arguments during tool call initialization. This enables progressive rendering -- your app can display a live preview of content before the complete input is available.
+
+Partial arguments are delivered as "healed" JSON: the host closes any unclosed brackets or braces to produce valid JSON at each step. This means the data is always parseable but may be incomplete.
+
+Like all notification handlers, `ontoolinputpartial` should be registered before calling `connect()`.
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+<Warning>
+Partial arguments are "healed" JSON -- the host closes unclosed brackets/braces to produce valid JSON. The last item in arrays or objects may be truncated. Use partial data only for preview UI, not for critical operations.
+</Warning>
+
+## Signature
+
+```ts
+app.ontoolinputpartial = (params) => void;
+```
+
+## Parameters
+
+<ResponseField name="params.arguments" type="Record<string, unknown>">
+  Partial tool arguments (healed JSON -- incomplete objects may be truncated).
+</ResponseField>
+
+## Usage
+
+### Basic preview rendering
+
+```ts
+const app = new App({ name: "MyApp", version: "1.0.0" });
+
+const codePreview = document.querySelector<HTMLPreElement>("#code-preview")!;
+
+app.ontoolinputpartial = (params) => {
+  codePreview.textContent = (params.arguments?.code as string) ?? "";
+};
+
+await app.connect();
+```
+
+### Progressive rendering with a final state
+
+Combine `ontoolinputpartial` for live preview with `ontoolinput` for the finalized result:
+
+```ts
+const preview = document.querySelector<HTMLElement>("#preview")!;
+
+app.ontoolinputpartial = (params) => {
+  const markdown = (params.arguments?.content as string) ?? "";
+  preview.innerHTML = renderMarkdownPreview(markdown);
+  preview.classList.add("streaming");
+};
+
+app.ontoolinput = (params) => {
+  const markdown = params.arguments.content as string;
+  preview.innerHTML = renderMarkdownFinal(markdown);
+  preview.classList.remove("streaming");
+};
+```
+
+### Using with the sunpeak framework
+
+The sunpeak framework provides the [`useToolData`](/api-reference/hooks/use-tool-data) hook, which manages both partial and complete tool input as a reactive value. This is the recommended approach when building with sunpeak.
+
+```ts
+import { useToolData } from "sunpeak/hooks";
+
+function MyComponent() {
+  const toolData = useToolData();
+  // toolData.input updates progressively as partial arguments stream in
+}
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [ontoolinput](/mcp-apps/app/event-handlers/ontoolinput) -- receive complete tool arguments

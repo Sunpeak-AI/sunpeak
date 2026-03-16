@@ -15,7 +15,7 @@ import { App } from "@modelcontextprotocol/ext-apps";
 
 The `App` class provides methods for the View to make requests to the host. The host proxies server requests to the MCP server and handles UI requests directly. For handling incoming host events, see [Event Handlers](/mcp-apps/app/event-handlers).
 
-## callServerTool
+## [callServerTool](/mcp-apps/app/requests/call-server-tool)
 
 Call a tool on the originating MCP server (proxied through the host).
 
@@ -43,7 +43,7 @@ if (result.isError) {
 Tool-level execution errors are returned in the result with `isError: true` rather than throwing exceptions. Transport or protocol failures throw. Always check `result.isError`.
 </Note>
 
-## sendMessage
+## [sendMessage](/mcp-apps/app/requests/send-message)
 
 Send a message to the host's chat interface.
 
@@ -65,7 +65,7 @@ if (result.isError) {
 }
 ```
 
-## updateModelContext
+## [updateModelContext](/mcp-apps/app/requests/update-model-context)
 
 Update the host's model context with app state. Context is available to the model in future turns without triggering an immediate response. Each call overwrites any previous context.
 
@@ -102,7 +102,7 @@ await app.sendMessage({
 ```
 </Tip>
 
-## openLink
+## [openLink](/mcp-apps/app/requests/open-link)
 
 Request the host to open an external URL in the browser.
 
@@ -122,7 +122,7 @@ if (isError) {
 }
 ```
 
-## downloadFile
+## [downloadFile](/mcp-apps/app/requests/download-file)
 
 Request the host to download a file. Since MCP Apps run in sandboxed iframes where direct downloads are blocked, this provides a host-mediated mechanism.
 
@@ -169,7 +169,7 @@ await app.downloadFile({
 });
 ```
 
-## readServerResource
+## [readServerResource](/mcp-apps/app/requests/read-server-resource)
 
 Read a resource from the originating MCP server (proxied through the host).
 
@@ -193,7 +193,7 @@ if (content && "blob" in content) {
 }
 ```
 
-## listServerResources
+## [listServerResources](/mcp-apps/app/requests/list-server-resources)
 
 List available resources on the originating MCP server (proxied through the host). Supports pagination via cursor.
 
@@ -217,7 +217,7 @@ if (result.nextCursor) {
 }
 ```
 
-## requestDisplayMode
+## [requestDisplayMode](/mcp-apps/app/requests/request-display-mode)
 
 Request the host to change the display mode.
 
@@ -240,7 +240,7 @@ if (ctx?.availableDisplayModes?.includes(newMode)) {
 }
 ```
 
-## sendLog
+## [sendLog](/mcp-apps/app/requests/send-log)
 
 Send log messages to the host for debugging. Logs are not added to the conversation.
 
@@ -256,7 +256,7 @@ app.sendLog({
 });
 ```
 
-## sendSizeChanged
+## [sendSizeChanged](/mcp-apps/app/requests/send-size-changed)
 
 Manually notify the host of a UI size change. If `autoResize` is enabled (default), this is called automatically.
 

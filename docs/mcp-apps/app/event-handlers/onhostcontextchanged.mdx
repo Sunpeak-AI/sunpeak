@@ -1,0 +1,103 @@
+---
+title: "MCP Apps onhostcontextchanged - React to Host Context Changes"
+sidebarTitle: "onhostcontextchanged"
+description: "Handle host context changes in an MCP App View, including theme toggles, display mode changes, locale updates, and available display modes."
+keywords: ["MCP Apps", "ChatGPT Apps", "onhostcontextchanged", "host context", "theme", "display mode", "event handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`onhostcontextchanged` is a notification handler called whenever the host environment changes -- for example, when the user toggles between light and dark themes, resizes the viewport, switches locale, or changes the display mode.
+
+Before your callback is invoked, the updated fields are automatically merged into the internal context store. This means [`getHostContext()`](/mcp-apps/app/app-class#gethostcontext) already returns the latest values by the time your handler runs. The `params` object contains only the fields that changed, not the full context.
+
+## Signature
+
+```ts
+app.onhostcontextchanged = (params: McpUiHostContext) => void;
+```
+
+## Parameters
+
+<ResponseField name="params" type="McpUiHostContext">
+  Partial context update containing only the fields that changed. See [Core Types](/mcp-apps/types/core-types) for the full `McpUiHostContext` structure. Common fields include:
+
+  <ResponseField name="theme" type='"light" | "dark"'>
+    The host's current color scheme.
+  </ResponseField>
+
+  <ResponseField name="displayMode" type="string">
+    The current display mode (e.g., `"default"`, `"fullscreen"`).
+  </ResponseField>
+
+  <ResponseField name="availableDisplayModes" type="string[]">
+    Display modes the host currently supports. Use this to show or hide UI controls like a fullscreen button.
+  </ResponseField>
+
+  <ResponseField name="locale" type="string">
+    The host's locale (e.g., `"en-US"`, `"ja-JP"`).
+  </ResponseField>
+</ResponseField>
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Usage
+
+### Respond to theme changes
+
+```ts
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.theme) {
+    document.body.classList.toggle("dark", ctx.theme === "dark");
+  }
+};
+
+await app.connect();
+```
+
+### Adapt to display mode and available modes
+
+```ts
+const container = document.querySelector<HTMLDivElement>("#app-container")!;
+const fullscreenBtn = document.querySelector<HTMLButtonElement>("#fullscreen-btn")!;
+
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.displayMode) {
+    container.classList.toggle("fullscreen", ctx.displayMode === "fullscreen");
+  }
+  if (ctx.availableDisplayModes) {
+    fullscreenBtn.style.display =
+      ctx.availableDisplayModes.includes("fullscreen") ? "block" : "none";
+  }
+};
+
+await app.connect();
+```
+
+### Combine with getHostContext for full state
+
+Since the internal context is updated before your handler runs, you can read the complete context when you need fields beyond what changed:
+
+```ts
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.theme || ctx.displayMode) {
+    const full = app.getHostContext();
+    applyLayout(full?.theme, full?.displayMode);
+  }
+};
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [App Class `getHostContext()`](/mcp-apps/app/app-class#gethostcontext) -- read the full host context at any time
+- [Core Types](/mcp-apps/types/core-types) -- `McpUiHostContext` type definition
+- [Lifecycle](/mcp-apps/lifecycle) -- connection and initialization flow

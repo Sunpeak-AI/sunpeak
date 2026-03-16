@@ -1,0 +1,126 @@
+---
+title: "MCP Apps requestDisplayMode - Change Display Mode"
+sidebarTitle: "requestDisplayMode"
+description: "Request the host to change the MCP App display mode between inline, fullscreen, and picture-in-picture (pip). The host returns the mode actually set."
+keywords: ["MCP Apps", "ChatGPT Apps", "requestDisplayMode", "display mode", "fullscreen", "inline", "pip", "picture in picture", "McpUiDisplayMode"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`requestDisplayMode` asks the host to change how the MCP App View is displayed. The three possible display modes are:
+
+- **`"inline"`** -- The default mode. The View is rendered inline within the chat conversation.
+- **`"fullscreen"`** -- The View expands to fill the host's available space.
+- **`"pip"`** -- Picture-in-picture mode. The View floats in a small overlay window.
+
+These values are defined by the `McpUiDisplayMode` type. See [Core Types](/mcp-apps/types/core-types) for the full type definition.
+
+The host may not support all display modes. The returned `mode` reflects what was actually set, which may differ from the requested mode if the host does not support it. Always check the host context's `availableDisplayModes` before requesting a mode change, and use the returned value to update your UI state.
+
+## Signature
+
+```ts
+async requestDisplayMode(
+  params: { mode: McpUiDisplayMode },
+  options?: RequestOptions,
+): Promise<{ mode: McpUiDisplayMode }>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  <ResponseField name="mode" type="McpUiDisplayMode" required>
+    The desired display mode. One of `"inline"`, `"fullscreen"`, or `"pip"`.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration such as timeout or abort signal.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="result" type="object">
+  <ResponseField name="mode" type="McpUiDisplayMode">
+    The display mode actually set by the host. This may differ from the requested mode if the host does not support it.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Toggling between inline and fullscreen
+
+```ts
+const ctx = app.getHostContext();
+const newMode = ctx?.displayMode === "inline" ? "fullscreen" : "inline";
+
+if (ctx?.availableDisplayModes?.includes(newMode)) {
+  const result = await app.requestDisplayMode({ mode: newMode });
+  container.classList.toggle("fullscreen", result.mode === "fullscreen");
+}
+```
+
+### Entering picture-in-picture mode
+
+```ts
+const ctx = app.getHostContext();
+
+if (ctx?.availableDisplayModes?.includes("pip")) {
+  const result = await app.requestDisplayMode({ mode: "pip" });
+  if (result.mode === "pip") {
+    showMinimalUI();
+  }
+}
+```
+
+### Handling unsupported modes gracefully
+
+```ts
+async function setDisplayMode(desired: McpUiDisplayMode) {
+  const ctx = app.getHostContext();
+
+  if (!ctx?.availableDisplayModes?.includes(desired)) {
+    console.warn(`Display mode "${desired}" is not available on this host`);
+    return;
+  }
+
+  const result = await app.requestDisplayMode({ mode: desired });
+
+  if (result.mode !== desired) {
+    console.warn(`Requested "${desired}" but host set "${result.mode}"`);
+  }
+
+  updateLayout(result.mode);
+}
+```
+
+### Building a mode switcher
+
+```ts
+const ctx = app.getHostContext();
+const modes: McpUiDisplayMode[] = ["inline", "fullscreen", "pip"];
+
+for (const mode of modes) {
+  const button = document.createElement("button");
+  button.textContent = mode;
+  button.disabled = !ctx?.availableDisplayModes?.includes(mode);
+  button.addEventListener("click", async () => {
+    const result = await app.requestDisplayMode({ mode });
+    updateActiveButton(result.mode);
+  });
+  toolbar.appendChild(button);
+}
+```
+
+## Related
+
+- [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode) -- React hook that wraps this method.
+- [Core Types](/mcp-apps/types/core-types) -- Full definition of `McpUiDisplayMode`.
+- [App Class](/mcp-apps/app/app-class) -- `getHostContext()` returns the current display mode and available modes.
+- [Event Handlers](/mcp-apps/app/event-handlers) -- Listen for host-initiated display mode changes.

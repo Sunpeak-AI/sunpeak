@@ -1,0 +1,106 @@
+---
+title: "MCP Apps sendMessage - Send Chat Messages"
+sidebarTitle: "sendMessage"
+description: "Send a message from an MCP App View to the host's chat interface. Inject user-role messages with text, images, or other content blocks into the conversation."
+keywords: ["MCP Apps", "ChatGPT Apps", "sendMessage", "chat message", "app requests", "user message"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`sendMessage` sends a message from the View into the host's chat interface, appearing as if the user typed it. This enables the app to drive the conversation -- for example, submitting a user selection, asking a follow-up question, or triggering the model to act on data displayed in the UI.
+
+The message is always sent with `role: "user"`. The host may reject the message (for example, if sending is rate-limited or disabled), in which case `isError` will be `true` in the response.
+
+## Signature
+
+```ts
+async sendMessage(
+  params: { role: "user"; content: ContentBlock[] },
+  options?: RequestOptions,
+): Promise<{ isError?: boolean }>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  The message parameters.
+
+  <ResponseField name="role" type='"user"' required>
+    The message role. Currently only `"user"` is supported.
+  </ResponseField>
+
+  <ResponseField name="content" type="ContentBlock[]" required>
+    Array of content blocks to include in the message. Supports text, images, and other standard MCP content block types.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration.
+
+  <ResponseField name="signal" type="AbortSignal">
+    An `AbortSignal` to cancel the request.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+<ResponseField name="result" type="object">
+  <ResponseField name="isError" type="boolean">
+    `true` if the host rejected the message. When absent or `false`, the message was accepted.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Send a text message
+
+```ts
+const result = await app.sendMessage({
+  role: "user",
+  content: [{ type: "text", text: "Show me details for item #42" }],
+});
+
+if (result.isError) {
+  console.error("Host rejected the message");
+}
+```
+
+### Send a message based on user interaction
+
+```ts
+function onItemSelected(itemId: string) {
+  app.sendMessage({
+    role: "user",
+    content: [{
+      type: "text",
+      text: `Tell me more about ${itemId}`,
+    }],
+  });
+}
+```
+
+### Combine with updateModelContext for large payloads
+
+When you need to send a large amount of data along with a message, offload the data to model context first, then send a brief trigger message:
+
+```ts
+await app.updateModelContext({
+  content: [{ type: "text", text: fullTranscript }],
+});
+await app.sendMessage({
+  role: "user",
+  content: [{ type: "text", text: "Summarize the key points" }],
+});
+```
+
+## Related
+
+- [Requests overview](/mcp-apps/app/requests) -- all available View-to-host request methods
+- [`useSendMessage`](/api-reference/hooks/use-send-message) -- sunpeak React convenience hook
+- [updateModelContext](/mcp-apps/app/requests/update-model-context) -- set model context without triggering a response

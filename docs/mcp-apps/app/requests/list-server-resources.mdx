@@ -1,0 +1,105 @@
+---
+title: "MCP Apps listServerResources - List Server Resources"
+sidebarTitle: "listServerResources"
+description: "List available resources on the originating MCP server, proxied through the host. Supports cursor-based pagination for large resource sets."
+keywords: ["MCP Apps", "ChatGPT Apps", "listServerResources", "list resources", "server resources", "pagination", "cursor"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`listServerResources` retrieves the list of resources available on the originating MCP server. The request is proxied through the host. Use this to discover what resources exist before reading them with [`readServerResource`](/mcp-apps/app/requests/read-server-resource).
+
+Results may be paginated. When more resources are available, the response includes a `nextCursor` field that can be passed in subsequent calls to fetch the next page.
+
+## Signature
+
+```ts
+async listServerResources(
+  params?: { cursor?: string },
+  options?: RequestOptions,
+): Promise<ListResourcesResult>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object">
+  <ResponseField name="cursor" type="string">
+    Pagination cursor returned from a previous `listServerResources` call. Omit for the first request.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration such as timeout or abort signal.
+</ResponseField>
+
+## Returns
+
+<ResponseField name="ListResourcesResult" type="object">
+  <ResponseField name="resources" type="Resource[]">
+    Array of available resources. Each resource includes `uri`, `name`, and optionally `description` and `mimeType`.
+  </ResponseField>
+  <ResponseField name="nextCursor" type="string">
+    Pagination cursor. Present when more resources are available. Pass this value as `cursor` in the next call to retrieve the next page.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Listing all resources
+
+```ts
+const result = await app.listServerResources();
+
+for (const resource of result.resources) {
+  console.log(resource.name, resource.uri, resource.mimeType);
+}
+```
+
+### Paginating through all resources
+
+```ts
+async function fetchAllResources() {
+  const allResources = [];
+  let cursor: string | undefined;
+
+  do {
+    const result = await app.listServerResources(
+      cursor ? { cursor } : undefined,
+    );
+    allResources.push(...result.resources);
+    cursor = result.nextCursor;
+  } while (cursor);
+
+  return allResources;
+}
+```
+
+### Building a resource picker
+
+```ts
+const result = await app.listServerResources();
+
+const list = document.getElementById("resource-list");
+for (const resource of result.resources) {
+  const item = document.createElement("li");
+  item.textContent = resource.name;
+  item.addEventListener("click", async () => {
+    const data = await app.readServerResource({ uri: resource.uri });
+    renderContent(data.contents);
+  });
+  list.appendChild(item);
+}
+```
+
+## Related
+
+- [`useListServerResources`](/api-reference/hooks/use-list-server-resources) -- React hook that wraps this method.
+- [MCP Resources](/mcp-apps/mcp/resources) -- How resources work in the MCP protocol.
+- [`readServerResource`](/mcp-apps/app/requests/read-server-resource) -- Read the contents of a discovered resource.
+- [`registerAppResource`](/mcp-apps/server/register-app-resource) -- Register resources on the server side.

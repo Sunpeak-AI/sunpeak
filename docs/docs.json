@@ -8,6 +8,18 @@
     "dark": "#000000"
   },
   "favicon": "/favicon.png",
+  "redirects": [
+    { "source": "/mcp-apps/security/csp-cors", "destination": "/mcp-apps/server/csp-cors" },
+    { "source": "/mcp-apps/app/events/oncalltool", "destination": "/mcp-apps/app/event-handlers/oncalltool" },
+    { "source": "/mcp-apps/app/events/onhostcontextchanged", "destination": "/mcp-apps/app/event-handlers/onhostcontextchanged" },
+    { "source": "/mcp-apps/app/events/onlisttools", "destination": "/mcp-apps/app/event-handlers/onlisttools" },
+    { "source": "/mcp-apps/app/events/onteardown", "destination": "/mcp-apps/app/event-handlers/onteardown" },
+    { "source": "/mcp-apps/app/events/ontoolcancelled", "destination": "/mcp-apps/app/event-handlers/ontoolcancelled" },
+    { "source": "/mcp-apps/app/events/ontoolinput", "destination": "/mcp-apps/app/event-handlers/ontoolinput" },
+    { "source": "/mcp-apps/app/events/ontoolinputpartial", "destination": "/mcp-apps/app/event-handlers/ontoolinputpartial" },
+    { "source": "/mcp-apps/app/events/ontoolresult", "destination": "/mcp-apps/app/event-handlers/ontoolresult" },
+    { "source": "/api-reference/hooks/safe-area", "destination": "/api-reference/components/safe-area" }
+  ],
   "navigation": {
     "tabs": [
       {
@@ -65,36 +77,17 @@
           {
             "group": "CLI",
             "pages": [
-              "api-reference/cli/new",
-              "api-reference/cli/dev",
               "api-reference/cli/build",
+              "api-reference/cli/dev",
+              "api-reference/cli/new",
               "api-reference/cli/start",
               "api-reference/cli/upgrade"
             ]
           },
           {
-            "group": "Tools & Server",
+            "group": "Components",
             "pages": [
-              "api-reference/tools/tool-file",
-              "api-reference/tools/server-entry",
-              "api-reference/tools/production-server"
-            ]
-          },
-          {
-            "group": "Simulations",
-            "pages": [
-              "api-reference/simulations/simulation",
-              "api-reference/simulations/simulator",
-              "api-reference/simulations/run-mcp-server"
-            ]
-          },
-          {
-            "group": "Resource Library",
-            "pages": [
-              "api-reference/resources/albums",
-              "api-reference/resources/carousel",
-              "api-reference/resources/map",
-              "api-reference/resources/review"
+              "api-reference/components/safe-area"
             ]
           },
           {
@@ -133,9 +126,28 @@
             ]
           },
           {
-            "group": "Components",
+            "group": "Resources",
             "pages": [
-              "api-reference/hooks/safe-area"
+              "api-reference/resources/albums",
+              "api-reference/resources/carousel",
+              "api-reference/resources/map",
+              "api-reference/resources/review"
+            ]
+          },
+          {
+            "group": "Simulations",
+            "pages": [
+              "api-reference/simulations/run-mcp-server",
+              "api-reference/simulations/simulation",
+              "api-reference/simulations/simulator"
+            ]
+          },
+          {
+            "group": "Tools",
+            "pages": [
+              "api-reference/tools/production-server",
+              "api-reference/tools/server-entry",
+              "api-reference/tools/tool-file"
             ]
           }
         ]
@@ -144,63 +156,86 @@
         "tab": "MCP Apps",
         "groups": [
           {
-            "group": "MCP Apps",
+            "group": "Overview",
             "pages": [
               "mcp-apps/introduction",
               "mcp-apps/lifecycle"
             ]
           },
           {
+            "group": "App",
+            "pages": [
+              "mcp-apps/app/app-class",
+              {
+                "group": "Event Handlers",
+                "pages": [
+                  "mcp-apps/app/event-handlers",
+                  "mcp-apps/app/event-handlers/oncalltool",
+                  "mcp-apps/app/event-handlers/onhostcontextchanged",
+                  "mcp-apps/app/event-handlers/onlisttools",
+                  "mcp-apps/app/event-handlers/onteardown",
+                  "mcp-apps/app/event-handlers/ontoolcancelled",
+                  "mcp-apps/app/event-handlers/ontoolinput",
+                  "mcp-apps/app/event-handlers/ontoolinputpartial",
+                  "mcp-apps/app/event-handlers/ontoolresult"
+                ]
+              },
+              {
+                "group": "Requests",
+                "pages": [
+                  "mcp-apps/app/requests",
+                  "mcp-apps/app/requests/call-server-tool",
+                  "mcp-apps/app/requests/download-file",
+                  "mcp-apps/app/requests/list-server-resources",
+                  "mcp-apps/app/requests/open-link",
+                  "mcp-apps/app/requests/read-server-resource",
+                  "mcp-apps/app/requests/request-display-mode",
+                  "mcp-apps/app/requests/send-log",
+                  "mcp-apps/app/requests/send-message",
+                  "mcp-apps/app/requests/send-size-changed",
+                  "mcp-apps/app/requests/update-model-context"
+                ]
+              }
+            ]
+          },
+          {
             "group": "MCP",
             "pages": [
               "mcp-apps/mcp/overview",
-              "mcp-apps/mcp/tools",
-              "mcp-apps/mcp/resources"
+              "mcp-apps/mcp/resources",
+              "mcp-apps/mcp/tools"
             ]
           },
           {
-            "group": "Server API",
+            "group": "React",
             "pages": [
-              "mcp-apps/server/register-app-tool",
+              "mcp-apps/react/use-app",
+              "mcp-apps/react/use-auto-resize",
+              "mcp-apps/react/use-document-theme",
+              "mcp-apps/react/use-host-styles"
+            ]
+          },
+          {
+            "group": "Server",
+            "pages": [
+              "mcp-apps/server/capability-detection",
+              "mcp-apps/server/csp-cors",
               "mcp-apps/server/register-app-resource",
-              "mcp-apps/server/tool-meta",
+              "mcp-apps/server/register-app-tool",
               "mcp-apps/server/resource-meta",
-              "mcp-apps/server/capability-detection"
-            ]
-          },
-          {
-            "group": "Security",
-            "pages": [
-              "mcp-apps/security/csp-cors"
-            ]
-          },
-          {
-            "group": "App API",
-            "pages": [
-              "mcp-apps/app/app-class",
-              "mcp-apps/app/event-handlers",
-              "mcp-apps/app/requests"
+              "mcp-apps/server/tool-meta"
             ]
           },
           {
             "group": "Styling",
             "pages": [
-              "mcp-apps/styling/theme",
               "mcp-apps/styling/css-variables",
-              "mcp-apps/styling/fonts"
+              "mcp-apps/styling/fonts",
+              "mcp-apps/styling/theme"
             ]
           },
           {
-            "group": "React Hooks",
-            "pages": [
-              "mcp-apps/react/use-app",
-              "mcp-apps/react/use-host-styles",
-              "mcp-apps/react/use-document-theme",
-              "mcp-apps/react/use-auto-resize"
-            ]
-          },
-          {
-            "group": "Types & Constants",
+            "group": "Types",
             "pages": [
               "mcp-apps/types/core-types",
               "mcp-apps/types/protocol-reference"

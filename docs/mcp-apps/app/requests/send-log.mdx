@@ -1,0 +1,103 @@
+---
+title: "MCP Apps sendLog - Send Debug Logs"
+sidebarTitle: "sendLog"
+description: "Send log messages from an MCP App View to the host for debugging. Logs are not added to the conversation and are only visible in host developer tools."
+keywords: ["MCP Apps", "ChatGPT Apps", "sendLog", "logging", "debug", "log level", "diagnostics"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`sendLog` sends log messages from the View to the host for debugging purposes. These logs are not added to the conversation and are not visible to the end user. They are intended for developers to diagnose issues during development or in production.
+
+Use `sendLog` when you need structured logging that the host can capture, filter, or display in its developer tools. This is particularly useful because MCP App Views run in sandboxed iframes where `console.log` output may not be easily accessible.
+
+## Signature
+
+```ts
+sendLog(
+  params: { level: string; data: string; logger?: string },
+): Promise<void>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  <ResponseField name="level" type="string" required>
+    The log level. Common values include `"debug"`, `"info"`, `"warning"`, and `"error"`.
+  </ResponseField>
+  <ResponseField name="data" type="string" required>
+    The log message content.
+  </ResponseField>
+  <ResponseField name="logger" type="string">
+    An optional logger name to identify the source of the log message. Useful when multiple components emit logs.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+Returns `Promise<void>`. The method resolves when the log has been sent to the host.
+
+## Usage
+
+### Basic logging
+
+```ts
+app.sendLog({
+  level: "info",
+  data: "Weather data refreshed",
+  logger: "WeatherApp",
+});
+```
+
+### Logging at different levels
+
+```ts
+// Debug-level detail
+app.sendLog({
+  level: "debug",
+  data: `Fetching resource: ${resourceUri}`,
+  logger: "ResourceLoader",
+});
+
+// Warning when something unexpected happens
+app.sendLog({
+  level: "warning",
+  data: "API response was empty, using cached data",
+  logger: "DataService",
+});
+
+// Error when something fails
+app.sendLog({
+  level: "error",
+  data: `Failed to parse response: ${error.message}`,
+  logger: "DataService",
+});
+```
+
+### Wrapping in a helper
+
+```ts
+function createLogger(name: string) {
+  return {
+    debug: (msg: string) => app.sendLog({ level: "debug", data: msg, logger: name }),
+    info: (msg: string) => app.sendLog({ level: "info", data: msg, logger: name }),
+    warn: (msg: string) => app.sendLog({ level: "warning", data: msg, logger: name }),
+    error: (msg: string) => app.sendLog({ level: "error", data: msg, logger: name }),
+  };
+}
+
+const log = createLogger("CartView");
+log.info("Cart loaded with 3 items");
+log.error("Payment gateway unreachable");
+```
+
+## Related
+
+- [`useSendLog`](/api-reference/hooks/use-send-log) -- React hook that wraps this method.
+- [Requests](/mcp-apps/app/requests) -- Overview of all View-to-host request methods.

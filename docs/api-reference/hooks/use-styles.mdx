@@ -10,6 +10,10 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "styles", "theming", "CSS 
 
 The `useStyles` hook returns the host's style configuration. It is a convenience wrapper around `useHostContext`.
 
+<Card horizontal title="Wraps onhostcontextchanged" icon="cube" href="/mcp-apps/app/event-handlers/onhostcontextchanged">
+  MCP Apps SDK reference
+</Card>
+
 <Tip>For most use cases, prefer the SDK's [`useHostStyleVariables`](/mcp-apps/react/use-host-styles) or [`useHostFonts`](/mcp-apps/react/use-host-styles) hooks which automatically apply styles to the document. Use `useStyles` when you need raw access to the style data.</Tip>
 
 ## Import
@@ -47,5 +51,3 @@ function MyResource() {
   );
 }
 ```
-
-The styles value comes from [`McpUiHostContext.styles`](/mcp-apps/types/core-types#mcpuihostcontext).

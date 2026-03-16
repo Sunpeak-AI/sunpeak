@@ -1,0 +1,95 @@
+---
+title: "MCP Apps openLink - Open External URLs"
+sidebarTitle: "openLink"
+description: "Request the host to open an external URL in the browser from within an MCP App View. Provides a safe mechanism for navigating to external resources from sandboxed iframes."
+keywords: ["MCP Apps", "ChatGPT Apps", "openLink", "external URL", "open link", "app requests"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`openLink` requests the host to open a URL in the user's browser. Since MCP Apps run inside sandboxed iframes, they cannot navigate directly or open new windows. This method delegates link opening to the host, which can apply its own security policies (such as URL allowlists or user confirmation dialogs) before opening the link.
+
+The host may deny the request, in which case `isError` will be `true` in the response.
+
+## Signature
+
+```ts
+async openLink(
+  params: { url: string },
+  options?: RequestOptions,
+): Promise<{ isError?: boolean }>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  The link parameters.
+
+  <ResponseField name="url" type="string" required>
+    The URL to open. Must be a valid absolute URL (e.g., `https://docs.example.com`). The host may restrict which URL schemes and domains are allowed.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration.
+
+  <ResponseField name="signal" type="AbortSignal">
+    An `AbortSignal` to cancel the request.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+<ResponseField name="result" type="object">
+  <ResponseField name="isError" type="boolean">
+    `true` if the host denied the link request (e.g., blocked URL scheme, user cancelled). When absent or `false`, the link was opened.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Open a documentation link
+
+```ts
+const { isError } = await app.openLink({
+  url: "https://docs.example.com",
+});
+if (isError) {
+  console.warn("Link request denied by host");
+}
+```
+
+### Open a link from a button click
+
+```ts
+viewDocsButton.addEventListener("click", async () => {
+  const { isError } = await app.openLink({
+    url: "https://docs.example.com/getting-started",
+  });
+  if (isError) {
+    showNotification("Unable to open link. Please copy the URL manually.");
+  }
+});
+```
+
+### Open a dynamic URL
+
+```ts
+async function openUserProfile(userId: string) {
+  await app.openLink({
+    url: `https://app.example.com/users/${userId}`,
+  });
+}
+```
+
+## Related
+
+- [Requests overview](/mcp-apps/app/requests) -- all available View-to-host request methods
+- [`useOpenLink`](/api-reference/hooks/use-open-link) -- sunpeak React convenience hook
+- [CSP and CORS](/mcp-apps/server/csp-cors) -- security considerations for external resources

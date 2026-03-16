@@ -176,6 +176,8 @@ Docs are built with [Mintlify](https://mintlify.com). Structure:
 
 When adding new hooks or features, you must: create the hook doc page, add it to `docs.json` navigation (alphabetical within its group), and update cross-references (e.g., the `<Tip>` in `mcp-apps/app/requests.mdx` that lists convenience hooks).
 
+**Path consistency**: File paths, `docs.json` group names, and resulting URL paths must stay consistent. When creating or moving doc pages, the file's directory should match the nav group it belongs to (e.g., a page in the "Server" group lives under `mcp-apps/server/`). If a file move changes a URL, add a Mintlify redirect in `docs.json` `"redirects"` to preserve SEO and update all internal links to the new path.
+
 ### Places to Update When User-Facing Functionality Changes
 
 When sunpeak package APIs change (new hooks, new features, deprecations, etc.), these locations may need updating:

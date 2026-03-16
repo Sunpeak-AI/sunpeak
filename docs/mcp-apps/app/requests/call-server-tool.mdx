@@ -1,0 +1,129 @@
+---
+title: "MCP Apps callServerTool - Call Server-Side Tools"
+sidebarTitle: "callServerTool"
+description: "Call a tool on the originating MCP server from within an MCP App View. The request is proxied through the host, enabling UI-driven server interactions."
+keywords: ["MCP Apps", "ChatGPT Apps", "callServerTool", "server tools", "tool call", "app requests"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`callServerTool` lets the View invoke any tool registered on the originating MCP server. The host proxies the request to the server and returns the result. This is the primary mechanism for UI-driven server interactions -- for example, fetching data, submitting forms, or triggering server-side actions from a button click.
+
+Tool-level execution errors are returned inside the result object with `isError: true` rather than throwing exceptions. Only transport or protocol failures throw. Always check `result.isError` before consuming the response.
+
+For tools that should only be callable from the View (not the model), register them with `visibility: ["app"]` on the server side. See [registerAppTool](/mcp-apps/server/register-app-tool) for details.
+
+## Signature
+
+```ts
+async callServerTool(
+  params: { name: string; arguments?: Record<string, unknown> },
+  options?: RequestOptions,
+): Promise<CallToolResult>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  The tool call parameters.
+
+  <ResponseField name="name" type="string" required>
+    The name of the server tool to call. Must match a tool registered on the MCP server.
+  </ResponseField>
+
+  <ResponseField name="arguments" type="Record<string, unknown>">
+    Arguments to pass to the tool. The shape must match the tool's `inputSchema`. Omit if the tool takes no arguments.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration.
+
+  <ResponseField name="signal" type="AbortSignal">
+    An `AbortSignal` to cancel the request.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+<ResponseField name="CallToolResult" type="object">
+  The result returned by the server tool.
+
+  <ResponseField name="content" type="ContentBlock[]">
+    Array of content blocks returned by the tool (text, images, embedded resources, etc.).
+  </ResponseField>
+
+  <ResponseField name="structuredContent" type="Record<string, unknown>">
+    Structured output if the tool defines an `outputSchema`. Parsed and validated by the server.
+  </ResponseField>
+
+  <ResponseField name="isError" type="boolean">
+    `true` if the tool handler returned an error. When `true`, inspect `content` for error details. When `false` or absent, the call succeeded.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Basic tool call
+
+```ts
+const result = await app.callServerTool({
+  name: "get_weather",
+  arguments: { location: "Tokyo" },
+});
+
+if (result.isError) {
+  console.error("Tool returned error:", result.content);
+} else {
+  console.log(result.structuredContent);
+}
+```
+
+### Using structured content
+
+When the server tool defines an `outputSchema`, the parsed result is available on `structuredContent`:
+
+```ts
+const result = await app.callServerTool({
+  name: "list_products",
+  arguments: { category: "electronics", limit: 10 },
+});
+
+if (!result.isError && result.structuredContent) {
+  const products = result.structuredContent.items as Product[];
+  renderProductList(products);
+}
+```
+
+### Cancelling a request
+
+Pass an `AbortSignal` to cancel long-running tool calls:
+
+```ts
+const controller = new AbortController();
+
+const result = await app.callServerTool(
+  { name: "generate_report", arguments: { year: 2025 } },
+  { signal: controller.signal },
+);
+
+// Cancel from a UI button
+cancelButton.addEventListener("click", () => controller.abort());
+```
+
+<Note>
+Tool-level execution errors are returned in the result with `isError: true` rather than throwing exceptions. Transport or protocol failures throw. Always check `result.isError`.
+</Note>
+
+## Related
+
+- [Requests overview](/mcp-apps/app/requests) -- all available View-to-host request methods
+- [`useCallServerTool`](/api-reference/hooks/use-call-server-tool) -- sunpeak React convenience hook
+- [registerAppTool](/mcp-apps/server/register-app-tool) -- register tools on the server with UI metadata
+- [Tool `_meta`](/mcp-apps/server/tool-meta) -- visibility and metadata configuration

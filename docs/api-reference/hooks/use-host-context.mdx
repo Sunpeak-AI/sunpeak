@@ -12,6 +12,10 @@ The `useHostContext` hook subscribes to the full host context object, which cont
 
 In addition to providing reactive state, `useHostContext` automatically applies host-provided styles and fonts to the iframe document. This includes CSS style variables, document theme (`light`/`dark`), and `@font-face` rules for host-provided fonts — all applied on initial context and updated whenever the host context changes.
 
+<Card horizontal title="Wraps onhostcontextchanged" icon="cube" href="/mcp-apps/app/event-handlers/onhostcontextchanged">
+  MCP Apps SDK reference
+</Card>
+
 Most apps should use the convenience hooks instead of accessing the full context directly: [`useTheme`](/api-reference/hooks/use-theme), [`useDisplayMode`](/api-reference/hooks/use-display-mode), [`useLocale`](/api-reference/hooks/use-locale), [`useTimeZone`](/api-reference/hooks/use-time-zone), [`useUserAgent`](/api-reference/hooks/use-user-agent), [`usePlatform`](/api-reference/hooks/use-platform), [`useDeviceCapabilities`](/api-reference/hooks/use-device-capabilities), [`useSafeArea`](/api-reference/hooks/use-safe-area), [`useViewport`](/api-reference/hooks/use-viewport), [`useStyles`](/api-reference/hooks/use-styles), and [`useToolInfo`](/api-reference/hooks/use-tool-info).
 
 ## Import

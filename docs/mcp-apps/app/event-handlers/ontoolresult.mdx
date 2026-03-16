@@ -1,0 +1,129 @@
+---
+title: "MCP Apps ontoolresult - Tool Execution Result"
+sidebarTitle: "ontoolresult"
+description: "Handle the result of a tool execution sent by the host. Use ontoolresult to render output, detect errors, and access structured content for UI display."
+keywords: ["MCP Apps", "ChatGPT Apps", "ontoolresult", "tool result", "CallToolResult", "event handler", "notification handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+The `ontoolresult` notification handler is called when the host sends the result of a tool execution. The result includes text content for model context, optional structured data optimized for UI rendering, and an error flag.
+
+Like all notification handlers, `ontoolresult` should be registered before calling `connect()`.
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Signature
+
+```ts
+app.ontoolresult = (params) => void;
+```
+
+## Parameters
+
+<ResponseField name="params" type="CallToolResult">
+  Standard MCP tool execution result containing the following fields:
+</ResponseField>
+
+<ResponseField name="params.content" type="ContentBlock[]">
+  Text content blocks intended for model context.
+</ResponseField>
+
+<ResponseField name="params.structuredContent" type="Record<string, unknown>">
+  Structured data optimized for UI rendering. Use this for displaying rich results in your app.
+</ResponseField>
+
+<ResponseField name="params.isError" type="boolean">
+  Whether the tool returned an error. When `true`, `content` contains error details.
+</ResponseField>
+
+<ResponseField name="params._meta" type="object">
+  Metadata object. Contains `viewUUID` which can be used for state persistence across tool calls.
+</ResponseField>
+
+## Usage
+
+### Handling success and error states
+
+```ts
+const app = new App({ name: "MyApp", version: "1.0.0" });
+
+app.ontoolresult = (params) => {
+  if (params.isError) {
+    console.error("Tool failed:", params.content);
+    showErrorBanner(params.content);
+  } else {
+    console.log("Tool output:", params.content);
+    console.log("Structured data:", params.structuredContent);
+  }
+};
+
+await app.connect();
+```
+
+### Rendering structured content
+
+```ts
+app.ontoolresult = (params) => {
+  if (params.isError) {
+    renderError(params.content);
+    return;
+  }
+
+  const data = params.structuredContent as {
+    rows: Array<Record<string, string>>;
+    columns: string[];
+  };
+
+  if (data) {
+    renderTable(data.columns, data.rows);
+  } else {
+    renderTextContent(params.content);
+  }
+};
+```
+
+### Using viewUUID for state persistence
+
+```ts
+app.ontoolresult = (params) => {
+  const viewUUID = params._meta?.viewUUID as string | undefined;
+
+  if (viewUUID) {
+    // Restore previous state for this view
+    const savedState = stateStore.get(viewUUID);
+    if (savedState) {
+      restoreState(savedState);
+    }
+  }
+
+  renderResult(params);
+};
+```
+
+### Using with the sunpeak framework
+
+The sunpeak framework provides the [`useToolData`](/api-reference/hooks/use-tool-data) hook, which wraps `ontoolresult` (along with related handlers) into a reactive value for React components.
+
+```ts
+import { useToolData } from "sunpeak/hooks";
+
+function MyComponent() {
+  const toolData = useToolData();
+  // toolData.result contains the tool execution result
+  // toolData.isError indicates whether the tool failed
+}
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [ontoolinput](/mcp-apps/app/event-handlers/ontoolinput) -- receive complete tool arguments before the result

@@ -1,0 +1,110 @@
+---
+title: "MCP Apps ontoolcancelled - Tool Cancellation"
+sidebarTitle: "ontoolcancelled"
+description: "Handle tool execution cancellation events. Use ontoolcancelled to clean up state and display cancellation feedback when a tool call is interrupted."
+keywords: ["MCP Apps", "ChatGPT Apps", "ontoolcancelled", "tool cancelled", "cancellation", "event handler", "notification handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+The `ontoolcancelled` notification handler is called when tool execution is cancelled. Cancellation can occur for several reasons: the user manually stops the tool, a timeout is reached, or a host-side classifier intervenes.
+
+Use this handler to clean up in-progress state, stop animations, and display appropriate feedback to the user.
+
+Like all notification handlers, `ontoolcancelled` should be registered before calling `connect()`.
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Signature
+
+```ts
+app.ontoolcancelled = (params) => void;
+```
+
+## Parameters
+
+<ResponseField name="params.reason" type="string">
+  Optional reason for the cancellation. May describe the cause (e.g., user action, timeout, or classifier intervention).
+</ResponseField>
+
+## Usage
+
+### Basic cancellation handling
+
+```ts
+const app = new App({ name: "MyApp", version: "1.0.0" });
+
+app.ontoolcancelled = (params) => {
+  console.log("Cancelled:", params.reason);
+};
+
+await app.connect();
+```
+
+### Cleaning up in-progress state
+
+```ts
+app.ontoolcancelled = (params) => {
+  // Stop any ongoing animations or processes
+  cancelAnimationFrame(currentFrame);
+  clearInterval(pollingInterval);
+
+  // Reset UI to idle state
+  const status = document.querySelector("#status")!;
+  status.textContent = params.reason
+    ? `Cancelled: ${params.reason}`
+    : "Tool execution was cancelled";
+  status.classList.add("cancelled");
+};
+```
+
+### Combining with the full tool lifecycle
+
+```ts
+app.ontoolinputpartial = (params) => {
+  renderPreview(params.arguments);
+};
+
+app.ontoolinput = (params) => {
+  renderFinalInput(params.arguments);
+};
+
+app.ontoolresult = (params) => {
+  if (params.isError) {
+    renderError(params.content);
+  } else {
+    renderResult(params.structuredContent);
+  }
+};
+
+app.ontoolcancelled = (params) => {
+  clearPreview();
+  showCancelledNotice(params.reason);
+};
+```
+
+### Using with the sunpeak framework
+
+The sunpeak framework provides the [`useToolData`](/api-reference/hooks/use-tool-data) hook, which manages the full tool lifecycle including cancellation as a reactive value.
+
+```ts
+import { useToolData } from "sunpeak/hooks";
+
+function MyComponent() {
+  const toolData = useToolData();
+  // toolData.cancelled indicates whether the tool was cancelled
+}
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [ontoolresult](/mcp-apps/app/event-handlers/ontoolresult) -- handle successful or failed tool results

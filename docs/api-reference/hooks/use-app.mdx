@@ -12,6 +12,10 @@ The `useApp` hook returns the `App` instance from the nearest `AppProvider`. Use
 
 The `AppProvider` handles connecting to the MCP Apps host, HMR persistence during development, and React StrictMode compatibility. It is set up automatically by the sunpeak framework — you never need to write it yourself.
 
+<Card horizontal title="Wraps App class" icon="cube" href="/mcp-apps/app/app-class">
+  MCP Apps SDK reference
+</Card>
+
 ## Import
 
 ```tsx
@@ -76,4 +80,3 @@ import { AppProvider } from 'sunpeak';
   Callback invoked when a new App instance is created. Optional.
 </ResponseField>
 
-See the [`App` class documentation](/mcp-apps/app/app-class) for the full API available on the `App` instance.

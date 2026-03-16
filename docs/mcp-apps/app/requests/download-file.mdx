@@ -1,0 +1,178 @@
+---
+title: "MCP Apps downloadFile - Download Files from Apps"
+sidebarTitle: "downloadFile"
+description: "Request the host to download a file from an MCP App View. Supports embedded text and binary content as well as resource links for host-fetched downloads."
+keywords: ["MCP Apps", "ChatGPT Apps", "downloadFile", "file download", "embedded resource", "resource link", "app requests"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`downloadFile` requests the host to download one or more files on behalf of the app. Since MCP Apps run in sandboxed iframes where direct downloads are blocked by browser security policies, this method provides a host-mediated mechanism for file exports.
+
+Files can be provided in three ways:
+
+- **Embedded text** -- inline text content (JSON, CSV, HTML, etc.) with a MIME type
+- **Embedded binary** -- base64-encoded binary data (images, PDFs, etc.)
+- **Resource link** -- a URL that the host fetches and downloads on behalf of the user
+
+The host may deny the download request, in which case `isError` will be `true` in the response.
+
+## Signature
+
+```ts
+async downloadFile(
+  params: { contents: (EmbeddedResource | ResourceLink)[] },
+  options?: RequestOptions,
+): Promise<{ isError?: boolean }>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  The download parameters.
+
+  <ResponseField name="contents" type="(EmbeddedResource | ResourceLink)[]" required>
+    Array of resources to download. Each entry is either an `EmbeddedResource` containing inline content or a `ResourceLink` pointing to a fetchable URL.
+
+    <ResponseField name="EmbeddedResource" type="object">
+      An inline resource with content included in the request.
+      <ResponseField name="type" type='"resource"' required>
+        Must be `"resource"`.
+      </ResponseField>
+      <ResponseField name="resource" type="object" required>
+        <ResponseField name="uri" type="string" required>
+          A URI identifying the file (e.g., `"file:///export.json"`). The host uses the filename portion for the download name.
+        </ResponseField>
+        <ResponseField name="mimeType" type="string">
+          MIME type of the content (e.g., `"application/json"`, `"image/png"`).
+        </ResponseField>
+        <ResponseField name="text" type="string">
+          Text content of the file. Use this for text-based formats. Mutually exclusive with `blob`.
+        </ResponseField>
+        <ResponseField name="blob" type="string">
+          Base64-encoded binary content. Use this for binary formats. Mutually exclusive with `text`.
+        </ResponseField>
+      </ResponseField>
+    </ResponseField>
+
+    <ResponseField name="ResourceLink" type="object">
+      A link to a resource the host should fetch and download.
+      <ResponseField name="type" type='"resource_link"' required>
+        Must be `"resource_link"`.
+      </ResponseField>
+      <ResponseField name="uri" type="string" required>
+        URL the host should fetch to retrieve the file content.
+      </ResponseField>
+      <ResponseField name="name" type="string">
+        Human-readable name for the download.
+      </ResponseField>
+      <ResponseField name="mimeType" type="string">
+        Expected MIME type of the resource.
+      </ResponseField>
+    </ResponseField>
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration.
+
+  <ResponseField name="signal" type="AbortSignal">
+    An `AbortSignal` to cancel the request.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+<ResponseField name="result" type="object">
+  <ResponseField name="isError" type="boolean">
+    `true` if the host denied or failed to process the download request. When absent or `false`, the download was initiated.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Download embedded text content
+
+Export generated text data such as JSON, CSV, or HTML:
+
+```ts
+await app.downloadFile({
+  contents: [{
+    type: "resource",
+    resource: {
+      uri: "file:///export.json",
+      mimeType: "application/json",
+      text: JSON.stringify(data, null, 2),
+    },
+  }],
+});
+```
+
+### Download embedded binary content
+
+Export binary data such as images or PDFs using base64 encoding:
+
+```ts
+await app.downloadFile({
+  contents: [{
+    type: "resource",
+    resource: {
+      uri: "file:///image.png",
+      mimeType: "image/png",
+      blob: base64EncodedPng,
+    },
+  }],
+});
+```
+
+### Download via resource link
+
+Let the host fetch and download a file from an external URL:
+
+```ts
+await app.downloadFile({
+  contents: [{
+    type: "resource_link",
+    uri: "https://api.example.com/reports/q4.pdf",
+    name: "Q4 Report",
+    mimeType: "application/pdf",
+  }],
+});
+```
+
+### Download multiple files at once
+
+```ts
+await app.downloadFile({
+  contents: [
+    {
+      type: "resource",
+      resource: {
+        uri: "file:///summary.csv",
+        mimeType: "text/csv",
+        text: csvContent,
+      },
+    },
+    {
+      type: "resource",
+      resource: {
+        uri: "file:///chart.png",
+        mimeType: "image/png",
+        blob: chartImageBase64,
+      },
+    },
+  ],
+});
+```
+
+## Related
+
+- [Requests overview](/mcp-apps/app/requests) -- all available View-to-host request methods
+- [`useDownloadFile`](/api-reference/hooks/use-download-file) -- sunpeak React convenience hook
+- [Core Types](/mcp-apps/types/core-types) -- `EmbeddedResource` and `ResourceLink` type definitions

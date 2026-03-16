@@ -1,0 +1,126 @@
+---
+title: "MCP Apps oncalltool - Handle Incoming Tool Calls"
+sidebarTitle: "oncalltool"
+description: "Handle tool calls from the host directed at an MCP App View. Implement app-side tools that the model or host can invoke, returning structured results."
+keywords: ["MCP Apps", "ChatGPT Apps", "oncalltool", "tool call", "app tools", "event handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`oncalltool` is a request handler that receives tool calls from the host directed at your app. This enables bidirectional tool communication -- in addition to calling server tools, the host (or model) can call tools that the View implements.
+
+To use `oncalltool`, you must declare the `tools` capability when constructing the `App`. The host discovers available tools through [`onlisttools`](/mcp-apps/app/event-handlers/onlisttools), then calls them through this handler.
+
+Because this is a **request** handler, the host waits for your response. Return a result object containing `content` blocks, or throw an error to signal failure.
+
+## Signature
+
+```ts
+app.oncalltool = async (params: {
+  name: string;
+  arguments?: Record<string, unknown>;
+}) => Promise<CallToolResult>;
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  The tool call parameters sent by the host.
+
+  <ResponseField name="name" type="string" required>
+    Name of the tool being called. Must match one of the tools declared in [`onlisttools`](/mcp-apps/app/event-handlers/onlisttools).
+  </ResponseField>
+
+  <ResponseField name="arguments" type="Record<string, unknown>">
+    Tool arguments as key-value pairs. The shape corresponds to the tool's `inputSchema`.
+  </ResponseField>
+</ResponseField>
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Usage
+
+### Declare tools capability and handle calls
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  { tools: { listChanged: true } },
+);
+
+app.oncalltool = async (params) => {
+  if (params.name === "get-selection") {
+    return { content: [{ type: "text", text: selectedText }] };
+  }
+  throw new Error(`Unknown tool: ${params.name}`);
+};
+
+await app.connect();
+```
+
+### Handle multiple tools with structured results
+
+```ts
+app.oncalltool = async (params) => {
+  switch (params.name) {
+    case "get-selection":
+      return {
+        content: [{ type: "text", text: getSelectedText() }],
+      };
+
+    case "get-form-data":
+      return {
+        content: [{ type: "text", text: JSON.stringify(collectFormData()) }],
+      };
+
+    case "set-highlight": {
+      const { selector, color } = params.arguments as {
+        selector: string;
+        color: string;
+      };
+      highlightElement(selector, color);
+      return {
+        content: [{ type: "text", text: "Highlighted successfully" }],
+      };
+    }
+
+    default:
+      throw new Error(`Unknown tool: ${params.name}`);
+  }
+};
+```
+
+### Return errors without throwing
+
+For expected failures, return an error result instead of throwing:
+
+```ts
+app.oncalltool = async (params) => {
+  if (params.name === "get-file") {
+    const file = files.get(params.arguments?.id as string);
+    if (!file) {
+      return {
+        isError: true,
+        content: [{ type: "text", text: `File not found: ${params.arguments?.id}` }],
+      };
+    }
+    return { content: [{ type: "text", text: file.contents }] };
+  }
+  throw new Error(`Unknown tool: ${params.name}`);
+};
+```
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [`onlisttools`](/mcp-apps/app/event-handlers/onlisttools) -- declare the tools your app provides
+- [`useAppTools`](/api-reference/hooks/use-app-tools) -- sunpeak React convenience hook for app-side tools
+- [App Class constructor](/mcp-apps/app/app-class#constructor) -- declaring `tools` capability

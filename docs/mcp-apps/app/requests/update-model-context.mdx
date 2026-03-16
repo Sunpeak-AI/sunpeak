@@ -1,0 +1,108 @@
+---
+title: "MCP Apps updateModelContext - Update Host Model Context"
+sidebarTitle: "updateModelContext"
+description: "Update the host's model context with app state. Provide structured or unstructured data that the model can access in future turns without triggering an immediate response."
+keywords: ["MCP Apps", "ChatGPT Apps", "updateModelContext", "model context", "app state", "app requests"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`updateModelContext` pushes app state into the host's model context. This data becomes available to the model on future turns without triggering an immediate response -- unlike `sendMessage`, which injects a message into the conversation and may prompt the model to reply.
+
+Each call to `updateModelContext` **overwrites** any previously set context. To clear the context, call it with empty content.
+
+This is useful for keeping the model informed about what the user is viewing or doing in the app, such as the current page, selected items, or filter state.
+
+## Signature
+
+```ts
+async updateModelContext(
+  params: {
+    content?: ContentBlock[];
+    structuredContent?: Record<string, unknown>;
+  },
+  options?: RequestOptions,
+): Promise<void>
+```
+
+## Parameters
+
+<ResponseField name="params" type="object" required>
+  The context update parameters. Provide at least one of `content` or `structuredContent`.
+
+  <ResponseField name="content" type="ContentBlock[]">
+    Array of content blocks (text, images, etc.) to set as the model context. The model can read these on subsequent turns.
+  </ResponseField>
+
+  <ResponseField name="structuredContent" type="Record<string, unknown>">
+    Structured data to set as the model context. Useful for passing typed objects, configuration, or state that the model can reference.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration.
+
+  <ResponseField name="signal" type="AbortSignal">
+    An `AbortSignal` to cancel the request.
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+Resolves with `void` on success. Throws on transport or protocol failure.
+
+## Usage
+
+### Set text context
+
+```ts
+await app.updateModelContext({
+  content: [{
+    type: "text",
+    text: `User is viewing page ${currentPage} of ${totalPages}`,
+  }],
+});
+```
+
+### Set structured context
+
+```ts
+await app.updateModelContext({
+  structuredContent: {
+    selectedItems: ["item-1", "item-5"],
+    filters: { category: "electronics", priceRange: [100, 500] },
+  },
+});
+```
+
+### Clear previous context
+
+```ts
+await app.updateModelContext({ content: [] });
+```
+
+<Tip>
+For large follow-up messages, offload data to `updateModelContext` first, then send a brief trigger via `sendMessage`:
+
+```ts
+await app.updateModelContext({
+  content: [{ type: "text", text: fullTranscript }],
+});
+await app.sendMessage({
+  role: "user",
+  content: [{ type: "text", text: "Summarize the key points" }],
+});
+```
+</Tip>
+
+## Related
+
+- [Requests overview](/mcp-apps/app/requests) -- all available View-to-host request methods
+- [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context) -- sunpeak React convenience hook
+- [sendMessage](/mcp-apps/app/requests/send-message) -- send a message that appears in the conversation

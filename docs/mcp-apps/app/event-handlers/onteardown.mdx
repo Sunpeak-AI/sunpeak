@@ -1,0 +1,89 @@
+---
+title: "MCP Apps onteardown - Graceful Shutdown Handler"
+sidebarTitle: "onteardown"
+description: "Handle graceful shutdown requests in an MCP App View. Save state and release resources before the host unmounts the iframe."
+keywords: ["MCP Apps", "ChatGPT Apps", "onteardown", "teardown", "shutdown", "lifecycle", "event handler"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`onteardown` is a request handler called when the host is about to unmount the iframe and wants the app to shut down gracefully. This is your opportunity to save unsaved state, close open connections, flush analytics, or perform any other cleanup before the View is destroyed.
+
+Because this is a **request** (not a notification), the host waits for your response before proceeding. Return `{}` (or a promise resolving to `{}`) to signal that cleanup is complete. If the handler throws or the promise rejects, the host may force-close the iframe.
+
+## Signature
+
+```ts
+app.onteardown = () => {} | Promise<{}>;
+```
+
+## Parameters
+
+This handler receives no parameters.
+
+## Returns
+
+Return `{}` or a `Promise<{}>` to indicate that shutdown is complete.
+
+<Warning>
+Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
+</Warning>
+
+## Usage
+
+### Save state before shutdown
+
+```ts
+app.onteardown = async () => {
+  await saveState();
+  closeConnections();
+  return {};
+};
+
+await app.connect();
+```
+
+### Flush pending work
+
+```ts
+app.onteardown = async () => {
+  await Promise.all([
+    analytics.flush(),
+    pendingUploads.waitForCompletion(),
+    database.close(),
+  ]);
+  return {};
+};
+
+await app.connect();
+```
+
+### Synchronous cleanup
+
+If your cleanup is synchronous, you can return `{}` directly:
+
+```ts
+app.onteardown = () => {
+  clearInterval(pollingTimer);
+  eventSource.close();
+  return {};
+};
+
+await app.connect();
+```
+
+<Note>
+The host may impose a timeout on the teardown request. Avoid long-running operations -- save critical state quickly and let non-critical work fail gracefully.
+</Note>
+
+## Related
+
+- [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
+- [`useTeardown`](/api-reference/hooks/use-teardown) -- sunpeak React convenience hook
+- [Lifecycle](/mcp-apps/lifecycle) -- connection, initialization, and shutdown flow
