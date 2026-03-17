@@ -15,6 +15,7 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'fs';
 import { discoverResources } from '../bin/lib/patterns.mjs';
+import { getPort } from '../bin/lib/get-port.mjs';
 
 // Color codes for output
 const colors = {
@@ -259,13 +260,13 @@ function runScaffoldSmokeTest() {
  * Runs captured so multiple examples can run in parallel.
  * Each example gets unique ports to avoid conflicts.
  */
-function testExample(resource, index) {
+async function testExample(resource, index) {
   const exampleName = `${resource}-example`;
   const exampleDir = join(EXAMPLES_DIR, exampleName);
 
-  // Unique ports per example to enable parallel execution
-  const testPort = 6776 + index;
-  const hmrPort = 24679 + index;
+  // Find available ports for parallel execution
+  const testPort = await getPort(6776 + index);
+  const hmrPort = await getPort(24679 + index);
   const env = {
     SUNPEAK_TEST_PORT: String(testPort),
     SUNPEAK_HMR_PORT: String(hmrPort),
@@ -290,7 +291,7 @@ function testExample(resource, index) {
  * Production server smoke test.
  */
 async function validateProductionServer(exampleDir) {
-  const port = 18765;
+  const port = await getPort(18765);
 
   const serverProcess = spawn('node', [SUNPEAK_BIN, 'start', '--port', String(port)], {
     cwd: exampleDir,

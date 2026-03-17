@@ -1,4 +1,5 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { URL } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -16,9 +17,10 @@ import { type MCPServerConfig, type MCPServerHandle, type SimulationWithDist } f
 
 export type { MCPServerConfig, MCPServerHandle, SimulationWithDist } from './types.js';
 
-// Dev server URLs for Vite HMR (localhost only — used for direct connections like ChatGPT)
-const LOCAL_DEV_SERVER_URL = 'http://localhost:8000';
-const LOCAL_HMR_WS_URL = 'ws://localhost:24678';
+// Dev server URLs for Vite HMR (localhost only — used for direct connections like ChatGPT).
+// Mutable: updated by runMCPServer once the actual port is known.
+let localDevServerUrl = 'http://localhost:8000';
+let localHmrWsUrl = 'ws://localhost:24678';
 
 /**
  * Detect whether this request needs pre-built HTML (no Vite HMR).
@@ -67,7 +69,7 @@ function getViteResourceHtml(srcPath: string): string {
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join('') + 'Resource';
 
-  const devServerUrl = LOCAL_DEV_SERVER_URL;
+  const devServerUrl = localDevServerUrl;
 
   // Encode srcPath and componentName for the virtual entry module
   const entryParams = new URLSearchParams({ src: srcPath, component: componentName });
@@ -138,14 +140,14 @@ function injectViteCSP(existingMeta: Record<string, unknown> | undefined): Recor
   const csp = (ui.csp as Record<string, unknown>) ?? {};
 
   const existingResourceDomains = (csp.resourceDomains as string[]) ?? [];
-  const resourceDomains = existingResourceDomains.includes(LOCAL_DEV_SERVER_URL)
+  const resourceDomains = existingResourceDomains.includes(localDevServerUrl)
     ? existingResourceDomains
-    : [...existingResourceDomains, LOCAL_DEV_SERVER_URL];
+    : [...existingResourceDomains, localDevServerUrl];
 
   const existingConnectDomains = (csp.connectDomains as string[]) ?? [];
   const connectDomains = [...existingConnectDomains];
-  if (!connectDomains.includes(LOCAL_DEV_SERVER_URL)) connectDomains.push(LOCAL_DEV_SERVER_URL);
-  if (!connectDomains.includes(LOCAL_HMR_WS_URL)) connectDomains.push(LOCAL_HMR_WS_URL);
+  if (!connectDomains.includes(localDevServerUrl)) connectDomains.push(localDevServerUrl);
+  if (!connectDomains.includes(localHmrWsUrl)) connectDomains.push(localHmrWsUrl);
 
   return {
     ...meta,
@@ -596,6 +598,13 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
   const port = config.port ?? (Number.isFinite(portEnv) ? portEnv : 8000);
   const { simulations } = config;
 
+  // Update module-level URLs so resource HTML and CSP point to the right ports.
+  // These are read lazily (on request), so updating them before listen is fine.
+  localDevServerUrl = `http://localhost:${port}`;
+  if (config.hmrPort) {
+    localHmrWsUrl = `ws://localhost:${config.hmrPort}`;
+  }
+
   // Check if Vite dev server is provided
   const viteServer = config.viteServer as ViteDevServer | undefined;
   const viteMode = !!viteServer;
@@ -678,13 +687,28 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
     socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
   });
 
-  httpServer.listen(port, () => {
-    console.log(`Sunpeak MCP server listening on http://localhost:${port}`);
-    console.log(`  MCP endpoint: http://localhost:${port}${MCP_PATH}`);
+  const onListening = () => {
+    const actualPort = (httpServer.address() as AddressInfo).port;
+    // Update module-level URL in case the OS assigned a different port
+    localDevServerUrl = `http://localhost:${actualPort}`;
+    console.log(`Sunpeak MCP server listening on http://localhost:${actualPort}`);
+    console.log(`  MCP endpoint: http://localhost:${actualPort}${MCP_PATH}`);
     if (viteMode) {
       console.log(`  Vite HMR: enabled (source files served with hot reload)`);
     }
+  };
+
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      console.warn(`Port ${port} in use, finding an available port...`);
+      // onListening is already registered as a .once('listening') from the first .listen() call
+      httpServer.listen(0);
+    } else {
+      throw err;
+    }
   });
+
+  httpServer.listen(port, onListening);
 
   // Graceful shutdown handler
   const shutdown = async () => {
