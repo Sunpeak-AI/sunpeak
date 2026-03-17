@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync } from 'fs';
 import { join, dirname } from 'path';
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
+import { getPort } from '../lib/get-port.mjs';
 
 /**
  * Start a production MCP server from built artifacts.
@@ -182,6 +183,9 @@ export async function start(projectRoot = process.cwd(), args = []) {
 
   const name = serverConfig.name ?? pkg.name ?? 'sunpeak-app';
   const version = serverConfig.version ?? pkg.version ?? '0.1.0';
+
+  // Find an available port (prefer the configured one)
+  port = await getPort(port);
 
   console.log(`\nStarting ${name} v${version} on ${host}:${port}...`);
 

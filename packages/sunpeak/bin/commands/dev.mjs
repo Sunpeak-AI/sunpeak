@@ -6,6 +6,7 @@ const { join, resolve, basename, dirname } = path;
 import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 import { spawn } from 'child_process';
+import { getPort } from '../lib/get-port.mjs';
 
 /**
  * Import a module from the project's node_modules using ESM resolution
@@ -471,6 +472,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
   // Start MCP server with its own Vite instance for HMR
   if (simulations.length > 0) {
+    // Find available ports for the MCP server and HMR WebSocket
+    const mcpPort = await getPort(8000);
+    const hmrPort = await getPort(Number(process.env.SUNPEAK_HMR_PORT || 24679));
+
     console.log(`\nStarting MCP server with ${simulations.length} simulation(s) (Vite HMR)...`);
 
     // Virtual entry module plugin for MCP
@@ -538,7 +543,7 @@ if (import.meta.hot) {
       },
       server: {
         middlewareMode: true,
-        hmr: { port: Number(process.env.SUNPEAK_HMR_PORT || 24679) },
+        hmr: { port: hmrPort },
         allowedHosts: true,
         watch: {
           // Only watch files that affect the UI bundle (not JSON, tests, etc.)
@@ -564,7 +569,8 @@ if (import.meta.hot) {
       name: pkg.name || 'Sunpeak',
       version: pkg.version || '0.1.0',
       simulations,
-      port: 8000,
+      port: mcpPort,
+      hmrPort,
       // In --prod-resources mode, don't pass viteServer so the MCP server serves pre-built HTML.
       // Otherwise, pass it so ChatGPT gets Vite HMR.
       viteServer: isProdResources ? undefined : mcpViteServer,

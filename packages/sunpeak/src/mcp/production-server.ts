@@ -781,11 +781,25 @@ export function startProductionHttpServer(
   });
 
   const displayHost = host === '0.0.0.0' ? 'localhost' : host;
-  httpServer.listen(port, host, () => {
-    log('info', `Server listening on http://${displayHost}:${port}`);
-    log('info', `MCP endpoint: http://${displayHost}:${port}${MCP_PATH}`);
-    log('info', `Health check: http://${displayHost}:${port}/health`);
+
+  const onListening = () => {
+    const addr = httpServer.address() as { port: number };
+    log('info', `Server listening on http://${displayHost}:${addr.port}`);
+    log('info', `MCP endpoint: http://${displayHost}:${addr.port}${MCP_PATH}`);
+    log('info', `Health check: http://${displayHost}:${addr.port}/health`);
+  };
+
+  httpServer.on('error', (err: NodeJS.ErrnoException) => {
+    if (err.code === 'EADDRINUSE') {
+      log('warn', `Port ${port} in use, finding an available port...`);
+      // onListening is already registered as a .once('listening') from the first .listen() call
+      httpServer.listen(0, host);
+    } else {
+      throw err;
+    }
   });
+
+  httpServer.listen(port, host, onListening);
 
   // Graceful shutdown
   const shutdown = async () => {

@@ -89,6 +89,8 @@ export interface MCPServerConfig {
   name?: string;
   version?: string;
   port?: number;
+  /** HMR WebSocket port (used for CSP injection in dev mode). */
+  hmrPort?: number;
   simulations: SimulationWithDist[];
   /**
    * Vite dev server instance for HMR mode.
