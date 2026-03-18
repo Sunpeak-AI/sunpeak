@@ -1,0 +1,86 @@
+---
+title: "MCP Apps getHostVersion - Host Identification"
+sidebarTitle: "getHostVersion"
+description: "Read the host application's name and version from an MCP App. Use getHostVersion to identify whether the app is running in ChatGPT, Claude, or another host."
+keywords: ["MCP Apps", "ChatGPT Apps", "getHostVersion", "host identification", "host name", "host version", "platform detection"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`getHostVersion()` returns the host application's name and version, as reported during the [initialization handshake](/mcp-apps/lifecycle#2-initialization). Use this to identify the host platform, log diagnostics, or adapt behavior for specific hosts.
+
+Returns `undefined` before `connect()` completes.
+
+## Signature
+
+```ts
+getHostVersion(): { name: string; version: string } | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="{ name: string; version: string } | undefined">
+  The host's self-reported identity, or `undefined` if the app has not connected yet.
+
+  <ResponseField name="name" type="string">
+    The host application name (e.g., `"ChatGPT"`, `"Claude"`).
+  </ResponseField>
+
+  <ResponseField name="version" type="string">
+    The host application version string.
+  </ResponseField>
+</ResponseField>
+
+## Usage
+
+### Log the host identity
+
+```ts
+await app.connect();
+
+const host = app.getHostVersion();
+console.log(`Running in ${host?.name} v${host?.version}`);
+// → "Running in ChatGPT v1.0.0"
+```
+
+### Adapt behavior per host
+
+```ts
+const host = app.getHostVersion();
+
+if (host?.name === "ChatGPT") {
+  // ChatGPT-specific initialization
+} else if (host?.name === "Claude") {
+  // Claude-specific initialization
+}
+```
+
+### Include in error reports
+
+```ts
+function reportError(error: Error) {
+  const host = app.getHostVersion();
+  sendToErrorService({
+    error: error.message,
+    hostName: host?.name,
+    hostVersion: host?.version,
+    appVersion: "1.0.0",
+  });
+}
+```
+
+## Related
+
+- [`getHostCapabilities()`](/mcp-apps/app/accessors/get-host-capabilities) — What the host supports
+- [`getHostContext()`](/mcp-apps/app/accessors/get-host-context) — Theme, locale, and display state
+- [Accessors overview](/mcp-apps/app/accessors) — All App accessor methods
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useHostInfo`](/api-reference/hooks/use-host-info) for reactive access to the host's name and version in React components.
+</Tip>

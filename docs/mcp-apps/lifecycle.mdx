@@ -86,13 +86,13 @@ The user interacts with the View. The View can:
 
 | Action | Method |
 |--------|--------|
-| Call server tools | [`callServerTool()`](/mcp-apps/app/requests#callservertool) |
-| Send chat messages | [`sendMessage()`](/mcp-apps/app/requests#sendmessage) |
-| Update model context | [`updateModelContext()`](/mcp-apps/app/requests#updatemodelcontext) |
-| Open external links | [`openLink()`](/mcp-apps/app/requests#openlink) |
-| Download files | [`downloadFile()`](/mcp-apps/app/requests#downloadfile) |
-| Change display mode | [`requestDisplayMode()`](/mcp-apps/app/requests#requestdisplaymode) |
-| Send logs | [`sendLog()`](/mcp-apps/app/requests#sendlog) |
+| Call server tools | [`callServerTool()`](/mcp-apps/app/requests/call-server-tool) |
+| Send chat messages | [`sendMessage()`](/mcp-apps/app/requests/send-message) |
+| Update model context | [`updateModelContext()`](/mcp-apps/app/requests/update-model-context) |
+| Open external links | [`openLink()`](/mcp-apps/app/requests/open-link) |
+| Download files | [`downloadFile()`](/mcp-apps/app/requests/download-file) |
+| Change display mode | [`requestDisplayMode()`](/mcp-apps/app/requests/request-display-mode) |
+| Send logs | [`sendLog()`](/mcp-apps/app/requests/send-log) |
 
 The Host proxies [tool calls](/mcp-apps/mcp/tools#invocation-toolscall) to the MCP server and forwards responses back to the View.
 
@@ -110,4 +110,4 @@ app.onteardown = async () => {
 
 ## Host Context Updates
 
-At any point during the interactive phase, the Host may send `ui/notifications/host-context-changed` when the environment changes (theme toggle, resize, locale change). The `App` class automatically merges these updates into its internal context — access the latest via [`getHostContext()`](/mcp-apps/app/app-class#gethostcontext).
+At any point during the interactive phase, the Host may send `ui/notifications/host-context-changed` when the environment changes (theme toggle, resize, locale change). The `App` class automatically merges these updates into its internal context — access the latest via [`getHostContext()`](/mcp-apps/app/accessors/get-host-context).

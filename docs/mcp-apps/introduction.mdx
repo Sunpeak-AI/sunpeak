@@ -77,12 +77,12 @@ When a tool with UI metadata is called, the Host fetches the corresponding resou
 
 Views communicate with Hosts using JSON-RPC over `postMessage`. From a View, you can:
 
-- **[Call server tools](/mcp-apps/app/requests#callservertool)** — Fetch fresh data or trigger server-side actions
-- **[Send messages](/mcp-apps/app/requests#sendmessage)** — Add messages to the conversation thread
-- **[Update model context](/mcp-apps/app/requests#updatemodelcontext)** — Push structured data to the model's context
-- **[Open links](/mcp-apps/app/requests#openlink)** — Request the host to open external URLs
-- **[Download files](/mcp-apps/app/requests#downloadfile)** — Trigger host-mediated file downloads
-- **[Request display modes](/mcp-apps/app/requests#requestdisplaymode)** — Switch between inline, fullscreen, and picture-in-picture
+- **[Call server tools](/mcp-apps/app/requests/call-server-tool)** — Fetch fresh data or trigger server-side actions
+- **[Send messages](/mcp-apps/app/requests/send-message)** — Add messages to the conversation thread
+- **[Update model context](/mcp-apps/app/requests/update-model-context)** — Push structured data to the model's context
+- **[Open links](/mcp-apps/app/requests/open-link)** — Request the host to open external URLs
+- **[Download files](/mcp-apps/app/requests/download-file)** — Trigger host-mediated file downloads
+- **[Request display modes](/mcp-apps/app/requests/request-display-mode)** — Switch between inline, fullscreen, and picture-in-picture
 
 See the full [App lifecycle](/mcp-apps/lifecycle) and [Requests API](/mcp-apps/app/requests) for details.
 

@@ -15,7 +15,7 @@ import { App } from "@modelcontextprotocol/ext-apps";
 
 `onhostcontextchanged` is a notification handler called whenever the host environment changes -- for example, when the user toggles between light and dark themes, resizes the viewport, switches locale, or changes the display mode.
 
-Before your callback is invoked, the updated fields are automatically merged into the internal context store. This means [`getHostContext()`](/mcp-apps/app/app-class#gethostcontext) already returns the latest values by the time your handler runs. The `params` object contains only the fields that changed, not the full context.
+Before your callback is invoked, the updated fields are automatically merged into the internal context store. This means [`getHostContext()`](/mcp-apps/app/accessors/get-host-context) already returns the latest values by the time your handler runs. The `params` object contains only the fields that changed, not the full context.
 
 ## Signature
 
@@ -98,6 +98,6 @@ app.onhostcontextchanged = (ctx) => {
 ## Related
 
 - [Event Handlers overview](/mcp-apps/app/event-handlers) -- all notification and request handlers
-- [App Class `getHostContext()`](/mcp-apps/app/app-class#gethostcontext) -- read the full host context at any time
+- [`getHostContext()`](/mcp-apps/app/accessors/get-host-context) -- read the full host context at any time
 - [Core Types](/mcp-apps/types/core-types) -- `McpUiHostContext` type definition
 - [Lifecycle](/mcp-apps/lifecycle) -- connection and initialization flow

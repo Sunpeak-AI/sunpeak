@@ -89,13 +89,15 @@
           {
             "group": "Components",
             "pages": [
+              "api-reference/components/app-provider",
               "api-reference/components/safe-area"
             ]
           },
           {
             "group": "Functions",
             "pages": [
-              "api-reference/functions/host-detection"
+              "api-reference/functions/host-detection",
+              "api-reference/functions/utilities"
             ]
           },
           {
@@ -174,6 +176,15 @@
             "pages": [
               "mcp-apps/app/app-class",
               {
+                "group": "Accessors",
+                "pages": [
+                  "mcp-apps/app/accessors",
+                  "mcp-apps/app/accessors/get-host-capabilities",
+                  "mcp-apps/app/accessors/get-host-context",
+                  "mcp-apps/app/accessors/get-host-version"
+                ]
+              },
+              {
                 "group": "Event Handlers",
                 "pages": [
                   "mcp-apps/app/event-handlers",
@@ -200,6 +211,7 @@
                   "mcp-apps/app/requests/send-log",
                   "mcp-apps/app/requests/send-message",
                   "mcp-apps/app/requests/send-size-changed",
+                  "mcp-apps/app/requests/setup-size-changed-notifications",
                   "mcp-apps/app/requests/update-model-context"
                 ]
               }
@@ -219,6 +231,8 @@
               "mcp-apps/react/use-app",
               "mcp-apps/react/use-auto-resize",
               "mcp-apps/react/use-document-theme",
+              "mcp-apps/react/use-host-fonts",
+              "mcp-apps/react/use-host-style-variables",
               "mcp-apps/react/use-host-styles"
             ]
           },
