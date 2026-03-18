@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.16.22",
+  "version": "0.16.23",
   "description": "Local-first MCP Apps framework. Quickstart, build, test, and ship your Claude Connector or ChatGPT App!",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -65,6 +65,30 @@
       "import": {
         "types": "./dist/host/chatgpt/index.d.ts",
         "default": "./dist/host/chatgpt/index.js"
+      }
+    },
+    "./test": {
+      "import": {
+        "types": "./bin/lib/live/live-fixtures.d.mts",
+        "default": "./bin/lib/live/live-fixtures.mjs"
+      }
+    },
+    "./test/config": {
+      "import": {
+        "types": "./bin/lib/live/test-config.d.mts",
+        "default": "./bin/lib/live/test-config.mjs"
+      }
+    },
+    "./test/chatgpt": {
+      "import": {
+        "types": "./bin/lib/live/chatgpt-fixtures.d.mts",
+        "default": "./bin/lib/live/chatgpt-fixtures.mjs"
+      }
+    },
+    "./test/chatgpt/config": {
+      "import": {
+        "types": "./bin/lib/live/chatgpt-config.d.mts",
+        "default": "./bin/lib/live/chatgpt-config.mjs"
       }
     },
     "./package.json": "./package.json"

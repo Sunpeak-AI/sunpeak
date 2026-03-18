@@ -51,14 +51,15 @@ sunpeak new
 
 1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`, `useUpdateModelContext`, `useAppTools`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.). Host-specific hooks like `useUploadFile`, `useRequestModal`, and `useRequestCheckout` are available via `sunpeak/host/chatgpt`, with `isChatGPT()` / `isClaude()` host detection via `sunpeak/host`.
 2. Multi-host simulator: React component replicating host runtimes (ChatGPT, Claude) to **test Apps locally and automatically** via UI, props, or URL parameters.
-3. MCP server: Serve Resources with mock data to hosts like ChatGPT and Claude with HMR (**no more cache issues or 5-click manual refreshes**).
+3. Live testing: **Automated tests against real ChatGPT** — opens your browser, sends messages, validates your app renders correctly inside the real host. No more manual testing.
+4. MCP server: Serve Resources with mock data to hosts like ChatGPT and Claude with HMR (**no more cache issues or 5-click manual refreshes**).
 
 ### The `sunpeak` framework
 
-Next.js for MCP Apps. Using an example App `my-app` with a `Review` UI ([MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources)), `sunpeak` projects look like:
+Next.js for MCP Apps. Using an example App `sunpeak-app` with a `Review` UI ([MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources)), `sunpeak` projects look like:
 
 ```bash
-my-app/
+sunpeak-app/
 ├── src/
 │   ├── resources/
 │   │   └── review/

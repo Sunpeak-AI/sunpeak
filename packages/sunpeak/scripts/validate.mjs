@@ -356,6 +356,9 @@ async function validateProductionServer(exampleDir) {
 // Main testing flow
 // ============================================================================
 
+// Parse --live flag
+const liveMode = process.argv.includes('--live');
+
 const startTime = Date.now();
 
 console.log(`${colors.yellow}Starting local testing for Sunpeak...${colors.reset}`);
@@ -499,6 +502,19 @@ try {
   printSuccess('sunpeak build (for production server)');
 
   await validateProductionServer(lastExampleDir);
+
+  // ==========================================================================
+  // Phase 6: Live tests (opt-in, requires tunnel)
+  // ==========================================================================
+  if (liveMode) {
+    printSection('LIVE TESTS');
+
+    if (!runCommand('pnpm test:live', TEMPLATE_ROOT)) {
+      throw new Error('Live tests failed');
+    }
+
+    printSuccess('Live tests passed');
+  }
 
   // ==========================================================================
   // Cleanup

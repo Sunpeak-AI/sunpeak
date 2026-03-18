@@ -29,7 +29,7 @@ import type { AuthInfo } from 'sunpeak/mcp';
 export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return null; // Reject → 401 Unauthorized
-  return { token, clientId: 'my-app', scopes: [] };
+  return { token, clientId: 'sunpeak-app', scopes: [] };
 }
 
 export const server = { name: 'My App', version: '1.0.0' };

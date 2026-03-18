@@ -91,7 +91,7 @@ describe('IframeResource', () => {
     );
 
     const iframe = screen.getByTitle('Resource Preview') as HTMLIFrameElement;
-    expect(iframe.className).toContain('custom-class');
+    expect(iframe.parentElement?.className).toContain('custom-class');
     expect(iframe.style.maxHeight).toBe('500px');
   });
 

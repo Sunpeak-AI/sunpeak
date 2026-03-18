@@ -1,4 +1,30 @@
 import { createServer } from 'net';
+import { execSync } from 'child_process';
+
+/**
+ * Synchronous version of getPort — safe to call at Playwright config load time.
+ * Spawns a tiny Node child process that binds, prints the port, and exits.
+ *
+ * @param {number} preferred - Port to try first
+ * @returns {number} The available port number
+ */
+export function getPortSync(preferred) {
+  const script = `
+    const s = require("net").createServer();
+    s.listen(${preferred}, () => {
+      process.stdout.write(String(s.address().port));
+      s.close();
+    });
+    s.on("error", () => {
+      const f = require("net").createServer();
+      f.listen(0, () => {
+        process.stdout.write(String(f.address().port));
+        f.close();
+      });
+    });
+  `;
+  return Number(execSync(`node -e '${script}'`, { encoding: 'utf-8' }).trim());
+}
 
 /**
  * Find an available TCP port, preferring the given port.

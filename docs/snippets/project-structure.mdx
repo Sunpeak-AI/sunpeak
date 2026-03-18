@@ -1,5 +1,5 @@
 ```bash
-my-app/
+sunpeak-app/
 ├── src/
 │   ├── resources/
 │   │   └── review/
@@ -9,9 +9,14 @@ my-app/
 │   │   ├── review-post.ts                   # Multiple tools can share one resource.
 │   │   └── review.ts                        # Backend-only tool (no resource, no UI).
 │   └── server.ts                            # Optional: auth, server config.
-├── tests/simulations/
-│   ├── review-diff.json                     # Mock state for testing (includes serverTools).
-│   ├── review-post.json                     # Mock state for testing (includes serverTools).
-│   └── review-purchase.json                 # Mock state for testing (includes serverTools).
+├── tests/
+│   ├── simulations/
+│   │   ├── review-diff.json                 # Mock state for testing (includes serverTools).
+│   │   ├── review-post.json                 # Mock state for testing (includes serverTools).
+│   │   └── review-purchase.json             # Mock state for testing (includes serverTools).
+│   ├── e2e/
+│   │   └── review.spec.ts                   # Playwright tests against the simulator.
+│   └── live/
+│       └── review.spec.ts                   # Live tests against real ChatGPT (one per resource).
 └── package.json
 ```

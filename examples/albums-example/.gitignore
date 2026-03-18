@@ -10,6 +10,7 @@ build
 
 # Testing
 coverage
+tests/live/.auth/
 
 # Environment variables
 .env

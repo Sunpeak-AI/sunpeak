@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useState } from 'react';
 
 interface SimpleSidebarProps {
   children: React.ReactNode;
@@ -333,6 +334,8 @@ export function SidebarSelect({ value, onChange, options, placeholder }: Sidebar
 interface SidebarInputProps {
   value: string;
   onChange: (value: string) => void;
+  /** When provided, onChange is only called on blur instead of on every keystroke. */
+  applyOnBlur?: boolean;
   placeholder?: string;
   type?: 'text' | 'number';
   disabled?: boolean;
@@ -341,10 +344,41 @@ interface SidebarInputProps {
 export function SidebarInput({
   value,
   onChange,
+  applyOnBlur = false,
   placeholder,
   type = 'text',
   disabled = false,
 }: SidebarInputProps) {
+  const [draft, setDraft] = useState(value);
+  const [isEditing, setIsEditing] = useState(false);
+  const [prevValue, setPrevValue] = useState(value);
+
+  // Sync draft when the controlled value changes externally (while not editing).
+  // Done during render (not in an effect) to avoid cascading renders.
+  if (!isEditing && value !== prevValue) {
+    setPrevValue(value);
+    setDraft(value);
+  }
+
+  if (applyOnBlur) {
+    return (
+      <input
+        type={type}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onFocus={() => setIsEditing(true)}
+        onBlur={() => {
+          setIsEditing(false);
+          onChange(draft);
+        }}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="w-full h-7 text-xs rounded-md px-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ ...formElementStyle, cursor: disabled ? undefined : 'text' }}
+      />
+    );
+  }
+
   return (
     <input
       type={type}

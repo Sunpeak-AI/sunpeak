@@ -104,7 +104,7 @@ Usage:
   sunpeak --version        Show version number
 
   Resources: ${resources.join(', ')} (comma/space separated)
-  Example: sunpeak new my-app "${resources.slice(0, 2).join(',')}"
+  Example: sunpeak new sunpeak-app "${resources.slice(0, 2).join(',')}"
 `);
       }
       break;

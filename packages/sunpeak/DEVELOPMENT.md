@@ -27,6 +27,26 @@ This will:
 - Generate per-resource example projects (via `sunpeak new`) in `examples/`
 - For each example: link local sunpeak, run unit tests, build, and run E2E tests with Playwright
 
+### Live Testing (against real ChatGPT)
+
+Run the full validation pipeline plus automated tests against real ChatGPT:
+
+```bash
+# Start a tunnel first
+ngrok http 8000
+
+# Run validation with live tests
+pnpm validate -- --live
+```
+
+This adds a final phase that runs `pnpm test:live` in the generated example project. Tests run fully in parallel (`fullyParallel: true`) — each test gets its own chat window. The MCP server refresh happens once in globalSetup before all workers. Requires:
+
+- A tunnel running (e.g. `ngrok http 8000`)
+- Being logged into ChatGPT in your browser (session is imported automatically)
+- MCP server pre-configured in ChatGPT settings with the tunnel URL
+
+Set `SUNPEAK_LIVE_BROWSER` (chrome/arc/brave/edge) to override browser detection.
+
 For manual testing with live servers, you can also run:
 
 - `pnpm dev`
@@ -40,7 +60,7 @@ With the mcp server still running from the previous step, make sure to have a tu
 ngrok http 8000
 ```
 
-You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see the template UI in action: `User > Settings > Apps & Connectors > Create`
+You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see the template UI in action: `User > Settings > Apps > Create`
 
 Once the app is connected, send the name of a tool simulation, like `show carousel`, to ChatGPT. Many changes require you to Refresh the app on the same settings modal.
 
@@ -57,7 +77,7 @@ Assuming `pwd` is this root sunpeak repo folder, run:
 ```bash
 pnpm update -g sunpeak
 rm -rf ../tmp && mkdir ../tmp && cd ../tmp
-sunpeak new my-app && cd my-app
+sunpeak new sunpeak-app && cd sunpeak-app
 sunpeak build && pnpm test && sunpeak dev
 ```
 
