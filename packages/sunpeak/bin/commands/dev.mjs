@@ -292,6 +292,16 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       sunpeakFaviconPlugin(),
       sunpeakCallToolPlugin(),
       sunpeakDistPlugin(),
+      // Health endpoint for Playwright webServer readiness check
+      {
+        name: 'sunpeak-health',
+        configureServer(server) {
+          server.middlewares.use('/health', (_req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok' }));
+          });
+        },
+      },
     ],
     define: {
       '__SUNPEAK_PROD_TOOLS__': JSON.stringify(isProdTools),
@@ -308,7 +318,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     },
     server: {
       port,
-      open: true,
+      // Don't auto-open browser when started by Playwright or CI
+      open: !process.env.CI && !process.env.SUNPEAK_LIVE_TEST,
+      // Allow tunnel hosts (ngrok, cloudflared, etc.) to reach the dev server
+      allowedHosts: 'all',
     },
   });
 

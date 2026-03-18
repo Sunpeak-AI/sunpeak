@@ -14,6 +14,7 @@ coverage
 test-results
 playwright-report
 playwright/.cache
+.auth/
 
 # Environment variables
 .env
@@ -55,3 +56,4 @@ examples/*/playwright-report
 .temp
 .tmp
 tmp
+.gstack/

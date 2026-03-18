@@ -48,6 +48,13 @@ function getRegistry(app: App): Set<() => void> {
       applyHostFonts(ctx.styles.css.fonts);
     }
 
+    // Debounce timer for subscriber notifications.
+    // Some hosts (e.g. ChatGPT) fire hostcontextchanged at hundreds of Hz while
+    // the LLM is generating text, oscillating containerDimensions between two
+    // values. Debouncing coalesces these rapid bursts into a single re-render
+    // so SafeArea and other dimension-sensitive components don't flicker.
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
     app.onhostcontextchanged = () => {
       // Read the full context from the app rather than relying on the
       // callback params, which may be a delta missing unchanged fields
@@ -60,7 +67,12 @@ function getRegistry(app: App): Set<() => void> {
       if (ctx?.styles?.css?.fonts) {
         applyHostFonts(ctx.styles.css.fonts);
       }
-      for (const fn of subs!) fn();
+      // Notify subscribers after a brief settling period.
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        debounceTimer = null;
+        for (const fn of subs!) fn();
+      }, 50);
     };
   }
   return subs;

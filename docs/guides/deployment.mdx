@@ -167,7 +167,7 @@ HOST=127.0.0.1 sunpeak start
 CMD ["sunpeak", "start", "--json-logs"]
 
 # PM2
-pm2 start "sunpeak start --json-logs" --name my-app
+pm2 start "sunpeak start --json-logs" --name sunpeak-app
 
 # systemd
 ExecStart=/usr/bin/sunpeak start --json-logs

@@ -495,6 +495,7 @@ export function Simulator({
                     docsPath="api-reference/hooks/use-locale"
                   >
                     <SidebarInput
+                      applyOnBlur
                       value={state.locale}
                       onChange={(value) => state.setLocale(value)}
                       placeholder="en-US"
@@ -578,6 +579,7 @@ export function Simulator({
                   docsPath="api-reference/hooks/use-time-zone"
                 >
                   <SidebarInput
+                    applyOnBlur
                     value={state.timeZone}
                     onChange={(value) => state.setTimeZone(value)}
                     placeholder="e.g. America/New_York"
@@ -593,6 +595,7 @@ export function Simulator({
                     <SidebarControl label="Height">
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={state.containerHeight != null ? String(state.containerHeight) : ''}
                         onChange={(value) =>
@@ -603,6 +606,7 @@ export function Simulator({
                     <SidebarControl label="Width">
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={state.containerWidth != null ? String(state.containerWidth) : ''}
                         onChange={(value) =>
@@ -613,6 +617,7 @@ export function Simulator({
                     <SidebarControl label="Max H">
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={
                           state.containerMaxHeight != null ? String(state.containerMaxHeight) : ''
@@ -625,6 +630,7 @@ export function Simulator({
                     <SidebarControl label="Max W">
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={
                           state.containerMaxWidth != null ? String(state.containerMaxWidth) : ''
@@ -652,6 +658,7 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={state.safeAreaInsets.top ? String(state.safeAreaInsets.top) : ''}
                         onChange={(value) =>
@@ -668,6 +675,7 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={
                           state.safeAreaInsets.bottom ? String(state.safeAreaInsets.bottom) : ''
@@ -689,6 +697,7 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={state.safeAreaInsets.left ? String(state.safeAreaInsets.left) : ''}
                         onChange={(value) =>
@@ -705,6 +714,7 @@ export function Simulator({
                       </span>
                       <SidebarInput
                         type="number"
+                        applyOnBlur
                         placeholder="-"
                         value={state.safeAreaInsets.right ? String(state.safeAreaInsets.right) : ''}
                         onChange={(value) =>

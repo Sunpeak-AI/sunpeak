@@ -19,8 +19,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 async function defaultPromptName() {
   const value = await clack.text({
     message: 'Project name',
-    placeholder: 'my-app',
-    defaultValue: 'my-app',
+    placeholder: 'sunpeak-app',
+    defaultValue: 'sunpeak-app',
     validate: (v) => {
       if (v === 'template') return '"template" is a reserved name';
     },
@@ -201,6 +201,10 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
         }
         // Skip e2e test files for excluded resources
         if (src.includes('/tests/e2e/') && name === `${resource}.spec.ts`) {
+          return false;
+        }
+        // Skip live test files for excluded resources
+        if (src.includes('/tests/live/') && name === `${resource}.spec.ts`) {
           return false;
         }
       }

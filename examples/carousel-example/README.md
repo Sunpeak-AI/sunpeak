@@ -17,6 +17,7 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 ```bash
 pnpm test              # Run tests with Vitest.
 pnpm test:e2e          # Run end-to-end tests with Playwright.
+pnpm test:live         # Run live tests against real ChatGPT.
 sunpeak dev            # Start dev server + MCP endpoint.
 sunpeak build          # Build resources and compile tools for production.
 sunpeak start          # Start the production MCP server.
@@ -30,7 +31,7 @@ The template includes a minimal test setup with Vitest. You can add additional t
 Using a Review page as an example, sunpeak projects look like:
 
 ```bash
-my-app/
+sunpeak-app/
 ├── src/resources/
 │   └── review/
 │       └── review.tsx            # Review UI component + resource metadata.
@@ -57,9 +58,30 @@ sunpeak dev
 ngrok http 8000
 ```
 
-You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps & Connectors > Create`
+You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps > Create`
 
 Once your app is connected, send the name of the app and a tool, like `/sunpeak show review`, to ChatGPT.
+
+### Automated Live Testing
+
+Run automated tests against real ChatGPT with `pnpm test:live`. This opens your browser, navigates to ChatGPT, sends messages that trigger your tools, and validates the rendered app — no manual testing required.
+
+**One-time setup:**
+
+1. Log into [chatgpt.com](https://chatgpt.com) in your browser (Chrome, Arc, Brave, or Edge)
+2. Add your MCP server in ChatGPT settings: `Settings > Apps > Create` with your tunnel URL at `/mcp`
+
+**Run live tests:**
+
+```bash
+# Start a tunnel in one terminal
+ngrok http 8000
+
+# Run the tests
+pnpm test:live
+```
+
+The test runner imports your browser session automatically, starts the dev server, and refreshes the MCP server connection once before all workers. Tests run fully in parallel — each test gets its own chat window and switches themes internally via `live.setColorScheme()`. The browser opens visibly to avoid bot detection on chatgpt.com.
 
 ## Build & Deploy
 

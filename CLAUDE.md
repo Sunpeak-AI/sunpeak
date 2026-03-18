@@ -95,6 +95,10 @@ packages/sunpeak/
 - `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/host` — Host detection
 - `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
+- `sunpeak/test` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
+- `sunpeak/test/config` — Playwright config factory (`defineLiveConfig` with `hosts` array)
+- `sunpeak/test/chatgpt` — ChatGPT-specific Playwright fixtures (backwards compat, `test` with `chatgpt` fixture)
+- `sunpeak/test/chatgpt/config` — ChatGPT-specific Playwright config factory
 - `sunpeak/style.css` — Main stylesheet
 - `sunpeak/chatgpt/globals.css` — Simulator globals stylesheet
 

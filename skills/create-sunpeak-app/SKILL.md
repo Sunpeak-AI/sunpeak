@@ -20,7 +20,7 @@ Template app lives at `/tmp/sunpeak/packages/sunpeak/template/`. This is the can
 ## Project Structure
 
 ```
-my-sunpeak-app/
+sunpeak-app/
 ├── src/
 │   ├── resources/
 │   │   └── {name}/
@@ -33,8 +33,11 @@ my-sunpeak-app/
 ├── tests/
 │   ├── simulations/
 │   │   └── *.json                    # Simulation fixture files (flat directory)
-│   └── e2e/
-│       └── {name}.spec.ts            # Playwright tests
+│   ├── e2e/
+│   │   └── {name}.spec.ts            # Playwright simulator tests
+│   └── live/
+│       ├── playwright.config.ts      # Live test config (long timeouts, single worker)
+│       └── {name}.spec.ts            # Live tests against real ChatGPT (one per resource)
 ├── package.json
 └── (vite.config.ts, tsconfig.json, etc. managed by sunpeak CLI)
 ```
@@ -403,11 +406,12 @@ function MyResource() {
 ## Commands
 
 ```bash
-pnpm dev      # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
-pnpm build    # Build resources + compile tools to dist/
-pnpm start    # Start production MCP server (real handlers, auth, Zod validation)
-pnpm test     # Run unit tests (vitest)
-pnpm test:e2e # Run Playwright e2e tests
+pnpm dev       # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
+pnpm build     # Build resources + compile tools to dist/
+pnpm start     # Start production MCP server (real handlers, auth, Zod validation)
+pnpm test      # Run unit tests (vitest)
+pnpm test:e2e  # Run Playwright e2e tests against simulator
+pnpm test:live # Run live tests against real ChatGPT (requires tunnel + browser session)
 ```
 
 The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The simulator runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
@@ -601,6 +605,60 @@ export const resource: ResourceConfig = {
   },
 };
 ```
+
+## Live Testing (against real ChatGPT)
+
+Live tests validate MCP Apps inside real ChatGPT. They use Playwright to open the user's browser, send messages that trigger tool calls, and assert on the rendered app iframe.
+
+### Live Test Pattern
+
+One spec file per resource. Import `test` and `expect` from `sunpeak/test` — the `live` fixture handles login, MCP refresh, and host-specific message formatting.
+
+```typescript
+// tests/live/weather.spec.ts
+import { test, expect } from 'sunpeak/test';
+
+test('weather tool renders forecast', async ({ live }) => {
+  const app = await live.invoke('show me the weather in Austin');
+  await expect(app.locator('h1')).toBeVisible();
+});
+```
+
+Config is a one-liner:
+```typescript
+// tests/live/playwright.config.ts
+import { defineLiveConfig } from 'sunpeak/test/config';
+export default defineLiveConfig();
+// Add hosts: defineLiveConfig({ hosts: ['chatgpt', 'claude'] })
+// Generates one Playwright project per host. Tests switch themes internally via live.setColorScheme().
+```
+
+### live Fixture API
+
+| Method | Description |
+|--------|-------------|
+| `invoke(prompt)` | Start new chat, send prompt, return app FrameLocator (one-liner) |
+| `startNewChat()` | Start a new conversation (for multi-step flows) |
+| `sendMessage(text)` | Send a message with host-appropriate formatting |
+| `sendRawMessage(text)` | Send a message without prefix |
+| `waitForAppIframe({ timeout })` | Wait for MCP app iframe to render (default 90s) |
+| `getAppIframe()` | Get FrameLocator for the app iframe |
+| `setColorScheme(scheme, appFrame?)` | Switch the host to `'light'` or `'dark'` theme. Optionally pass an app FrameLocator to wait for it to update. |
+| `page` | Raw Playwright `Page` object for advanced assertions |
+
+### Running
+
+```bash
+# Requires: tunnel running (ngrok http 8000) + logged into ChatGPT in your browser
+pnpm test:live
+
+# Or via validate pipeline
+sunpeak validate --live
+```
+
+The browser opens visibly — headless mode is blocked by chatgpt.com's bot detection.
+
+The live test runner imports your browser session, starts `sunpeak dev --prod-resources`, and refreshes the MCP server connection in ChatGPT once in globalSetup before all workers. Tests run in parallel — each test gets its own chat window.
 
 ## Common Mistakes
 

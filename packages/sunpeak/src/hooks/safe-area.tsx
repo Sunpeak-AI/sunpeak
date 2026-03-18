@@ -39,9 +39,13 @@ export const SafeArea = forwardRef<HTMLDivElement, SafeAreaProps>(function SafeA
   const displayMode = useDisplayMode();
 
   // In fullscreen, fill the iframe viewport so flex layouts work.
-  // In inline/pip, use viewport.height if set by the host.
+  // In inline/pip, do NOT apply containerDimensions.height as an explicit height.
+  // Doing so creates a feedback loop: the host sends a small initial placeholder height,
+  // SafeArea pins to it, the app fires sizechange with that small height, and the host
+  // never corrects it. Instead, let content size naturally so sizechange reports the
+  // real rendered height.
   const isFullscreen = displayMode === 'fullscreen';
-  const height = viewport?.height ?? (isFullscreen ? '100dvh' : undefined);
+  const height = isFullscreen ? (viewport?.height ?? '100dvh') : undefined;
 
   return (
     <div
@@ -54,7 +58,10 @@ export const SafeArea = forwardRef<HTMLDivElement, SafeAreaProps>(function SafeA
         paddingLeft: safeArea.left || undefined,
         paddingRight: safeArea.right || undefined,
         height,
+        // overflow:hidden ensures content doesn't escape the maxHeight boundary,
+        // which also lets apps fill the space with their own scrollable container.
         maxHeight: viewport?.maxHeight,
+        overflow: viewport?.maxHeight != null ? 'hidden' : undefined,
         width: viewport?.width,
         maxWidth: viewport?.maxWidth,
         ...style,

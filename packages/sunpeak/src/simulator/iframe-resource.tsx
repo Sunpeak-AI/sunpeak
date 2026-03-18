@@ -616,38 +616,67 @@ export function IframeResource({
     ...style,
   };
 
+  // Apply containerDimensions constraints as a host-side wrapper so the app
+  // reports its natural size via sizechange (no feedback loop) while the
+  // simulator visually enforces the configured dimensions.
+  //
+  // height / maxHeight → clip the iframe vertically with overflow:hidden.
+  //   Using a wrapper (not SafeArea inside the app) is intentional: if the
+  //   app were to apply the height constraint internally, sizechange would
+  //   echo the constrained value back and the host would lock in that size.
+  // width / maxWidth → constrain the wrapper's width; the iframe fills 100%.
+  //
+  // The wrapper div is always rendered (never conditional) so that adding or
+  // removing constraints is a style update, not a tree change. Conditionally
+  // toggling the wrapper would unmount/remount the iframe mid-handshake,
+  // which causes the tool result to never reach the app.
+  const dims = hostContext?.containerDimensions;
+  const isFullscreenMode = hostContext?.displayMode === 'fullscreen';
+  const wrapperStyle: React.CSSProperties = {};
+  if (dims && !isFullscreenMode) {
+    const h = 'height' in dims ? dims.height : undefined;
+    const mh = 'maxHeight' in dims ? dims.maxHeight : undefined;
+    const w = 'width' in dims ? dims.width : undefined;
+    const mw = 'maxWidth' in dims ? dims.maxWidth : undefined;
+    if (h != null) {
+      wrapperStyle.maxHeight = h;
+      wrapperStyle.overflow = 'hidden';
+    }
+    if (mh != null) {
+      wrapperStyle.maxHeight = mh;
+      wrapperStyle.overflow = 'hidden';
+    }
+    if (w != null) wrapperStyle.maxWidth = w;
+    if (mw != null) wrapperStyle.maxWidth = mw;
+  }
+
+  const iframeAttrs = {
+    ref: setIframeRef,
+    onLoad: handleLoad,
+    style: iframeStyle,
+    title: 'Resource Preview' as const,
+    sandbox:
+      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox' as const,
+    allow: allowAttribute,
+  };
+
   // For src mode, use iframe src directly
   if (src) {
     if (!isValidUrl) {
       console.error('[IframeResource] URL not allowed:', src);
       return <div style={{ color: 'red', padding: 20 }}>Error: URL not allowed: {src}</div>;
     }
-
     return (
-      <iframe
-        ref={setIframeRef}
-        src={src}
-        onLoad={handleLoad}
-        className={className}
-        style={iframeStyle}
-        title="Resource Preview"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-        allow={allowAttribute}
-      />
+      <div className={className} style={wrapperStyle}>
+        <iframe {...iframeAttrs} src={src} />
+      </div>
     );
   }
 
   return (
-    <iframe
-      ref={setIframeRef}
-      srcDoc={htmlContent}
-      onLoad={handleLoad}
-      className={className}
-      style={iframeStyle}
-      title="Resource Preview"
-      sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-      allow={allowAttribute}
-    />
+    <div className={className} style={wrapperStyle}>
+      <iframe {...iframeAttrs} srcDoc={htmlContent} />
+    </div>
   );
 }
 
