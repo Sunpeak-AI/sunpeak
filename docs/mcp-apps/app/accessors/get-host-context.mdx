@@ -1,0 +1,143 @@
+---
+title: "MCP Apps getHostContext - Host Environment State"
+sidebarTitle: "getHostContext"
+description: "Read the host environment context from an MCP App: theme, locale, display mode, container dimensions, device capabilities, safe area insets, and more."
+keywords: ["MCP Apps", "ChatGPT Apps", "getHostContext", "host context", "theme", "locale", "display mode", "safe area"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`getHostContext()` returns the current host environment context. This includes the theme, styles, locale, time zone, display mode, container dimensions, device capabilities, platform, and safe area insets.
+
+The context is first populated during the [initialization handshake](/mcp-apps/lifecycle#2-initialization) and automatically updated when the host sends [`onhostcontextchanged`](/mcp-apps/app/event-handlers/onhostcontextchanged) notifications.
+
+Returns `undefined` before `connect()` completes.
+
+## Signature
+
+```ts
+getHostContext(): McpUiHostContext | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="McpUiHostContext | undefined">
+  The current host context, or `undefined` if the app has not connected yet. See [`McpUiHostContext`](/mcp-apps/types/core-types#mcpuihostcontext) for the full type definition.
+</ResponseField>
+
+## Usage
+
+### Read the current theme
+
+```ts
+await app.connect();
+
+const ctx = app.getHostContext();
+if (ctx?.theme === "dark") {
+  document.body.classList.add("dark-theme");
+}
+```
+
+### Check display mode
+
+```ts
+const ctx = app.getHostContext();
+const isFullscreen = ctx?.displayMode === "fullscreen";
+
+if (isFullscreen) {
+  showExpandedLayout();
+} else {
+  showCompactLayout();
+}
+```
+
+### Use locale for formatting
+
+```ts
+const ctx = app.getHostContext();
+const locale = ctx?.locale ?? "en-US";
+const timeZone = ctx?.timeZone ?? "UTC";
+
+const formatted = new Intl.DateTimeFormat(locale, { timeZone }).format(new Date());
+```
+
+### Adapt to container dimensions
+
+```ts
+const ctx = app.getHostContext();
+const maxWidth = ctx?.containerDimensions?.maxWidth;
+
+if (maxWidth && maxWidth < 400) {
+  // Switch to compact layout
+}
+```
+
+### Check device capabilities
+
+```ts
+const ctx = app.getHostContext();
+const hasTouch = ctx?.deviceCapabilities?.touch ?? false;
+const hasHover = ctx?.deviceCapabilities?.hover ?? true;
+```
+
+### Apply safe area insets
+
+```ts
+const ctx = app.getHostContext();
+const insets = ctx?.safeAreaInsets;
+
+if (insets) {
+  document.documentElement.style.setProperty("--safe-top", `${insets.top}px`);
+  document.documentElement.style.setProperty("--safe-bottom", `${insets.bottom}px`);
+}
+```
+
+## Context Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `theme` | `McpUiTheme` | `"light"` or `"dark"` |
+| `styles` | `McpUiHostStyles` | CSS variables and font CSS |
+| `displayMode` | `McpUiDisplayMode` | `"inline"`, `"fullscreen"`, or `"pip"` |
+| `availableDisplayModes` | `McpUiDisplayMode[]` | Modes the host supports |
+| `containerDimensions` | `object` | `width`, `maxWidth`, `height`, `maxHeight` in pixels |
+| `locale` | `string` | BCP 47 locale (e.g., `"en-US"`) |
+| `timeZone` | `string` | IANA time zone (e.g., `"America/New_York"`) |
+| `userAgent` | `string` | Host application identifier |
+| `platform` | `string` | `"web"`, `"desktop"`, or `"mobile"` |
+| `deviceCapabilities` | `object` | `touch` and `hover` booleans |
+| `safeAreaInsets` | `object` | `top`, `right`, `bottom`, `left` in pixels |
+| `toolInfo` | `object` | Current tool ID and definition |
+
+## Reactivity
+
+`getHostContext()` always returns the latest context. When the host sends a context change notification, the `App` class merges the partial update into its stored context. To react to changes:
+
+- **Vanilla JS** — Register an [`onhostcontextchanged`](/mcp-apps/app/event-handlers/onhostcontextchanged) handler
+- **React** — Use the sunpeak [`useHostContext`](/api-reference/hooks/use-host-context) hook for reactive updates
+
+```ts
+app.onhostcontextchanged = (ctx) => {
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+};
+```
+
+## Related
+
+- [`McpUiHostContext`](/mcp-apps/types/core-types#mcpuihostcontext) — Full type definition
+- [`onhostcontextchanged`](/mcp-apps/app/event-handlers/onhostcontextchanged) — Event handler for context updates
+- [`getHostCapabilities()`](/mcp-apps/app/accessors/get-host-capabilities) — What the host supports
+- [`getHostVersion()`](/mcp-apps/app/accessors/get-host-version) — Host identification
+- [Accessors overview](/mcp-apps/app/accessors) — All App accessor methods
+
+<Tip>
+The [sunpeak framework](/quickstart) provides reactive hooks for individual context fields: [`useHostContext`](/api-reference/hooks/use-host-context), [`useTheme`](/api-reference/hooks/use-theme), [`useLocale`](/api-reference/hooks/use-locale), [`useTimeZone`](/api-reference/hooks/use-time-zone), [`useDisplayMode`](/api-reference/hooks/use-display-mode), [`useViewport`](/api-reference/hooks/use-viewport), [`useDeviceCapabilities`](/api-reference/hooks/use-device-capabilities), [`useSafeArea`](/api-reference/hooks/use-safe-area), and [`usePlatform`](/api-reference/hooks/use-platform).
+</Tip>

@@ -1,0 +1,94 @@
+---
+title: "MCP Apps setupSizeChangedNotifications - Auto-Resize Control"
+sidebarTitle: "setupSizeChangedNotifications"
+description: "Manually start or stop auto-resize reporting in an MCP App. Uses ResizeObserver to monitor DOM changes and sends size-changed notifications to the host."
+keywords: ["MCP Apps", "ChatGPT Apps", "setupSizeChangedNotifications", "auto resize", "ResizeObserver", "size reporting", "iframe resize"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`setupSizeChangedNotifications()` manually starts automatic size reporting to the host. It attaches a `ResizeObserver` to `document.body` and `document.documentElement`, sending `ui/notifications/size-changed` whenever the content dimensions change.
+
+This method is automatically called by [`connect()`](/mcp-apps/app/app-class#connect) when the `App` is created with `autoResize: true` (the default). You only need to call it directly when:
+
+- You created the `App` with `autoResize: false` and want to enable it later
+- You previously stopped auto-resize and want to restart it
+
+## Signature
+
+```ts
+setupSizeChangedNotifications(): () => void
+```
+
+## Returns
+
+<ResponseField name="return" type="() => void">
+  A cleanup function that disconnects the `ResizeObserver` and stops size reporting. Call this to disable auto-resize.
+</ResponseField>
+
+## Usage
+
+### Enable auto-resize after connection
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  {},
+  { autoResize: false },
+);
+await app.connect();
+
+// Enable auto-resize manually
+const cleanup = app.setupSizeChangedNotifications();
+```
+
+### Temporarily disable auto-resize
+
+```ts
+const cleanup = app.setupSizeChangedNotifications();
+
+// Disable during animation to avoid excessive notifications
+cleanup();
+runAnimation();
+
+// Re-enable after animation
+const newCleanup = app.setupSizeChangedNotifications();
+```
+
+### Conditional auto-resize
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  {},
+  { autoResize: false },
+);
+await app.connect();
+
+const ctx = app.getHostContext();
+if (ctx?.displayMode === "inline") {
+  // Only auto-resize in inline mode where the host needs size hints
+  app.setupSizeChangedNotifications();
+}
+```
+
+## How It Works
+
+The method creates a `ResizeObserver` that watches:
+
+1. `document.documentElement` — catches viewport-level changes
+2. `document.body` — catches content-level changes
+
+When either element's size changes, the observer sends the current `scrollWidth` and `scrollHeight` of `document.documentElement` to the host via `sendSizeChanged()`.
+
+## Related
+
+- [`sendSizeChanged()`](/mcp-apps/app/requests/send-size-changed) — Manually send a one-time size update
+- [`useAutoResize`](/mcp-apps/react/use-auto-resize) — React hook that wraps this method
+- [Auto-Resize](/mcp-apps/app/app-class#auto-resize) — How auto-resize works in the `App` class

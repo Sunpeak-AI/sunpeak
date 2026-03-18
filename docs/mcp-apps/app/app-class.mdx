@@ -72,9 +72,9 @@ await app.connect(new PostMessageTransport(window.parent, window.parent));
 Register event handlers **before** calling `connect()` to avoid missing notifications during the handshake.
 </Warning>
 
-## Accessors
+## [Accessors](/mcp-apps/app/accessors)
 
-### getHostCapabilities()
+### [getHostCapabilities()](/mcp-apps/app/accessors/get-host-capabilities)
 
 Returns the host's capabilities from the initialization handshake. `undefined` before connection.
 
@@ -85,7 +85,7 @@ if (app.getHostCapabilities()?.serverTools) {
 }
 ```
 
-### getHostVersion()
+### [getHostVersion()](/mcp-apps/app/accessors/get-host-version)
 
 Returns the host's name and version. `undefined` before connection.
 
@@ -94,7 +94,7 @@ const { name, version } = app.getHostVersion() ?? {};
 console.log(`Connected to ${name} v${version}`);
 ```
 
-### getHostContext()
+### [getHostContext()](/mcp-apps/app/accessors/get-host-context)
 
 Returns the current host context (theme, locale, display mode, etc.). Automatically updated when the host sends context change notifications.
 
@@ -125,7 +125,7 @@ new PostMessageTransport(eventTarget?, eventSource)
 
 By default, `App` monitors `document.body` and `document.documentElement` for size changes and sends `ui/notifications/size-changed` to the host. Disable with `{ autoResize: false }`. In React, you can use the [`useAutoResize`](/mcp-apps/react/use-auto-resize) hook instead.
 
-### setupSizeChangedNotifications()
+### [setupSizeChangedNotifications()](/mcp-apps/app/requests/setup-size-changed-notifications)
 
 Manually start auto-resize reporting. Returns a cleanup function. Automatically called by `connect()` when `autoResize: true`.
 

@@ -15,6 +15,8 @@ import type {
   McpUiInitializeResult,
   McpUiOpenLinkRequest,
   McpUiOpenLinkResult,
+  McpUiDownloadFileRequest,
+  McpUiDownloadFileResult,
   McpUiMessageRequest,
   McpUiMessageResult,
   McpUiUpdateModelContextRequest,
@@ -22,6 +24,13 @@ import type {
   McpUiRequestDisplayModeResult,
   McpUiResourceTeardownRequest,
   McpUiResourceTeardownResult,
+  McpUiToolInputNotification,
+  McpUiToolInputPartialNotification,
+  McpUiToolResultNotification,
+  McpUiToolCancelledNotification,
+  McpUiHostContextChangedNotification,
+  McpUiInitializedNotification,
+  McpUiSizeChangedNotification,
   AppRequest,
   AppNotification,
   AppResult,
@@ -43,6 +52,8 @@ import type {
 |------|--------|-------------|
 | `McpUiOpenLinkRequest` | `ui/open-link` | Open URL: `{ url: string }` |
 | `McpUiOpenLinkResult` | — | `{ isError?: boolean }` |
+| `McpUiDownloadFileRequest` | `ui/download-file` | Download file: `{ contents: (EmbeddedResource \| ResourceLink)[] }` |
+| `McpUiDownloadFileResult` | — | `{ isError?: boolean }` |
 | `McpUiMessageRequest` | `ui/message` | Send message: `{ role: "user"; content: ContentBlock[] }` |
 | `McpUiMessageResult` | — | `{ isError?: boolean }` |
 | `McpUiUpdateModelContextRequest` | `ui/update-model-context` | Update context: `{ content?; structuredContent? }` |
@@ -77,13 +88,22 @@ import type {
 
 ## Union Types
 
-These union types represent all possible message types in the protocol:
+These union types group all possible message types in the protocol. They are useful for building generic message handlers, routers, or middleware that processes any protocol message.
 
 | Type | Description |
 |------|-------------|
-| `AppRequest` | All request types (UI requests + proxied MCP server requests + ping) |
-| `AppNotification` | All notification types (both directions) |
-| `AppResult` | All result types |
+| `AppRequest` | Union of all request types: initialization, View → Host requests (`openLink`, `downloadFile`, `sendMessage`, `updateModelContext`, `requestDisplayMode`, `sendLog`, `sendSizeChanged`), proxied MCP server requests (`callServerTool`, `readServerResource`, `listServerResources`), Host → View requests (`resourceTeardown`), and ping |
+| `AppNotification` | Union of all notification types in both directions: Host → View (`toolInput`, `toolInputPartial`, `toolResult`, `toolCancelled`, `hostContextChanged`) and View → Host (`initialized`, `sizeChanged`) |
+| `AppResult` | Union of all result types corresponding to each request type |
+
+```ts
+import type { AppRequest, AppNotification, AppResult } from "@modelcontextprotocol/ext-apps";
+
+// Example: generic message logger
+function logMessage(msg: AppRequest | AppNotification | AppResult) {
+  console.log(`[${msg.method}]`, msg);
+}
+```
 
 ## Method Constants
 
@@ -94,6 +114,7 @@ import {
   INITIALIZE_METHOD,
   INITIALIZED_METHOD,
   OPEN_LINK_METHOD,
+  DOWNLOAD_FILE_METHOD,
   MESSAGE_METHOD,
   REQUEST_DISPLAY_MODE_METHOD,
   RESOURCE_TEARDOWN_METHOD,
@@ -111,6 +132,7 @@ import {
 | `INITIALIZE_METHOD` | `"ui/initialize"` |
 | `INITIALIZED_METHOD` | `"ui/notifications/initialized"` |
 | `OPEN_LINK_METHOD` | `"ui/open-link"` |
+| `DOWNLOAD_FILE_METHOD` | `"ui/download-file"` |
 | `MESSAGE_METHOD` | `"ui/message"` |
 | `REQUEST_DISPLAY_MODE_METHOD` | `"ui/request-display-mode"` |
 | `RESOURCE_TEARDOWN_METHOD` | `"ui/resource-teardown"` |
@@ -132,7 +154,9 @@ import {
 
 ## Zod Schemas
 
-Every type has a corresponding Zod schema exported for runtime validation:
+Every type has a corresponding Zod schema exported for runtime validation. Schema names follow the pattern `{TypeName}Schema` (e.g., `McpUiTheme` → `McpUiThemeSchema`).
+
+### Core Type Schemas
 
 ```ts
 import {
@@ -141,21 +165,109 @@ import {
   McpUiHostContextSchema,
   McpUiHostCapabilitiesSchema,
   McpUiAppCapabilitiesSchema,
+  McpUiHostCssSchema,
+  McpUiHostStylesSchema,
+  McpUiSupportedContentBlockModalitiesSchema,
+} from "@modelcontextprotocol/ext-apps";
+```
+
+| Schema | Validates |
+|--------|-----------|
+| `McpUiThemeSchema` | `McpUiTheme` — `"light"` or `"dark"` |
+| `McpUiDisplayModeSchema` | `McpUiDisplayMode` — `"inline"`, `"fullscreen"`, `"pip"` |
+| `McpUiHostContextSchema` | `McpUiHostContext` — theme, styles, locale, dimensions, etc. |
+| `McpUiHostCapabilitiesSchema` | `McpUiHostCapabilities` — host feature flags |
+| `McpUiAppCapabilitiesSchema` | `McpUiAppCapabilities` — app-declared features |
+| `McpUiHostCssSchema` | `McpUiHostCss` — host CSS (fonts) |
+| `McpUiHostStylesSchema` | `McpUiHostStyles` — style variables + CSS |
+| `McpUiSupportedContentBlockModalitiesSchema` | `McpUiSupportedContentBlockModalities` — text, image, audio, etc. |
+
+### Initialization Schemas
+
+```ts
+import {
   McpUiInitializeRequestSchema,
   McpUiInitializeResultSchema,
+  McpUiInitializedNotificationSchema,
+} from "@modelcontextprotocol/ext-apps";
+```
+
+| Schema | Validates |
+|--------|-----------|
+| `McpUiInitializeRequestSchema` | `McpUiInitializeRequest` — View → Host init |
+| `McpUiInitializeResultSchema` | `McpUiInitializeResult` — Host → View init response |
+| `McpUiInitializedNotificationSchema` | `McpUiInitializedNotification` — View → Host init complete |
+
+### Request / Result Schemas
+
+```ts
+import {
+  McpUiOpenLinkRequestSchema,
+  McpUiOpenLinkResultSchema,
+  McpUiDownloadFileRequestSchema,
+  McpUiDownloadFileResultSchema,
+  McpUiMessageRequestSchema,
+  McpUiMessageResultSchema,
+  McpUiUpdateModelContextRequestSchema,
+  McpUiRequestDisplayModeRequestSchema,
+  McpUiRequestDisplayModeResultSchema,
+  McpUiResourceTeardownRequestSchema,
+  McpUiResourceTeardownResultSchema,
+} from "@modelcontextprotocol/ext-apps";
+```
+
+| Schema | Validates |
+|--------|-----------|
+| `McpUiOpenLinkRequestSchema` | `McpUiOpenLinkRequest` — open URL request |
+| `McpUiOpenLinkResultSchema` | `McpUiOpenLinkResult` — open URL result |
+| `McpUiDownloadFileRequestSchema` | `McpUiDownloadFileRequest` — download file request |
+| `McpUiDownloadFileResultSchema` | `McpUiDownloadFileResult` — download file result |
+| `McpUiMessageRequestSchema` | `McpUiMessageRequest` — send message request |
+| `McpUiMessageResultSchema` | `McpUiMessageResult` — send message result |
+| `McpUiUpdateModelContextRequestSchema` | `McpUiUpdateModelContextRequest` — update context request |
+| `McpUiRequestDisplayModeRequestSchema` | `McpUiRequestDisplayModeRequest` — display mode request |
+| `McpUiRequestDisplayModeResultSchema` | `McpUiRequestDisplayModeResult` — display mode result |
+| `McpUiResourceTeardownRequestSchema` | `McpUiResourceTeardownRequest` — teardown request |
+| `McpUiResourceTeardownResultSchema` | `McpUiResourceTeardownResult` — teardown result |
+
+### Notification Schemas
+
+```ts
+import {
   McpUiToolInputNotificationSchema,
+  McpUiToolInputPartialNotificationSchema,
   McpUiToolResultNotificationSchema,
   McpUiToolCancelledNotificationSchema,
   McpUiHostContextChangedNotificationSchema,
-  McpUiResourceTeardownRequestSchema,
-  McpUiResourceTeardownResultSchema,
+  McpUiSizeChangedNotificationSchema,
+} from "@modelcontextprotocol/ext-apps";
+```
+
+| Schema | Validates |
+|--------|-----------|
+| `McpUiToolInputNotificationSchema` | `McpUiToolInputNotification` — tool arguments |
+| `McpUiToolInputPartialNotificationSchema` | `McpUiToolInputPartialNotification` — streaming partial arguments |
+| `McpUiToolResultNotificationSchema` | `McpUiToolResultNotification` — tool result |
+| `McpUiToolCancelledNotificationSchema` | `McpUiToolCancelledNotification` — tool cancelled |
+| `McpUiHostContextChangedNotificationSchema` | `McpUiHostContextChangedNotification` — context update |
+| `McpUiSizeChangedNotificationSchema` | `McpUiSizeChangedNotification` — size change |
+
+### Metadata Schemas
+
+```ts
+import {
   McpUiResourceCspSchema,
   McpUiResourcePermissionsSchema,
   McpUiResourceMetaSchema,
   McpUiToolVisibilitySchema,
   McpUiToolMetaSchema,
-  // ... and more
 } from "@modelcontextprotocol/ext-apps";
 ```
 
-Schema names follow the pattern `{TypeName}Schema` (e.g., `McpUiTheme` → `McpUiThemeSchema`).
+| Schema | Validates |
+|--------|-----------|
+| `McpUiResourceCspSchema` | `McpUiResourceCsp` — CSP configuration |
+| `McpUiResourcePermissionsSchema` | `McpUiResourcePermissions` — browser permissions |
+| `McpUiResourceMetaSchema` | `McpUiResourceMeta` — resource UI metadata |
+| `McpUiToolVisibilitySchema` | `McpUiToolVisibility` — tool visibility |
+| `McpUiToolMetaSchema` | `McpUiToolMeta` — tool UI metadata |

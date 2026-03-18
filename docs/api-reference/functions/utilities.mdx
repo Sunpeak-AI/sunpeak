@@ -1,0 +1,149 @@
+---
+title: "Utility Functions"
+description: "Utility functions exported by sunpeak: cn() for class name merging, and media query helpers for motion, touch, and hover detection."
+keywords: ["MCP Apps", "sunpeak", "cn", "clsx", "tailwind-merge", "media queries", "reduced motion", "touch device", "hover"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## cn
+
+Merges class names using [clsx](https://github.com/lukeed/clsx) and [tailwind-merge](https://github.com/dcastil/tailwind-merge). Handles conditional classes, arrays, and deduplicates conflicting Tailwind utilities.
+
+### Import
+
+```tsx
+import { cn } from 'sunpeak';
+```
+
+### Signature
+
+```tsx
+function cn(...inputs: ClassValue[]): string
+```
+
+### Usage
+
+```tsx
+import { cn } from 'sunpeak';
+
+function Card({ active, className }: { active: boolean; className?: string }) {
+  return (
+    <div className={cn(
+      'rounded-lg p-4 border',
+      active && 'border-blue-500 bg-blue-50',
+      className,
+    )}>
+      ...
+    </div>
+  );
+}
+```
+
+---
+
+## prefersReducedMotion
+
+Returns `true` if the user has enabled the "reduce motion" accessibility setting.
+
+### Import
+
+```tsx
+import { prefersReducedMotion } from 'sunpeak';
+```
+
+### Signature
+
+```tsx
+function prefersReducedMotion(): boolean
+```
+
+### Usage
+
+```tsx
+import { prefersReducedMotion } from 'sunpeak';
+
+function AnimatedCard() {
+  const style = prefersReducedMotion()
+    ? {}
+    : { transition: 'transform 0.3s ease' };
+
+  return <div style={style}>...</div>;
+}
+```
+
+---
+
+## isPrimarilyTouchDevice
+
+Returns `true` if the primary input mechanism is coarse (touch). Checks the `(pointer: coarse)` media query.
+
+### Import
+
+```tsx
+import { isPrimarilyTouchDevice } from 'sunpeak';
+```
+
+### Signature
+
+```tsx
+function isPrimarilyTouchDevice(): boolean
+```
+
+### Usage
+
+```tsx
+import { isPrimarilyTouchDevice } from 'sunpeak';
+
+function InteractiveMap() {
+  const touchMode = isPrimarilyTouchDevice();
+
+  return (
+    <div onPointerDown={touchMode ? handleTouchStart : handleMouseStart}>
+      ...
+    </div>
+  );
+}
+```
+
+<Tip>
+For host-reported device capabilities, use [`useDeviceCapabilities`](/api-reference/hooks/use-device-capabilities) which reads the `touch` and `hover` values from the host context.
+</Tip>
+
+---
+
+## isHoverAvailable
+
+Returns `true` if the primary input mechanism supports hover. Checks the `(hover: hover)` media query.
+
+### Import
+
+```tsx
+import { isHoverAvailable } from 'sunpeak';
+```
+
+### Signature
+
+```tsx
+function isHoverAvailable(): boolean
+```
+
+### Usage
+
+```tsx
+import { isHoverAvailable } from 'sunpeak';
+
+function Tooltip({ children, text }: { children: ReactNode; text: string }) {
+  if (!isHoverAvailable()) {
+    // On touch devices, show tooltip inline instead
+    return <>{children}<span className="text-xs ml-1">{text}</span></>;
+  }
+
+  return (
+    <div className="group relative">
+      {children}
+      <span className="hidden group-hover:block absolute ...">{text}</span>
+    </div>
+  );
+}
+```

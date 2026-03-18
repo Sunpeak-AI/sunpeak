@@ -1,0 +1,81 @@
+---
+title: "MCP Apps useHostFonts - Font Injection Hook"
+sidebarTitle: "useHostFonts"
+description: "React hook that injects host-provided font CSS into an MCP App. Applies @font-face rules and font imports from the host, updating automatically on context changes."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useHostFonts", "fonts", "typography", "@font-face"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { useHostFonts } from "@modelcontextprotocol/ext-apps/react";
+```
+
+## Overview
+
+`useHostFonts` injects host-provided font CSS into the document. It listens for `onhostcontextchanged` notifications and updates the fonts automatically when the host's font configuration changes.
+
+The host sends font CSS as `@font-face` rules or `@import` statements in `McpUiHostContext.styles.css.fonts`. This hook injects those rules as a `<style>` tag via `applyHostFonts()`.
+
+For CSS variable and theme handling, use [`useHostStyleVariables`](/mcp-apps/react/use-host-style-variables) separately, or use [`useHostStyles`](/mcp-apps/react/use-host-styles) to apply everything at once.
+
+## Signature
+
+```ts
+function useHostFonts(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void
+```
+
+<ResponseField name="app" type="App | null" required>
+  The connected `App` instance from [`useApp`](/mcp-apps/react/use-app), or `null` during initialization.
+</ResponseField>
+
+<ResponseField name="initialContext" type="McpUiHostContext | null">
+  Initial host context from `app?.getHostContext()`. Pass this to apply fonts immediately on mount without waiting for the first context change notification.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useHostFonts } from "@modelcontextprotocol/ext-apps/react";
+
+function MyApp() {
+  const { app } = useApp({
+    appInfo: { name: "MyApp", version: "1.0.0" },
+    capabilities: {},
+  });
+
+  useHostFonts(app, app?.getHostContext());
+
+  return <div style={{ fontFamily: "var(--font-sans)" }}>Hello!</div>;
+}
+```
+
+## What It Applies
+
+The host provides font CSS in `McpUiHostContext.styles.css.fonts`. This typically contains:
+
+- `@font-face` declarations for the host's typeface
+- `@import` statements for web font services
+
+The hook injects these as a `<style>` tag in the document head using `applyHostFonts()`. This makes the host's fonts available for use via CSS variables like `var(--font-sans)`.
+
+## When to Use
+
+| Hook | Applies | Use when |
+|------|---------|----------|
+| [`useHostStyles`](/mcp-apps/react/use-host-styles) | CSS variables + theme + fonts | You want everything (recommended) |
+| [`useHostStyleVariables`](/mcp-apps/react/use-host-style-variables) | CSS variables + theme only | You handle fonts separately or don't need them |
+| `useHostFonts` | Fonts only | You only need host fonts |
+
+## Related
+
+- [`useHostStyles`](/mcp-apps/react/use-host-styles) — All-in-one styling hook (combines `useHostStyleVariables` with this hook)
+- [`useHostStyleVariables`](/mcp-apps/react/use-host-style-variables) — CSS variables and theme hook
+- [Fonts](/mcp-apps/styling/fonts) — How host font delivery works in MCP Apps
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useHostContext`](/api-reference/hooks/use-host-context) which auto-applies host styles (including fonts) in React components.
+</Tip>
