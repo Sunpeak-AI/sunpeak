@@ -5,7 +5,7 @@ import { Conversation } from './chatgpt-conversation';
 
 /**
  * ChatGPT host version info — matches what ChatGPT reports via the MCP protocol.
- * Verified via host-inspector extraction on 2026-03-19.
+ * Verified against production ChatGPT on 2026-03-19.
  */
 const CHATGPT_HOST_INFO = {
   name: 'chatgpt',
@@ -37,7 +37,7 @@ function applyChatGPTTheme(theme: 'light' | 'dark'): void {
 
 /**
  * ChatGPT style variables — matches SDK defaults exactly.
- * Verified via host-inspector extraction on 2026-03-19.
+ * Verified against production ChatGPT on 2026-03-19.
  */
 const CHATGPT_STYLE_VARIABLES = {
   ...DEFAULT_STYLE_VARIABLES,

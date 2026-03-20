@@ -82,7 +82,7 @@ packages/sunpeak/
 │   └── cli/                  # CLI commands
 ├── template/                 # Scaffolded app template (also a workspace package)
 │   ├── .sunpeak/             # dev.tsx (simulator bootstrap), resource-loader.tsx (iframe loader)
-│   ├── src/resources/        # Example resource components (albums, carousel, map, review, host-inspector)
+│   ├── src/resources/        # Example resource components (albums, carousel, map, review)
 │   ├── src/tools/            # Tool files with handlers and metadata
 │   ├── src/server.ts         # Optional server entry (auth, config)
 │   └── tests/                # Unit tests, E2E tests, simulations, live tests
@@ -225,23 +225,6 @@ This is the upstream SDK that sunpeak wraps. Upgrades often introduce new `App` 
 The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export all types, schemas, and constants. To discover available exports, check:
 - `node_modules/@modelcontextprotocol/ext-apps/dist/types.d.ts` — All type definitions
 - `node_modules/@modelcontextprotocol/ext-apps/dist/app.d.ts` — `App` class methods
-
-## Host Inspector & Sync Workflow
-
-The `host-inspector` resource (template-only, excluded from `sunpeak new`) captures everything about the host runtime environment. Used to sync the simulator with real ChatGPT/Claude behavior.
-
-**Extraction workflow** (see `skills/sync-host-styles/SKILL.md` for full details):
-1. Start dev server: `SUNPEAK_LIVE_TEST=1 pnpm dev -- --prod-resources`
-2. Run extraction: `node tests/live/extract-host-data.mjs`
-3. Output: `.context/chatgpt-host-data.json` with both themes, responsive widths, display mode snapshots
-4. Compare against simulator config and update `chatgpt-host.ts` / `chatgpt-conversation.tsx`
-
-**ChatGPT-specific values** (verified 2026-03-19):
-- `hostVersion: { name: "chatgpt", version: "0.0.1" }`
-- `userAgent: "chatgpt"`
-- Conversation max-width: `max-w-[40rem]` default, `max-w-[48rem]` at 1440px+
-- `containerDimensions` per display mode: inline sends `{ maxWidth }`, fullscreen sends `{ height, width }`, PiP sends `{ height, maxWidth }`
-- No `downloadFile` capability, sandbox has `microphone` permission
 
 ## Conventions
 - pnpm workspace with packages at `packages/*` and `packages/sunpeak/template`
