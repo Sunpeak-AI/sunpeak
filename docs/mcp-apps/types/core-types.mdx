@@ -88,14 +88,14 @@ interface McpUiHostCapabilities {
 
 | Field | Description |
 |-------|-------------|
-| `openLinks` | Host supports `openLink()` |
-| `downloadFile` | Host supports `downloadFile()` |
-| `serverTools` | Host can proxy `callServerTool()` to the MCP server |
-| `serverResources` | Host can proxy `resources/read` to the MCP server |
-| `logging` | Host accepts `sendLog()` messages |
+| `openLinks` | Host supports [`openLink()`](/mcp-apps/app/requests/open-link) |
+| `downloadFile` | Host supports [`downloadFile()`](/mcp-apps/app/requests/download-file) |
+| `serverTools` | Host can proxy [`callServerTool()`](/mcp-apps/app/requests/call-server-tool) to the MCP server |
+| `serverResources` | Host can proxy [`readServerResource()`](/mcp-apps/app/requests/read-server-resource) to the MCP server |
+| `logging` | Host accepts [`sendLog()`](/mcp-apps/app/requests/send-log) messages |
 | `sandbox` | Permissions and CSP applied by the host |
-| `updateModelContext` | Host accepts `updateModelContext()` |
-| `message` | Host accepts `sendMessage()` |
+| `updateModelContext` | Host accepts [`updateModelContext()`](/mcp-apps/app/requests/update-model-context) |
+| `message` | Host accepts [`sendMessage()`](/mcp-apps/app/requests/send-message) |
 
 ## McpUiAppCapabilities
 
@@ -130,11 +130,15 @@ interface McpUiClientCapabilities {
 type McpUiTheme = "light" | "dark";
 ```
 
+The [sunpeak framework](/quickstart) also exports a short alias: `Theme` (equivalent to `McpUiTheme`).
+
 ## McpUiDisplayMode
 
 ```ts
 type McpUiDisplayMode = "inline" | "fullscreen" | "pip";
 ```
+
+The [sunpeak framework](/quickstart) also exports a short alias: `DisplayMode` (equivalent to `McpUiDisplayMode`).
 
 ## McpUiHostStyles
 

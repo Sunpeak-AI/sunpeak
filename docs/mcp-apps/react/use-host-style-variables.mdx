@@ -1,0 +1,91 @@
+---
+title: "MCP Apps useHostStyleVariables - CSS Variables Hook"
+sidebarTitle: "useHostStyleVariables"
+description: "React hook that applies host CSS variables and theme to the document in MCP Apps. Listens for host context changes and updates styles automatically."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useHostStyleVariables", "CSS variables", "theming", "host styles"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { useHostStyleVariables } from "@modelcontextprotocol/ext-apps/react";
+```
+
+## Overview
+
+`useHostStyleVariables` applies host-provided CSS custom properties and the document theme to the page. It listens for `onhostcontextchanged` notifications and updates styles automatically when the host's theme or style variables change.
+
+This hook handles two responsibilities:
+
+- **CSS variables** — Applies `styles.variables` from the host context as CSS custom properties via `applyHostStyleVariables()`
+- **Document theme** — Sets the `data-theme` attribute and `color-scheme` property via `applyDocumentTheme()`
+
+For font handling, use [`useHostFonts`](/mcp-apps/react/use-host-fonts) separately, or use [`useHostStyles`](/mcp-apps/react/use-host-styles) to apply everything at once.
+
+## Signature
+
+```ts
+function useHostStyleVariables(
+  app: App | null,
+  initialContext?: McpUiHostContext | null,
+): void
+```
+
+<ResponseField name="app" type="App | null" required>
+  The connected `App` instance from [`useApp`](/mcp-apps/react/use-app), or `null` during initialization.
+</ResponseField>
+
+<ResponseField name="initialContext" type="McpUiHostContext | null">
+  Initial host context from `app?.getHostContext()`. Pass this to apply styles immediately on mount without waiting for the first context change notification.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp, useHostStyleVariables } from "@modelcontextprotocol/ext-apps/react";
+
+function MyApp() {
+  const { app } = useApp({
+    appInfo: { name: "MyApp", version: "1.0.0" },
+    capabilities: {},
+  });
+
+  useHostStyleVariables(app, app?.getHostContext());
+
+  return (
+    <div style={{
+      background: "var(--color-background-primary)",
+      color: "var(--color-text-primary)",
+    }}>
+      Styled with host variables
+    </div>
+  );
+}
+```
+
+## What It Applies
+
+The host sends style variables as part of `McpUiHostContext.styles.variables`. These are CSS custom properties that match the host's design system. See [CSS Variables](/mcp-apps/styling/css-variables) for the full list of available variable keys.
+
+The hook also applies the theme from `McpUiHostContext.theme`, setting:
+- `document.documentElement.dataset.theme` to `"light"` or `"dark"`
+- `document.documentElement.style.colorScheme` to match
+
+## When to Use
+
+| Hook | Applies | Use when |
+|------|---------|----------|
+| [`useHostStyles`](/mcp-apps/react/use-host-styles) | CSS variables + theme + fonts | You want everything (recommended) |
+| `useHostStyleVariables` | CSS variables + theme only | You handle fonts separately or don't need them |
+| [`useHostFonts`](/mcp-apps/react/use-host-fonts) | Fonts only | You only need host fonts |
+
+## Related
+
+- [`useHostStyles`](/mcp-apps/react/use-host-styles) — All-in-one styling hook (combines this hook with `useHostFonts`)
+- [`useHostFonts`](/mcp-apps/react/use-host-fonts) — Host font injection hook
+- [`useDocumentTheme`](/mcp-apps/react/use-document-theme) — Reactive theme detection hook
+- [CSS Variables](/mcp-apps/styling/css-variables) — Full list of host style variable keys
+
+<Tip>
+The [sunpeak framework](/quickstart) provides [`useHostContext`](/api-reference/hooks/use-host-context) which auto-applies host styles in React components.
+</Tip>

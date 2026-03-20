@@ -24,14 +24,19 @@ function getPortSync(preferred: number): number {
 }
 
 const port = Number(process.env.SUNPEAK_TEST_PORT) || getPortSync(6776);
+const sandboxPort = Number(process.env.SUNPEAK_SANDBOX_PORT) || getPortSync(24680);
 
 export default defineConfig({
   globalSetup: './tests/e2e/global-setup.ts',
   testDir: './tests/e2e',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  retries: process.env.CI ? 2 : 1,
+  // Limit parallel workers. Each test loads a full simulator page with
+  // iframe → cross-origin sandbox proxy → inner iframe. Too many concurrent
+  // pages overwhelm the sandbox proxy server and cause PostMessage relay
+  // timeouts. 2 workers balances speed vs reliability.
+  workers: process.env.CI ? 1 : 2,
   reporter: 'list',
   use: {
     baseURL: `http://localhost:${port}`,
@@ -49,9 +54,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `PORT=${port} pnpm dev`,
-    url: `http://localhost:${port}`,
+    command: `PORT=${port} SUNPEAK_SANDBOX_PORT=${sandboxPort} pnpm dev`,
+    url: `http://localhost:${port}/health`,
     reuseExistingServer: !process.env.CI,
-    timeout: 10000,
+    timeout: 60000,
   },
 });

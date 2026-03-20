@@ -9,7 +9,7 @@ for (const host of hosts) {
       test('should render album cards with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
         await expect(albumCard).toBeVisible();
 
@@ -29,7 +29,7 @@ for (const host of hosts) {
       test('should have album image with correct aspect ratio', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumImage = iframe.locator('button:has-text("Summer Slice") img').first();
         await expect(albumImage).toBeVisible();
 
@@ -56,7 +56,7 @@ for (const host of hosts) {
       test('should render album cards with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
         await expect(albumCard).toBeVisible();
 
@@ -75,7 +75,7 @@ for (const host of hosts) {
       test('should have text with appropriate contrast', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumTitle = iframe.locator('button:has-text("Summer Slice") div').first();
         await expect(albumTitle).toBeVisible();
 
@@ -196,7 +196,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
         await expect(albumCard).toBeVisible();
 
@@ -210,6 +210,38 @@ for (const host of hosts) {
 
         expect(styles.cursor).toBe('pointer');
         expect(styles.borderRadius).toBe('12px');
+      });
+
+      test('should render content after switching from inline to fullscreen', async ({ page }) => {
+        // Start in inline mode
+        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
+        await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+        // Switch to fullscreen via sidebar
+        await page.locator('button:has-text("Full")').click();
+
+        // Content should still be visible after the mode transition
+        await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible({
+          timeout: 5000,
+        });
+      });
+
+      test('should render content after switching from inline to pip', async ({ page }) => {
+        // Start in inline mode
+        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
+        await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+        // Switch to PiP via sidebar
+        await page.locator('button:has-text("PiP")').click();
+
+        // Content should still be visible after the mode transition
+        await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible({
+          timeout: 5000,
+        });
       });
     });
   });

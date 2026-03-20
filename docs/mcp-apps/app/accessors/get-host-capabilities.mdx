@@ -1,0 +1,108 @@
+---
+title: "MCP Apps getHostCapabilities - Feature Detection"
+sidebarTitle: "getHostCapabilities"
+description: "Read the host's supported capabilities from an MCP App. Use getHostCapabilities for feature detection before calling host-dependent methods like callServerTool, sendMessage, or downloadFile."
+keywords: ["MCP Apps", "ChatGPT Apps", "getHostCapabilities", "feature detection", "host capabilities", "capability check"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`getHostCapabilities()` returns the capabilities the host advertised during the [initialization handshake](/mcp-apps/lifecycle#2-initialization). Use this for feature detection — check whether a capability exists before calling the corresponding method.
+
+Returns `undefined` before `connect()` completes.
+
+## Signature
+
+```ts
+getHostCapabilities(): McpUiHostCapabilities | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="McpUiHostCapabilities | undefined">
+  The host's capabilities, or `undefined` if the app has not connected yet. See [`McpUiHostCapabilities`](/mcp-apps/types/core-types#mcpuihostcapabilities) for the full type definition.
+</ResponseField>
+
+## Usage
+
+### Check before calling server tools
+
+```ts
+await app.connect();
+
+const caps = app.getHostCapabilities();
+if (caps?.serverTools) {
+  const result = await app.callServerTool({
+    name: "get_weather",
+    arguments: { location: "Tokyo" },
+  });
+}
+```
+
+### Check before sending messages
+
+```ts
+if (app.getHostCapabilities()?.message) {
+  await app.sendMessage({
+    role: "user",
+    content: [{ type: "text", text: "Show details" }],
+  });
+}
+```
+
+### Check before downloading files
+
+```ts
+if (app.getHostCapabilities()?.downloadFile) {
+  await app.downloadFile({
+    contents: [{
+      type: "resource",
+      resource: {
+        uri: "file:///export.json",
+        mimeType: "application/json",
+        text: JSON.stringify(data),
+      },
+    }],
+  });
+}
+```
+
+### Build a capabilities summary
+
+```ts
+const caps = app.getHostCapabilities();
+const features = {
+  canCallTools: !!caps?.serverTools,
+  canReadResources: !!caps?.serverResources,
+  canSendMessages: !!caps?.message,
+  canUpdateContext: !!caps?.updateModelContext,
+  canOpenLinks: !!caps?.openLinks,
+  canDownloadFiles: !!caps?.downloadFile,
+  canLog: !!caps?.logging,
+};
+```
+
+## Capability Fields
+
+| Field | Enables |
+|-------|---------|
+| `openLinks` | [`openLink()`](/mcp-apps/app/requests/open-link) |
+| `downloadFile` | [`downloadFile()`](/mcp-apps/app/requests/download-file) |
+| `serverTools` | [`callServerTool()`](/mcp-apps/app/requests/call-server-tool) |
+| `serverResources` | [`readServerResource()`](/mcp-apps/app/requests/read-server-resource), [`listServerResources()`](/mcp-apps/app/requests/list-server-resources) |
+| `logging` | [`sendLog()`](/mcp-apps/app/requests/send-log) |
+| `updateModelContext` | [`updateModelContext()`](/mcp-apps/app/requests/update-model-context) |
+| `message` | [`sendMessage()`](/mcp-apps/app/requests/send-message) |
+| `sandbox` | Host-enforced sandbox permissions and CSP |
+
+## Related
+
+- [`McpUiHostCapabilities`](/mcp-apps/types/core-types#mcpuihostcapabilities) — Full type definition
+- [Capability Detection](/mcp-apps/server/capability-detection) — Server-side capability negotiation
+- [Accessors overview](/mcp-apps/app/accessors) — All App accessor methods

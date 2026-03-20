@@ -9,7 +9,7 @@ for (const host of hosts) {
       test('should render review title with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
         await expect(title).toBeVisible();
 
@@ -27,7 +27,7 @@ for (const host of hosts) {
       test('should render change items with type-specific styling', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const changeItem = iframe.locator('li').first();
         await expect(changeItem).toBeVisible();
 
@@ -47,7 +47,7 @@ for (const host of hosts) {
       test('should have interactive apply and cancel buttons', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
 
         // Find the Apply Changes button (based on simulation data)
         const applyButton = iframe.locator('button:has-text("Apply Changes")');
@@ -84,7 +84,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
         await expect(expandButton).toBeVisible();
 
@@ -168,7 +168,7 @@ for (const host of hosts) {
       test('should render review title with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
         await expect(title).toBeVisible();
       });
@@ -176,7 +176,7 @@ for (const host of hosts) {
       test('should have appropriate text colors for dark mode', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1').first();
         await expect(title).toBeVisible();
 
@@ -194,7 +194,7 @@ for (const host of hosts) {
       test('should render change items in dark mode', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const changeItem = iframe.locator('li').first();
         await expect(changeItem).toBeVisible();
       });
@@ -210,7 +210,7 @@ for (const host of hosts) {
         await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
         // Wait for iframe content to render
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         await expect(iframe.locator('h1').first()).toBeVisible();
 
         // Filter out expected iframe/MCP handshake errors
@@ -236,7 +236,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         // Wait for content to render first
         await expect(iframe.locator('h1').first()).toBeVisible();
 
@@ -260,7 +260,7 @@ for (const host of hosts) {
         await expect(root).not.toBeEmpty();
 
         // Title should be visible inside the iframe
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1');
         await expect(title).toBeVisible();
       });
@@ -275,7 +275,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         // Content sections should be visible in fullscreen
         const title = iframe.locator('h1');
         await expect(title).toBeVisible();
@@ -315,15 +315,15 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const publishButton = iframe.locator('button:has-text("Publish")');
         await expect(publishButton).toBeVisible();
         await publishButton.click();
 
         // Should show the server's success message from serverTools mock
-        await expect(iframe.locator('text=Completed.')).toBeVisible();
+        await expect(iframe.locator('text=Completed.')).toBeVisible({ timeout: 10000 });
         // Should also show what button was pressed
-        await expect(iframe.locator('text=Publishing post...')).toBeVisible();
+        await expect(iframe.locator('text=Publishing post...')).toBeVisible({ timeout: 10000 });
       });
 
       test('should show server cancel message when rejecting', async ({ page }) => {
@@ -335,13 +335,13 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const cancelButton = iframe.locator('button:has-text("Cancel")');
         await expect(cancelButton).toBeVisible();
         await cancelButton.click();
 
         // Server returned cancelled status via serverTools when condition
-        await expect(iframe.locator('text=Cancelled.')).toBeVisible();
+        await expect(iframe.locator('text=Cancelled.')).toBeVisible({ timeout: 10000 });
       });
     });
 
@@ -375,14 +375,14 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const placeOrderButton = iframe.locator('button:has-text("Place Order")');
         await expect(placeOrderButton).toBeVisible();
         await placeOrderButton.click();
 
         // After server responds, should show what the user clicked and the server result
-        await expect(iframe.locator('text=Placing order...')).toBeVisible();
-        await expect(iframe.locator('text=Completed.')).toBeVisible();
+        await expect(iframe.locator('text=Placing order...')).toBeVisible({ timeout: 10000 });
+        await expect(iframe.locator('text=Completed.')).toBeVisible({ timeout: 10000 });
       });
     });
 
@@ -396,14 +396,14 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const applyButton = iframe.locator('button:has-text("Apply Changes")');
         await expect(applyButton).toBeVisible();
         await applyButton.click();
 
         // Should show the decision label and server response
-        await expect(iframe.locator('text=Applying changes...')).toBeVisible();
-        await expect(iframe.locator('text=Completed.')).toBeVisible();
+        await expect(iframe.locator('text=Applying changes...')).toBeVisible({ timeout: 10000 });
+        await expect(iframe.locator('text=Completed.')).toBeVisible({ timeout: 10000 });
       });
 
       test('should cancel review-diff and show server cancelled', async ({ page }) => {
@@ -415,13 +415,13 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const cancelButton = iframe.locator('button:has-text("Cancel")');
         await expect(cancelButton).toBeVisible();
         await cancelButton.click();
 
         // Server returned cancelled status via when condition matching
-        await expect(iframe.locator('text=Cancelled.')).toBeVisible();
+        await expect(iframe.locator('text=Cancelled.')).toBeVisible({ timeout: 10000 });
       });
     });
   });

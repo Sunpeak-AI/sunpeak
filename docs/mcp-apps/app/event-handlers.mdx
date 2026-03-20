@@ -97,7 +97,7 @@ app.ontoolcancelled = (params) => {
 
 ### [onhostcontextchanged](/mcp-apps/app/event-handlers/onhostcontextchanged)
 
-Called when the host context changes (theme toggle, resize, locale change, etc.). Params are automatically merged into the internal context before the callback — `getHostContext()` returns updated values.
+Called when the host context changes (theme toggle, resize, locale change, etc.). Params are automatically merged into the internal context before the callback — [`getHostContext()`](/mcp-apps/app/accessors/get-host-context) returns updated values.
 
 ```ts
 app.onhostcontextchanged = (ctx) => {

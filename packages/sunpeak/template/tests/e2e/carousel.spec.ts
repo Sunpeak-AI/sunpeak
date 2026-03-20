@@ -9,7 +9,7 @@ for (const host of hosts) {
       test('should render carousel cards with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl').first();
         await expect(card).toBeVisible();
 
@@ -28,7 +28,7 @@ for (const host of hosts) {
       test('should have card with border styling', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl.border').first();
         await expect(card).toBeVisible();
 
@@ -47,7 +47,7 @@ for (const host of hosts) {
       test('should have interactive buttons', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const visitButton = iframe.locator('button:has-text("Visit")').first();
         await expect(visitButton).toBeAttached();
 
@@ -131,7 +131,7 @@ for (const host of hosts) {
       test('should render carousel cards with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl').first();
         await expect(card).toBeVisible();
 
@@ -150,7 +150,7 @@ for (const host of hosts) {
       test('should have appropriate styling for dark mode', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         // Select card by its border + rounded combo
         const card = iframe.locator('.rounded-2xl.border').first();
         await expect(card).toBeVisible();
@@ -178,7 +178,7 @@ for (const host of hosts) {
         await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         // Wait for iframe content to render
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         await expect(iframe.locator('.rounded-2xl').first()).toBeVisible();
 
         // Filter out expected iframe/MCP handshake errors

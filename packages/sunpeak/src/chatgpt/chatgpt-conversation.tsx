@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { SCREEN_WIDTHS, type ScreenWidth } from '../simulator/simulator-types';
 import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
@@ -25,14 +26,10 @@ interface ConversationProps {
   appName?: string;
   appIcon?: string;
   userMessage?: string;
-  /**
-   * Whether the content is transitioning between display modes.
-   * When true, the content area is hidden (opacity 0) to prevent the pip
-   * border from flashing at a stale height before the iframe resizes.
-   */
-  isTransitioning?: boolean;
   /** Optional action element rendered in the conversation header (e.g., Run button) */
   headerAction?: React.ReactNode;
+  /** Called when the content container width changes */
+  onContentWidthChange?: (width: number) => void;
 }
 
 /**
@@ -57,13 +54,39 @@ export function Conversation({
   appName = 'Sunpeak',
   appIcon,
   userMessage = 'What have you got for me today?',
-  isTransitioning = false,
   headerAction,
+  onContentWidthChange,
 }: ConversationProps) {
   const isDesktop = platform === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
   const isFullscreen = displayMode === 'fullscreen';
   const isPip = displayMode === 'pip';
+
+  // Measure the content container width and report it via onContentWidthChange.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const onContentWidthChangeRef = useRef(onContentWidthChange);
+  useEffect(() => {
+    onContentWidthChangeRef.current = onContentWidthChange;
+  });
+
+  const setContentRef = useCallback((node: HTMLDivElement | null) => {
+    contentRef.current = node;
+  }, []);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = Math.round(entry.contentBoxSize[0]?.inlineSize ?? entry.contentRect.width);
+        if (width > 0) {
+          onContentWidthChangeRef.current?.(width);
+        }
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleClose = () => onRequestDisplayMode?.('inline');
 
@@ -117,7 +140,7 @@ export function Conversation({
                 WebkitBackdropFilter: 'blur(16px)',
               }}
             />
-            <div className="max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
+            <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
               <div className="relative">
                 <input
                   type="text"
@@ -162,7 +185,7 @@ export function Conversation({
             <article className="w-full focus:outline-none" dir="auto" data-turn="user">
               <h5 className="sr-only">You said:</h5>
               <div className="text-base my-auto mx-auto md:pt-8 px-4">
-                <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
+                <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                   <div className="flex max-w-full flex-col grow">
                     <div
                       data-message-author-role="user"
@@ -190,7 +213,7 @@ export function Conversation({
           <article className="w-full focus:outline-none flex-1" dir="auto" data-turn="assistant">
             <h6 className="sr-only">{appName} said:</h6>
             <div className="text-base my-auto mx-auto pb-10 px-4">
-              <div className="max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
+              <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                 <div className="flex max-w-full flex-col grow">
                   {/* Assistant avatar and name - hidden in fullscreen */}
                   {!isFullscreen && (
@@ -226,6 +249,7 @@ export function Conversation({
                        *   fullscreen: viewport takeover (position: fixed)
                        */}
                       <div
+                        ref={setContentRef}
                         className={
                           isPip
                             ? 'no-scrollbar @w-xl/main:top-4 fixed start-4 end-4 top-12 z-50 mx-auto max-w-[40rem] lg:max-w-[48rem] sm:start-0 sm:end-0 sm:top-[3.25rem] sm:w-full overflow-visible'
@@ -272,8 +296,6 @@ export function Conversation({
                                       backgroundColor: 'var(--color-background-primary)',
                                     }
                                   : { backgroundColor: 'transparent' }),
-                              opacity: isTransitioning ? 0 : 1,
-                              transition: isTransitioning ? 'none' : 'opacity 100ms',
                             }}
                           >
                             {children}
@@ -301,7 +323,7 @@ export function Conversation({
                   WebkitBackdropFilter: 'blur(16px)',
                 }}
               />
-              <div className="max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
+              <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
                 <div className="relative">
                   <input
                     type="text"

@@ -2,26 +2,31 @@
  * Global setup for live tests.
  *
  * Runs exactly once before all workers. Two responsibilities:
- *  1. Authenticate — import cookies from the user's real browser or open a
- *     manual login window. Session state is saved to disk for 24 hours.
+ *  1. Authenticate — launch a browser, verify login, wait for user if needed.
  *  2. Refresh MCP server — navigate to host settings and click Refresh so
  *     all workers start with pre-loaded resources.
+ *
+ * Auth approach:
+ *  - Opens a browser with storageState if a fresh auth file exists (<24h).
+ *  - Checks that we're truly logged in (profile button visible AND no "Log in" buttons).
+ *  - If not logged in, prints a clear message and waits for the user to log in
+ *    in the open browser window (up to 5 minutes).
+ *  - Saves storageState after successful login for future runs.
+ *  - The same browser session is reused for MCP refresh so Cloudflare's
+ *    HttpOnly cookies (which storageState can't capture) remain valid.
  *
  * This file is referenced by the Playwright config created by defineLiveConfig().
  * The auth file path is passed via SUNPEAK_AUTH_FILE env var.
  */
-import { existsSync, mkdirSync, statSync } from 'fs';
+import { existsSync, mkdirSync, statSync, unlinkSync } from 'fs';
 import { dirname } from 'path';
 import { ANTI_BOT_ARGS, CHROME_USER_AGENT, resolvePlaywright, getAppName } from './utils.mjs';
-import { launchAuthenticatedBrowser, detectBrowser } from './browser-auth.mjs';
 import { ChatGPTPage, CHATGPT_SELECTORS, CHATGPT_URLS } from './chatgpt-page.mjs';
 
 /** Auth state expires after 24 hours — ChatGPT session cookies are short-lived. */
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-/** Reuse selectors and URLs from the canonical ChatGPT page object. */
 const CHATGPT_URL = CHATGPT_URLS.base;
-const LOGIN_SELECTOR = CHATGPT_SELECTORS.loggedInIndicator;
 
 function isAuthFresh(authFile) {
   if (!existsSync(authFile)) return false;
@@ -30,121 +35,124 @@ function isAuthFresh(authFile) {
 }
 
 /**
- * Refresh the MCP server connection in ChatGPT settings.
- * Opens a browser with the saved auth, navigates to settings, clicks Refresh,
- * then closes. Runs once so parallel test workers don't each refresh.
+ * Check if we're truly logged into ChatGPT.
+ * Must have the profile button AND must NOT have any "Log in" buttons.
+ * The logged-out ChatGPT page can show some UI elements that look like
+ * a logged-in state, so checking just the profile button isn't enough.
  */
-async function refreshMcpServer(authFile) {
+async function isFullyLoggedIn(page) {
+  const hasProfile = await page
+    .locator(CHATGPT_SELECTORS.loggedInIndicator)
+    .first()
+    .isVisible()
+    .catch(() => false);
+
+  if (!hasProfile) return false;
+
+  // Must NOT have "Log in" buttons — these appear on the logged-out page
+  const hasLoginButton = await page
+    .locator(CHATGPT_SELECTORS.loginPage)
+    .first()
+    .isVisible()
+    .catch(() => false);
+
+  return !hasLoginButton;
+}
+
+export default async function globalSetup() {
+  const authFile = process.env.SUNPEAK_AUTH_FILE;
+
+  if (process.env.SUNPEAK_STORAGE_STATE) {
+    return;
+  }
+
+  if (!authFile) {
+    console.warn('SUNPEAK_AUTH_FILE not set — skipping auth setup.');
+    return;
+  }
+
   const projectRoot = process.env.SUNPEAK_PROJECT_ROOT || process.cwd();
   const appName = getAppName(projectRoot);
   const { chromium } = resolvePlaywright(projectRoot);
 
+  // Launch a browser. Use saved storageState if fresh, otherwise start clean.
+  const hasFreshAuth = isAuthFresh(authFile);
   const browser = await chromium.launch({
     headless: false,
     args: ANTI_BOT_ARGS,
   });
   const context = await browser.newContext({
     userAgent: CHROME_USER_AGENT,
-    storageState: authFile,
+    ...(hasFreshAuth ? { storageState: authFile } : {}),
   });
   const page = await context.newPage();
 
   try {
+    await page.goto(CHATGPT_URL, { waitUntil: 'domcontentloaded' });
+
+    // Wait for page to settle — Cloudflare challenge or ChatGPT UI loading
+    await page.waitForTimeout(5_000);
+
+    // Check if truly logged in (profile button visible, no "Log in" buttons)
+    let loggedIn = await isFullyLoggedIn(page);
+
+    if (loggedIn) {
+      console.log('Authenticated (from saved session).');
+    } else {
+      // If we loaded a stale auth file that didn't work, delete it
+      if (hasFreshAuth) {
+        try { unlinkSync(authFile); } catch {}
+      }
+
+      console.log(
+        `\n` +
+        `╔══════════════════════════════════════════════════════════════╗\n` +
+        `║  Please log in to ChatGPT                                  ║\n` +
+        `║                                                            ║\n` +
+        `║  A browser window has opened at chatgpt.com.               ║\n` +
+        `║  Log in and wait for the chat to load.                     ║\n` +
+        `║                                                            ║\n` +
+        `║  Waiting up to 5 minutes...                                ║\n` +
+        `╚══════════════════════════════════════════════════════════════╝\n`
+      );
+
+      // Poll until truly logged in
+      const maxWait = 300_000; // 5 minutes
+      const pollInterval = 3_000;
+      const start = Date.now();
+
+      while (Date.now() - start < maxWait) {
+        loggedIn = await isFullyLoggedIn(page);
+        if (loggedIn) break;
+        await page.waitForTimeout(pollInterval);
+      }
+
+      if (!loggedIn) {
+        throw new Error(
+          'Login timed out after 5 minutes.\n' +
+          'Please log in to chatgpt.com in the browser window that opened.\n' +
+          'If the session expired, delete the .auth/ directory and try again.'
+        );
+      }
+      console.log('Logged in!');
+    }
+
+    // Save session for future runs (best effort — HttpOnly cookies won't be captured).
+    mkdirSync(dirname(authFile), { recursive: true });
+    await context.storageState({ path: authFile });
+    console.log('Session saved.\n');
+
+    // Refresh MCP server in the SAME browser session.
+    // This is critical — Cloudflare's cf_clearance cookie is HttpOnly and
+    // won't be in the saved storageState. By refreshing here, the cookie
+    // is still valid for navigating to settings.
+    //
+    // This MUST succeed — if the MCP server isn't reachable or the refresh
+    // fails, tests will fail with confusing iframe/timeout errors.
     const hostPage = new ChatGPTPage(page);
     await hostPage.refreshMcpServer({ appName });
     console.log('MCP server refreshed.');
   } finally {
     await browser.close();
   }
-}
-
-export default async function globalSetup() {
-  // If storage state was provided externally, skip auth but still refresh.
-  const authFile = process.env.SUNPEAK_AUTH_FILE;
-
-  if (!process.env.SUNPEAK_STORAGE_STATE) {
-    if (!authFile) {
-      console.warn('SUNPEAK_AUTH_FILE not set — skipping auth setup.');
-      return;
-    }
-
-    if (!isAuthFresh(authFile)) {
-      await authenticate(authFile);
-    }
-  }
-
-  // Refresh MCP server connection so all workers start with pre-loaded resources.
-  const resolvedAuth = process.env.SUNPEAK_STORAGE_STATE || authFile;
-  if (resolvedAuth && existsSync(resolvedAuth)) {
-    await refreshMcpServer(resolvedAuth);
-  }
-}
-
-/**
- * Authenticate by importing cookies from the user's browser or manual login.
- */
-async function authenticate(authFile) {
-  // Try importing cookies from the user's real browser profile.
-  const browserName = process.env.SUNPEAK_LIVE_BROWSER || detectBrowser();
-  if (browserName) {
-    let auth;
-    try {
-      auth = await launchAuthenticatedBrowser({ browser: browserName, headless: false });
-      const page = auth.page;
-
-      await page.goto(CHATGPT_URL, { waitUntil: 'domcontentloaded' });
-
-      const loggedIn = await page
-        .locator(LOGIN_SELECTOR)
-        .first()
-        .waitFor({ timeout: 15_000 })
-        .then(() => true)
-        .catch(() => false);
-
-      if (loggedIn) {
-        mkdirSync(dirname(authFile), { recursive: true });
-        await auth.context.storageState({ path: authFile });
-        console.log(`Session imported from ${browserName} browser.`);
-      }
-
-      await auth.context.close();
-      auth.cleanup();
-
-      if (loggedIn) return;
-      // Not logged in — fall through to manual login.
-    } catch {
-      // Profile copy failed — clean up and fall through to manual login.
-      if (auth) {
-        try { await auth.context.close(); } catch {}
-        auth.cleanup();
-      }
-    }
-  }
-
-  // Fallback: open a bare browser for the user to log in manually.
-  console.log('\nNo saved ChatGPT session found (or session expired).');
-  console.log('Opening browser — please log in to chatgpt.com.\n');
-
-  const projectRoot = process.env.SUNPEAK_PROJECT_ROOT || process.cwd();
-  const { chromium } = resolvePlaywright(projectRoot);
-
-  const browser = await chromium.launch({
-    headless: false,
-    args: ANTI_BOT_ARGS,
-  });
-
-  const context = await browser.newContext({
-    userAgent: CHROME_USER_AGENT,
-  });
-
-  const page = await context.newPage();
-  await page.goto(CHATGPT_URL, { waitUntil: 'domcontentloaded' });
-
-  console.log('Waiting for login... (this will timeout after 5 minutes)\n');
-  await page.locator(LOGIN_SELECTOR).first().waitFor({ timeout: 300_000 });
-  console.log('Logged in! Saving session...\n');
-
-  mkdirSync(dirname(authFile), { recursive: true });
-  await context.storageState({ path: authFile });
-  await browser.close();
 }

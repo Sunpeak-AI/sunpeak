@@ -45,7 +45,9 @@ export const SafeArea = forwardRef<HTMLDivElement, SafeAreaProps>(function SafeA
   // never corrects it. Instead, let content size naturally so sizechange reports the
   // real rendered height.
   const isFullscreen = displayMode === 'fullscreen';
-  const height = isFullscreen ? (viewport?.height ?? '100dvh') : undefined;
+  // Always use 100dvh in fullscreen — viewport.height may report content height
+  // rather than the iframe viewport height, which would defeat overflow scrolling.
+  const height = isFullscreen ? '100dvh' : undefined;
 
   return (
     <div

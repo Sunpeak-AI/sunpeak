@@ -20,6 +20,7 @@ const { Simulator, buildDevSimulations } = simulator;
 // Compile-time flags injected by sunpeak dev (via Vite define)
 declare const __SUNPEAK_PROD_TOOLS__: boolean;
 declare const __SUNPEAK_PROD_RESOURCES__: boolean | undefined;
+declare const __SUNPEAK_SANDBOX_URL__: string | undefined;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
@@ -64,6 +65,7 @@ root.render(
       onCallTool={onCallTool}
       defaultProdTools={__SUNPEAK_PROD_TOOLS__}
       defaultProdResources={!!__SUNPEAK_PROD_RESOURCES__}
+      sandboxUrl={__SUNPEAK_SANDBOX_URL__}
     />
   </StrictMode>
 );

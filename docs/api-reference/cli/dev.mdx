@@ -87,8 +87,16 @@ When `--prod-resources` is used, `sunpeak build` runs automatically before the d
 
 ### Ports
 
-Default simulator port: `3000`
-Default MCP server port: `8000`
+The dev server runs multiple services on different ports:
+
+| Port | Service | Purpose | Configurable |
+|------|---------|---------|-------------|
+| `3000` | Simulator UI | Main dev server with HMR | `--port` flag or `PORT` env |
+| `8000` | MCP server | Tool execution endpoint (tunnel this for ChatGPT/Claude) | Auto-allocated |
+| `24679` | HMR WebSocket | Vite HMR for MCP resource bundles | `SUNPEAK_HMR_PORT` env |
+| `24680` | Sandbox proxy | Cross-origin iframe isolation (local only, not tunneled) | `SUNPEAK_SANDBOX_PORT` env |
+
+Only port `8000` needs to be tunneled (e.g., via ngrok) for ChatGPT/Claude connections. The sandbox proxy server provides real cross-origin isolation for the simulator's iframe architecture, matching how production hosts run apps on a separate sandbox origin.
 
 ## Usage
 

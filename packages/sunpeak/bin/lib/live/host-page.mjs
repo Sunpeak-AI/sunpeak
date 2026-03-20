@@ -88,8 +88,37 @@ export class HostPage {
   }
 
   /**
+   * Check if truly logged in: profile button visible AND no "Log in" buttons.
+   * The logged-out page can show UI elements that look like a logged-in state
+   * (e.g., sidebar with profile-like elements), so checking just the profile
+   * button isn't enough.
+   */
+  async _isFullyLoggedIn() {
+    const hasProfile = await this.page
+      .locator(this.selectors.loggedInIndicator)
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    if (!hasProfile) return false;
+
+    const hasLoginButton = await this.page
+      .locator(this.selectors.loginPage)
+      .first()
+      .isVisible()
+      .catch(() => false);
+
+    return !hasLoginButton;
+  }
+
+  /**
    * Verify the user is logged into the host.
    * Navigates to the host if not already there.
+   *
+   * If not logged in, waits up to 3 minutes for the user to complete login
+   * in the open browser window, polling every 5 seconds. This handles the
+   * case where storageState doesn't capture Cloudflare's HttpOnly cookies
+   * and the browser needs a fresh login.
    */
   async verifyLoggedIn() {
     const url = this.page.url();
@@ -97,20 +126,43 @@ export class HostPage {
       await this.page.goto(this.urls.base, { waitUntil: 'domcontentloaded' });
     }
 
-    const loggedIn = this.page.locator(this.selectors.loggedInIndicator).first();
-    const loginPage = this.page.locator(this.selectors.loginPage);
+    // Wait for the page to settle (Cloudflare challenge or UI loading)
+    await this.page.waitForTimeout(5_000);
 
-    const result = await Promise.race([
-      loggedIn.waitFor({ timeout: 15_000 }).then(() => 'logged-in'),
-      loginPage.waitFor({ timeout: 15_000 }).then(() => 'login-page'),
-    ]).catch(() => 'timeout');
+    // Quick check: truly logged in? (profile button AND no "Log in" buttons)
+    if (await this._isFullyLoggedIn()) return;
 
-    if (result !== 'logged-in') {
-      throw new Error(
-        `Not logged into ${this.hostName}. Run \`pnpm test:live\` to open a browser and log in.\n` +
-        'Your session is saved for 24 hours after the first login.'
-      );
+    // Not logged in. Wait for the user to authenticate in this browser window.
+    console.log(
+      `\n` +
+      `╔══════════════════════════════════════════════════════════════╗\n` +
+      `║  Not logged into ${this.hostName.padEnd(42)}║\n` +
+      `║                                                            ║\n` +
+      `║  Please log in at: ${this.urls.base.padEnd(39)}║\n` +
+      `║  in the browser window that just opened.                   ║\n` +
+      `║                                                            ║\n` +
+      `║  Waiting up to 3 minutes...                                ║\n` +
+      `╚══════════════════════════════════════════════════════════════╝\n`
+    );
+
+    // Poll for login — the user may need to pass Cloudflare + enter credentials
+    const maxWait = 180_000; // 3 minutes
+    const pollInterval = 5_000;
+    const start = Date.now();
+
+    while (Date.now() - start < maxWait) {
+      if (await this._isFullyLoggedIn()) {
+        console.log(`Logged into ${this.hostName}!\n`);
+        return;
+      }
+      await this.page.waitForTimeout(pollInterval);
     }
+
+    throw new Error(
+      `Login to ${this.hostName} timed out after 3 minutes.\n` +
+      `Please log in at ${this.urls.base} in the browser window and try again.\n` +
+      'If the session expired, delete the .auth/ directory and try again.'
+    );
   }
 
   /**

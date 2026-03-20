@@ -15,23 +15,38 @@ const BROWSER_PROFILES = {
 };
 
 /**
+ * Get the Chrome profile subdirectory name to copy from.
+ * Defaults to "Default" but can be overridden via SUNPEAK_CHROME_PROFILE env var
+ * (e.g., "Profile 5" for a non-default Chrome profile).
+ */
+function getProfileSubdir() {
+  return process.env.SUNPEAK_CHROME_PROFILE || 'Default';
+}
+
+/**
  * Subdirectories/files to copy from the browser profile.
  * These contain session cookies and local storage — enough for authenticated browsing.
  * Copying only these keeps the operation fast (<2s) vs copying the full profile (500MB+).
+ *
+ * The profile subdirectory (Default, Profile 1, Profile 5, etc.) is determined by
+ * getProfileSubdir(). Set SUNPEAK_CHROME_PROFILE env var to use a non-default profile.
  */
-const ESSENTIAL_PATHS = [
-  'Default/Cookies',
-  'Default/Cookies-journal',
-  'Default/Local Storage',
-  'Default/Session Storage',
-  'Default/IndexedDB',
-  'Default/Login Data',
-  'Default/Login Data-journal',
-  'Default/Preferences',
-  'Default/Secure Preferences',
-  'Default/Web Data',
-  'Local State',
-];
+function getEssentialPaths() {
+  const profile = getProfileSubdir();
+  return [
+    `${profile}/Cookies`,
+    `${profile}/Cookies-journal`,
+    `${profile}/Local Storage`,
+    `${profile}/Session Storage`,
+    `${profile}/IndexedDB`,
+    `${profile}/Login Data`,
+    `${profile}/Login Data-journal`,
+    `${profile}/Preferences`,
+    `${profile}/Secure Preferences`,
+    `${profile}/Web Data`,
+    'Local State',
+  ];
+}
 
 /**
  * Detect which browser the user has installed.
@@ -63,13 +78,20 @@ function copyProfile(browser) {
     );
   }
 
+  const profileSubdir = getProfileSubdir();
+  const essentialPaths = getEssentialPaths();
   const tempDir = mkdtempSync(join(tmpdir(), 'sunpeak-live-'));
 
-  for (const relativePath of ESSENTIAL_PATHS) {
+  for (const relativePath of essentialPaths) {
     const src = join(profileDir, relativePath);
     if (!existsSync(src)) continue;
 
-    const dest = join(tempDir, relativePath);
+    // Remap the source profile subdir to "Default" in the temp dir.
+    // Playwright's launchPersistentContext always uses "Default" as the profile name.
+    const destRelative = relativePath.startsWith(profileSubdir + '/')
+      ? 'Default' + relativePath.slice(profileSubdir.length)
+      : relativePath;
+    const dest = join(tempDir, destRelative);
     try {
       cpSync(src, dest, { recursive: true });
     } catch {
@@ -78,10 +100,13 @@ function copyProfile(browser) {
   }
 
   // Ensure Default directory exists even if no essential files were copied.
-  // Use an allowlist to avoid copying large cache/media directories.
   const defaultDir = join(tempDir, 'Default');
   if (!existsSync(defaultDir)) {
     mkdirSync(defaultDir, { recursive: true });
+  }
+
+  if (profileSubdir !== 'Default') {
+    console.log(`Using Chrome profile: ${profileSubdir}`);
   }
 
   return tempDir;
@@ -99,7 +124,18 @@ function copyProfile(browser) {
  * @returns {Promise<{ context: BrowserContext, page: Page, cleanup: () => void }>}
  */
 export async function launchAuthenticatedBrowser({ browser = 'chrome', headless = false } = {}) {
-  const { chromium } = await import('playwright');
+  // Resolve chromium from @playwright/test (which re-exports it) rather than
+  // the standalone 'playwright' package — pnpm doesn't hoist transitive deps
+  // so 'playwright' isn't directly resolvable from user projects.
+  let chromium;
+  try {
+    ({ chromium } = await import('playwright'));
+  } catch {
+    // Fallback: resolve via @playwright/test which is always a direct dependency
+    const projectRoot = process.env.SUNPEAK_PROJECT_ROOT || process.cwd();
+    const { resolvePlaywright } = await import('./utils.mjs');
+    ({ chromium } = resolvePlaywright(projectRoot));
+  }
 
   const tempDir = copyProfile(browser);
 

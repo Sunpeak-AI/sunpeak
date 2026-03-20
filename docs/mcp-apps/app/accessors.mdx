@@ -1,0 +1,47 @@
+---
+title: "MCP Apps Accessors - Read Host State"
+sidebarTitle: "Accessors"
+description: "Read host state from the App class: getHostCapabilities for feature detection, getHostVersion for host identification, and getHostContext for theme, locale, and display state."
+keywords: ["MCP Apps", "ChatGPT Apps", "App accessors", "getHostCapabilities", "getHostVersion", "getHostContext", "host state"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+The `App` class provides accessor methods for reading host state received during the [initialization handshake](/mcp-apps/lifecycle#2-initialization). These methods return `undefined` before `connect()` completes.
+
+| Method | Returns | Description |
+|--------|---------|-------------|
+| [`getHostCapabilities()`](/mcp-apps/app/accessors/get-host-capabilities) | `McpUiHostCapabilities` | Feature detection — what the host supports |
+| [`getHostVersion()`](/mcp-apps/app/accessors/get-host-version) | `{ name, version }` | Host identification |
+| [`getHostContext()`](/mcp-apps/app/accessors/get-host-context) | `McpUiHostContext` | Theme, locale, display mode, dimensions, and more |
+
+## Quick Example
+
+```ts
+const app = new App({ name: "MyApp", version: "1.0.0" });
+await app.connect();
+
+// Feature detection
+const caps = app.getHostCapabilities();
+if (caps?.serverTools) {
+  const result = await app.callServerTool({ name: "get_data" });
+}
+
+// Host identification
+const host = app.getHostVersion();
+console.log(`Running in ${host?.name} v${host?.version}`);
+
+// Host context (theme, locale, etc.)
+const ctx = app.getHostContext();
+console.log(`Theme: ${ctx?.theme}, Locale: ${ctx?.locale}`);
+```
+
+<Tip>
+The [sunpeak framework](/quickstart) provides React hooks that wrap these accessors reactively: [`useHostContext`](/api-reference/hooks/use-host-context), [`useHostInfo`](/api-reference/hooks/use-host-info), [`useTheme`](/api-reference/hooks/use-theme), [`useLocale`](/api-reference/hooks/use-locale), and [`useDeviceCapabilities`](/api-reference/hooks/use-device-capabilities).
+</Tip>

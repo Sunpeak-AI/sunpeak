@@ -29,10 +29,14 @@ export interface HostConversationProps {
   appIcon?: string;
   /** User message to show in the conversation (decorative) */
   userMessage?: string;
-  /** Whether content is transitioning between display modes */
-  isTransitioning?: boolean;
   /** Optional action element rendered in the conversation header (e.g., Run button in Prod Tools mode) */
   headerAction?: React.ReactNode;
+  /**
+   * Called when the content container width changes (via ResizeObserver).
+   * The simulator uses this to set containerDimensions.maxWidth in hostContext,
+   * matching what real hosts report to apps.
+   */
+  onContentWidthChange?: (width: number) => void;
 }
 
 /** Unique identifier for a host */
@@ -55,6 +59,11 @@ export interface HostShell {
   hostInfo: { name: string; version: string };
   /** Host capabilities reported to the app via MCP protocol */
   hostCapabilities: McpUiHostCapabilities;
+  /**
+   * User agent string sent to the app via hostContext.userAgent.
+   * Real hosts send identifiers like "chatgpt" or "claude".
+   */
+  userAgent?: string;
   /**
    * MCP App style variables sent to the app via hostContext.styles.variables.
    * Uses CSS light-dark() values so a single set adapts to theme automatically.

@@ -9,7 +9,7 @@ for (const host of hosts) {
       test('should render map container with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
@@ -33,7 +33,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const innerContainer = iframe.locator('.border.rounded-2xl').first();
         await expect(innerContainer).toBeVisible({ timeout: 10000 });
 
@@ -59,7 +59,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const expandButton = iframe.locator('button[aria-label="Enter fullscreen"]');
         await expect(expandButton).toBeVisible({ timeout: 10000 });
 
@@ -85,7 +85,7 @@ for (const host of hosts) {
 
         await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'light', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
@@ -165,7 +165,7 @@ for (const host of hosts) {
       test('should render map container with correct styles', async ({ page }) => {
         await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
       });
@@ -180,7 +180,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const innerContainer = iframe.locator('.border.rounded-2xl').first();
         await expect(innerContainer).toBeVisible({ timeout: 10000 });
 
@@ -205,7 +205,7 @@ for (const host of hosts) {
 
         await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
@@ -232,7 +232,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const innerContainer = iframe.locator('.rounded-none.border-0').first();
         await expect(innerContainer).toBeVisible({ timeout: 10000 });
 
@@ -256,7 +256,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
@@ -275,7 +275,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
       });
@@ -292,7 +292,7 @@ for (const host of hosts) {
           })
         );
 
-        const iframe = page.frameLocator('iframe');
+        const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
