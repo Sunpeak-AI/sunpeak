@@ -319,8 +319,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       }
     } catch (err) {
       // Non-fatal — simulator will use defaults
+    } finally {
+      await configLoader.close();
     }
-    await configLoader.close();
   }
 
   // Create and start Vite dev server programmatically

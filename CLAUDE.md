@@ -250,6 +250,6 @@ The `host-inspector` resource (template-only, excluded from `sunpeak new`) captu
 - Resources discovered from `src/resources/{name}/{name}.tsx`
 - Tools discovered from `src/tools/{name}.ts` (each exports `tool: AppToolConfig`, `schema`, optional `outputSchema`, `default` handler)
 - Simulations discovered from `tests/simulations/*.json` (flat directory, `"tool"` string field references tool filename)
-- Optional server entry at `src/server.ts` (exports `auth()` for request authentication)
+- Optional server entry at `src/server.ts` (exports `server: ServerConfig` for identity/icons, `auth()` for request authentication)
 - Hook file naming: `use-{kebab-name}.ts` → export `use{PascalName}` (e.g., `use-download-file.ts` → `useDownloadFile`)
 - SDK re-exports in `src/index.ts` are organized into four sections: core classes/functions, method constants, Zod schemas, protocol types
