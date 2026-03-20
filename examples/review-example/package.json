@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "sunpeak": "^0.16.25",
+    "sunpeak": "file:/Users/abe/conductor/workspaces/sunpeak/new-york/packages/sunpeak",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
