@@ -125,6 +125,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
         const mod = await import(toolPath);
         const tool = mod.tool;
         const schema = mod.schema;
+        const outputSchema = mod.outputSchema;
         const handler = mod.default;
 
         if (!tool) {
@@ -136,7 +137,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
           continue;
         }
 
-        tools.push({ name: toolName, tool, schema, handler });
+        tools.push({ name: toolName, tool, schema, outputSchema, handler });
       } catch (err) {
         console.error(`Failed to load tool ${toolName}:`, err.message);
         process.exit(1);
@@ -190,7 +191,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
   console.log(`\nStarting ${name} v${version} on ${host}:${port}...`);
 
   startProductionHttpServer(
-    { name, version, tools, resources, auth },
+    { name, version, serverInfo: serverConfig, tools, resources, auth },
     { port, host }
   );
 }

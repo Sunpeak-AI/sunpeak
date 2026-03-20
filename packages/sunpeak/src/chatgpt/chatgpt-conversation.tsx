@@ -219,9 +219,13 @@ export function Conversation({
                   {!isFullscreen && (
                     <div className="flex items-center gap-2 my-3">
                       {appIcon ? (
-                        <div className="size-6 flex items-center justify-center text-base">
-                          {appIcon}
-                        </div>
+                        appIcon.startsWith('data:') || appIcon.startsWith('http') ? (
+                          <img src={appIcon} alt="" className="size-6 rounded-full object-cover" />
+                        ) : (
+                          <div className="size-6 flex items-center justify-center text-base">
+                            {appIcon}
+                          </div>
+                        )
                       ) : (
                         <div
                           className="size-6 rounded-full flex items-center justify-center font-medium text-xs text-white"

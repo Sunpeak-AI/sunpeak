@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 
-import { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
+import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -13,7 +13,7 @@ import {
   RESOURCE_MIME_TYPE,
 } from '@modelcontextprotocol/ext-apps/server';
 
-import type { AuthInfo, CallToolResult, ToolHandlerExtra } from './types.js';
+import type { AuthInfo, CallToolResult, ServerConfig, ToolHandlerExtra } from './types.js';
 
 // ============================================================================
 // Structured logging
@@ -78,6 +78,8 @@ export interface ProductionTool {
   };
   /** Zod shape from the `schema` export (passed to SDK as inputSchema) */
   schema?: Record<string, unknown>;
+  /** Zod shape from the `outputSchema` export (passed to SDK as outputSchema) */
+  outputSchema?: Record<string, unknown>;
   /** Handler from the `default` export */
   handler: (
     args: Record<string, unknown>,
@@ -120,6 +122,8 @@ export interface ProductionServerConfig {
   name?: string;
   /** Server version reported to hosts */
   version?: string;
+  /** Full server identity (overrides name/version when provided). */
+  serverInfo?: ServerConfig;
   /** Tool registrations with real handlers */
   tools: ProductionTool[];
   /** Resource registrations with pre-built HTML */
@@ -136,6 +140,8 @@ export interface WebHandlerConfig {
   name?: string;
   /** Server version reported to hosts */
   version?: string;
+  /** Full server identity (overrides name/version when provided). */
+  serverInfo?: ServerConfig;
   /** Tool registrations with real handlers */
   tools: ProductionTool[];
   /** Resource registrations with pre-built HTML */
@@ -155,17 +161,20 @@ export interface WebHandlerConfig {
  * Resources serve pre-built HTML with their _meta preserved.
  */
 export function createProductionMcpServer(config: ProductionServerConfig): McpServer {
-  const { name = 'sunpeak-app', version = '0.1.0', tools, resources } = config;
+  const { name = 'sunpeak-app', version = '0.1.0', serverInfo, tools, resources } = config;
 
   const mcpServer = new McpServer(
     {
-      name,
-      version,
-      icons: [
+      name: serverInfo?.name ?? name,
+      version: serverInfo?.version ?? version,
+      ...(serverInfo?.title ? { title: serverInfo.title } : {}),
+      ...(serverInfo?.description ? { description: serverInfo.description } : {}),
+      ...(serverInfo?.websiteUrl ? { websiteUrl: serverInfo.websiteUrl } : {}),
+      icons: serverInfo?.icons ?? [
         {
-          src: `data:image/png;base64,${FAVICON_BASE64}`,
+          src: FAVICON_DATA_URI,
           mimeType: 'image/png',
-          sizes: ['128x128'],
+          sizes: ['64x64'],
         },
       ],
     },
@@ -251,6 +260,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
         description: tool.tool.description,
         annotations: tool.tool.annotations,
         ...(tool.schema ? { inputSchema: tool.schema } : {}),
+        ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
         _meta: {
           ...tool.tool._meta,
           ui: {
@@ -268,22 +278,21 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
         makeCallback() as Parameters<typeof registerAppTool>[3]
       );
     } else {
-      // ── Plain tool (no UI): register directly via mcpServer.tool() ──
-      // Use the description + callback overload, with schema if available.
-      // The mcpServer.tool() overloads are complex, so we call it dynamically.
+      // ── Plain tool (no UI): register directly via mcpServer.registerTool() ──
       const cb = makeCallback();
-      const toolArgs: unknown[] = [tool.name];
-      if (tool.schema) {
-        toolArgs.push(tool.schema);
-      }
-      toolArgs.push(async (...args: unknown[]) => {
-        // Normalize to (args, extra) for the shared callback
+      const toolConfig: Record<string, unknown> = {
+        description: tool.tool.description,
+        annotations: tool.tool.annotations,
+        _meta: tool.tool._meta,
+        ...(tool.schema ? { inputSchema: tool.schema } : {}),
+        ...(tool.outputSchema ? { outputSchema: tool.outputSchema } : {}),
+      };
+      mcpServer.registerTool(tool.name, toolConfig, async (...args: unknown[]) => {
         if (tool.schema) {
           return cb(args[0] as Record<string, unknown>, args[1] as ToolHandlerExtra);
         }
         return cb(args[0] as ToolHandlerExtra);
       });
-      (mcpServer.tool as (...a: unknown[]) => unknown)(...toolArgs);
     }
     toolCount++;
   }
@@ -616,8 +625,8 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
 
     // New session (POST without session ID = initialization)
     if (req.method === 'POST') {
-      const { name, version, tools, resources } = config;
-      const server = createProductionMcpServer({ name, version, tools, resources });
+      const { name, version, serverInfo, tools, resources } = config;
+      const server = createProductionMcpServer({ name, version, serverInfo, tools, resources });
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {
@@ -745,7 +754,7 @@ export function startProductionHttpServer(
 <html>
 <head>
 <meta charset="UTF-8" />
-<link rel="icon" type="image/png" href="/favicon.ico" />
+<link rel="icon" type="image/png" href="/favicon.png" />
 <title>Sunpeak MCP Server</title>
 </head>
 <body><h1>Sunpeak MCP Server</h1><p>Connect via <a href="/mcp">/mcp</a></p></body>
@@ -753,15 +762,20 @@ export function startProductionHttpServer(
       return;
     }
 
-    // Favicon
-    if (req.method === 'GET' && url.pathname === '/favicon.ico') {
+    // Favicon — serve PNG at /favicon.png and /favicon.ico only.
+    // Do NOT serve PNG data at /favicon.svg — wrong content type confuses host icon resolvers.
+    // Support both GET and HEAD — ChatGPT sends HEAD to check existence before fetching.
+    if (
+      (req.method === 'GET' || req.method === 'HEAD') &&
+      (url.pathname === '/favicon.png' || url.pathname === '/favicon.ico')
+    ) {
       res.writeHead(200, {
         'Content-Type': 'image/png',
         'Content-Length': FAVICON_BUFFER.length,
         'Cache-Control': 'public, max-age=86400',
         'Access-Control-Allow-Origin': '*',
       });
-      res.end(FAVICON_BUFFER);
+      res.end(req.method === 'HEAD' ? undefined : FAVICON_BUFFER);
       return;
     }
 

@@ -21,6 +21,9 @@ const { Simulator, buildDevSimulations } = simulator;
 declare const __SUNPEAK_PROD_TOOLS__: boolean;
 declare const __SUNPEAK_PROD_RESOURCES__: boolean | undefined;
 declare const __SUNPEAK_SANDBOX_URL__: string | undefined;
+declare const __SUNPEAK_APP_NAME__: string | null;
+declare const __SUNPEAK_APP_ICON__: string | null;
+declare const __SUNPEAK_DEFAULT_ICON__: string;
 
 // Build simulations from discovered files
 const simulations = buildDevSimulations({
@@ -47,9 +50,10 @@ const onCallTool = async (params: {
   return res.json();
 };
 
-// Read app config from environment or use defaults
-const appName = import.meta.env?.VITE_APP_NAME || 'Sunpeak';
-const appIcon = import.meta.env?.VITE_APP_ICON || '🌄';
+// Read app config from server.ts (injected via Vite define) or use MCP server defaults.
+// The default icon matches what ChatGPT sees when connecting to the MCP server.
+const appName = __SUNPEAK_APP_NAME__ ?? 'sunpeak-app';
+const appIcon: string | undefined = __SUNPEAK_APP_ICON__ ?? __SUNPEAK_DEFAULT_ICON__;
 
 // Reuse existing React root across HMR updates to avoid full page reload
 // when resource files change (they have mixed exports that disable Fast Refresh)

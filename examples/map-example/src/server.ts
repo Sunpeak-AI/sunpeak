@@ -1,5 +1,5 @@
 import type { IncomingMessage } from 'node:http';
-import type { AuthInfo } from 'sunpeak/mcp';
+import type { AuthInfo, ServerConfig } from 'sunpeak/mcp';
 
 /**
  * Optional server entry point.
@@ -14,4 +14,18 @@ export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
   return { token: token ?? '', clientId: 'anonymous', scopes: [] };
 }
 
-export const server = { name: 'Sunpeak', version: '1.0.0' };
+/**
+ * Server identity sent in the MCP initialize response.
+ * Hosts use this to display your app's name, description, and icon.
+ *
+ * Icons must be 64x64 PNG for ChatGPT compatibility. Use a data URI
+ * to embed the icon inline (no external fetch required by the host):
+ *
+ *   icons: [{ src: 'data:image/png;base64,...', mimeType: 'image/png', sizes: ['64x64'] }]
+ */
+export const server: ServerConfig = {
+  // name defaults to package.json "name" field when omitted
+  version: '1.0.0',
+  description: 'A sunpeak MCP app',
+  // icons: [{ src: 'data:image/png;base64,...', mimeType: 'image/png', sizes: ['64x64'] }],
+};

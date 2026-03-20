@@ -4,7 +4,7 @@ import { URL } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { FAVICON_BASE64, FAVICON_BUFFER } from './favicon.js';
+import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
@@ -178,17 +178,20 @@ function createAppServer(
   simulations: SimulationWithDist[],
   viteMode: boolean
 ): AppServerResult {
-  const { name = 'sunpeak-app', version = '0.1.0' } = config;
+  const { name = 'sunpeak-app', version = '0.1.0', serverInfo } = config;
 
   const mcpServer = new McpServer(
     {
-      name,
-      version,
-      icons: [
+      name: serverInfo?.name ?? name,
+      version: serverInfo?.version ?? version,
+      ...(serverInfo?.title ? { title: serverInfo.title } : {}),
+      ...(serverInfo?.description ? { description: serverInfo.description } : {}),
+      ...(serverInfo?.websiteUrl ? { websiteUrl: serverInfo.websiteUrl } : {}),
+      icons: serverInfo?.icons ?? [
         {
-          src: `data:image/png;base64,${FAVICON_BASE64}`,
+          src: FAVICON_DATA_URI,
           mimeType: 'image/png',
-          sizes: ['128x128'],
+          sizes: ['64x64'],
         },
       ],
     },
@@ -292,6 +295,13 @@ function createAppServer(
         tool.name as string,
         {
           description: tool.description as string | undefined,
+          ...(simulation.outputSchema
+            ? {
+                outputSchema: simulation.outputSchema as Parameters<
+                  typeof registerAppTool
+                >[2]['outputSchema'],
+              }
+            : {}),
           _meta: fullToolMeta,
         },
         async (extra) => {
@@ -354,18 +364,20 @@ function createAppServer(
       // to fail. A passthrough schema from the same Zod instance as the SDK
       // accepts any arguments and forwards them to the handler.
       const realHandler = simulation.handler;
-      mcpServer.registerTool(
+      const plainToolConfig: Record<string, unknown> = {
+        description: tool.description as string | undefined,
+        // Use passthrough so the SDK passes all args to the handler without stripping.
+        // We can't use the tool's own Zod schema because it's loaded via Vite SSR
+        // from a different Zod module instance, causing isZodSchemaInstance checks to fail.
+        inputSchema: z.object({}).passthrough(),
+        ...(simulation.outputSchema ? { outputSchema: simulation.outputSchema } : {}),
+        annotations: tool.annotations as Record<string, unknown> | undefined,
+        _meta: toolMeta,
+      };
+      (mcpServer.registerTool as (...a: unknown[]) => unknown)(
         tool.name as string,
-        {
-          description: tool.description as string | undefined,
-          // Use passthrough so the SDK passes all args to the handler without stripping.
-          // We can't use the tool's own Zod schema because it's loaded via Vite SSR
-          // from a different Zod module instance, causing isZodSchemaInstance checks to fail.
-          inputSchema: z.object({}).passthrough(),
-          annotations: tool.annotations as Record<string, unknown> | undefined,
-          _meta: toolMeta,
-        },
-        async (args, extra) => {
+        plainToolConfig,
+        async (args: Record<string, unknown>, extra: unknown) => {
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
           console.log(`[MCP] CallTool: ${tool.name}${argsStr}`);
@@ -634,7 +646,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
 <html>
 <head>
 <meta charset="UTF-8" />
-<link rel="icon" type="image/png" href="/favicon.ico" />
+<link rel="icon" type="image/png" href="/favicon.png" />
 <title>Sunpeak MCP Server</title>
 </head>
 <body><h1>Sunpeak MCP Server</h1><p>Connect via <a href="/mcp">/mcp</a></p></body>
@@ -642,15 +654,21 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       return;
     }
 
-    // Favicon endpoint
-    if (req.method === 'GET' && url.pathname === '/favicon.ico') {
+    // Favicon endpoint — serve PNG at /favicon.png and /favicon.ico only.
+    // Do NOT serve PNG data at /favicon.svg — returning the wrong content type (image/png
+    // for a .svg path) confuses host icon resolvers that dispatch on extension.
+    // Support both GET and HEAD — ChatGPT sends HEAD to check existence before fetching.
+    if (
+      (req.method === 'GET' || req.method === 'HEAD') &&
+      (url.pathname === '/favicon.png' || url.pathname === '/favicon.ico')
+    ) {
       res.writeHead(200, {
         'Content-Type': 'image/png',
         'Content-Length': FAVICON_BUFFER.length,
         'Cache-Control': 'public, max-age=86400',
         'Access-Control-Allow-Origin': '*',
       });
-      res.end(FAVICON_BUFFER);
+      res.end(req.method === 'HEAD' ? undefined : FAVICON_BUFFER);
       return;
     }
 

@@ -17,6 +17,23 @@ export const schema = {
   limit: z.number().describe('Maximum number of albums to return'),
 };
 
+export const outputSchema = {
+  albums: z.array(
+    z.object({
+      id: z.string(),
+      title: z.string(),
+      cover: z.string(),
+      photos: z.array(
+        z.object({
+          id: z.string(),
+          title: z.string(),
+          url: z.string(),
+        })
+      ),
+    })
+  ),
+};
+
 type Args = z.infer<z.ZodObject<typeof schema>>;
 
 export default async function (args: Args, _extra: ToolHandlerExtra) {

@@ -188,7 +188,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     sunpeakMcp = await import(pathToFileURL(join(sunpeakBase, 'dist/mcp/index.js')).href);
     sunpeakDiscovery = await import(pathToFileURL(join(sunpeakBase, 'dist/lib/discovery-cli.js')).href);
   }
-  const { FAVICON_BUFFER: faviconBuffer, runMCPServer } = sunpeakMcp;
+  const { FAVICON_BUFFER: faviconBuffer, FAVICON_DATA_URI: faviconDataUri, runMCPServer } = sunpeakMcp;
   const { findResourceDirs, findSimulationFilesFlat, findToolFiles, extractResourceExport, extractToolExport } = sunpeakDiscovery;
 
   // Vite plugin to serve the sunpeak favicon
@@ -290,6 +290,39 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const sandboxPort = Number(process.env.SUNPEAK_SANDBOX_PORT || 24680);
   const sandbox = await startSandboxServer({ preferredPort: sandboxPort });
 
+  // Load server config from src/server.ts (if present) for simulator display.
+  // Uses a temporary SSR server so the values are available as Vite defines
+  // before the main simulator UI server starts.
+  // The fallback chain matches the MCP server: serverInfo.name → pkg.name → 'sunpeak-app'.
+  const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+  let serverDisplayName = pkg.name ?? null;
+  let serverDisplayIcon = undefined;
+  const serverEntryPath = join(projectRoot, 'src/server.ts');
+  if (existsSync(serverEntryPath)) {
+    const configLoader = await createServer({
+      root: projectRoot,
+      server: { middlewareMode: true, hmr: false },
+      resolve: { alias: { '@': path.resolve(projectRoot, 'src'), ...(isTemplate && { sunpeak: parentSrc }) } },
+      appType: 'custom',
+      logLevel: 'silent',
+    });
+    try {
+      const serverMod = await configLoader.ssrLoadModule('./src/server.ts');
+      if (serverMod.server && typeof serverMod.server === 'object') {
+        if (serverMod.server.name) serverDisplayName = serverMod.server.name;
+        // Extract a display icon from the icons array (first non-dark icon, or first icon)
+        const icons = serverMod.server.icons;
+        if (Array.isArray(icons) && icons.length > 0) {
+          const lightIcon = icons.find(i => !i.theme || i.theme === 'light') ?? icons[0];
+          serverDisplayIcon = lightIcon?.src;
+        }
+      }
+    } catch (err) {
+      // Non-fatal — simulator will use defaults
+    }
+    await configLoader.close();
+  }
+
   // Create and start Vite dev server programmatically
   const server = await createServer({
     root: projectRoot,
@@ -332,6 +365,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       '__SUNPEAK_PROD_TOOLS__': JSON.stringify(isProdTools),
       '__SUNPEAK_PROD_RESOURCES__': JSON.stringify(isProdResources),
       '__SUNPEAK_SANDBOX_URL__': JSON.stringify(sandbox.url),
+      '__SUNPEAK_APP_NAME__': JSON.stringify(serverDisplayName ?? null),
+      '__SUNPEAK_APP_ICON__': JSON.stringify(serverDisplayIcon ?? null),
+      '__SUNPEAK_DEFAULT_ICON__': JSON.stringify(faviconDataUri),
     },
     resolve: {
       alias: {
@@ -433,7 +469,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     try {
       const mod = await toolLoaderServer.ssrLoadModule(`./${relativePath}`);
       if (typeof mod.default === 'function') {
-        toolHandlerMap.set(toolName, { handler: mod.default });
+        toolHandlerMap.set(toolName, { handler: mod.default, outputSchema: mod.outputSchema });
       }
     } catch (err) {
       console.warn(`Warning: Could not load handler for tool "${toolName}": ${err.message}`);
@@ -482,6 +518,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
         srcPath,
         resource: resourceMap.get(resourceKey),
       } : {}),
+      // Attach output schema from the tool module (if present)
+      ...(toolHandlerMap.has(toolName) && toolHandlerMap.get(toolName).outputSchema ? {
+        outputSchema: toolHandlerMap.get(toolName).outputSchema,
+      } : {}),
       // Attach real handler for tools consumed by the MCP server.
       // Backend-only tools (no resource) always need handlers for callServerTool.
       // UI tools only get handlers in --prod-tools mode (otherwise simulation mock data is used).
@@ -505,6 +545,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     simulations.push({
       name: `__tool_${toolName}`,
       tool: { name: toolName, ...tool },
+      ...(handlerInfo?.outputSchema ? { outputSchema: handlerInfo.outputSchema } : {}),
       ...(handlerInfo ? { handler: handlerInfo.handler } : {}),
     });
   }
@@ -611,11 +652,23 @@ if (import.meta.hot) {
       appType: 'custom',
     });
 
-    const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
+    // Load server config from src/server.ts (if present) for server identity
+    let serverInfo = undefined;
+    if (existsSync(serverEntryPath)) {
+      try {
+        const serverMod = await toolLoaderServer.ssrLoadModule('./src/server.ts');
+        if (serverMod.server && typeof serverMod.server === 'object') {
+          serverInfo = serverMod.server;
+        }
+      } catch (err) {
+        console.warn(`Warning: Could not load server config: ${err.message}`);
+      }
+    }
 
     const mcpHandle = runMCPServer({
-      name: pkg.name || 'Sunpeak',
-      version: pkg.version || '0.1.0',
+      name: serverInfo?.name ?? pkg.name ?? 'Sunpeak',
+      version: serverInfo?.version ?? pkg.version ?? '0.1.0',
+      serverInfo,
       simulations,
       port: mcpPort,
       hmrPort,

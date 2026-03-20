@@ -1,6 +1,7 @@
 import type {
   Resource,
   Tool,
+  Implementation,
   ServerRequest,
   ServerNotification,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -10,6 +11,33 @@ import type { ServerToolMock } from '../types/simulation';
 
 export type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 export type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
+
+/**
+ * Server identity configuration, exported from `src/server.ts` as `server`.
+ *
+ * All fields from the MCP SDK's `Implementation` type are supported:
+ * `name`, `version`, `title`, `description`, `websiteUrl`, `icons`.
+ *
+ * Icons must be **64x64 PNG** for ChatGPT compatibility. Use a `data:` URI
+ * to embed the icon inline so the host doesn't need to fetch it separately.
+ * Light/dark theme variants are supported via the `theme` field.
+ *
+ * If omitted, a default sunpeak icon is used.
+ *
+ * @example
+ * ```ts
+ * export const server: ServerConfig = {
+ *   name: 'my-app',
+ *   version: '1.0.0',
+ *   description: 'My MCP app',
+ *   icons: [
+ *     { src: 'data:image/png;base64,...', mimeType: 'image/png', sizes: ['64x64'] },
+ *     { src: 'data:image/png;base64,...', mimeType: 'image/png', sizes: ['64x64'], theme: 'dark' },
+ *   ],
+ * };
+ * ```
+ */
+export type ServerConfig = Partial<Implementation>;
 
 /**
  * Extra context passed to tool handlers as the second argument.
@@ -60,6 +88,11 @@ export interface SimulationWithDist {
     isError?: boolean;
   };
 
+  // Output schema Zod shape from the tool module's `outputSchema` export.
+  // Typed as `unknown` because it's loaded dynamically via Vite SSR —
+  // at runtime it will be a Zod shape (Record<string, ZodType>).
+  outputSchema?: unknown;
+
   // Real handler for backend-only tools (loaded via Vite SSR in dev mode).
   // When present, the dev MCP server calls this instead of returning mock data.
   handler?: (args: Record<string, unknown>, extra: unknown) => unknown | Promise<unknown>;
@@ -88,6 +121,8 @@ export interface MCPServerHandle {
 export interface MCPServerConfig {
   name?: string;
   version?: string;
+  /** Full server identity (overrides name/version when provided). */
+  serverInfo?: ServerConfig;
   port?: number;
   /** HMR WebSocket port (used for CSP injection in dev mode). */
   hmrPort?: number;

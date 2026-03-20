@@ -96,7 +96,7 @@ packages/sunpeak/
 - `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
 - `sunpeak/chatgpt` — ChatGPT host shell registration + Simulator re-export
 - `sunpeak/claude` — Claude host shell registration + Simulator re-export
-- `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
+- `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), server config (`ServerConfig`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/host` — Host detection
 - `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/test` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
@@ -248,7 +248,7 @@ The `host-inspector` resource (template-only, excluded from `sunpeak new`) captu
 - ESM-first (`"type": "module"`)
 - Tailwind CSS with MCP standard variables via arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`, `border-[var(--color-border-primary)]`)
 - Resources discovered from `src/resources/{name}/{name}.tsx`
-- Tools discovered from `src/tools/{name}.ts` (each exports `tool: AppToolConfig`, `schema`, `default` handler)
+- Tools discovered from `src/tools/{name}.ts` (each exports `tool: AppToolConfig`, `schema`, optional `outputSchema`, `default` handler)
 - Simulations discovered from `tests/simulations/*.json` (flat directory, `"tool"` string field references tool filename)
 - Optional server entry at `src/server.ts` (exports `auth()` for request authentication)
 - Hook file naming: `use-{kebab-name}.ts` → export `use{PascalName}` (e.g., `use-download-file.ts` → `useDownloadFile`)
