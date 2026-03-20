@@ -64,7 +64,7 @@ async function importFromProject(require, moduleName) {
  *
  * When a file changes during a build, the current build is killed and restarted.
  */
-function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild = false } = {}) {
+function startBuildWatcher(projectRoot, resourcesDirs, mcpHandle, { skipInitialBuild = false } = {}) {
   let activeChild = null;
   const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
 
@@ -101,25 +101,28 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBu
     runBuild();
   }
 
-  // Watch src/resources/ for changes using fs.watch (recursive supported on macOS/Windows)
+  // Watch resource directories for changes using fs.watch (recursive supported on macOS/Windows)
   let debounceTimer = null;
-  try {
-    fsWatch(resourcesDir, { recursive: true }, (_event, filename) => {
-      if (!filename) return;
-      // Only rebuild on source file changes
-      if (!/\.(tsx?|css)$/.test(filename)) return;
-      // Skip test files
-      if (/\.(test|spec)\.tsx?$/.test(filename)) return;
+  const dirsToWatch = Array.isArray(resourcesDirs) ? resourcesDirs : [resourcesDirs];
+  for (const dir of dirsToWatch) {
+    try {
+      fsWatch(dir, { recursive: true }, (_event, filename) => {
+        if (!filename) return;
+        // Only rebuild on source file changes
+        if (!/\.(tsx?|css)$/.test(filename)) return;
+        // Skip test files
+        if (/\.(test|spec)\.tsx?$/.test(filename)) return;
 
-      clearTimeout(debounceTimer);
-      debounceTimer = setTimeout(() => {
-        runBuild();
-      }, 500);
-    });
-    console.log('[build] Watching src/resources/ for changes...');
-  } catch {
-    console.warn('[build] Could not start file watcher — run "sunpeak build" manually after changes');
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          runBuild();
+        }, 500);
+      });
+    } catch {
+      console.warn(`[build] Could not watch ${dir} — run "sunpeak build" manually after changes`);
+    }
   }
+  console.log('[build] Watching resource directories for changes...');
 }
 
 /**
@@ -383,7 +386,16 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const simulationsDir = join(projectRoot, 'tests/simulations');
   const toolsDir = join(projectRoot, 'src/tools');
 
-  const resourceDirs = findResourceDirs(resourcesDir, (key) => `${key}.tsx`, fs);
+  // In workspace dev mode, also discover internal resources/tools/simulations
+  const internalDir = isTemplate ? resolve(projectRoot, '../internal') : null;
+  const internalResourcesDir = internalDir ? join(internalDir, 'resources') : null;
+  const internalToolsDir = internalDir ? join(internalDir, 'tools') : null;
+  const internalSimulationsDir = internalDir ? join(internalDir, 'simulations') : null;
+
+  const resourceDirs = [
+    ...findResourceDirs(resourcesDir, (key) => `${key}.tsx`, fs),
+    ...(internalResourcesDir ? findResourceDirs(internalResourcesDir, (key) => `${key}.tsx`, fs) : []),
+  ];
 
   // Build resource metadata map
   const resourceMap = new Map();
@@ -395,7 +407,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   }
 
   // Discover tool files and extract metadata
-  const toolFiles = findToolFiles(toolsDir, fs);
+  const toolFiles = [
+    ...findToolFiles(toolsDir, fs),
+    ...(internalToolsDir ? findToolFiles(internalToolsDir, fs) : []),
+  ];
   const toolMap = new Map();
   for (const { name: toolName, path: toolPath } of toolFiles) {
     try {
@@ -442,7 +457,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
   // Discover simulations from flat directory
   const simulations = [];
-  const simFiles = findSimulationFilesFlat(simulationsDir, fs);
+  const simFiles = [
+    ...findSimulationFilesFlat(simulationsDir, fs),
+    ...(internalSimulationsDir ? findSimulationFilesFlat(internalSimulationsDir, fs) : []),
+  ];
 
   for (const { name: simName, path: simPath } of simFiles) {
     const simulation = JSON.parse(readFileSync(simPath, 'utf-8'));
@@ -470,7 +488,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     // Determine source path for the resource (if it has a UI)
     const resourceDir = resourceKey ? resourceDirs.find((d) => d.key === resourceKey) : undefined;
     const srcPath = resourceDir
-      ? `/src/resources/${resourceKey}/${basename(resourceDir.resourcePath)}`
+      ? '/' + path.relative(projectRoot, resourceDir.resourcePath)
       : undefined;
 
     simulations.push({
@@ -605,6 +623,7 @@ if (import.meta.hot) {
         entries: [
           'src/resources/**/*.{ts,tsx}',
           'src/tools/**/*.ts',
+          ...(isTemplate ? ['../internal/resources/**/*.{ts,tsx}', '../internal/tools/**/*.ts'] : []),
         ],
         include: ['react', 'react-dom/client'],
       },
@@ -629,7 +648,8 @@ if (import.meta.hot) {
     // reach the local Vite dev server. The watcher rebuilds on source file changes
     // so the prod output stays fresh without manual `sunpeak build`.
     // On successful builds, mcpHandle.invalidateResources() notifies tunnel sessions.
-    startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild: isProdResources });
+    const watchDirs = internalResourcesDir ? [resourcesDir, internalResourcesDir] : [resourcesDir];
+    startBuildWatcher(projectRoot, watchDirs, mcpHandle, { skipInitialBuild: isProdResources });
 
     // Handle signals - close all servers
     process.on('SIGINT', async () => {

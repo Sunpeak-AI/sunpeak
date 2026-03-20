@@ -20,7 +20,8 @@ import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const PROJECT_ROOT = join(__dirname, '..', '..');
+// internal/tests/live/ → packages/sunpeak/ → template/
+const PROJECT_ROOT = join(__dirname, '..', '..', '..', 'template');
 const OUTPUT_DIR = join(PROJECT_ROOT, '.context');
 const OUTPUT_FILE = join(OUTPUT_DIR, 'chatgpt-host-data.json');
 const AUTH_FILE = join(PROJECT_ROOT, '.auth', 'chatgpt.json');

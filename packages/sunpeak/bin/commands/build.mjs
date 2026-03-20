@@ -156,37 +156,40 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 
     mkdirSync(tempDir, { recursive: true });
 
-    // Auto-discover all resources (each resource is a subdirectory)
-    resourceFiles = readdirSync(resourcesDir, { withFileTypes: true })
-      .filter(entry => entry.isDirectory())
-      .map(entry => {
-        const kebabName = entry.name;
+    // Scan a single resource directory for buildable resources
+    const scanResourceDir = (dir) =>
+      readdirSync(dir, { withFileTypes: true })
+        .filter(entry => entry.isDirectory())
+        .map(entry => {
+          const kebabName = entry.name;
+          const resourceFile = `${kebabName}.tsx`;
+          const resourcePath = path.join(dir, kebabName, resourceFile);
 
-        const resourceFile = `${kebabName}.tsx`;
-        const resourcePath = path.join(resourcesDir, kebabName, resourceFile);
+          if (!existsSync(resourcePath)) return null;
 
-        // Skip directories without a resource file
-        if (!existsSync(resourcePath)) {
-          return null;
-        }
+          const pascalName = toPascalCase(kebabName);
+          const componentFile = resourceFile.replace(/\.tsx$/, '');
 
-        // Convert kebab-case to PascalCase: 'review' -> 'Review', 'my-widget' -> 'MyWidget'
-        const pascalName = toPascalCase(kebabName);
-        const componentFile = resourceFile.replace(/\.tsx$/, '');
+          return {
+            componentName: `${pascalName}Resource`,
+            componentFile,
+            kebabName,
+            resourceDir: path.join(dir, kebabName),
+            entry: `.tmp/index-${kebabName}.tsx`,
+            jsOutput: `${kebabName}.js`,
+            htmlOutput: `${kebabName}.html`,
+            buildOutDir: path.join(buildDir, kebabName),
+            distOutDir: path.join(distDir, kebabName),
+          };
+        })
+        .filter(Boolean);
 
-        return {
-          componentName: `${pascalName}Resource`,
-          componentFile,
-          kebabName,
-          resourceDir: path.join(resourcesDir, kebabName),
-          entry: `.tmp/index-${kebabName}.tsx`,
-          jsOutput: `${kebabName}.js`,
-          htmlOutput: `${kebabName}.html`,
-          buildOutDir: path.join(buildDir, kebabName),
-          distOutDir: path.join(distDir, kebabName),  // Final output: dist/{resource}/
-        };
-      })
-      .filter(Boolean);
+    // Auto-discover all resources (template + internal when in workspace mode)
+    resourceFiles = scanResourceDir(resourcesDir);
+    const internalResourcesDir = isTemplate ? path.join(projectRoot, '../internal/resources') : null;
+    if (internalResourcesDir && existsSync(internalResourcesDir)) {
+      resourceFiles = [...resourceFiles, ...scanResourceDir(internalResourcesDir)];
+    }
 
     if (resourceFiles.length > 0) {
       log('Building all resources...\n');
@@ -211,7 +214,7 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 
       // Build all resources (but don't copy yet)
       for (let i = 0; i < resourceFiles.length; i++) {
-        const { componentName, componentFile, kebabName, entry, jsOutput, buildOutDir } = resourceFiles[i];
+        const { componentName, componentFile, kebabName, resourceDir, entry, jsOutput, buildOutDir } = resourceFiles[i];
         log(`[${i + 1}/${resourceFiles.length}] Building ${kebabName}...`);
 
         try {
@@ -221,8 +224,10 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
           }
 
           // Create entry file from template in temp directory
+          // Compute import path relative to .tmp/ directory
+          const importPath = path.relative(path.join(projectRoot, '.tmp'), path.join(resourceDir, componentFile));
           const entryContent = template
-            .replace('// RESOURCE_IMPORT', `import { ${componentName}, resource } from '../src/resources/${kebabName}/${componentFile}';`)
+            .replace('// RESOURCE_IMPORT', `import { ${componentName}, resource } from '${importPath.startsWith('.') ? importPath : './' + importPath}';`)
             .replace('// RESOURCE_MOUNT', `createRoot(root).render(<AppProvider appInfo={{ name: ${JSON.stringify(appName)}, version: ${JSON.stringify(appVersion)} }}><${componentName} /></AppProvider>);`);
 
           const entryPath = path.join(projectRoot, entry);
@@ -351,12 +356,20 @@ ${jsContents}
   // ========================================================================
 
   const toolsDir = path.join(projectRoot, 'src/tools');
+  const internalToolsDir = isTemplate ? path.join(projectRoot, '../internal/tools') : null;
   const serverEntryPath = path.join(projectRoot, 'src/server.ts');
 
-  // Find tool files
-  const toolFiles = existsSync(toolsDir)
-    ? readdirSync(toolsDir).filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'))
-    : [];
+  // Find tool files (with full paths for both template and internal)
+  const scanToolDir = (dir) =>
+    existsSync(dir)
+      ? readdirSync(dir)
+          .filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts'))
+          .map(f => ({ name: f.replace(/\.ts$/, ''), path: path.join(dir, f) }))
+      : [];
+  const toolFiles = [
+    ...scanToolDir(toolsDir),
+    ...(internalToolsDir ? scanToolDir(internalToolsDir) : []),
+  ];
 
   const hasServerEntry = existsSync(serverEntryPath);
 
@@ -380,9 +393,7 @@ ${jsContents}
       }
 
       // Compile each tool file
-      for (const toolFile of toolFiles) {
-        const toolName = toolFile.replace(/\.ts$/, '');
-        const toolPath = path.join(toolsDir, toolFile);
+      for (const { name: toolName, path: toolPath } of toolFiles) {
 
         try {
           await esbuild.build({

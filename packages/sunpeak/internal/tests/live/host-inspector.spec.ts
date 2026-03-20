@@ -2,7 +2,8 @@ import { test } from 'sunpeak/test';
 import { writeFileSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
-const OUTPUT_DIR = join(import.meta.dirname, '../../.context');
+// internal/tests/live/ → packages/sunpeak/ → template/.context
+const OUTPUT_DIR = join(import.meta.dirname, '../../../template/.context');
 
 test('extract host inspector data for both themes', async ({ live }) => {
   // Invoke the host inspector tool
