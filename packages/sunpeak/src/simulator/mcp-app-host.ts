@@ -44,6 +44,11 @@ export interface McpAppHostOptions {
   onDownloadFile?: (contents: unknown[]) => void;
   /** Called after the iframe confirms rendering in a new display mode (paint fence resolved). */
   onDisplayModeReady?: (mode: string) => void;
+  /**
+   * Called when the sandbox proxy signals readiness (double-iframe mode).
+   * The host should respond by sending HTML content via sendSandboxResourceReady().
+   */
+  onSandboxReady?: () => void;
 }
 
 /**
@@ -179,6 +184,12 @@ export class McpAppHost {
       }
       return {};
     };
+
+    // Double-iframe sandbox support: when the proxy signals readiness,
+    // notify the host so it can deliver the app HTML.
+    this.bridge.onsandboxready = () => {
+      this.options.onSandboxReady?.();
+    };
   }
 
   /**
@@ -305,6 +316,27 @@ export class McpAppHost {
     const params: McpUiToolCancelledNotification['params'] = reason ? { reason } : {};
     if (this._initialized) {
       this.bridge.sendToolCancelled(params);
+    }
+  }
+
+  /**
+   * Send HTML resource to the sandbox proxy for secure loading.
+   * Used in the double-iframe architecture after the proxy signals readiness.
+   */
+  sendSandboxResourceReady(params: { html: string; sandbox?: string }): void {
+    this.bridge.sendSandboxResourceReady(params);
+  }
+
+  /**
+   * Send a custom message to the connected iframe (for sandbox proxy commands).
+   */
+  sendRawMessage(data: unknown): void {
+    const win = this._contentWindow;
+    if (!win) return;
+    try {
+      win.postMessage(data, '*');
+    } catch {
+      // Detached or cross-origin window
     }
   }
 

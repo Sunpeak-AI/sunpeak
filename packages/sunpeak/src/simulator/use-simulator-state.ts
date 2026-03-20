@@ -67,10 +67,8 @@ export interface SimulatorState {
   // ── Computed host context ──
   hostContext: McpUiHostContext;
 
-  // ── Display mode transition ──
-  readyDisplayMode: McpUiDisplayMode;
+  // ── Display mode ready callback (for IframeResource paint fence) ──
   handleDisplayModeReady: (mode: string) => void;
-  isTransitioning: boolean;
 
   // ── Tool data ──
   toolInput: Record<string, unknown>;
@@ -111,6 +109,10 @@ export interface SimulatorState {
     updateFn: (value: Record<string, unknown> | null) => void
   ) => void;
 
+  // ── Content width (from conversation ResizeObserver) ──
+  measuredContentWidth: number | undefined;
+  handleContentWidthChange: (width: number) => void;
+
   // ── Host callbacks ──
   handleDisplayModeChange: (mode: McpUiDisplayMode) => void;
   handleUpdateModelContext: (content: unknown[], structuredContent?: unknown) => void;
@@ -121,9 +123,6 @@ export interface SimulatorState {
   csp: ResourceCSP | undefined;
   permissions: McpUiResourcePermissions | undefined;
   prefersBorder: boolean;
-  domain: string | undefined;
-  hasIframeContent: boolean;
-
   // ── URL param overrides ──
   urlProdTools: boolean | undefined;
   urlProdResources: boolean | undefined;
@@ -292,6 +291,13 @@ export function useSimulatorState({
   );
   const [timeZone, setTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
 
+  // Content width measured from the conversation component's ResizeObserver.
+  // Used as containerDimensions.maxWidth unless the user manually sets one.
+  const [measuredContentWidth, setMeasuredContentWidth] = useState<number | undefined>(undefined);
+  const handleContentWidthChange = useCallback((width: number) => {
+    setMeasuredContentWidth(width);
+  }, []);
+
   // Display mode setter that respects mobile width constraints
   const setDisplayMode = (mode: McpUiDisplayMode) => {
     if (isMobileWidth(screenWidth) && mode === 'pip') {
@@ -301,31 +307,68 @@ export function useSimulatorState({
     }
   };
 
-  // Track which display mode the iframe has confirmed rendering.
-  const [readyDisplayMode, setReadyDisplayMode] = useState<McpUiDisplayMode>(
-    urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
-  );
+  // Callback for IframeResource's onDisplayModeReady (paint fence ack).
+  // Currently a no-op — the simulator doesn't need to track the confirmed
+  // display mode. Kept as a stable reference to avoid unnecessary re-renders.
+  const handleDisplayModeReady = useCallback((_mode: string) => {}, []);
 
-  const handleDisplayModeReady = useCallback((mode: string) => {
-    setReadyDisplayMode(mode as McpUiDisplayMode);
-  }, []);
-
-  // Build host context from state
+  // Build containerDimensions based on the current display mode.
+  // Real hosts (ChatGPT) report different shapes per mode:
+  //   inline:     { height: <content height>, maxWidth: <column width> }
+  //   fullscreen: { height: <viewport height>, width: <viewport width> }
+  //   pip:        { height: <pip height>, maxWidth: <pip max width> }
+  //
+  // User-set sidebar values always take priority. When not set, we derive
+  // values from the measured content width (ResizeObserver) and the
+  // browser viewport for fullscreen mode.
   const containerDimensions = useMemo(() => {
+    // User-set values always take priority
     if (
-      containerHeight == null &&
-      containerWidth == null &&
-      containerMaxHeight == null &&
-      containerMaxWidth == null
-    )
-      return undefined;
-    return {
-      ...(containerHeight != null ? { height: containerHeight } : {}),
-      ...(containerWidth != null ? { width: containerWidth } : {}),
-      ...(containerMaxHeight != null ? { maxHeight: containerMaxHeight } : {}),
-      ...(containerMaxWidth != null ? { maxWidth: containerMaxWidth } : {}),
-    };
-  }, [containerHeight, containerWidth, containerMaxHeight, containerMaxWidth]);
+      containerHeight != null ||
+      containerWidth != null ||
+      containerMaxHeight != null ||
+      containerMaxWidth != null
+    ) {
+      return {
+        ...(containerHeight != null ? { height: containerHeight } : {}),
+        ...(containerWidth != null ? { width: containerWidth } : {}),
+        ...(containerMaxHeight != null ? { maxHeight: containerMaxHeight } : {}),
+        ...(containerMaxWidth != null ? { maxWidth: containerMaxWidth } : {}),
+      };
+    }
+
+    // Auto-derived dimensions based on display mode
+    if (displayMode === 'fullscreen') {
+      // Fullscreen: report actual viewport dimensions (width + height, no maxWidth).
+      // Use window.innerHeight minus the fullscreen chrome header (52px).
+      const h = typeof window !== 'undefined' ? window.innerHeight - 52 : 800;
+      const w = measuredContentWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1280);
+      return { height: h, width: w };
+    }
+
+    if (displayMode === 'pip') {
+      // PiP: report the PiP container height constraint + maxWidth.
+      // ChatGPT uses ~362px height for PiP.
+      return {
+        height: 480,
+        ...(measuredContentWidth != null ? { maxWidth: measuredContentWidth } : {}),
+      };
+    }
+
+    // Inline: report maxWidth from the measured content container.
+    if (measuredContentWidth != null) {
+      return { maxWidth: measuredContentWidth };
+    }
+
+    return undefined;
+  }, [
+    containerHeight,
+    containerWidth,
+    containerMaxHeight,
+    containerMaxWidth,
+    measuredContentWidth,
+    displayMode,
+  ]);
 
   const hostContext = useMemo<McpUiHostContext>(
     () => ({
@@ -472,9 +515,6 @@ export function useSimulatorState({
     | undefined;
   const permissions = resourceMeta?.permissions;
   const prefersBorder = resourceMeta?.prefersBorder ?? false;
-  const domain = resourceMeta?.domain;
-  const hasIframeContent = !!(resourceUrl || resourceScript);
-  const isTransitioning = hasIframeContent && displayMode !== readyDisplayMode;
 
   return {
     simulationNames,
@@ -515,9 +555,7 @@ export function useSimulatorState({
 
     hostContext,
 
-    readyDisplayMode,
     handleDisplayModeReady,
-    isTransitioning,
 
     toolInput,
     setToolInput,
@@ -546,6 +584,9 @@ export function useSimulatorState({
     validateJSON,
     commitJSON,
 
+    measuredContentWidth,
+    handleContentWidthChange,
+
     handleDisplayModeChange,
     handleUpdateModelContext,
 
@@ -554,9 +595,6 @@ export function useSimulatorState({
     csp,
     permissions,
     prefersBorder,
-    domain,
-    hasIframeContent,
-
     urlProdTools: urlParams.prodTools,
     urlProdResources: urlParams.prodResources,
   };

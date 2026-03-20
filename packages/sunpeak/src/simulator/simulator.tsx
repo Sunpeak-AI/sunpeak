@@ -49,6 +49,12 @@ export interface SimulatorProps {
   defaultProdResources?: boolean;
   /** Hide Prod Tools and Prod Resources toggles in the sidebar (e.g., for marketing/embedded use). */
   hideSimulatorModes?: boolean;
+  /**
+   * Base URL of the separate-origin sandbox server (e.g., "http://localhost:24680").
+   * When provided, the outer iframe loads from this URL instead of using srcdoc,
+   * giving real cross-origin isolation that matches production hosts.
+   */
+  sandboxUrl?: string;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
@@ -63,6 +69,7 @@ export function Simulator({
   defaultProdTools = false,
   defaultProdResources = false,
   hideSimulatorModes = false,
+  sandboxUrl,
 }: SimulatorProps) {
   const state = useSimulatorState({ simulations, defaultHost });
   const [prodTools, setProdTools] = React.useState(state.urlProdTools ?? defaultProdTools);
@@ -142,16 +149,20 @@ export function Simulator({
   const registeredHosts = getRegisteredHosts();
   const ShellConversation = activeShell?.Conversation;
 
-  // Merge host style variables into the hostContext (standard MCP App theming).
+  // Merge host style variables and userAgent into the hostContext.
   // Style variables use CSS light-dark() so they don't depend on theme —
   // the app handles theme via color-scheme set by applyDocumentTheme().
   const hostContext = React.useMemo(() => {
     const styleVars = activeShell?.styleVariables;
-    if (!styleVars) return state.hostContext;
-    return {
-      ...state.hostContext,
-      styles: { variables: styleVars },
-    } as McpUiHostContext;
+    const userAgent = activeShell?.userAgent;
+    const ctx = { ...state.hostContext };
+    if (styleVars) {
+      (ctx as McpUiHostContext).styles = { variables: styleVars };
+    }
+    if (userAgent) {
+      (ctx as McpUiHostContext).userAgent = userAgent;
+    }
+    return ctx as McpUiHostContext;
   }, [state.hostContext, activeShell]);
 
   // Apply host style variables to the document root so the simulator chrome
@@ -330,6 +341,7 @@ export function Simulator({
           onDisplayModeReady={state.handleDisplayModeReady}
           debugInjectState={state.modelContext}
           injectOpenAIRuntime={state.activeHost === 'chatgpt'}
+          sandboxUrl={sandboxUrl}
           className="h-full w-full"
         />
       </div>
@@ -356,6 +368,7 @@ export function Simulator({
           onDisplayModeReady={state.handleDisplayModeReady}
           debugInjectState={state.modelContext}
           injectOpenAIRuntime={state.activeHost === 'chatgpt'}
+          sandboxUrl={sandboxUrl}
           className="h-full w-full"
         />
       </div>
@@ -631,7 +644,11 @@ export function Simulator({
                       <SidebarInput
                         type="number"
                         applyOnBlur
-                        placeholder="-"
+                        placeholder={
+                          state.measuredContentWidth != null
+                            ? String(state.measuredContentWidth)
+                            : '-'
+                        }
                         value={
                           state.containerMaxWidth != null ? String(state.containerMaxWidth) : ''
                         }
@@ -821,7 +838,7 @@ export function Simulator({
             appName={appName}
             appIcon={appIcon}
             userMessage={prodToolsUserMessage ?? state.selectedSim?.userMessage}
-            isTransitioning={state.isTransitioning}
+            onContentWidthChange={state.handleContentWidthChange}
             headerAction={
               prodTools && onCallTool ? (
                 <button

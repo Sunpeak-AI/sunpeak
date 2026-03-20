@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { SCREEN_WIDTHS, type ScreenWidth } from '../simulator/simulator-types';
 import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
@@ -13,9 +14,10 @@ interface ClaudeConversationProps {
   appName?: string;
   appIcon?: string;
   userMessage?: string;
-  isTransitioning?: boolean;
   /** Optional action element rendered in the conversation header (e.g., Run button) */
   headerAction?: React.ReactNode;
+  /** Called when the content container width changes */
+  onContentWidthChange?: (width: number) => void;
 }
 
 function CloseIcon() {
@@ -60,13 +62,39 @@ export function ClaudeConversation({
   appName = 'Sunpeak',
   appIcon,
   userMessage = 'What have you got for me today?',
-  isTransitioning = false,
   headerAction,
+  onContentWidthChange,
 }: ClaudeConversationProps) {
   const isDesktop = platform === 'desktop';
   const containerWidth = screenWidth === 'full' ? '100%' : `${SCREEN_WIDTHS[screenWidth]}px`;
   const isFullscreen = displayMode === 'fullscreen';
   const isPip = displayMode === 'pip';
+
+  // Measure the content container width and report it via onContentWidthChange.
+  const contentRef = useRef<HTMLDivElement>(null);
+  const onContentWidthChangeRef = useRef(onContentWidthChange);
+  useEffect(() => {
+    onContentWidthChangeRef.current = onContentWidthChange;
+  });
+
+  const setContentRef = useCallback((node: HTMLDivElement | null) => {
+    contentRef.current = node;
+  }, []);
+
+  useEffect(() => {
+    const el = contentRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = Math.round(entry.contentBoxSize[0]?.inlineSize ?? entry.contentRect.width);
+        if (width > 0) {
+          onContentWidthChangeRef.current?.(width);
+        }
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const handleClose = () => onRequestDisplayMode?.('inline');
 
@@ -193,6 +221,7 @@ export function ClaudeConversation({
 
                 {/* ─── CONTENT AREA ─── */}
                 <div
+                  ref={setContentRef}
                   className={
                     isPip
                       ? 'fixed start-4 end-4 top-12 z-50 mx-auto max-w-[40rem] lg:max-w-[48rem] sm:start-0 sm:end-0 sm:top-[3rem] sm:w-full overflow-visible'
@@ -240,8 +269,6 @@ export function ClaudeConversation({
                                 backgroundColor: 'var(--color-background-primary)',
                               }
                             : { backgroundColor: 'transparent' }),
-                        opacity: isTransitioning ? 0 : 1,
-                        transition: isTransitioning ? 'none' : 'opacity 100ms',
                       }}
                     >
                       {children}

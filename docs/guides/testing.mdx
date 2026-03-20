@@ -133,7 +133,7 @@ test('should show success when server confirms', async ({ page }) => {
     simulation: 'review-purchase',
   }));
 
-  const iframe = page.frameLocator('iframe');
+  const iframe = page.frameLocator('iframe').frameLocator('iframe');
   await iframe.locator('button:has-text("Place Order")').click();
 
   // The serverTools mock matches { confirmed: true } and returns success
@@ -145,7 +145,7 @@ test('should show cancel when user rejects', async ({ page }) => {
     simulation: 'review-purchase',
   }));
 
-  const iframe = page.frameLocator('iframe');
+  const iframe = page.frameLocator('iframe').frameLocator('iframe');
   await iframe.locator('button:has-text("Cancel")').click();
 
   // The serverTools mock matches { confirmed: false } and returns cancelled
@@ -311,12 +311,6 @@ You can also run live tests as part of the full validation pipeline:
 sunpeak validate --live
 ```
 
-### Environment Variables
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SUNPEAK_LIVE_BROWSER` | auto-detected | Browser to import session from (`chrome`, `arc`, `brave`, `edge`) |
-
 ### Writing Live Tests
 
 Live test specs live in `tests/live/` — one file per resource, just like e2e tests. Import `test` and `expect` from `sunpeak/test` to get a `live` fixture that handles login, MCP server refresh, and host-specific message formatting automatically.
@@ -360,7 +354,7 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
 
 <AccordionGroup>
   <Accordion title="'Not logged into ChatGPT' error">
-    On first run, a browser window opens for you to log in to ChatGPT. The session is saved to `tests/live/.auth/chatgpt.json` and reused for 24 hours. If the error persists, delete the `.auth/` directory and run `pnpm test:live` again to re-login.
+    On first run, a browser window opens for you to log in to ChatGPT. The session is saved to `.auth/chatgpt.json` and reused for 24 hours. If the error persists, delete the `.auth/` directory and run `pnpm test:live` again to re-login.
   </Accordion>
 
   <Accordion title="Tunnel not reachable">

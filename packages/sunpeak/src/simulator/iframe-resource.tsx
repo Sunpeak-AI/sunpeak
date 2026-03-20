@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
-import { createMockOpenAIRuntime, MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
+import { MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
+import { generateSandboxProxyHtml } from './sandbox-proxy';
 import type { McpUiHostContext, McpUiResourcePermissions } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
@@ -194,12 +195,8 @@ function generateCSP(csp: ResourceCSP | undefined, scriptSrc: string): string {
 
 /**
  * Paint fence responder script body.
- * Allows the host to wait for this iframe to process pending messages and
- * commit DOM updates before revealing content during display mode transitions.
- *
- * Used in two places:
- * - Embedded in the generated HTML for scriptSrc mode
- * - Injected into src-mode iframes after load via contentDocument
+ * Embedded in the generated HTML for scriptSrc mode. The sandbox proxy
+ * handles fence injection for src-mode iframes.
  */
 const PAINT_FENCE_SCRIPT = `window.addEventListener("message",function(e){
 if(e.data&&e.data.method==="sunpeak/fence"){
@@ -207,60 +204,6 @@ var fid=e.data.params&&e.data.params.fenceId;
 requestAnimationFrame(function(){
 e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:fid}},"*");
 });}});`;
-
-/**
- * Inject the paint fence responder into an iframe's document.
- * For src-mode iframes the host doesn't control the HTML, so we inject the
- * script after load. This requires same-origin access (sandbox must include
- * allow-same-origin). Silently skipped for cross-origin iframes.
- */
-function injectPaintFence(iframe: HTMLIFrameElement): void {
-  try {
-    const doc = iframe.contentDocument;
-    if (!doc || doc.querySelector('script[data-sunpeak-fence]')) return;
-    const script = doc.createElement('script');
-    script.setAttribute('data-sunpeak-fence', '');
-    script.textContent = PAINT_FENCE_SCRIPT;
-    doc.head.appendChild(script);
-  } catch {
-    // Cross-origin iframe — contentDocument access blocked
-  }
-}
-
-/**
- * Inject a background-color rule into an iframe's document.
- * For src-mode iframes (Vite dev) the simulator doesn't control the HTML,
- * so we inject the rule after load. The scriptSrc-mode generated HTML
- * already includes this rule in its <style> tag.
- *
- * Sets color-scheme on the document so the CSS system color `Canvas`
- * resolves to the correct dark/light default, preventing white flash.
- */
-function injectBackgroundRule(
-  iframe: HTMLIFrameElement,
-  theme?: string,
-  styleVars?: Record<string, string>
-): void {
-  try {
-    const doc = iframe.contentDocument;
-    if (!doc || doc.querySelector('style[data-sunpeak-bg]')) return;
-    // Set color-scheme so Canvas resolves to the correct system color
-    doc.documentElement.style.colorScheme = theme || 'dark';
-    // Inject host style variables so --color-background-primary resolves
-    // immediately, before the MCP handshake delivers them via the SDK.
-    if (styleVars) {
-      for (const [key, value] of Object.entries(styleVars)) {
-        if (value) doc.documentElement.style.setProperty(key, value);
-      }
-    }
-    const style = doc.createElement('style');
-    style.setAttribute('data-sunpeak-bg', '');
-    style.textContent = 'html { background-color: var(--color-background-primary, Canvas); }';
-    doc.head.appendChild(style);
-  } catch {
-    // Cross-origin iframe — contentDocument access blocked
-  }
-}
 
 /**
  * Generates HTML wrapper for a script URL.
@@ -386,6 +329,13 @@ interface IframeResourceProps {
    * and isChatGPT() will work inside the iframe.
    */
   injectOpenAIRuntime?: boolean;
+  /**
+   * Base URL of the separate-origin sandbox server (e.g., "http://localhost:24680").
+   * When provided, the outer iframe loads from this server instead of using srcdoc,
+   * giving real cross-origin isolation that matches production hosts like ChatGPT.
+   * Falls back to srcdoc when not provided (unit tests, embedded usage).
+   */
+  sandboxUrl?: string;
 }
 
 /**
@@ -416,12 +366,29 @@ export function IframeResource({
   onDisplayModeReady,
   debugInjectState,
   injectOpenAIRuntime,
+  sandboxUrl,
 }: IframeResourceProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
 
   // Determine which URL to validate
   const resourceUrl = src ?? scriptSrc;
+
+  // Refs for resource data so the stable onSandboxReady callback can access current values
+  // Refs for values that the stable onSandboxReady callback needs to access.
+  // Without refs, the callback would capture stale values from the initial render.
+  const srcRef = useRef(src);
+  srcRef.current = src;
+  const scriptSrcRef = useRef(scriptSrc);
+  scriptSrcRef.current = scriptSrc;
+  const cspRef = useRef(csp);
+  cspRef.current = csp;
+  const hostContextRef = useRef(hostContext);
+  hostContextRef.current = hostContext;
+  const injectOpenAIRuntimeRef = useRef(injectOpenAIRuntime);
+  injectOpenAIRuntimeRef.current = injectOpenAIRuntime;
+  const permissionsRef = useRef(permissions);
+  permissionsRef.current = permissions;
 
   // Track whether we've received an initial size report
   const hasReceivedSizeRef = useRef(false);
@@ -450,12 +417,105 @@ export function IframeResource({
           // fixed container — auto-sizing would create a feedback loop with
           // viewport-relative units like dvh. PIP and inline use content-driven sizing.
           if (displayModeRef.current === 'fullscreen') return;
-          if (iframeRef.current && params.height != null) {
+          const iframe = iframeRef.current;
+          if (!iframe) return;
+
+          // Border-box compensation: if the iframe has borders, add their
+          // width/height so the content area matches the reported size.
+          // Pattern from ext-apps basic-host reference implementation.
+          const style = getComputedStyle(iframe);
+          const isBorderBox = style.boxSizing === 'border-box';
+
+          const from: Record<string, string> = {};
+          const to: Record<string, string> = {};
+
+          if (params.width != null) {
+            let w = params.width;
+            if (isBorderBox) {
+              w += parseFloat(style.borderLeftWidth) + parseFloat(style.borderRightWidth);
+            }
+            // Use min-width with min() to allow responsive growing while
+            // respecting the content's minimum width.
+            from.minWidth = `${iframe.offsetWidth}px`;
+            iframe.style.minWidth = `min(${w}px, 100%)`;
+            to.minWidth = `min(${w}px, 100%)`;
+          }
+          if (params.height != null) {
             hasReceivedSizeRef.current = true;
-            iframeRef.current.style.height = `${params.height}px`;
+            let h = params.height;
+            if (isBorderBox) {
+              h += parseFloat(style.borderTopWidth) + parseFloat(style.borderBottomWidth);
+            }
+            from.height = `${iframe.offsetHeight}px`;
+            iframe.style.height = `${h}px`;
+            to.height = `${h}px`;
+          }
+
+          // Smooth animated transition for size changes.
+          if (Object.keys(from).length > 0) {
+            iframe.animate([from, to], { duration: 300, easing: 'ease-out' });
           }
         },
         onDisplayModeReady: (mode) => onDisplayModeReady?.(mode),
+        onSandboxReady: () => {
+          // The sandbox proxy is ready. Deliver the app content.
+          const currentSrc = srcRef.current;
+          const currentScriptSrc = scriptSrcRef.current;
+          const currentHost = hostRef.current;
+          if (!currentHost) return;
+
+          if (currentScriptSrc) {
+            // scriptSrc mode (prod): use the official sandbox-resource-ready protocol.
+            // Generate the full app HTML and send it to the proxy.
+            const absoluteScriptSrc = currentScriptSrc.startsWith('/')
+              ? `${window.location.origin}${currentScriptSrc}`
+              : currentScriptSrc;
+            const cspPolicy = generateCSP(cspRef.current, absoluteScriptSrc);
+            const theme = hostContextRef.current?.theme ?? 'dark';
+            const platformScriptStr = injectOpenAIRuntimeRef.current
+              ? MOCK_OPENAI_RUNTIME_SCRIPT
+              : undefined;
+            const appHtml = generateScriptHtml(
+              absoluteScriptSrc,
+              theme,
+              cspPolicy,
+              platformScriptStr
+            );
+
+            currentHost.sendSandboxResourceReady({
+              html: appHtml,
+              sandbox:
+                'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox',
+            });
+
+            // Fade in the outer iframe
+            if (iframeRef.current) {
+              iframeRef.current.style.opacity = '1';
+              iframeRef.current.style.transition = 'opacity 100ms';
+            }
+          } else if (currentSrc) {
+            // src mode (dev): send the URL to the proxy for inner iframe src loading.
+            // This is a simulator-specific extension — the proxy creates an inner iframe
+            // with src pointing to the Vite dev server, preserving HMR.
+            //
+            // When using a separate-origin sandbox server, the src must be absolute
+            // (relative paths would resolve against the sandbox origin, not the Vite server).
+            const absoluteSrc = currentSrc.startsWith('/')
+              ? `${window.location.origin}${currentSrc}`
+              : currentSrc;
+            const allowAttr = buildIframeAllow(permissionsRef.current);
+            currentHost.sendRawMessage({
+              jsonrpc: '2.0',
+              method: 'sunpeak/sandbox-load-src',
+              params: {
+                src: absoluteSrc,
+                allow: allowAttr,
+                theme: hostContextRef.current?.theme,
+                styleVars: hostContextRef.current?.styles?.variables,
+              },
+            });
+          }
+        },
       }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [] // Stable - create once
@@ -477,36 +537,14 @@ export function IframeResource({
     [host]
   );
 
-  // After iframe content loads, inject the paint fence responder for src-mode
-  // iframes (scriptSrc mode already embeds it in the generated HTML).
-  // Tool data is NOT sent here — McpAppHost queues pending data and flushes
-  // it automatically when the app initializes.
+  // The outer iframe loads the sandbox proxy HTML. Show it immediately since
+  // it's just the proxy shell. The proxy handles inner iframe creation and content.
   const handleLoad = useCallback(() => {
-    if (src && iframeRef.current) {
-      injectPaintFence(iframeRef.current);
-      injectBackgroundRule(
-        iframeRef.current,
-        hostContext?.theme,
-        hostContext?.styles?.variables as Record<string, string> | undefined
-      );
-    }
-    // Inject mock ChatGPT runtime for src-mode iframes after page load.
-    // For srcdoc mode this is handled by an inline script in the generated HTML.
-    if (injectOpenAIRuntime && iframeRef.current?.contentWindow) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (iframeRef.current.contentWindow as any).openai = createMockOpenAIRuntime();
-      } catch {
-        // Cross-origin iframe — contentWindow access blocked
-      }
-    }
-    // Fade in via direct DOM update — avoids a React state update from an
-    // async iframe load event (which triggers act() warnings in tests).
     if (iframeRef.current) {
       iframeRef.current.style.opacity = '1';
       iframeRef.current.style.transition = 'opacity 100ms';
     }
-  }, [src, injectOpenAIRuntime, hostContext?.theme, hostContext?.styles]);
+  }, []);
 
   // Sync mutable host options (e.g. onCallTool) into the existing host
   // instance when they change, without recreating the connection.
@@ -583,25 +621,25 @@ export function IframeResource({
     ? { border: '1px solid var(--color-border-primary, #e5e7eb)' }
     : { border: 'none' };
 
-  // For scriptSrc mode, generate HTML with srcdoc (must be above early return to satisfy rules-of-hooks)
-  const htmlContent = useMemo(() => {
-    if (!scriptSrc || !isValidUrl) {
-      if (scriptSrc) {
-        console.error('[IframeResource] Script source not allowed:', scriptSrc);
-      }
-      return `<!DOCTYPE html><html><body><h1>Error</h1><p>Script source not allowed.</p></body></html>`;
-    }
+  // Build sandbox proxy content. When a separate-origin sandbox server is available,
+  // use its URL for real cross-origin isolation (matching production hosts).
+  // Otherwise fall back to srcdoc with the proxy HTML (for unit tests, embedded use).
+  // Build sandbox proxy URL/HTML. These must NOT depend on theme — changing
+  // theme should not reload the iframe (which would destroy app state and
+  // show a loading flash). Theme is propagated to the app via hostContext
+  // through PostMessage, not via iframe src/srcdoc.
+  const sandboxSrc = useMemo(() => {
+    if (!sandboxUrl) return undefined;
+    const url = new URL('/proxy', sandboxUrl);
+    if (injectOpenAIRuntime) url.searchParams.set('platform', 'chatgpt');
+    return url.toString();
+  }, [sandboxUrl, injectOpenAIRuntime]);
 
-    // Convert relative paths to absolute (srcdoc iframes can't resolve relative paths)
-    const absoluteScriptSrc = scriptSrc.startsWith('/')
-      ? `${window.location.origin}${scriptSrc}`
-      : scriptSrc;
-
-    const cspPolicy = generateCSP(csp, absoluteScriptSrc);
-    const theme = hostContext?.theme ?? 'dark';
+  const proxyHtml = useMemo(() => {
+    if (sandboxSrc) return undefined;
     const platformScript = injectOpenAIRuntime ? MOCK_OPENAI_RUNTIME_SCRIPT : undefined;
-    return generateScriptHtml(absoluteScriptSrc, theme, cspPolicy, platformScript);
-  }, [scriptSrc, isValidUrl, csp, hostContext?.theme, injectOpenAIRuntime]);
+    return generateSandboxProxyHtml(platformScript);
+  }, [sandboxSrc, injectOpenAIRuntime]);
 
   const iframeStyle: React.CSSProperties = {
     ...borderStyle,
@@ -610,9 +648,9 @@ export function IframeResource({
     // Start hidden; handleLoad fades in via direct DOM update
     opacity: 0,
     width: '100%',
-    // Start with minHeight to prevent collapse, but allow auto-resize to set actual height.
-    // Don't use height: 100% as it requires explicit height in parent chain.
-    minHeight: '200px',
+    // In fullscreen, fill the container immediately. In other modes, use
+    // minHeight to prevent collapse while waiting for the app to report size.
+    ...(hostContext?.displayMode === 'fullscreen' ? { height: '100%' } : { minHeight: '200px' }),
     ...style,
   };
 
@@ -639,43 +677,41 @@ export function IframeResource({
     const w = 'width' in dims ? dims.width : undefined;
     const mw = 'maxWidth' in dims ? dims.maxWidth : undefined;
     if (h != null) {
-      wrapperStyle.maxHeight = h;
+      wrapperStyle.height = h;
       wrapperStyle.overflow = 'hidden';
     }
     if (mh != null) {
       wrapperStyle.maxHeight = mh;
       wrapperStyle.overflow = 'hidden';
     }
-    if (w != null) wrapperStyle.maxWidth = w;
+    if (w != null) wrapperStyle.width = w;
     if (mw != null) wrapperStyle.maxWidth = mw;
   }
 
-  const iframeAttrs = {
-    ref: setIframeRef,
-    onLoad: handleLoad,
-    style: iframeStyle,
-    title: 'Resource Preview' as const,
-    sandbox:
-      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox' as const,
-    allow: allowAttribute,
-  };
-
-  // For src mode, use iframe src directly
-  if (src) {
-    if (!isValidUrl) {
-      console.error('[IframeResource] URL not allowed:', src);
-      return <div style={{ color: 'red', padding: 20 }}>Error: URL not allowed: {src}</div>;
-    }
-    return (
-      <div className={className} style={wrapperStyle}>
-        <iframe {...iframeAttrs} src={src} />
-      </div>
-    );
+  // Validate URL for src mode
+  if (src && !isValidUrl) {
+    console.error('[IframeResource] URL not allowed:', src);
+    return <div style={{ color: 'red', padding: 20 }}>Error: URL not allowed: {src}</div>;
+  }
+  if (scriptSrc && !isValidUrl) {
+    console.error('[IframeResource] Script source not allowed:', scriptSrc);
+    return <div style={{ color: 'red', padding: 20 }}>Error: Script source not allowed.</div>;
   }
 
+  // Both src and scriptSrc modes use the sandbox proxy. The proxy creates
+  // the inner iframe after receiving content via onSandboxReady.
   return (
     <div className={className} style={wrapperStyle}>
-      <iframe {...iframeAttrs} srcDoc={htmlContent} />
+      <iframe
+        ref={setIframeRef}
+        onLoad={handleLoad}
+        style={iframeStyle}
+        title="Resource Preview"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
+        allow={allowAttribute}
+        src={sandboxSrc ?? undefined}
+        srcDoc={sandboxSrc ? undefined : proxyHtml}
+      />
     </div>
   );
 }

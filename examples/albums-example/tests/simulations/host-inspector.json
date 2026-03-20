@@ -1,0 +1,13 @@
+{
+  "tool": "host-inspector",
+  "userMessage": "Show me everything about this host environment",
+  "toolInput": {
+    "label": "Inspector Session"
+  },
+  "toolResult": {
+    "structuredContent": {
+      "label": "Inspector Session",
+      "timestamp": "2025-01-01T00:00:00.000Z"
+    }
+  }
+}

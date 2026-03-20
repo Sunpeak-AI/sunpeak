@@ -1,25 +1,10 @@
-import { existsSync, readdirSync } from 'fs';
-import { resolve } from 'path';
-import { execSync } from 'child_process';
-
 /**
- * Playwright global setup: ensures dist/ is built for prodResources e2e tests.
- * Skips the build if dist/ already contains resource HTML files.
+ * Playwright global setup.
+ *
+ * The webServer (pnpm dev) handles building resources via its build watcher.
+ * No separate build step needed here — the dev server's initial build creates
+ * dist/ files before serving the first request.
  */
 export default function globalSetup() {
-  const distDir = resolve('dist');
-
-  // Check if dist/ has at least one resource HTML file
-  if (existsSync(distDir)) {
-    const entries = readdirSync(distDir);
-    const hasResourceHtml = entries.some((entry) => {
-      return existsSync(resolve(distDir, entry, `${entry}.html`));
-    });
-    if (hasResourceHtml) {
-      return; // Already built
-    }
-  }
-
-  console.log('Building resources for prodResources e2e tests...');
-  execSync('pnpm sunpeak build', { stdio: 'inherit' });
+  // Nothing to do — the webServer handles everything.
 }

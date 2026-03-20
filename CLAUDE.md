@@ -38,16 +38,19 @@ The simulator supports multiple host platforms via a **HostShell** abstraction. 
 
 Switching hosts in the sidebar changes the conversation chrome, theming, and reported host info/capabilities. The sidebar controls, iframe infrastructure, and state management are shared.
 
-### Rendering Flow
+### Rendering Flow (Double-Iframe Sandbox Architecture)
 1. `Simulator` (host page) → `HostShell.Conversation` → `IframeResource`
-2. `IframeResource` creates an `<iframe>` with either:
-   - `src` prop (dev mode: HTML page URL with Vite HMR)
-   - `scriptSrc` prop → `srcdoc` (prod mode: generated HTML wrapping a JS bundle)
-3. `McpAppHost` wraps the SDK's `AppBridge` for host-side communication via PostMessage
-4. Inside the iframe, the resource component uses `useApp()` which connects via `PostMessageTransport` to `window.parent`
+2. `IframeResource` creates an outer `<iframe>` containing a **sandbox proxy** that relays PostMessage between the host and an inner iframe holding the actual app. This two-level architecture matches how production hosts (ChatGPT, Claude) isolate app iframes on a separate origin (e.g., `web-sandbox.oaiusercontent.com`).
+   - **Outer iframe**: Loads the sandbox proxy from a separate-origin server (port 24680) or via `srcdoc` (fallback for unit tests).
+   - **Inner iframe**: Created by the proxy, loads the app HTML via `src` (dev: Vite HMR URL) or `document.write()` (prod: generated HTML).
+3. `McpAppHost` wraps the SDK's `AppBridge` for host-side communication. Messages flow: host ↔ outer iframe (proxy) ↔ inner iframe (app), all via PostMessage relay.
+4. Inside the inner iframe, the resource component uses `useApp()` which connects via `PostMessageTransport` to `window.parent` (the proxy), which relays to the host.
 
 ### E2E Tests
-Tests use `page.frameLocator('iframe')` to access resource content inside iframes. Elements on the simulator chrome (header, `#root`) use `page.locator()` directly. Console error tests filter expected MCP handshake errors.
+Tests use `page.frameLocator('iframe').frameLocator('iframe')` to access resource content inside the double-iframe. Elements on the simulator chrome (header, `#root`) use `page.locator()` directly. Console error tests filter expected MCP handshake errors.
+
+### Live Tests (`pnpm test:live`)
+Automated tests against real ChatGPT using Playwright. Uses the same `ChatGPTPage` class for selectors, message sending, and iframe handling. Auth flow: saved session (<24h) → manual login in the opened browser window. The `global-setup.mjs` handles auth + MCP server refresh in the same browser session (Cloudflare's HttpOnly cookies can't survive storageState export, so refresh must happen before the browser closes).
 
 ## Package Structure
 
@@ -60,7 +63,8 @@ packages/sunpeak/
 │   │   ├── use-simulator-state.ts  # All simulator state management
 │   │   ├── hosts.ts          # HostShell interface + registry
 │   │   ├── mcp-app-host.ts   # MCP Apps bridge wrapper (generic, supports streaming partials)
-│   │   ├── iframe-resource.tsx  # Iframe rendering + CSP (generic)
+│   │   ├── iframe-resource.tsx  # Iframe rendering + double-iframe sandbox proxy
+│   │   ├── sandbox-proxy.ts    # Sandbox proxy HTML generation (srcdoc fallback)
 │   │   ├── simple-sidebar.tsx   # Dev control panel
 │   │   └── theme-provider.tsx   # Pluggable theme provider
 │   ├── chatgpt/              # ChatGPT host shell
@@ -78,10 +82,10 @@ packages/sunpeak/
 │   └── cli/                  # CLI commands
 ├── template/                 # Scaffolded app template (also a workspace package)
 │   ├── .sunpeak/             # dev.tsx (simulator bootstrap), resource-loader.tsx (iframe loader)
-│   ├── src/resources/        # Example resource components (albums, carousel, map, review)
+│   ├── src/resources/        # Example resource components (albums, carousel, map, review, host-inspector)
 │   ├── src/tools/            # Tool files with handlers and metadata
 │   ├── src/server.ts         # Optional server entry (auth, config)
-│   └── tests/                # Unit tests, E2E tests, simulations
+│   └── tests/                # Unit tests, E2E tests, simulations, live tests
 └── scripts/
     ├── validate.mjs           # Full validation pipeline
     └── generate-examples.mjs  # Generate examples/ from template resources
@@ -143,6 +147,7 @@ interface HostShell {
   applyTheme: (theme: 'light' | 'dark') => void;
   hostInfo: { name: string; version: string };
   hostCapabilities: McpUiHostCapabilities;
+  userAgent?: string;                      // e.g. 'chatgpt', 'claude'
 }
 ```
 
@@ -153,8 +158,9 @@ The `sunpeak dev` command runs a multi-server architecture:
 1. **loaderServer** — A Vite server in middleware mode (`hmr: false`) used solely for `ssrLoadModule()` to dynamically import tool files and discover simulations. Must stay alive for the duration of the dev session (Vite 7+ invalidates loaded modules when the server closes).
 2. **mcpViteServer** — A Vite dev server that serves the simulator UI with HMR on a non-default port (`hmr: { port: 24679 }`) to avoid conflicts with the loader.
 3. **MCP stdio server** — A child process (`sunpeak start`) for tool execution.
+4. **sandboxServer** — A minimal HTTP server on a separate port (default 24680) that serves the sandbox proxy HTML. This provides real cross-origin isolation for the simulator's double-iframe architecture, matching how production hosts (ChatGPT, Claude) run app iframes on a separate sandbox origin (e.g., `web-sandbox.oaiusercontent.com`). The sandbox server is local-dev-only — it is NOT tunneled and does not affect production or CI/CD. Its URL is injected into the Simulator via `__SUNPEAK_SANDBOX_URL__` Vite define.
 
-Port management: The loaderServer disables HMR entirely. The mcpViteServer uses port 24679 for its WebSocket. The main dev server listens on the user-facing port (default 5173).
+Port management: The loaderServer disables HMR entirely. The mcpViteServer uses port 24679 for its WebSocket. The sandboxServer uses port 24680 (configurable via `SUNPEAK_SANDBOX_PORT`). The main dev server listens on the user-facing port (default 3000). The MCP server prefers port 8000 (users typically have an ngrok tunnel on this port). All ports use `getPort()` to find free alternatives if the preferred port is taken, allowing multiple instances to run simultaneously.
 
 ### `--prod-tools` and `--prod-resources` flags
 
@@ -167,7 +173,7 @@ Two orthogonal flags that toggle real tool handlers and production resource bund
 | `--prod-resources` | Built | Mocked | CI/E2E, catch build regressions |
 | `--prod-tools --prod-resources` | Built | Real handlers | Final smoke test |
 
-**Implementation**: The dev server always registers a Vite middleware plugin (`POST /__sunpeak/call-tool`) and loads all tool handlers, so the simulator's **Prod Tools** checkbox can toggle between mock and real tool execution at runtime. `--prod-tools` sets the initial state of the Prod Tools checkbox to on (`__SUNPEAK_PROD_TOOLS__` Vite define → `defaultProdTools` prop). Both **Prod Tools** and **Prod Resources** are runtime-toggleable checkboxes in the simulator sidebar. `--prod-resources` runs `sunpeak build` before starting and sets the initial state of the Prod Resources checkbox to on (`__SUNPEAK_PROD_RESOURCES__` define → `defaultProdResources` prop). The dist-serving Vite plugin (`/dist/` middleware) is always registered so Prod Resources mode can be toggled at runtime. When Prod Resources is on, the Simulator computes `/dist/{resourceName}/{resourceName}.html` from the simulation's resource metadata and uses it as the iframe `src` instead of the HMR dev URL. The `Simulator` component accepts `onCallTool`, `defaultProdTools`, `defaultProdResources`, and `hideSimulatorModes` props.
+**Implementation**: The dev server always registers a Vite middleware plugin (`POST /__sunpeak/call-tool`) and loads all tool handlers, so the simulator's **Prod Tools** checkbox can toggle between mock and real tool execution at runtime. `--prod-tools` sets the initial state of the Prod Tools checkbox to on (`__SUNPEAK_PROD_TOOLS__` Vite define → `defaultProdTools` prop). Both **Prod Tools** and **Prod Resources** are runtime-toggleable checkboxes in the simulator sidebar. `--prod-resources` runs `sunpeak build` before starting and sets the initial state of the Prod Resources checkbox to on (`__SUNPEAK_PROD_RESOURCES__` define → `defaultProdResources` prop). The dist-serving Vite plugin (`/dist/` middleware) is always registered so Prod Resources mode can be toggled at runtime. When Prod Resources is on, the Simulator computes `/dist/{resourceName}/{resourceName}.html` from the simulation's resource metadata and uses it as the iframe `src` instead of the HMR dev URL. The `Simulator` component accepts `onCallTool`, `defaultProdTools`, `defaultProdResources`, `hideSimulatorModes`, and `sandboxUrl` props.
 
 ## Documentation (`docs/`)
 
@@ -219,6 +225,23 @@ This is the upstream SDK that sunpeak wraps. Upgrades often introduce new `App` 
 The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export all types, schemas, and constants. To discover available exports, check:
 - `node_modules/@modelcontextprotocol/ext-apps/dist/types.d.ts` — All type definitions
 - `node_modules/@modelcontextprotocol/ext-apps/dist/app.d.ts` — `App` class methods
+
+## Host Inspector & Sync Workflow
+
+The `host-inspector` resource (template-only, excluded from `sunpeak new`) captures everything about the host runtime environment. Used to sync the simulator with real ChatGPT/Claude behavior.
+
+**Extraction workflow** (see `skills/sync-host-styles/SKILL.md` for full details):
+1. Start dev server: `SUNPEAK_LIVE_TEST=1 pnpm dev -- --prod-resources`
+2. Run extraction: `node tests/live/extract-host-data.mjs`
+3. Output: `.context/chatgpt-host-data.json` with both themes, responsive widths, display mode snapshots
+4. Compare against simulator config and update `chatgpt-host.ts` / `chatgpt-conversation.tsx`
+
+**ChatGPT-specific values** (verified 2026-03-19):
+- `hostVersion: { name: "chatgpt", version: "0.0.1" }`
+- `userAgent: "chatgpt"`
+- Conversation max-width: `max-w-[40rem]` default, `max-w-[48rem]` at 1440px+
+- `containerDimensions` per display mode: inline sends `{ maxWidth }`, fullscreen sends `{ height, width }`, PiP sends `{ height, maxWidth }`
+- No `downloadFile` capability, sandbox has `microphone` permission
 
 ## Conventions
 - pnpm workspace with packages at `packages/*` and `packages/sunpeak/template`

@@ -57,6 +57,7 @@ registerHostShell({
   applyTheme: applyClaudeTheme,
   hostInfo: CLAUDE_HOST_INFO,
   hostCapabilities: CLAUDE_HOST_CAPABILITIES,
+  userAgent: 'claude',
   styleVariables: CLAUDE_STYLE_VARIABLES,
   pageStyles: {
     '--sim-bg-sidebar': 'light-dark(#f9f8f3, #252523)',

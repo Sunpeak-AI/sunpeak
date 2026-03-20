@@ -89,7 +89,7 @@ export function createLiveConfig(hostOptions, options = {}) {
       },
     ],
     webServer: {
-      command: `SUNPEAK_LIVE_TEST=1 pnpm dev -- --prod-resources --port ${vitePort}`,
+      command: `SUNPEAK_LIVE_TEST=1 SUNPEAK_SANDBOX_PORT=${getPortSync(24680)} pnpm dev -- --prod-resources --port ${vitePort}`,
       url: `http://localhost:${vitePort}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

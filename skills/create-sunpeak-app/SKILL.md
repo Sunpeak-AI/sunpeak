@@ -660,11 +660,13 @@ The browser opens visibly — headless mode is blocked by chatgpt.com's bot dete
 
 The live test runner imports your browser session, starts `sunpeak dev --prod-resources`, and refreshes the MCP server connection in ChatGPT once in globalSetup before all workers. Tests run in parallel — each test gets its own chat window.
 
+**If auth fails:** If tests report "Not logged into ChatGPT", delete `.auth/` and re-run `pnpm test:live` — a browser window will open for you to log in again.
+
 ## Common Mistakes
 
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.
 2. **Missing `<SafeArea>`** — Always wrap content in `<SafeArea>` to respect host safe area insets.
-3. **Wrong Playwright locator** — Use `page.frameLocator('iframe').locator(...)` for resource content, never `page.locator(...)`.
+3. **Wrong Playwright locator** — Use `page.frameLocator('iframe').frameLocator('iframe').locator(...)` for resource content (double-iframe sandbox architecture), never `page.locator(...)`.
 4. **Hardcoded colors** — Use MCP standard CSS variables via Tailwind arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`) not raw colors.
 5. **Simulation tool mismatch** — The `"tool"` field in simulation JSON must match a tool filename in `src/tools/` (e.g. `"tool": "show-weather"` matches `src/tools/show-weather.ts`).
 6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).

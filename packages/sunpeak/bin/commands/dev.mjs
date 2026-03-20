@@ -7,6 +7,7 @@ import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 import { spawn } from 'child_process';
 import { getPort } from '../lib/get-port.mjs';
+import { startSandboxServer } from '../lib/sandbox-server.mjs';
 
 /**
  * Import a module from the project's node_modules using ESM resolution
@@ -283,15 +284,39 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     },
   });
 
+  // Start the separate-origin sandbox server for cross-origin iframe isolation.
+  // This matches how production hosts (ChatGPT, Claude) run app iframes on a
+  // separate sandbox origin (e.g., web-sandbox.oaiusercontent.com).
+  const sandboxPort = Number(process.env.SUNPEAK_SANDBOX_PORT || 24680);
+  const sandbox = await startSandboxServer({ preferredPort: sandboxPort });
+
   // Create and start Vite dev server programmatically
   const server = await createServer({
     root: projectRoot,
+    optimizeDeps: {
+      // The simulator UI entry (.sunpeak/dev.tsx) imports sunpeak/simulator
+      // which pulls in React and the simulator components. Pre-include the
+      // dev.tsx entry so its transitive deps are discovered at startup.
+      entries: ['.sunpeak/dev.tsx'],
+    },
     plugins: [
       react(),
       tailwindcss(),
       sunpeakFaviconPlugin(),
       sunpeakCallToolPlugin(),
       sunpeakDistPlugin(),
+      // Inject paint fence responder into all HTML pages served by Vite.
+      // When resources are loaded in the cross-origin sandbox proxy's inner
+      // iframe, the proxy can't inject scripts (cross-origin). This plugin
+      // ensures the fence responder is always present so display mode
+      // transitions resolve deterministically.
+      {
+        name: 'sunpeak-fence-responder',
+        transformIndexHtml(html) {
+          const fenceScript = `<script>window.addEventListener("message",function(e){if(e.data&&e.data.method==="sunpeak/fence"){var fid=e.data.params&&e.data.params.fenceId;requestAnimationFrame(function(){e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:fid}},"*");});}});</script>`;
+          return html.replace('</head>', fenceScript + '</head>');
+        },
+      },
       // Health endpoint for Playwright webServer readiness check
       {
         name: 'sunpeak-health',
@@ -306,6 +331,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     define: {
       '__SUNPEAK_PROD_TOOLS__': JSON.stringify(isProdTools),
       '__SUNPEAK_PROD_RESOURCES__': JSON.stringify(isProdResources),
+      '__SUNPEAK_SANDBOX_URL__': JSON.stringify(sandbox.url),
     },
     resolve: {
       alias: {
@@ -571,6 +597,15 @@ if (import.meta.hot) {
         },
       },
       optimizeDeps: {
+        // Pre-scan resource source files so ALL their dependencies are
+        // discovered and pre-bundled at startup. Without this, the first
+        // resource load discovers new deps (e.g., mapbox-gl, embla-carousel),
+        // triggers re-optimization, and reloads all connections — killing
+        // any active ChatGPT/Claude iframe connections with ECONNRESET.
+        entries: [
+          'src/resources/**/*.{ts,tsx}',
+          'src/tools/**/*.ts',
+        ],
         include: ['react', 'react-dom/client'],
       },
       appType: 'custom',
@@ -601,6 +636,7 @@ if (import.meta.hot) {
       await mcpViteServer.close();
       await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
+      await sandbox.close();
       await server.close();
       process.exit(0);
     });
@@ -609,6 +645,7 @@ if (import.meta.hot) {
       await mcpViteServer.close();
       await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
+      await sandbox.close();
       await server.close();
       process.exit(0);
     });
@@ -617,6 +654,7 @@ if (import.meta.hot) {
     process.on('SIGINT', async () => {
       await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
+      await sandbox.close();
       await server.close();
       process.exit(0);
     });
@@ -624,6 +662,7 @@ if (import.meta.hot) {
     process.on('SIGTERM', async () => {
       await toolLoaderServer.close();
       if (loaderServer) await loaderServer.close();
+      await sandbox.close();
       await server.close();
       process.exit(0);
     });

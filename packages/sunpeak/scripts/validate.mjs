@@ -264,12 +264,15 @@ async function testExample(resource, index) {
   const exampleName = `${resource}-example`;
   const exampleDir = join(EXAMPLES_DIR, exampleName);
 
-  // Find available ports for parallel execution
+  // Find available ports for parallel execution.
+  // Each parallel example gets its own preferred port range to minimize contention.
   const testPort = await getPort(6776 + index);
-  const hmrPort = await getPort(24679 + index);
+  const hmrPort = await getPort(24679 + index * 2);
+  const sandboxPort = await getPort(24680 + index * 2);
   const env = {
     SUNPEAK_TEST_PORT: String(testPort),
     SUNPEAK_HMR_PORT: String(hmrPort),
+    SUNPEAK_SANDBOX_PORT: String(sandboxPort),
   };
 
   // Link local sunpeak

@@ -15,6 +15,7 @@ test-results
 playwright-report
 playwright/.cache
 .auth/
+.context/
 
 # Environment variables
 .env
