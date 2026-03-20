@@ -308,6 +308,20 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       sunpeakFaviconPlugin(),
       sunpeakCallToolPlugin(),
       sunpeakDistPlugin(),
+      // In workspace dev mode, inject internal resources into the resource glob
+      // so the Simulator discovers host-inspector and other internal resources.
+      ...(isTemplate ? [{
+        name: 'sunpeak-internal-resources',
+        transform(code, id) {
+          if (!id.endsWith('src/resources/index.ts')) return null;
+          // Add internal resource glob alongside the template glob
+          const internalGlob = `'../../../internal/resources/*/*.tsx'`;
+          return code.replace(
+            `['./*/*.tsx', '!./*/*.test.tsx']`,
+            `['./*/*.tsx', ${internalGlob}, '!./*/*.test.tsx']`
+          );
+        },
+      }] : []),
       // Inject paint fence responder into all HTML pages served by Vite.
       // When resources are loaded in the cross-origin sandbox proxy's inner
       // iframe, the proxy can't inject scripts (cross-origin). This plugin
@@ -485,10 +499,15 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       continue;
     }
 
-    // Determine source path for the resource (if it has a UI)
+    // Determine source path for the resource (if it has a UI).
+    // For resources inside projectRoot, use a root-relative path (e.g. /src/resources/albums/albums.tsx).
+    // For resources outside projectRoot (internal/), use an absolute path so
+    // Vite's virtual module import resolves correctly via /@fs/.
     const resourceDir = resourceKey ? resourceDirs.find((d) => d.key === resourceKey) : undefined;
     const srcPath = resourceDir
-      ? '/' + path.relative(projectRoot, resourceDir.resourcePath)
+      ? (resourceDir.resourcePath.startsWith(projectRoot + '/')
+          ? '/' + path.relative(projectRoot, resourceDir.resourcePath)
+          : resourceDir.resourcePath)
       : undefined;
 
     simulations.push({
