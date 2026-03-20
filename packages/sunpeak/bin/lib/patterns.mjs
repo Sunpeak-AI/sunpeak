@@ -22,7 +22,6 @@ export function discoverResources() {
   return readdirSync(resourcesDir, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .filter((entry) => existsSync(join(resourcesDir, entry.name, `${entry.name}.tsx`)))
-    .filter((entry) => !existsSync(join(resourcesDir, entry.name, '.internal')))
     .map((entry) => entry.name);
 }
 
