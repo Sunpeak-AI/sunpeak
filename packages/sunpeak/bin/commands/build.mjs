@@ -260,7 +260,6 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
               },
               rollupOptions: {
                 output: {
-                  inlineDynamicImports: true,
                   assetFileNames: 'style.css',
                 },
               },
