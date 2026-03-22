@@ -296,9 +296,11 @@ for (const host of hosts) {
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
         await expect(mapContainer).toBeVisible({ timeout: 10000 });
 
-        // Suggestion chips should be visible (contains "Open now", "Top rated", etc.)
+        // Suggestion chips should be present (contains "Open now", "Top rated", etc.)
+        // Use toBeAttached — Playwright's toBeVisible can false-negative inside
+        // double-iframes with overflow:hidden ancestors.
         const openNowChip = iframe.locator('button:has-text("Open now")');
-        await expect(openNowChip).toBeVisible({ timeout: 5000 });
+        await expect(openNowChip).toBeAttached({ timeout: 5000 });
       });
     });
   });

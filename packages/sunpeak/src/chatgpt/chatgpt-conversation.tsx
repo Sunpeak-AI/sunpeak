@@ -106,22 +106,19 @@ export function Conversation({
           style={{ maxWidth: containerWidth }}
         >
           <div
-            className="z-10 grid h-[3.25rem] grid-cols-[1fr_auto_1fr] border-b px-2 pointer-events-auto"
+            className="z-20 flex h-[3.25rem] items-center justify-between p-2 pointer-events-auto"
             style={{
-              borderColor: 'var(--color-border-primary)',
               backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
             }}
           >
-            <div className="flex items-center justify-start gap-3">
-              <button
-                onClick={handleClose}
-                aria-label="Close"
-                className="h-7 w-7 flex items-center justify-center rounded-md transition-colors hover:opacity-70"
-                type="button"
-              >
-                <CloseIcon />
-              </button>
-            </div>
+            <button
+              onClick={handleClose}
+              aria-label="Close"
+              className="h-7 w-7 flex items-center justify-center rounded-lg transition-colors hover:opacity-70"
+              type="button"
+            >
+              <CloseIcon />
+            </button>
             {isDesktop && (
               <div className="flex items-center justify-center text-base">{appName}</div>
             )}
@@ -130,14 +127,13 @@ export function Conversation({
           {/* Spacer - pointer events pass through to content below */}
           <div className="flex-1" />
           <footer className="relative">
-            {/* Backdrop blur gradient — matches inline input treatment */}
+            {/* Scroll fade mask — ChatGPT uses gradient mask, not backdrop blur */}
             <div
               className="absolute inset-x-0 bottom-0 h-full -z-10"
               style={{
                 maskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
                 WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
+                backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
               }}
             />
             <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
@@ -147,11 +143,13 @@ export function Conversation({
                   name="userInput"
                   disabled
                   placeholder="Message sunpeak.ai"
-                  className="w-full rounded-3xl px-5 py-3 pr-12 shadow-sm"
+                  className="w-full rounded-[28px] p-2.5 shadow-sm"
                   style={{
                     backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
                     color: 'var(--color-text-primary)',
-                    border: '1px solid var(--color-border-tertiary)',
+                    border: 'none',
+                    // @ts-expect-error -- corner-shape is a newer CSS property (squircle)
+                    cornerShape: 'superellipse',
                   }}
                 />
               </div>
@@ -193,10 +191,12 @@ export function Conversation({
                     >
                       <div className="flex w-full flex-col gap-1 empty:hidden items-end">
                         <div
-                          className="relative rounded-[18px] px-4 py-3 max-w-[70%]"
+                          className="relative rounded-[22px] px-4 py-2.5 leading-6 max-w-[70%]"
                           style={{
                             backgroundColor:
                               'var(--sim-bg-user-bubble, var(--color-background-tertiary))',
+                            // @ts-expect-error -- corner-shape is a newer CSS property (squircle)
+                            cornerShape: 'superellipse',
                           }}
                         >
                           <div className="whitespace-pre-wrap">{userMessage}</div>
@@ -262,7 +262,7 @@ export function Conversation({
                               : 'no-scrollbar relative mb-2 @w-sm/main:w-full mx-0 max-sm:-mx-[1rem] max-sm:w-[100cqw] max-sm:overflow-hidden overflow-visible'
                         }
                         style={{
-                          ...(isPip ? { maxHeight: '480px' } : {}),
+                          ...(isPip ? { maxHeight: 'calc(50dvh - 38px)' } : {}),
                           ...(isFullscreen ? { maxWidth: containerWidth } : {}),
                         }}
                       >
@@ -271,7 +271,7 @@ export function Conversation({
                           <button
                             key="pip-close"
                             onClick={handleClose}
-                            className="absolute -start-2 -top-1.5 z-10 rounded-full bg-[#3a3a3a] p-1.5 text-white shadow-[0px_0px_0px_1px_#fff3,0px_4px_12px_rgba(0,0,0,0.12)] hover:bg-[#6a6a6a]"
+                            className="absolute -start-2 md:-start-6 -top-1.5 z-10 rounded-full bg-[#3a3a3a] p-1.25 text-white shadow-[0px_0px_0px_1px_var(--color-border-primary),0px_4px_12px_rgba(0,0,0,0.12)] hover:bg-[#6a6a6a]"
                             aria-label="Close picture-in-picture"
                             type="button"
                           >
@@ -282,7 +282,7 @@ export function Conversation({
                           key="content"
                           className={
                             isPip
-                              ? 'relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_#fff3,0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4'
+                              ? 'relative overflow-hidden h-full rounded-2xl sm:rounded-3xl shadow-[0px_0px_0px_1px_var(--color-border-primary),0px_6px_20px_rgba(0,0,0,0.1)] md:-mx-4'
                               : 'relative overflow-hidden h-full'
                           }
                         >
@@ -317,14 +317,13 @@ export function Conversation({
               Hidden in fullscreen since fullscreen chrome has its own footer. */}
           {!isFullscreen && (
             <div className="sticky bottom-0 z-10 pointer-events-none">
-              {/* Backdrop blur gradient — fades from transparent to blurred */}
+              {/* Scroll fade mask — ChatGPT uses gradient mask, not backdrop blur */}
               <div
                 className="absolute inset-x-0 bottom-0 h-full -z-10"
                 style={{
                   maskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
                   WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 50%)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
+                  backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
                 }}
               />
               <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
