@@ -56,6 +56,6 @@ registerHostShell({
     '--sim-bg-sidebar': 'light-dark(#ffffff, #212121)',
     '--sim-bg-conversation': 'light-dark(#ffffff, #212121)',
     '--sim-bg-user-bubble': 'light-dark(rgba(233,233,233,0.5), rgba(50,50,50,0.85))',
-    '--sim-bg-reply-input': 'light-dark(#ffffff, #212121)',
+    '--sim-bg-reply-input': 'light-dark(#ffffff, #303030)',
   },
 });

@@ -8,7 +8,7 @@ interface SimpleSidebarProps {
   headerRight?: React.ReactNode;
 }
 
-const DEFAULT_SIDEBAR_WIDTH = 224; // w-56 = 14rem = 224px
+const DEFAULT_SIDEBAR_WIDTH = 260; // ChatGPT sidebar: 260px (extracted 2026-03-21)
 
 function ChevronRightIcon() {
   return (

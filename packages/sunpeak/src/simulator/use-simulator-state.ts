@@ -347,10 +347,13 @@ export function useSimulatorState({
     }
 
     if (displayMode === 'pip') {
-      // PiP: report the PiP container height constraint + maxWidth.
-      // ChatGPT uses ~362px height for PiP.
+      // PiP: report maxHeight (not fixed height) — content determines actual height.
+      // ChatGPT uses calc(50dvh - 38px): half the viewport minus chrome.
+      // Confirmed by extraction at 7 viewport sizes (2026-03-21).
+      const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
+      const pipMaxHeight = Math.round(viewportH * 0.5 - 38);
       return {
-        height: 480,
+        maxHeight: pipMaxHeight,
         ...(measuredContentWidth != null ? { maxWidth: measuredContentWidth } : {}),
       };
     }
