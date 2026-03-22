@@ -91,6 +91,12 @@
         "default": "./bin/lib/live/chatgpt-config.mjs"
       }
     },
+    "./test/inspect/config": {
+      "import": {
+        "types": "./bin/lib/inspect/inspect-config.d.mts",
+        "default": "./bin/lib/inspect/inspect-config.mjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -114,6 +120,7 @@
     "lint": "eslint . --ext .ts,.tsx --fix",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:e2e": "pnpm exec playwright test",
     "generate-examples": "node scripts/generate-examples.mjs",
     "validate": "node scripts/validate.mjs",
     "prepublishOnly": "pnpm build"
@@ -173,6 +180,7 @@
     "typescript": "^5.9.3",
     "vite": "^8.0.1",
     "vite-plugin-dts": "^4.5.4",
+    "@playwright/test": "^1.52.0",
     "vitest": "^4.1.0"
   },
   "repository": {

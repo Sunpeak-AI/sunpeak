@@ -229,17 +229,24 @@ function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
 }
 
 interface SidebarControlProps {
-  label: string;
+  label: React.ReactNode;
   children: React.ReactNode;
   /** Short tooltip shown on hover of the help icon */
   tooltip?: string;
   /** Docs path appended to https://sunpeak.ai/docs/ */
   docsPath?: string;
+  'data-testid'?: string;
 }
 
-export function SidebarControl({ label, children, tooltip, docsPath }: SidebarControlProps) {
+export function SidebarControl({
+  label,
+  children,
+  tooltip,
+  docsPath,
+  'data-testid': testId,
+}: SidebarControlProps) {
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" data-testid={testId}>
       <span
         className="text-[10px] font-medium leading-tight inline-flex items-center gap-1"
         style={{ color: 'var(--color-text-secondary)' }}
@@ -260,6 +267,7 @@ interface SidebarCollapsibleControlProps {
   tooltip?: string;
   /** Docs path appended to https://sunpeak.ai/docs/ */
   docsPath?: string;
+  'data-testid'?: string;
 }
 
 export function SidebarCollapsibleControl({
@@ -268,11 +276,12 @@ export function SidebarCollapsibleControl({
   defaultCollapsed = true,
   tooltip,
   docsPath,
+  'data-testid': testId,
 }: SidebarCollapsibleControlProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1" data-testid={testId}>
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="w-full flex items-center justify-between text-[10px] font-medium leading-tight transition-colors py-1 cursor-pointer"
@@ -439,6 +448,7 @@ interface SidebarTextareaProps {
   placeholder?: string;
   maxRows?: number;
   error?: string;
+  'data-testid'?: string;
 }
 
 export function SidebarTextarea({
@@ -449,6 +459,7 @@ export function SidebarTextarea({
   placeholder,
   maxRows = 8,
   error,
+  'data-testid': testId,
 }: SidebarTextareaProps) {
   const contentRows = value?.split('\n').length ?? 1;
   const rows = Math.min(contentRows, maxRows);
@@ -462,6 +473,7 @@ export function SidebarTextarea({
         onBlur={onBlur}
         placeholder={placeholder}
         rows={rows}
+        data-testid={testId}
         className="w-full text-[10px] font-mono rounded-md px-2 py-1.5 outline-none resize-y"
         style={{
           ...formElementStyle,
