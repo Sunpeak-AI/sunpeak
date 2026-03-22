@@ -355,6 +355,139 @@ async function validateProductionServer(exampleDir) {
 }
 
 
+/**
+ * Inspect mode integration test.
+ *
+ * Starts `sunpeak start` (real MCP server) and `sunpeak inspect` pointing at it,
+ * then verifies tool discovery, tool calling, and the inspect server health endpoint.
+ * All ports are dynamically allocated via getPort() to support parallel runs.
+ */
+async function validateInspectMode(exampleDir) {
+  const mcpPort = await getPort(18800);
+  const inspectPort = await getPort(18900);
+  const sandboxPort = await getPort(24690);
+
+  // Start the MCP server
+  console.log(`Starting MCP server on port ${mcpPort}...`);
+  const mcpProcess = spawn('node', [SUNPEAK_BIN, 'start', '--port', String(mcpPort)], {
+    cwd: exampleDir,
+    env: { ...process.env },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  let mcpStdout = '';
+  let mcpStderr = '';
+  mcpProcess.stdout.on('data', (data) => { mcpStdout += data.toString(); });
+  mcpProcess.stderr.on('data', (data) => { mcpStderr += data.toString(); });
+
+  try {
+    // Wait for MCP server to be ready
+    let mcpReady = false;
+    for (let i = 0; i < 30; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      try {
+        const response = await fetch(`http://localhost:${mcpPort}/health`);
+        if (response.ok) { mcpReady = true; break; }
+      } catch { /* not up yet */ }
+      if (mcpProcess.exitCode !== null) break;
+    }
+
+    if (!mcpReady) {
+      throw new Error(`MCP server failed to start\nstdout: ${mcpStdout}\nstderr: ${mcpStderr}`);
+    }
+    printSuccess('MCP server started');
+
+    // Start sunpeak inspect pointing at the MCP server
+    console.log(`Starting inspect server on port ${inspectPort}...`);
+    const inspectProcess = spawn(
+      'node',
+      [SUNPEAK_BIN, 'inspect', '--server', `http://localhost:${mcpPort}/mcp`, '--port', String(inspectPort)],
+      {
+        cwd: exampleDir,
+        env: { ...process.env, CI: '1', SUNPEAK_SANDBOX_PORT: String(sandboxPort) },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
+
+    let inspectStdout = '';
+    let inspectStderr = '';
+    inspectProcess.stdout.on('data', (data) => { inspectStdout += data.toString(); });
+    inspectProcess.stderr.on('data', (data) => { inspectStderr += data.toString(); });
+
+    try {
+      // Wait for inspect server to be ready
+      let inspectReady = false;
+      for (let i = 0; i < 30; i++) {
+        await new Promise(r => setTimeout(r, 500));
+        try {
+          const response = await fetch(`http://localhost:${inspectPort}/health`);
+          if (response.ok) { inspectReady = true; break; }
+        } catch { /* not up yet */ }
+        if (inspectProcess.exitCode !== null) break;
+      }
+
+      if (!inspectReady) {
+        if (inspectProcess.exitCode !== null) {
+          throw new Error(`Inspect server exited with code ${inspectProcess.exitCode}\nstdout: ${inspectStdout}\nstderr: ${inspectStderr}`);
+        }
+        throw new Error(`Inspect server failed to start within 15s\nstdout: ${inspectStdout}\nstderr: ${inspectStderr}`);
+      }
+      printSuccess('Inspect server started');
+
+      // Verify tool discovery
+      const listToolsResp = await fetch(`http://localhost:${inspectPort}/__sunpeak/list-tools`);
+      if (!listToolsResp.ok) throw new Error(`list-tools returned ${listToolsResp.status}`);
+      const { tools } = await listToolsResp.json();
+      if (!tools || tools.length === 0) throw new Error('No tools discovered from MCP server');
+      const toolNames = tools.map(t => t.name);
+      printSuccess(`Discovered ${tools.length} tool(s): ${toolNames.join(', ')}`);
+
+      // Verify tool calling — pick the first tool and call it with empty args
+      const firstTool = tools[0];
+      const callToolResp = await fetch(`http://localhost:${inspectPort}/__sunpeak/call-tool`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: firstTool.name, arguments: {} }),
+      });
+      if (!callToolResp.ok) throw new Error(`call-tool returned ${callToolResp.status}`);
+      const callResult = await callToolResp.json();
+      // Result should have either content or structuredContent (or isError)
+      if (!callResult.content && !callResult.structuredContent && !callResult.isError) {
+        throw new Error(`call-tool returned unexpected shape: ${JSON.stringify(callResult).substring(0, 200)}`);
+      }
+      printSuccess(`Tool call succeeded: ${firstTool.name}`);
+
+      // Verify resource reading endpoint responds (even if no resources matched)
+      const readResourceResp = await fetch(
+        `http://localhost:${inspectPort}/__sunpeak/read-resource?uri=nonexistent://test`
+      );
+      // Should return 404 or 500 (resource not found), not crash
+      if (readResourceResp.status !== 404 && readResourceResp.status !== 500) {
+        throw new Error(`read-resource returned unexpected status ${readResourceResp.status}`);
+      }
+      printSuccess('Resource endpoint responds correctly');
+
+      // Verify the inspect UI serves HTML
+      const indexResp = await fetch(`http://localhost:${inspectPort}/`);
+      if (!indexResp.ok) throw new Error(`Index page returned ${indexResp.status}`);
+      const indexHtml = await indexResp.text();
+      if (!indexHtml.includes('<div id="root">')) throw new Error('Index page missing #root');
+      if (!indexHtml.includes('sunpeak')) throw new Error('Index page missing sunpeak branding');
+      printSuccess('Inspect UI serves correctly');
+
+    } finally {
+      inspectProcess.kill('SIGTERM');
+      await new Promise(r => setTimeout(r, 500));
+      if (inspectProcess.exitCode === null) inspectProcess.kill('SIGKILL');
+    }
+  } finally {
+    mcpProcess.kill('SIGTERM');
+    await new Promise(r => setTimeout(r, 500));
+    if (mcpProcess.exitCode === null) mcpProcess.kill('SIGKILL');
+  }
+}
+
+
 // ============================================================================
 // Main testing flow
 // ============================================================================
@@ -403,6 +536,16 @@ try {
   console.log('\nRunning: pnpm test');
   if (!runCommand('pnpm test', PACKAGE_ROOT)) throw new Error('pnpm test failed');
   printSuccess('pnpm test');
+
+  console.log('\nInstalling Playwright browsers for package-level e2e...');
+  if (!runCommand('pnpm exec playwright install chromium --with-deps', PACKAGE_ROOT)) {
+    throw new Error('Playwright browser install failed');
+  }
+  printSuccess('Playwright browsers installed');
+
+  console.log('\nRunning: pnpm test:e2e (package-level simulator e2e)');
+  if (!runCommand('pnpm test:e2e', PACKAGE_ROOT)) throw new Error('pnpm test:e2e failed');
+  printSuccess('pnpm test:e2e');
 
   // ==========================================================================
   // Phase 2: Static validations (instant)
@@ -505,6 +648,20 @@ try {
   printSuccess('sunpeak build (for production server)');
 
   await validateProductionServer(lastExampleDir);
+
+  // ==========================================================================
+  // Phase 5b: Inspect mode integration test
+  // ==========================================================================
+  printSection('INSPECT MODE');
+
+  // Use the template directory (already built during pnpm build) rather than an
+  // example, because examples may lack esbuild and skip tool compilation.
+  console.log('Building template for inspect test...');
+  if (!runCommand(`node ${SUNPEAK_BIN} build`, TEMPLATE_ROOT)) {
+    throw new Error('Template build failed for inspect test');
+  }
+  printSuccess('Template built');
+  await validateInspectMode(TEMPLATE_ROOT);
 
   // ==========================================================================
   // Phase 6: Live tests (opt-in, requires tunnel)

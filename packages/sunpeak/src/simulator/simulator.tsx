@@ -6,6 +6,7 @@ import type {
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { useSimulatorState } from './use-simulator-state';
+import { useMcpConnection } from './use-mcp-connection';
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
 import {
@@ -55,6 +56,14 @@ export interface SimulatorProps {
    * giving real cross-origin isolation that matches production hosts.
    */
   sandboxUrl?: string;
+  /**
+   * MCP server URL. When provided, the simulator enters "inspect" mode:
+   * shows a server URL input in the sidebar (replacing prod-tools/prod-resources
+   * checkboxes), routes tool calls to the real server, and always shows the
+   * Run button. Simulations still work — those with toolResult use mock data,
+   * those without call the real server.
+   */
+  mcpServerUrl?: string;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
@@ -70,9 +79,14 @@ export function Simulator({
   defaultProdResources = false,
   hideSimulatorModes = false,
   sandboxUrl,
+  mcpServerUrl,
 }: SimulatorProps) {
+  const isInspectMode = mcpServerUrl != null;
   const state = useSimulatorState({ simulations, defaultHost });
-  const [prodTools, setProdTools] = React.useState(state.urlProdTools ?? defaultProdTools);
+  const connection = useMcpConnection(mcpServerUrl);
+  const [prodTools, setProdTools] = React.useState(
+    isInspectMode ? true : (state.urlProdTools ?? defaultProdTools)
+  );
   const [prodResources, setProdResources] = React.useState(
     state.urlProdResources ?? defaultProdResources
   );
@@ -86,6 +100,9 @@ export function Simulator({
   React.useEffect(() => {
     if (prodTools) {
       setHasRun(false);
+      state.setToolResult(undefined);
+      state.setToolResultJson('');
+      state.setToolResultError('');
     } else {
       const simResult = (state.selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
       state.setToolResult(simResult);
@@ -112,13 +129,20 @@ export function Simulator({
     }));
   }, [prodTools, state.simulationNames, simulations]);
 
-  // Run button handler: call the real tool handler with current toolInput
+  // Run button handler: call the real tool handler with current toolInput.
+  // In inspect mode, if the simulation has a pre-filled toolResult, use it
+  // directly (mock mode) instead of calling the real server.
   const handleRun = React.useCallback(async () => {
     if (!onCallTool || !state.selectedSim) return;
     const toolName = state.selectedSim.tool.name;
     setIsRunning(true);
     try {
-      const result = await onCallTool({ name: toolName, arguments: state.toolInput });
+      // Use simulation's pre-filled toolResult as a mock when available in inspect mode
+      const simToolResult = isInspectMode
+        ? (state.selectedSim.toolResult as CallToolResult | undefined)
+        : undefined;
+      const result =
+        simToolResult ?? (await onCallTool({ name: toolName, arguments: state.toolInput }));
       state.setToolResult(result);
       state.setToolResultJson(JSON.stringify(result, null, 2));
       state.setToolResultError('');
@@ -142,7 +166,7 @@ export function Simulator({
     } finally {
       setIsRunning(false);
     }
-  }, [onCallTool, state]);
+  }, [onCallTool, state, isInspectMode]);
 
   // Resolve the active host shell
   const activeShell = getHostShell(state.activeHost);
@@ -385,8 +409,43 @@ export function Simulator({
       <SimpleSidebar
         controls={
           <div className="space-y-1">
-            {/* ── Dev mode toggles ── */}
-            {!hideSimulatorModes && onCallTool && (
+            {/* ── Inspect mode: Server URL ── */}
+            {isInspectMode && (
+              <SidebarControl
+                label={
+                  <span className="flex items-center gap-1.5">
+                    MCP Server
+                    <span
+                      className="inline-block w-2 h-2 rounded-full"
+                      data-testid="inspect-connection-status"
+                      style={{
+                        backgroundColor:
+                          connection.status === 'connected'
+                            ? '#22c55e'
+                            : connection.status === 'connecting'
+                              ? '#eab308'
+                              : connection.status === 'error'
+                                ? '#ef4444'
+                                : '#6b7280',
+                      }}
+                      title={connection.error ?? connection.status}
+                    />
+                  </span>
+                }
+                tooltip="MCP server URL (set via --server flag)"
+                data-testid="inspect-server-url"
+              >
+                <SidebarInput
+                  value={mcpServerUrl ?? ''}
+                  onChange={() => {}}
+                  disabled
+                  placeholder="http://localhost:8000/mcp"
+                />
+              </SidebarControl>
+            )}
+
+            {/* ── Dev mode toggles (framework mode only) ── */}
+            {!isInspectMode && !hideSimulatorModes && onCallTool && (
               <SidebarCheckbox
                 checked={prodTools}
                 onChange={setProdTools}
@@ -395,7 +454,7 @@ export function Simulator({
                 docsPath="api-reference/cli/dev#prod-tools-and-prod-resources-flags"
               />
             )}
-            {!hideSimulatorModes && (
+            {!isInspectMode && !hideSimulatorModes && (
               <SidebarCheckbox
                 checked={prodResources}
                 onChange={setProdResources}
@@ -792,40 +851,41 @@ export function Simulator({
               />
             </SidebarCollapsibleControl>
 
-            {!prodTools && (
-              <SidebarCollapsibleControl
-                label="Tool Result (JSON)"
-                defaultCollapsed={false}
-                tooltip="Structured content returned by the tool"
-                docsPath="api-reference/hooks/use-tool-data"
-              >
-                <SidebarTextarea
-                  value={state.toolResultJson}
-                  onChange={(json) =>
-                    state.validateJSON(json, state.setToolResultJson, state.setToolResultError)
-                  }
-                  onFocus={() => state.setEditingField('toolResult')}
-                  onBlur={() =>
-                    state.commitJSON(state.toolResultJson, state.setToolResultError, (parsed) => {
-                      if (parsed === null) {
-                        state.setToolResult(undefined);
+            <SidebarCollapsibleControl
+              key={`tool-result-${prodTools}`}
+              label="Tool Result (JSON)"
+              defaultCollapsed={prodTools}
+              tooltip="Structured content returned by the tool"
+              docsPath="api-reference/hooks/use-tool-data"
+              data-testid="tool-result-section"
+            >
+              <SidebarTextarea
+                value={state.toolResultJson}
+                data-testid="tool-result-textarea"
+                onChange={(json) =>
+                  state.validateJSON(json, state.setToolResultJson, state.setToolResultError)
+                }
+                onFocus={() => state.setEditingField('toolResult')}
+                onBlur={() =>
+                  state.commitJSON(state.toolResultJson, state.setToolResultError, (parsed) => {
+                    if (parsed === null) {
+                      state.setToolResult(undefined);
+                    } else {
+                      const result = parsed as Record<string, unknown>;
+                      if ('content' in result || 'structuredContent' in result) {
+                        state.setToolResult(
+                          result as import('@modelcontextprotocol/sdk/types.js').CallToolResult
+                        );
                       } else {
-                        const result = parsed as Record<string, unknown>;
-                        if ('content' in result || 'structuredContent' in result) {
-                          state.setToolResult(
-                            result as import('@modelcontextprotocol/sdk/types.js').CallToolResult
-                          );
-                        } else {
-                          state.setToolResult({ content: [], structuredContent: result });
-                        }
+                        state.setToolResult({ content: [], structuredContent: result });
                       }
-                    })
-                  }
-                  error={state.toolResultError}
-                  maxRows={8}
-                />
-              </SidebarCollapsibleControl>
-            )}
+                    }
+                  })
+                }
+                error={state.toolResultError}
+                maxRows={8}
+              />
+            </SidebarCollapsibleControl>
           </div>
         }
       >

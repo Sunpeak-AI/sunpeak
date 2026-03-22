@@ -108,6 +108,16 @@ export interface SimulatorUrlParams {
    * Enable Prod Resources mode (production dist/ bundles instead of HMR).
    */
   prodResources?: boolean;
+
+  /**
+   * MCP server URL for inspect mode. Encoded into the URL for informational purposes.
+   */
+  serverUrl?: string;
+
+  /**
+   * Pre-select a tool by name (alternative to the `simulation` param).
+   */
+  tool?: string;
 }
 
 /**
@@ -197,6 +207,12 @@ export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): 
   }
   if (params.prodResources !== undefined) {
     searchParams.set('prodResources', String(params.prodResources));
+  }
+  if (params.serverUrl !== undefined) {
+    searchParams.set('serverUrl', params.serverUrl);
+  }
+  if (params.tool !== undefined) {
+    searchParams.set('tool', params.tool);
   }
   const queryString = searchParams.toString();
   return queryString ? `${basePath}?${queryString}` : basePath;

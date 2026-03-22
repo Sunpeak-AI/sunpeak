@@ -37,7 +37,7 @@ function getVersion() {
   }
 
   // Commands that don't require a package.json
-  const standaloneCommands = ['new', 'upgrade', 'help', undefined];
+  const standaloneCommands = ['new', 'upgrade', 'inspect', 'help', undefined];
 
   if (command && !standaloneCommands.includes(command)) {
     checkPackageJson();
@@ -72,6 +72,13 @@ function getVersion() {
       }
       break;
 
+    case 'inspect':
+      {
+        const { inspect } = await import(join(COMMANDS_DIR, 'inspect.mjs'));
+        await inspect(args);
+      }
+      break;
+
     case 'upgrade':
       {
         const { upgrade } = await import(join(COMMANDS_DIR, 'upgrade.mjs'));
@@ -100,6 +107,9 @@ Usage:
   sunpeak build            Build resources + tools for production
   sunpeak start            Start production MCP server
     --port, -p             Server port (default: 8000, or PORT env)
+  sunpeak inspect           Test an external MCP server in the simulator
+    --server, -s <url|cmd> MCP server URL or stdio command (required)
+    --simulations <dir>    Simulation JSON directory
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 
