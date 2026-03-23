@@ -318,7 +318,9 @@ for (const host of hosts) {
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const publishButton = iframe.locator('button:has-text("Publish")');
         await expect(publishButton).toBeVisible();
-        await publishButton.click();
+        // Use evaluate to dispatch click directly — Playwright's coordinate-based
+        // click can miss the target inside the double cross-origin iframe.
+        await publishButton.evaluate((el) => (el as HTMLElement).click());
 
         // Should show the server's success message from serverTools mock
         await expect(iframe.locator('text=Completed.')).toBeVisible({ timeout: 10000 });
@@ -338,7 +340,7 @@ for (const host of hosts) {
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const cancelButton = iframe.locator('button:has-text("Cancel")');
         await expect(cancelButton).toBeVisible();
-        await cancelButton.click();
+        await cancelButton.evaluate((el) => (el as HTMLElement).click());
 
         // Server returned cancelled status via serverTools when condition
         await expect(iframe.locator('text=Cancelled.')).toBeVisible({ timeout: 10000 });
@@ -378,7 +380,7 @@ for (const host of hosts) {
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const placeOrderButton = iframe.locator('button:has-text("Place Order")');
         await expect(placeOrderButton).toBeVisible();
-        await placeOrderButton.click();
+        await placeOrderButton.evaluate((el) => (el as HTMLElement).click());
 
         // After server responds, should show what the user clicked and the server result
         await expect(iframe.locator('text=Placing order...')).toBeVisible({ timeout: 10000 });
@@ -399,7 +401,7 @@ for (const host of hosts) {
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const applyButton = iframe.locator('button:has-text("Apply Changes")');
         await expect(applyButton).toBeVisible();
-        await applyButton.click();
+        await applyButton.evaluate((el) => (el as HTMLElement).click());
 
         // Should show the decision label and server response
         await expect(iframe.locator('text=Applying changes...')).toBeVisible({ timeout: 10000 });
@@ -418,7 +420,7 @@ for (const host of hosts) {
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const cancelButton = iframe.locator('button:has-text("Cancel")');
         await expect(cancelButton).toBeVisible();
-        await cancelButton.click();
+        await cancelButton.evaluate((el) => (el as HTMLElement).click());
 
         // Server returned cancelled status via when condition matching
         await expect(iframe.locator('text=Cancelled.')).toBeVisible({ timeout: 10000 });

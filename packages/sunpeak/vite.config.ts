@@ -9,7 +9,16 @@ import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 // Node.js built-in modules to externalize
 const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
 
+// Tailwind v4's @source directive may be visible to lightningcss during
+// parsing/minification. Declaring it as a custom at-rule suppresses warnings.
+const lightningcssConfig = {
+  customAtRules: {
+    source: { prelude: '<string>' as const },
+  },
+};
+
 export default defineConfig({
+  css: { lightningcss: lightningcssConfig },
   plugins: [
     react(),
     tailwindcss(),
