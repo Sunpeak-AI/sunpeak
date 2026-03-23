@@ -294,7 +294,7 @@ pnpm test:live
 ```
 
 The test runner:
-1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found (saved for 24 hours).
+1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found. Sessions typically last a few hours — Cloudflare's HttpOnly `cf_clearance` cookie cannot be persisted, so re-authentication is needed when it expires.
 2. Starts `sunpeak dev --prod-resources` automatically
 3. Refreshes the MCP server connection in ChatGPT settings (once in globalSetup, before all workers)
 4. Runs `tests/live/*.spec.ts` files fully in parallel — each test gets its own chat window
@@ -354,7 +354,7 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
 
 <AccordionGroup>
   <Accordion title="'Not logged into ChatGPT' error">
-    On first run, a browser window opens for you to log in to ChatGPT. The session is saved to `.auth/chatgpt.json` and reused for 24 hours. If the error persists, delete the `.auth/` directory and run `pnpm test:live` again to re-login.
+    On first run, a browser window opens for you to log in to ChatGPT. The session is saved to `.auth/chatgpt.json` but typically only lasts a few hours because Cloudflare's `cf_clearance` cookie is HttpOnly and cannot be persisted across runs. When you see this error, just re-authenticate in the browser window that opens. If it keeps failing, delete the `.auth/` directory and run `pnpm test:live` again.
   </Accordion>
 
   <Accordion title="Tunnel not reachable">

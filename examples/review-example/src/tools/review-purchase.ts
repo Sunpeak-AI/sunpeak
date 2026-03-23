@@ -5,7 +5,7 @@ export const tool: AppToolConfig = {
   resource: 'review',
   title: 'Review Purchase',
   description: 'Review a purchase before completing the transaction',
-  annotations: { readOnlyHint: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   _meta: {
     ui: { visibility: ['model', 'app'] },
   },

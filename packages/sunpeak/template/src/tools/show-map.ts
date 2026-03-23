@@ -5,7 +5,7 @@ export const tool: AppToolConfig = {
   resource: 'map',
   title: 'Show Map',
   description: 'Show the map',
-  annotations: { readOnlyHint: true },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   _meta: {
     ui: { visibility: ['model', 'app'] },
   },

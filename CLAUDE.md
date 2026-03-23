@@ -50,7 +50,7 @@ Switching hosts in the sidebar changes the conversation chrome, theming, and rep
 Tests use `page.frameLocator('iframe').frameLocator('iframe')` to access resource content inside the double-iframe. Elements on the simulator chrome (header, `#root`) use `page.locator()` directly. Console error tests filter expected MCP handshake errors.
 
 ### Live Tests (`pnpm test:live`)
-Automated tests against real ChatGPT using Playwright. Uses the same `ChatGPTPage` class for selectors, message sending, and iframe handling. Auth flow: saved session (<24h) → manual login in the opened browser window. The `global-setup.mjs` handles auth + MCP server refresh in the same browser session (Cloudflare's HttpOnly cookies can't survive storageState export, so refresh must happen before the browser closes).
+Automated tests against real ChatGPT using Playwright. Uses the same `ChatGPTPage` class for selectors, message sending, and iframe handling. Auth flow: saved session → manual login in the opened browser window. Sessions typically last only a few hours because Cloudflare's HttpOnly `cf_clearance` cookie cannot be persisted by `storageState()`. The `global-setup.mjs` handles auth + MCP server refresh in the same browser session (refresh must happen before the browser closes while `cf_clearance` is still valid).
 
 ## Package Structure
 
@@ -81,7 +81,6 @@ packages/sunpeak/
 │   ├── types/                # Type definitions (Simulation, runtime types)
 │   └── cli/                  # CLI commands
 ├── template/                 # Scaffolded app template (also a workspace package)
-│   ├── .sunpeak/             # dev.tsx (simulator bootstrap), resource-loader.tsx (iframe loader)
 │   ├── src/resources/        # Example resource components (albums, carousel, map, review)
 │   ├── src/tools/            # Tool files with handlers and metadata
 │   ├── src/server.ts         # Optional server entry (auth, config)
@@ -153,14 +152,14 @@ interface HostShell {
 
 ## Dev Server (`bin/commands/dev.mjs`)
 
-The `sunpeak dev` command runs a multi-server architecture:
+`sunpeak dev` starts the local MCP server (with Vite HMR for resources) and then launches the inspector pointed at it. This means `sunpeak dev` and `sunpeak inspect` share the same simulator UI codepath — the inspector is the single entry point for all simulator use cases.
 
-1. **loaderServer** — A Vite server in middleware mode (`hmr: false`) used solely for `ssrLoadModule()` to dynamically import tool files and discover simulations. Must stay alive for the duration of the dev session (Vite 7+ invalidates loaded modules when the server closes).
-2. **mcpViteServer** — A Vite dev server that serves the simulator UI with HMR on a non-default port (`hmr: { port: 24679 }`) to avoid conflicts with the loader.
-3. **MCP stdio server** — A child process (`sunpeak start`) for tool execution.
-4. **sandboxServer** — A minimal HTTP server on a separate port (default 24680) that serves the sandbox proxy HTML. This provides real cross-origin isolation for the simulator's double-iframe architecture, matching how production hosts (ChatGPT, Claude) run app iframes on a separate sandbox origin (e.g., `web-sandbox.oaiusercontent.com`). The sandbox server is local-dev-only — it is NOT tunneled and does not affect production or CI/CD. Its URL is injected into the Simulator via `__SUNPEAK_SANDBOX_URL__` Vite define.
+Architecture:
+1. **MCP server** — Started via `runMCPServer()` with `viteMode: true`. Serves tools, resources (with Vite HMR scripts in `readResource` HTML), and simulation data via a custom `sunpeak/simulations` MCP method.
+2. **Inspector** — `inspectServer()` from `inspect.mjs` connects to the MCP server URL, discovers tools/resources via MCP protocol, and serves the simulator UI with HMR.
+3. **sandboxServer** — A minimal HTTP server on a separate port (default 24680) for cross-origin iframe isolation.
 
-Port management: The loaderServer disables HMR entirely. The mcpViteServer uses port 24679 for its WebSocket. The sandboxServer uses port 24680 (configurable via `SUNPEAK_SANDBOX_PORT`). The main dev server listens on the user-facing port (default 3000). The MCP server prefers port 8000 (users typically have an ngrok tunnel on this port). All ports use `getPort()` to find free alternatives if the preferred port is taken, allowing multiple instances to run simultaneously.
+Port management: The MCP server prefers port 8000 (users typically have an ngrok tunnel on this port). The inspector's Vite dev server uses port 24679 for its HMR WebSocket. The sandboxServer uses port 24680 (configurable via `SUNPEAK_SANDBOX_PORT`). The main dev server listens on the user-facing port (default 3000). All ports use `getPort()` to find free alternatives if the preferred port is taken.
 
 ### `--prod-tools` and `--prod-resources` flags
 
@@ -173,7 +172,7 @@ Two orthogonal flags that toggle real tool handlers and production resource bund
 | `--prod-resources` | Built | Mocked | CI/E2E, catch build regressions |
 | `--prod-tools --prod-resources` | Built | Real handlers | Final smoke test |
 
-**Implementation**: The dev server always registers a Vite middleware plugin (`POST /__sunpeak/call-tool`) and loads all tool handlers, so the simulator's **Prod Tools** checkbox can toggle between mock and real tool execution at runtime. `--prod-tools` sets the initial state of the Prod Tools checkbox to on (`__SUNPEAK_PROD_TOOLS__` Vite define → `defaultProdTools` prop). Both **Prod Tools** and **Prod Resources** are runtime-toggleable checkboxes in the simulator sidebar. `--prod-resources` runs `sunpeak build` before starting and sets the initial state of the Prod Resources checkbox to on (`__SUNPEAK_PROD_RESOURCES__` define → `defaultProdResources` prop). The dist-serving Vite plugin (`/dist/` middleware) is always registered so Prod Resources mode can be toggled at runtime. When Prod Resources is on, the Simulator computes `/dist/{resourceName}/{resourceName}.html` from the simulation's resource metadata and uses it as the iframe `src` instead of the HMR dev URL. The `Simulator` component accepts `onCallTool`, `defaultProdTools`, `defaultProdResources`, `hideSimulatorModes`, and `sandboxUrl` props.
+**Implementation**: Tool calls flow through MCP protocol to the local server (no Vite middleware). `--prod-tools` sets the initial state of the Prod Tools sidebar checkbox. `--prod-resources` runs `sunpeak build` before starting and sets the initial Prod Resources checkbox state. Both are runtime-toggleable in the sidebar. The `Simulator` component accepts `mcpServerUrl`, `defaultProdTools`, `defaultProdResources`, `hideSimulatorModes`, and `sandboxUrl` props.
 
 ## Documentation (`docs/`)
 

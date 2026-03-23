@@ -92,7 +92,7 @@ describe('Simulator', () => {
   });
 
   describe('Inspect mode (mcpServerUrl)', () => {
-    it('shows MCP Server input when mcpServerUrl is set', () => {
+    it('shows MCP Server input when mcpServerUrl is set', async () => {
       render(
         <Simulator
           simulations={{ test: createSim() }}
@@ -101,11 +101,14 @@ describe('Simulator', () => {
         />
       );
 
-      expect(screen.getByTestId('inspect-server-url')).toBeInTheDocument();
+      // Wait for useMcpConnection's async fetch to settle
+      await waitFor(() => {
+        expect(screen.getByTestId('inspect-server-url')).toBeInTheDocument();
+      });
       expect(screen.getByPlaceholderText('http://localhost:8000/mcp')).toBeInTheDocument();
     });
 
-    it('hides Prod Tools and Prod Resources checkboxes when mcpServerUrl is set', () => {
+    it('hides Prod Tools and Prod Resources checkboxes when mcpServerUrl is set', async () => {
       render(
         <Simulator
           simulations={{ test: createSim() }}
@@ -114,7 +117,10 @@ describe('Simulator', () => {
         />
       );
 
-      expect(screen.queryByRole('checkbox', { name: /prod tools/i })).not.toBeInTheDocument();
+      // Wait for useMcpConnection's async fetch to settle
+      await waitFor(() => {
+        expect(screen.queryByRole('checkbox', { name: /prod tools/i })).not.toBeInTheDocument();
+      });
       expect(screen.queryByRole('checkbox', { name: /prod resources/i })).not.toBeInTheDocument();
     });
 

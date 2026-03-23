@@ -170,8 +170,8 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     filter: (src) => {
       const name = basename(src);
 
-      // Skip node_modules and lock file
-      if (name === 'node_modules' || name === 'pnpm-lock.yaml') {
+      // Skip node_modules, lock file, and legacy dev bootstrap files
+      if (name === 'node_modules' || name === 'pnpm-lock.yaml' || name === '.sunpeak' || name === 'index.html') {
         return false;
       }
 

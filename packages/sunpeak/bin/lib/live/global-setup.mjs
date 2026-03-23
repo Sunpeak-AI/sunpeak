@@ -23,7 +23,12 @@ import { dirname } from 'path';
 import { ANTI_BOT_ARGS, CHROME_USER_AGENT, resolvePlaywright, getAppName } from './utils.mjs';
 import { ChatGPTPage, CHATGPT_SELECTORS, CHATGPT_URLS } from './chatgpt-page.mjs';
 
-/** Auth state expires after 24 hours — ChatGPT session cookies are short-lived. */
+/**
+ * Auth file retention window. The file is kept for 24 hours, but sessions
+ * typically expire much sooner (a few hours) because Cloudflare's HttpOnly
+ * `cf_clearance` cookie cannot be captured by storageState(). When it
+ * expires, the next run will need re-authentication even if the file is fresh.
+ */
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
 const CHATGPT_URL = CHATGPT_URLS.base;

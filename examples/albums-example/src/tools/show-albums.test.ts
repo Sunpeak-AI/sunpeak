@@ -7,7 +7,11 @@ describe('show-albums tool', () => {
   it('exports correct tool config', () => {
     expect(tool.resource).toBe('albums');
     expect(tool.title).toBe('Show Albums');
-    expect(tool.annotations?.readOnlyHint).toBe(true);
+    expect(tool.annotations).toEqual({
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    });
   });
 
   it('has expected schema fields', () => {

@@ -5,7 +5,7 @@ export const tool: AppToolConfig = {
   resource: 'review',
   title: 'Diff Review',
   description: 'Show a review dialog for a proposed code diff',
-  annotations: { readOnlyHint: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   _meta: {
     ui: { visibility: ['model', 'app'] },
   },

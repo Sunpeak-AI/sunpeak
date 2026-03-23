@@ -5,7 +5,7 @@ export const tool: AppToolConfig = {
   resource: 'albums',
   title: 'Show Albums',
   description: 'Show photo albums',
-  annotations: { readOnlyHint: true },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   _meta: {
     ui: { visibility: ['model', 'app'] },
   },
