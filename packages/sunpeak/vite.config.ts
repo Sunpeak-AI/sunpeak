@@ -19,22 +19,17 @@ export default defineConfig({
       outDir: 'dist',
       rollupTypes: false,
     }),
-    // Merge Tailwind setup + bundled component styles into CSS files for each entry
+    // Copy processed styles into chatgpt/globals.css for backwards compatibility
     {
       name: 'merge-simulator-css',
       closeBundle() {
-        // Read pre-compiled component styles (CSS modules from SDK)
+        // dist/style.css already contains all processed Tailwind + component styles
+        // (built from src/style.css → chatgpt/globals.css → simulator/globals.css)
         const styleCss = readFileSync(resolve(__dirname, 'dist/style.css'), 'utf-8');
 
-        // Read the base simulator CSS (Tailwind config + utilities)
-        const simulatorCss = readFileSync(resolve(__dirname, 'src/simulator/globals.css'), 'utf-8');
-
-        // chatgpt/globals.css — backwards compatibility
+        // chatgpt/globals.css — backwards compatibility (same content as style.css)
         mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
-        writeFileSync(
-          resolve(__dirname, 'dist/chatgpt/globals.css'),
-          `${simulatorCss}\n/* Bundled component styles */\n${styleCss}`
-        );
+        writeFileSync(resolve(__dirname, 'dist/chatgpt/globals.css'), styleCss);
       },
     },
   ],

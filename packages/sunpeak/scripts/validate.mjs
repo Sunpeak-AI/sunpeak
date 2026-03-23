@@ -143,6 +143,41 @@ function validateExportsMap() {
 }
 
 /**
+ * Verify dist CSS files don't contain unprocessed Tailwind/PostCSS directives
+ * that consumers can't resolve (e.g. @import "tailwindcss", @source, @custom-variant).
+ */
+function validateDistCss() {
+  console.log('Validating dist CSS files...');
+
+  const forbiddenPatterns = [
+    { regex: /@import\s+["']tailwindcss["']/, label: '@import "tailwindcss"' },
+    { regex: /@source\s+/, label: '@source' },
+    { regex: /@custom-variant\s+/, label: '@custom-variant' },
+    { regex: /@utility\s+/, label: '@utility' },
+  ];
+
+  const cssFiles = ['dist/style.css', 'dist/chatgpt/globals.css'];
+  const errors = [];
+
+  for (const file of cssFiles) {
+    const fullPath = join(PACKAGE_ROOT, file);
+    if (!existsSync(fullPath)) continue;
+    const content = readFileSync(fullPath, 'utf-8');
+    for (const { regex, label } of forbiddenPatterns) {
+      if (regex.test(content)) {
+        errors.push(`  ${file} contains unprocessed ${label}`);
+      }
+    }
+  }
+
+  if (errors.length > 0) {
+    throw new Error(`Dist CSS contains unprocessed directives:\n${errors.join('\n')}`);
+  }
+
+  printSuccess(`Dist CSS files verified (no unprocessed directives)`);
+}
+
+/**
  * Verify every page referenced in docs.json has a corresponding .mdx file.
  * Also checks that every exported hook has a docs page.
  */
@@ -787,6 +822,7 @@ try {
   printSuccess('pnpm build');
 
   validateExportsMap();
+  validateDistCss();
 
   console.log('\nRunning: pnpm typecheck');
   if (!runCommand('pnpm typecheck', PACKAGE_ROOT)) throw new Error('pnpm typecheck failed');
