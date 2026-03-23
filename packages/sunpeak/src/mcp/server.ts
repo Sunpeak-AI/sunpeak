@@ -278,8 +278,9 @@ function createAppServer(
 
       // Register the tool using ext-apps helper (normalizes ui/resourceUri metadata).
       // Capture the returned RegisteredTool handle for metadata updates on rebuild.
-      // Note: inputSchema from simulation is JSON Schema, not Zod, so we omit it here
-      // (simulation mode doesn't validate inputs - just logs what was called)
+      // Use passthrough schema so the MCP SDK forwards all arguments to the handler
+      // without stripping. Can't use the tool's own Zod schema because it's loaded
+      // via Vite SSR from a different Zod module instance.
       const fullToolMeta = {
         ...toolMeta,
         ui: {
@@ -295,6 +296,7 @@ function createAppServer(
         tool.name as string,
         {
           description: tool.description as string | undefined,
+          inputSchema: z.object({}).passthrough(),
           ...(simulation.outputSchema
             ? {
                 outputSchema: simulation.outputSchema as Parameters<
@@ -302,19 +304,22 @@ function createAppServer(
                 >[2]['outputSchema'],
               }
             : {}),
+          annotations: tool.annotations as Record<string, unknown> | undefined,
           _meta: fullToolMeta,
         },
-        async (extra) => {
-          // Access arguments from request context (no inputSchema = no parsed args)
-          const args =
-            (extra as { request?: { params?: { arguments?: Record<string, unknown> } } }).request
-              ?.params?.arguments ?? {};
+        async (args: Record<string, unknown>, extra) => {
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
 
-          // Use real handler when available (Prod Tools mode), fall back to simulation mock
+          // UI tools: prefer simulation mock data so ChatGPT/Claude get predictable
+          // fixture results. Real handlers are called via the direct endpoint
+          // (/__sunpeak/call-tool-direct) when prod-tools mode is active in the
+          // simulator sidebar. Backend-only tools (no structuredContent) always
+          // use real handlers since they're consumed by callServerTool.
+          const hasMockResult = toolResult?.structuredContent != null;
           const realHandler = simulation.handler;
-          if (realHandler) {
+
+          if (realHandler && !hasMockResult) {
             console.log(`[MCP] CallTool: ${tool.name}${argsStr} → live handler`);
             try {
               const result = await (
@@ -334,9 +339,8 @@ function createAppServer(
             }
           }
 
-          const hasStructuredContent = toolResult?.structuredContent != null;
           console.log(
-            `[MCP] CallTool: ${tool.name}${argsStr} → ${hasStructuredContent ? 'structured' : 'text'}`
+            `[MCP] CallTool: ${tool.name}${argsStr} → ${hasMockResult ? 'structured' : 'text'}`
           );
 
           return {
@@ -700,9 +704,19 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
     });
   }
 
-  httpServer.on('clientError', (err: Error, socket) => {
-    console.error('HTTP client error', err);
+  httpServer.on('clientError', (err: NodeJS.ErrnoException, socket) => {
+    // ECONNRESET is normal when clients (browser tabs, Playwright) close
+    // connections abruptly. Don't log these as errors.
+    if (err.code !== 'ECONNRESET') {
+      console.error('HTTP client error', err);
+    }
     socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+  });
+
+  // Promise that resolves when the HTTP server is listening.
+  let resolveReady: () => void;
+  const ready = new Promise<void>((resolve) => {
+    resolveReady = resolve;
   });
 
   const onListening = () => {
@@ -714,6 +728,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
     if (viteMode) {
       console.log(`  Vite HMR: enabled (source files served with hot reload)`);
     }
+    resolveReady!();
   };
 
   httpServer.on('error', (err: NodeJS.ErrnoException) => {
@@ -748,11 +763,20 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
   process.on('SIGINT', () => void shutdown());
 
   return {
+    ready,
     invalidateResources() {
       if (sessions.size === 0) return;
 
+      // Only cache-bust non-local (tunnel) sessions. Local sessions (ChatGPT,
+      // inspector, simulator) use Vite HMR for live content updates — their
+      // iframes auto-update without needing a new readResource URI.
+      // Tunnel sessions (Claude via ngrok) serve pre-built HTML snapshots, so
+      // they need a new URI to force the host to re-read the resource.
+      const tunnelSessions = [...sessions].filter(([, s]) => !s.isLocal);
+      if (tunnelSessions.length === 0) return;
+
       const timestamp = Date.now().toString(36);
-      for (const [, session] of sessions) {
+      for (const [, session] of tunnelSessions) {
         // Update resource URIs with timestamp to force cache-busting.
         // .update() automatically sends resources/list_changed notification.
         for (const [name, handle] of session.resourceHandles) {
@@ -771,7 +795,9 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
           });
         }
       }
-      console.log(`[MCP] Cache-busted ${sessions.size} session(s) with timestamp ${timestamp}`);
+      console.log(
+        `[MCP] Cache-busted ${tunnelSessions.length} tunnel session(s) with timestamp ${timestamp}`
+      );
     },
   };
 }

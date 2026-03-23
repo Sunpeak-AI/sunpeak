@@ -5,7 +5,7 @@ export const tool: AppToolConfig = {
   resource: 'review',
   title: 'Review Post',
   description: 'Review a social media post before publishing',
-  annotations: { readOnlyHint: false },
+  annotations: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
   _meta: {
     ui: { visibility: ['model', 'app'] },
   },

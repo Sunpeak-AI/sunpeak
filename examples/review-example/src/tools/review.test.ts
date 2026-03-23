@@ -6,7 +6,11 @@ const extra = {} as Parameters<typeof handler>[1];
 describe('review (confirm) tool', () => {
   it('exports correct tool config', () => {
     expect(tool.title).toBe('Confirm Review');
-    expect(tool.annotations?.readOnlyHint).toBe(false);
+    expect(tool.annotations).toEqual({
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    });
     // No resource — this is a server-side-only tool
     expect((tool as { resource?: string }).resource).toBeUndefined();
   });

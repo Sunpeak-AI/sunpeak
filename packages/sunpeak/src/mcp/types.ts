@@ -107,6 +107,12 @@ export interface SimulationWithDist {
  */
 export interface MCPServerHandle {
   /**
+   * Promise that resolves when the HTTP server is listening.
+   * Useful for callers that need to connect to the server immediately after starting it.
+   */
+  ready: Promise<void>;
+
+  /**
    * Notify non-local sessions that resources have changed.
    * Sends `notifications/resources/list_changed` so hosts re-fetch fresh content.
    * Local sessions (ChatGPT, simulator) are skipped since they use Vite HMR.

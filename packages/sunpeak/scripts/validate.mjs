@@ -13,7 +13,7 @@
 import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { existsSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync, rmSync, mkdirSync } from 'fs';
 import { discoverResources } from '../bin/lib/patterns.mjs';
 import { getPort } from '../bin/lib/get-port.mjs';
 
@@ -488,6 +488,269 @@ async function validateInspectMode(exampleDir) {
 }
 
 
+/**
+ * Dev server integration test.
+ *
+ * Boots `sunpeak dev` and exercises every interaction surface that could
+ * break silently: MCP discovery, tool calling, resource HTML, simulation
+ * fixture data, prod resources, backend-only tools, sandbox server, server
+ * identity, and framework mode props.
+ */
+async function validateDevServer(projectDir) {
+  const devPort = await getPort(18950);
+  const sandboxPort = await getPort(24695);
+  const hmrPort = await getPort(24696);
+
+  console.log(`Starting dev server on port ${devPort}...`);
+  const devProcess = spawn(
+    'node',
+    [SUNPEAK_BIN, 'dev', '--port', String(devPort), '--no-begging'],
+    {
+      cwd: projectDir,
+      env: {
+        ...process.env,
+        CI: '1',
+        PORT: String(devPort),
+        SUNPEAK_SANDBOX_PORT: String(sandboxPort),
+        SUNPEAK_HMR_PORT: String(hmrPort),
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    }
+  );
+
+  let devStdout = '';
+  let devStderr = '';
+  devProcess.stdout.on('data', (data) => { devStdout += data.toString(); });
+  devProcess.stderr.on('data', (data) => { devStderr += data.toString(); });
+
+  try {
+    // ── 1. Health endpoint ──
+    let ready = false;
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 500));
+      try {
+        const response = await fetch(`http://localhost:${devPort}/health`);
+        if (response.ok) { ready = true; break; }
+      } catch { /* not up yet */ }
+      if (devProcess.exitCode !== null) break;
+    }
+    if (!ready) {
+      const ctx = devProcess.exitCode !== null
+        ? `exited with code ${devProcess.exitCode}`
+        : 'failed to start within 30s';
+      throw new Error(`Dev server ${ctx}\nstdout: ${devStdout}\nstderr: ${devStderr}`);
+    }
+    printSuccess('Dev server started');
+
+    // ── 2. Tool discovery ──
+    const listToolsResp = await fetch(`http://localhost:${devPort}/__sunpeak/list-tools`);
+    if (!listToolsResp.ok) throw new Error(`list-tools returned ${listToolsResp.status}`);
+    const { tools } = await listToolsResp.json();
+    if (!tools || tools.length === 0) throw new Error('No tools discovered');
+    const toolNames = tools.map(t => t.name);
+    printSuccess(`Discovered ${tools.length} tool(s): ${toolNames.join(', ')}`);
+
+    // ── 3. All expected simulations present ──
+    // Read simulation directory to know what we expect
+    const simDir = join(projectDir, 'tests/simulations');
+    const expectedSims = readdirSync(simDir)
+      .filter(f => f.endsWith('.json'))
+      .map(f => JSON.parse(readFileSync(join(simDir, f), 'utf-8')).tool);
+    const missingTools = expectedSims.filter(name => !toolNames.includes(name));
+    if (missingTools.length > 0) {
+      throw new Error(`Tools from simulation files not discovered: ${missingTools.join(', ')}`);
+    }
+    printSuccess(`All ${expectedSims.length} simulation tools present`);
+
+    // ── 4. UI tools have resource metadata ──
+    const uiTools = tools.filter(t => t._meta?.ui?.resourceUri || t._meta?.['ui/resourceUri']);
+    if (uiTools.length === 0) {
+      throw new Error('Expected at least one UI tool with resourceUri metadata');
+    }
+    printSuccess(`${uiTools.length} UI tool(s) with resourceUri`);
+
+    // ── 5. All UI resources have distinct URIs ──
+    const resourceUris = uiTools.map(t => t._meta?.ui?.resourceUri ?? t._meta?.['ui/resourceUri']);
+    const uniqueUris = new Set(resourceUris);
+    // Multiple tools can share a resource (e.g., review-diff and review-post share review)
+    // but every URI should be non-empty
+    if (resourceUris.some(u => !u)) {
+      throw new Error('Found UI tool with empty resourceUri');
+    }
+    printSuccess(`${uniqueUris.size} distinct resource URI(s)`);
+
+    // ── 6. Backend-only tools registered and callable ──
+    const backendTools = tools.filter(t => !t._meta?.ui?.resourceUri && !t._meta?.['ui/resourceUri']);
+    if (backendTools.length === 0) {
+      console.log('  (no backend-only tools found, skipping)');
+    } else {
+      const backendTool = backendTools[0];
+      const backendResp = await fetch(`http://localhost:${devPort}/__sunpeak/call-tool`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: backendTool.name, arguments: {} }),
+      });
+      if (!backendResp.ok) throw new Error(`Backend tool call returned ${backendResp.status}`);
+      const backendResult = await backendResp.json();
+      if (!backendResult.content && !backendResult.isError) {
+        throw new Error(`Backend tool returned unexpected shape: ${JSON.stringify(backendResult).substring(0, 200)}`);
+      }
+      printSuccess(`Backend-only tool callable: ${backendTool.name}`);
+    }
+
+    // ── 7. UI tool calling returns structured content ──
+    const uiToolWithResult = uiTools[0];
+    const callResp = await fetch(`http://localhost:${devPort}/__sunpeak/call-tool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: uiToolWithResult.name, arguments: {} }),
+    });
+    if (!callResp.ok) throw new Error(`call-tool returned ${callResp.status}`);
+    const callResult = await callResp.json();
+    if (!callResult.content && !callResult.structuredContent && !callResult.isError) {
+      throw new Error(`UI tool call returned unexpected shape: ${JSON.stringify(callResult).substring(0, 200)}`);
+    }
+    printSuccess(`UI tool call succeeded: ${uiToolWithResult.name}`);
+
+    // ── 8. Resource HTML served with Vite HMR ──
+    const firstUri = uiTools[0]._meta?.ui?.resourceUri ?? uiTools[0]._meta?.['ui/resourceUri'];
+    const readResp = await fetch(`http://localhost:${devPort}/__sunpeak/read-resource?uri=${encodeURIComponent(firstUri)}`);
+    if (!readResp.ok) throw new Error(`read-resource returned ${readResp.status}`);
+    const resourceHtml = await readResp.text();
+    if (!resourceHtml.includes('<div id="root">')) throw new Error('Resource HTML missing #root');
+    if (!resourceHtml.includes('@vite/client')) throw new Error('Resource HTML missing Vite HMR script');
+    printSuccess('Resource HTML served with Vite HMR');
+
+    // ── 9. All distinct resources readable ──
+    for (const uri of uniqueUris) {
+      const resp = await fetch(`http://localhost:${devPort}/__sunpeak/read-resource?uri=${encodeURIComponent(uri)}`);
+      if (!resp.ok) throw new Error(`read-resource failed for ${uri}: ${resp.status}`);
+      const html = await resp.text();
+      if (!html.includes('<div id="root">')) throw new Error(`Resource ${uri} missing #root`);
+    }
+    printSuccess(`All ${uniqueUris.size} resources readable`);
+
+    // ── 10. Simulator UI: framework mode (no server URL input) ──
+    const indexResp = await fetch(`http://localhost:${devPort}/`);
+    if (!indexResp.ok) throw new Error(`Index page returned ${indexResp.status}`);
+    const indexHtml = await indexResp.text();
+    if (!indexHtml.includes('<div id="root">')) throw new Error('Index page missing #root');
+    // In framework mode, the virtual entry should NOT set mcpServerUrl (which shows
+    // the server URL input). It should contain the simulations and onCallTool instead.
+    if (indexHtml.includes('mcpServerUrl')) {
+      throw new Error('Framework mode: index page should not contain mcpServerUrl');
+    }
+    printSuccess('Simulator UI in framework mode');
+
+    // ── 11. Server identity in page title ──
+    // The dev server reads name from server.ts or package.json. The template's
+    // package.json name is "sunpeak-app". It should appear in the <title>.
+    const pkg = JSON.parse(readFileSync(join(projectDir, 'package.json'), 'utf-8'));
+    const expectedName = pkg.name || 'sunpeak-app';
+    if (!indexHtml.includes(expectedName)) {
+      throw new Error(`Page title should contain "${expectedName}"`);
+    }
+    printSuccess(`Server identity in title: "${expectedName}"`);
+
+    // ── 12. Simulation fixture data flows through ──
+    // Fixture data (toolInput, toolResult, serverTools, userMessage) from JSON
+    // files is merged into the simulations object and serialized into the virtual
+    // entry JS module. Fetch the module and check for fixture data.
+    const entryResp = await fetch(`http://localhost:${devPort}/@id/__x00__virtual:sunpeak-inspect-entry`);
+    if (!entryResp.ok) throw new Error(`Virtual entry module returned ${entryResp.status}`);
+    const entryJs = await entryResp.text();
+
+    const sampleFixture = JSON.parse(readFileSync(join(simDir, 'show-albums.json'), 'utf-8'));
+    if (sampleFixture.toolInput) {
+      const fixtureKey = Object.keys(sampleFixture.toolInput)[0]; // e.g., "category"
+      if (!entryJs.includes(fixtureKey)) {
+        throw new Error(`Fixture toolInput missing from virtual entry (expected "${fixtureKey}")`);
+      }
+      printSuccess('Fixture data: toolInput flows through');
+    }
+    if (sampleFixture.userMessage) {
+      if (!entryJs.includes(sampleFixture.userMessage.substring(0, 20))) {
+        throw new Error(`Fixture userMessage missing from virtual entry`);
+      }
+      printSuccess('Fixture data: userMessage flows through');
+    }
+    if (sampleFixture.toolResult?.structuredContent) {
+      // Verify the entry contains the structured content shape
+      if (!entryJs.includes('structuredContent')) {
+        throw new Error('Fixture toolResult.structuredContent missing from virtual entry');
+      }
+      printSuccess('Fixture data: toolResult flows through');
+    }
+
+    // ── 13. Sandbox server responds ──
+    // The sandbox URL is embedded in the virtual entry module JS.
+    // Extract it and verify the sandbox proxy is reachable.
+    const sandboxUrlMatch = entryJs.match(/const sandboxUrl\s*=\s*"(http[^"]+)"/);
+    if (!sandboxUrlMatch) {
+      throw new Error('Sandbox URL not found in virtual entry module');
+    }
+    const sandboxUrl = sandboxUrlMatch[1];
+    // The sandbox serves the proxy at /proxy and has a /health endpoint
+    const sandboxHealthResp = await fetch(`${sandboxUrl}/health`);
+    if (!sandboxHealthResp.ok) throw new Error(`Sandbox health returned ${sandboxHealthResp.status}`);
+    const sandboxProxyResp = await fetch(`${sandboxUrl}/proxy`);
+    if (!sandboxProxyResp.ok) throw new Error(`Sandbox proxy returned ${sandboxProxyResp.status}`);
+    const sandboxHtml = await sandboxProxyResp.text();
+    if (!sandboxHtml.includes('postMessage')) {
+      throw new Error('Sandbox proxy HTML missing PostMessage relay');
+    }
+    if (!sandboxHtml.includes('sandbox-proxy-ready')) {
+      throw new Error('Sandbox proxy HTML missing readiness signal');
+    }
+    printSuccess(`Sandbox server responds (${sandboxUrl})`);
+
+    // ── 14. Prod resources: /dist/ served after build ──
+    let buildDone = false;
+    for (let i = 0; i < 60; i++) {
+      if ((devStdout + devStderr).includes('Built resources for the MCP server')) {
+        buildDone = true;
+        break;
+      }
+      await new Promise(r => setTimeout(r, 500));
+    }
+    if (!buildDone) {
+      throw new Error('Build watcher did not complete within 30s');
+    }
+
+    // Extract resource name from URI (ui://name-timestamp → name)
+    const resourceName = firstUri.replace('ui://', '').replace(/-[a-z0-9]+$/, '');
+    const distUrl = `http://localhost:${devPort}/dist/${resourceName}/${resourceName}.html`;
+
+    // HEAD (the Simulator polls with HEAD to check readiness)
+    const distHeadResp = await fetch(distUrl, { method: 'HEAD' });
+    if (!distHeadResp.ok) {
+      throw new Error(`Prod resources HEAD ${distUrl} returned ${distHeadResp.status}`);
+    }
+
+    // GET (the Simulator loads this in the iframe)
+    const distGetResp = await fetch(distUrl);
+    const distHtml = await distGetResp.text();
+    if (!distHtml.includes('<div id="root">')) throw new Error('Prod resources HTML missing #root');
+    if (!distHtml.includes('<script>')) throw new Error('Prod resources HTML missing inlined script');
+    // Prod HTML should NOT contain Vite HMR (it's self-contained)
+    if (distHtml.includes('@vite/client')) throw new Error('Prod resources HTML should not contain Vite HMR');
+    printSuccess(`Prod resources served: /dist/${resourceName}/${resourceName}.html`);
+
+    // ── 15. Missing dist file returns 404 (not SPA fallback) ──
+    const missingDistResp = await fetch(`http://localhost:${devPort}/dist/nonexistent/nonexistent.html`, { method: 'HEAD' });
+    if (missingDistResp.ok) {
+      throw new Error('Missing dist file should return 404, not 200');
+    }
+    printSuccess('Missing dist file returns 404');
+
+  } finally {
+    devProcess.kill('SIGTERM');
+    await new Promise(r => setTimeout(r, 1000));
+    if (devProcess.exitCode === null) devProcess.kill('SIGKILL');
+  }
+}
+
+
 // ============================================================================
 // Main testing flow
 // ============================================================================
@@ -662,6 +925,13 @@ try {
   }
   printSuccess('Template built');
   await validateInspectMode(TEMPLATE_ROOT);
+
+  // ==========================================================================
+  // Phase 5c: Dev server integration test
+  // ==========================================================================
+  printSection('DEV SERVER');
+
+  await validateDevServer(TEMPLATE_ROOT);
 
   // ==========================================================================
   // Phase 6: Live tests (opt-in, requires tunnel)

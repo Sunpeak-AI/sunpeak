@@ -4,7 +4,7 @@ import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
 export const tool: AppToolConfig = {
   title: 'Confirm Review',
   description: 'Execute or cancel a reviewed action after user approval in the review UI',
-  annotations: { readOnlyHint: false },
+  annotations: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
   _meta: { ui: { visibility: ['model', 'app'] } },
 };
 

@@ -7,7 +7,7 @@
  * @example
  * ```tsx
  * import { simulator } from 'sunpeak';
- * const { Simulator, buildDevSimulations } = simulator;
+ * const { Simulator } = simulator;
  *
  * <Simulator simulations={simulations} appName="My App" />
  * ```
@@ -64,12 +64,8 @@ export {
   SidebarToggle,
 } from './simple-sidebar';
 
-// Discovery utilities for building simulations
+// Discovery utilities
 export {
-  buildDevSimulations,
-  buildSimulations,
-  buildResourceMap,
-  createResourceExports,
   toPascalCase,
   extractResourceKey,
   extractSimulationKey,
@@ -77,10 +73,4 @@ export {
   getComponentName,
   findResourceDirs,
 } from '../lib/discovery';
-export type {
-  BuildSimulationsOptions,
-  BuildDevSimulationsOptions,
-  ResourceMetadata,
-  ResourceDirInfo,
-  FsOps,
-} from '../lib/discovery';
+export type { ResourceDirInfo, FsOps } from '../lib/discovery';

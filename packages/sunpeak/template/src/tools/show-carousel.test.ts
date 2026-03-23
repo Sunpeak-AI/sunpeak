@@ -7,7 +7,11 @@ describe('show-carousel tool', () => {
   it('exports correct tool config', () => {
     expect(tool.resource).toBe('carousel');
     expect(tool.title).toBe('Show Carousel');
-    expect(tool.annotations?.readOnlyHint).toBe(true);
+    expect(tool.annotations).toEqual({
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    });
   });
 
   it('has expected schema fields', () => {

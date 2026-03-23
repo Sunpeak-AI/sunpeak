@@ -7,7 +7,11 @@ describe('review-diff tool', () => {
   it('exports correct tool config', () => {
     expect(tool.resource).toBe('review');
     expect(tool.title).toBe('Diff Review');
-    expect(tool.annotations?.readOnlyHint).toBe(false);
+    expect(tool.annotations).toEqual({
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    });
   });
 
   it('has expected schema fields', () => {

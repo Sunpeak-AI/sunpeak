@@ -31,12 +31,8 @@ export * from '../simulator/theme-provider';
 export { createSimulatorUrl } from '../simulator/simulator-url';
 export type { SimulatorUrlParams } from '../simulator/simulator-url';
 
-// Discovery utilities for building simulations
+// Discovery utilities
 export {
-  buildDevSimulations,
-  buildSimulations,
-  buildResourceMap,
-  createResourceExports,
   toPascalCase,
   extractResourceKey,
   extractSimulationKey,
@@ -44,10 +40,4 @@ export {
   getComponentName,
   findResourceDirs,
 } from '../lib/discovery';
-export type {
-  BuildSimulationsOptions,
-  BuildDevSimulationsOptions,
-  ResourceMetadata,
-  ResourceDirInfo,
-  FsOps,
-} from '../lib/discovery';
+export type { ResourceDirInfo, FsOps } from '../lib/discovery';

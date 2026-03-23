@@ -39,8 +39,13 @@ export interface SimulatorProps {
   appIcon?: string;
   /** Which host shell to use initially. Defaults to 'chatgpt'. */
   defaultHost?: HostId;
-  /** Override callServerTool resolution. When provided, bypasses simulation serverTools mocks (e.g., for --prod-tools mode). */
+  /** Override callServerTool resolution. When provided, bypasses simulation serverTools mocks. Routes through MCP which returns simulation fixture data for UI tools. */
   onCallTool?: (params: {
+    name: string;
+    arguments?: Record<string, unknown>;
+  }) => Promise<CallToolResult> | CallToolResult;
+  /** Direct tool handler call, bypassing MCP server mock data. Used by the Prod Tools Run button to call real handlers. Falls back to onCallTool if not provided. */
+  onCallToolDirect?: (params: {
     name: string;
     arguments?: Record<string, unknown>;
   }) => Promise<CallToolResult> | CallToolResult;
@@ -75,6 +80,7 @@ export function Simulator({
   appIcon,
   defaultHost = 'chatgpt',
   onCallTool,
+  onCallToolDirect,
   defaultProdTools = false,
   defaultProdResources = false,
   hideSimulatorModes = false,
@@ -130,10 +136,13 @@ export function Simulator({
   }, [prodTools, state.simulationNames, simulations]);
 
   // Run button handler: call the real tool handler with current toolInput.
+  // Uses onCallToolDirect (bypasses MCP mock data) so the real handler runs.
+  // Falls back to onCallTool if no direct handler is available.
   // In inspect mode, if the simulation has a pre-filled toolResult, use it
   // directly (mock mode) instead of calling the real server.
   const handleRun = React.useCallback(async () => {
-    if (!onCallTool || !state.selectedSim) return;
+    const caller = onCallToolDirect ?? onCallTool;
+    if (!caller || !state.selectedSim) return;
     const toolName = state.selectedSim.tool.name;
     setIsRunning(true);
     try {
@@ -142,7 +151,7 @@ export function Simulator({
         ? (state.selectedSim.toolResult as CallToolResult | undefined)
         : undefined;
       const result =
-        simToolResult ?? (await onCallTool({ name: toolName, arguments: state.toolInput }));
+        simToolResult ?? (await caller({ name: toolName, arguments: state.toolInput }));
       state.setToolResult(result);
       state.setToolResultJson(JSON.stringify(result, null, 2));
       state.setToolResultError('');
@@ -166,7 +175,7 @@ export function Simulator({
     } finally {
       setIsRunning(false);
     }
-  }, [onCallTool, state, isInspectMode]);
+  }, [onCallTool, onCallToolDirect, state, isInspectMode]);
 
   // Resolve the active host shell
   const activeShell = getHostShell(state.activeHost);
@@ -222,20 +231,25 @@ export function Simulator({
     }
   }, [activeShell]);
 
-  // Handle callServerTool from the iframe. When onCallTool is provided (prod-tools mode),
-  // forward to real tool handlers. Otherwise resolve from simulation serverTools mocks.
+  // Handle callServerTool from the iframe.
+  // In simulation mode: prefer serverTools mocks from the fixture, fall back to onCallTool (MCP).
+  // In prod-tools mode: always use onCallTool (MCP → real handlers).
   const handleCallTool = React.useCallback(
     (params: {
       name: string;
       arguments?: Record<string, unknown>;
     }): CallToolResult | Promise<CallToolResult> => {
+      // In simulation mode, try serverTools mocks first
+      if (!prodTools) {
+        const mock = state.selectedSim?.serverTools?.[params.name];
+        if (mock) {
+          const result = resolveServerToolResult(mock, params.arguments);
+          if (result) return result;
+        }
+      }
+      // Forward to MCP server (real handlers for backend tools)
       if (onCallTool) {
         return onCallTool(params);
-      }
-      const mock = state.selectedSim?.serverTools?.[params.name];
-      if (mock) {
-        const result = resolveServerToolResult(mock, params.arguments);
-        if (result) return result;
       }
       return {
         content: [
@@ -246,7 +260,7 @@ export function Simulator({
         ],
       };
     },
-    [onCallTool, state.selectedSim, state.selectedSimulationName]
+    [onCallTool, prodTools, state.selectedSim, state.selectedSimulationName]
   );
 
   // In prod-tools mode, derive user message from the selected tool
