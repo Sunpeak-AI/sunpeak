@@ -1,12 +1,12 @@
 /**
- * `sunpeak inspect` — Connect to an external MCP server and launch the simulator.
+ * `sunpeak inspect` — Connect to an external MCP server and launch the inspector.
  *
- * This command lets users test their own MCP server in the sunpeak simulator
+ * This command lets users test their own MCP server in the sunpeak inspector
  * without adopting the sunpeak framework conventions. It connects to the server
- * via MCP protocol, discovers tools and resources, and serves the simulator UI.
+ * via MCP protocol, discovers tools and resources, and serves the inspector UI.
  *
  * The core logic lives in `inspectServer()`, which is also used by `sunpeak dev`
- * to serve the simulator UI pointed at the local MCP server.
+ * to serve the inspector UI pointed at the local MCP server.
  *
  * Usage:
  *   sunpeak inspect --server http://localhost:8000/mcp
@@ -57,7 +57,7 @@ function parseArgs(args) {
 
 function printHelp() {
   console.log(`
-sunpeak inspect — Test an external MCP server in the simulator
+sunpeak inspect — Test an external MCP server in the inspector
 
 Usage:
   sunpeak inspect --server <url-or-command>
@@ -66,7 +66,7 @@ Options:
   --server, -s <url|cmd>     MCP server URL or stdio command (required)
   --simulations <dir>        Simulation JSON directory (opt-in, no default)
   --port, -p <number>        Dev server port (default: 3000)
-  --name <string>            App name in simulator chrome
+  --name <string>            App name in inspector chrome
   --help, -h                 Show this help
 
 Examples:
@@ -210,7 +210,7 @@ function mergeSimulationFixtures(dir, simulations) {
  * @param {string} appName - Display name
  * @param {string|null} appIcon - Icon URL or emoji
  * @param {string} sandboxUrl - Sandbox server URL
- * @param {{ defaultProdResources?: boolean, hideSimulatorModes?: boolean }} [modeFlags] - Mode toggles
+ * @param {{ defaultProdResources?: boolean, hideInspectorModes?: boolean }} [modeFlags] - Mode toggles
  */
 function sunpeakInspectVirtualPlugin(simulations, serverUrl, appName, appIcon, sandboxUrl, modeFlags = {}) {
   const ENTRY_ID = 'virtual:sunpeak-inspect-entry';
@@ -227,16 +227,15 @@ function sunpeakInspectVirtualPlugin(simulations, serverUrl, appName, appIcon, s
       return `
 import { createElement, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Simulator } from 'sunpeak/simulator';
+import { Inspector } from 'sunpeak/inspector';
 import 'sunpeak/style.css';
-import 'sunpeak/chatgpt/globals.css';
 
 const simulations = ${JSON.stringify(simulations)};
 const appName = ${JSON.stringify(appName ?? 'MCP Inspector')};
 const appIcon = ${JSON.stringify(appIcon ?? null)};
 const sandboxUrl = ${JSON.stringify(sandboxUrl)};
 const defaultProdResources = ${JSON.stringify(modeFlags.defaultProdResources ?? false)};
-const hideSimulatorModes = ${JSON.stringify(modeFlags.hideSimulatorModes ?? false)};
+const hideInspectorModes = ${JSON.stringify(modeFlags.hideInspectorModes ?? false)};
 
 const onCallTool = async (params) => {
   const res = await fetch('/__sunpeak/call-tool', {
@@ -259,7 +258,7 @@ const onCallToolDirect = async (params) => {
 const root = createRoot(document.getElementById('root'));
 root.render(
   createElement(StrictMode, null,
-    createElement(Simulator, {
+    createElement(Inspector, {
       simulations,
       mcpServerUrl: ${JSON.stringify(serverUrl)},
       appName,
@@ -268,7 +267,7 @@ root.render(
       onCallTool,
       onCallToolDirect,
       defaultProdResources,
-      hideSimulatorModes,
+      hideInspectorModes,
     })
   )
 );
@@ -492,7 +491,7 @@ function readRequestBody(req) {
 
 /**
  * Core inspect server logic. Connects to an MCP server, discovers tools/resources,
- * merges simulation fixtures, and serves the simulator UI via Vite.
+ * merges simulation fixtures, and serves the inspector UI via Vite.
  *
  * Used by both `sunpeak inspect` (CLI) and `sunpeak dev` (programmatic).
  *
@@ -621,7 +620,7 @@ export async function inspectServer(opts) {
 </body>
 </html>`;
 
-  const simulatorServerUrl = serverArg;
+  const inspectorServerUrl = serverArg;
 
   // Create the Vite server.
   // Use the sunpeak package dir as root to avoid scanning the user's project
@@ -636,11 +635,11 @@ export async function inspectServer(opts) {
       ...extraVitePlugins,
       sunpeakInspectVirtualPlugin(
         simulations,
-        simulatorServerUrl,
+        inspectorServerUrl,
         serverAppName,
         serverAppIcon,
         sandbox.url,
-        { defaultProdResources, hideSimulatorModes: !frameworkMode }
+        { defaultProdResources, hideInspectorModes: !frameworkMode }
       ),
       sunpeakInspectEndpointsPlugin(
         () => mcpConnection.client,
@@ -648,9 +647,9 @@ export async function inspectServer(opts) {
         { callToolDirect: opts.callToolDirect, simulationsDir }
       ),
       // Serve /dist/{name}/{name}.html from the project directory (for Prod Resources mode).
-      // The Simulator polls these paths via HEAD to check if built resources exist.
+      // The Inspector polls these paths via HEAD to check if built resources exist.
       // Only intercepts .html files under /dist/ — other /dist/ paths (like sunpeak's
-      // own dist/simulator/index.js) must fall through to Vite's module resolution.
+      // own dist/inspector/index.js) must fall through to Vite's module resolution.
       ...(projectRoot ? [{
         name: 'sunpeak-dist-serve',
         configureServer(server) {

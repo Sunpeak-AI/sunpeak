@@ -435,7 +435,7 @@ function createAppServer(
 type SessionRecord = {
   server: McpServer;
   transport: StreamableHTTPServerTransport;
-  /** True for localhost connections (ChatGPT, simulator) — they use Vite HMR. */
+  /** True for localhost connections (ChatGPT, inspector) — they use Vite HMR. */
   isLocal: boolean;
   lastActivity: number;
   /** Resource handles for URI cache-busting on rebuild. Keyed by resource name. */
@@ -449,7 +449,7 @@ const SESSION_IDLE_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * Check if the request originates from localhost.
- * Local connections (ChatGPT, simulator) use Vite HMR for live content updates.
+ * Local connections (ChatGPT, inspector) use Vite HMR for live content updates.
  */
 function isLocalConnection(req: IncomingMessage): boolean {
   const addr = req.socket.remoteAddress;
@@ -768,7 +768,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       if (sessions.size === 0) return;
 
       // Only cache-bust non-local (tunnel) sessions. Local sessions (ChatGPT,
-      // inspector, simulator) use Vite HMR for live content updates — their
+      // inspector) use Vite HMR for live content updates — their
       // iframes auto-update without needing a new readResource URI.
       // Tunnel sessions (Claude via ngrok) serve pre-built HTML snapshots, so
       // they need a new URI to force the host to re-read the resource.

@@ -11,7 +11,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 1,
-  // Limit parallel workers. Each test loads a full simulator page with
+  // Limit parallel workers. Each test loads a full inspector page with
   // iframe → cross-origin sandbox proxy → inner iframe. Too many concurrent
   // pages overwhelm the sandbox proxy server and cause PostMessage relay
   // timeouts. 2 workers balances speed vs reliability.

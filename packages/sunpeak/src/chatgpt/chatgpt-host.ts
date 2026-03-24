@@ -1,6 +1,6 @@
 import type { McpUiHostCapabilities } from '@modelcontextprotocol/ext-apps';
-import { registerHostShell } from '../simulator/hosts';
-import { DEFAULT_STYLE_VARIABLES } from '../simulator/host-styles';
+import { registerHostShell } from '../inspector/hosts';
+import { DEFAULT_STYLE_VARIABLES } from '../inspector/host-styles';
 import { Conversation } from './chatgpt-conversation';
 
 /**

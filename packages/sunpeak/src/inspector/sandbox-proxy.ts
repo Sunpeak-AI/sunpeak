@@ -8,7 +8,7 @@
  * The proxy relays PostMessage between the host (parent) and the app (inner iframe),
  * providing origin isolation and security boundaries.
  *
- * The simulator replicates this architecture so apps are tested under the same
+ * The inspector replicates this architecture so apps are tested under the same
  * iframe nesting they'll encounter in production.
  *
  * Protocol:

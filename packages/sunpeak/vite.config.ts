@@ -4,7 +4,6 @@ import dts from 'vite-plugin-dts';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'path';
 import { builtinModules } from 'module';
-import { readFileSync, writeFileSync, mkdirSync } from 'fs';
 
 // Node.js built-in modules to externalize
 const nodeBuiltins = builtinModules.flatMap((m) => [m, `node:${m}`]);
@@ -28,25 +27,12 @@ export default defineConfig({
       outDir: 'dist',
       rollupTypes: false,
     }),
-    // Copy processed styles into chatgpt/globals.css for backwards compatibility
-    {
-      name: 'merge-simulator-css',
-      closeBundle() {
-        // dist/style.css already contains all processed Tailwind + component styles
-        // (built from src/style.css → chatgpt/globals.css → simulator/globals.css)
-        const styleCss = readFileSync(resolve(__dirname, 'dist/style.css'), 'utf-8');
-
-        // chatgpt/globals.css — backwards compatibility (same content as style.css)
-        mkdirSync(resolve(__dirname, 'dist/chatgpt'), { recursive: true });
-        writeFileSync(resolve(__dirname, 'dist/chatgpt/globals.css'), styleCss);
-      },
-    },
   ],
   build: {
     lib: {
       entry: {
         index: resolve(__dirname, 'src/index.ts'),
-        'simulator/index': resolve(__dirname, 'src/simulator/index.ts'),
+        'inspector/index': resolve(__dirname, 'src/inspector/index.ts'),
         'chatgpt/index': resolve(__dirname, 'src/chatgpt/index.ts'),
         'claude/index': resolve(__dirname, 'src/claude/index.ts'),
         'lib/discovery-cli': resolve(__dirname, 'src/lib/discovery-cli.ts'),

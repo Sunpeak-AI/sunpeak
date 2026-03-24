@@ -95,19 +95,19 @@ function getVersion() {
       {
         const resources = discoverResources();
         console.log(`
-☀️ 🏔️ sunpeak - The ChatGPT App framework
+☀️ 🏔️ sunpeak - Inspector, testing framework, and app framework for MCP Apps
 
 Install:
   pnpm add -g sunpeak
 
 Usage:
   sunpeak new [name] [resources]  Create a new project
-  sunpeak dev              Start dev server + MCP endpoint
+  sunpeak dev              Start dev server + inspector + MCP endpoint
     --no-begging           Suppress GitHub star message
   sunpeak build            Build resources + tools for production
   sunpeak start            Start production MCP server
     --port, -p             Server port (default: 8000, or PORT env)
-  sunpeak inspect           Test an external MCP server in the simulator
+  sunpeak inspect          Inspect any MCP server in the inspector
     --server, -s <url|cmd> MCP server URL or stdio command (required)
     --simulations <dir>    Simulation JSON directory
   sunpeak upgrade          Upgrade sunpeak to latest version

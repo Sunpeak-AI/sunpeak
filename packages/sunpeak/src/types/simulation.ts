@@ -1,7 +1,7 @@
 /**
  * Core simulation types for development and testing.
  * These types define how simulations are configured and used in both
- * the dev simulator and MCP server contexts.
+ * the dev inspector and MCP server contexts.
  */
 
 import type { Tool, Resource, CallToolResult } from '@modelcontextprotocol/sdk/types.js';
@@ -20,7 +20,7 @@ export type ServerToolMock =
 
 /**
  * A simulation packages a component with its example data and metadata.
- * Each simulation represents a complete tool experience in the simulator.
+ * Each simulation represents a complete tool experience in the inspector.
  *
  * Resource rendering options (mutually exclusive):
  * - `resourceUrl`: URL to an HTML page (dev mode with Vite HMR)
@@ -37,7 +37,7 @@ export interface Simulation {
   // URL to a built resource for iframe rendering (production builds).
   resourceScript?: string;
 
-  userMessage?: string; // Decoration for the simulator, no functional purpose.
+  userMessage?: string; // Decoration for the inspector, no functional purpose.
 
   // Official Tool type from the MCP SDK, used in ListTools response.
   tool: Tool;

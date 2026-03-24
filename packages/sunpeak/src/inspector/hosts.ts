@@ -4,7 +4,7 @@ import type {
   McpUiHostCapabilities,
   McpUiStyles,
 } from '@modelcontextprotocol/ext-apps';
-import type { ScreenWidth } from './simulator-types';
+import type { ScreenWidth } from './inspector-types';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
 
@@ -33,7 +33,7 @@ export interface HostConversationProps {
   headerAction?: React.ReactNode;
   /**
    * Called when the content container width changes (via ResizeObserver).
-   * The simulator uses this to set containerDimensions.maxWidth in hostContext,
+   * The inspector uses this to set containerDimensions.maxWidth in hostContext,
    * matching what real hosts report to apps.
    */
   onContentWidthChange?: (width: number) => void;
@@ -72,7 +72,7 @@ export interface HostShell {
    */
   styleVariables?: McpUiStyles;
   /**
-   * CSS custom properties for the simulator page chrome (sidebar, conversation area).
+   * CSS custom properties for the inspector page chrome (sidebar, conversation area).
    * These are applied to the document root and can override the defaults:
    *   --sim-bg-sidebar       (fallback: var(--color-background-secondary))
    *   --sim-bg-conversation  (fallback: var(--color-background-primary))

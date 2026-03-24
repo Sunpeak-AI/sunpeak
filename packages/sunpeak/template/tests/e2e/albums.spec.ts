@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from 'sunpeak/chatgpt';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Albums Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render album cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
@@ -27,7 +27,7 @@ for (const host of hosts) {
       });
 
       test('should have album image with correct aspect ratio', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumImage = iframe.locator('button:has-text("Summer Slice") img').first();
@@ -54,7 +54,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render album cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumCard = iframe.locator('button:has-text("Summer Slice")');
@@ -73,7 +73,7 @@ for (const host of hosts) {
       });
 
       test('should have text with appropriate contrast', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const albumTitle = iframe.locator('button:has-text("Summer Slice") div').first();
@@ -94,7 +94,7 @@ for (const host of hosts) {
 
     test.describe('Prod Tools Mode', () => {
       test('should show empty state with Run button', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
         // Should show the "Press Run to call the tool" empty state
         const emptyState = page.locator('text=Press Run to call the tool');
@@ -110,7 +110,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in light mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'light', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -126,7 +126,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -147,7 +147,7 @@ for (const host of hosts) {
         // With dist/ files available, renders the resource from dist/
         // This test verifies the mode activates without errors
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-albums',
             theme: 'dark',
             host,
@@ -164,7 +164,7 @@ for (const host of hosts) {
     test.describe('Fullscreen Mode', () => {
       test('should render correctly in fullscreen displayMode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-albums',
             theme: 'light',
             displayMode: 'fullscreen',
@@ -182,7 +182,7 @@ for (const host of hosts) {
 
       test('should maintain album card styles in fullscreen', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-albums',
             theme: 'dark',
             displayMode: 'fullscreen',
@@ -208,7 +208,7 @@ for (const host of hosts) {
 
       test('should render content after switching from inline to fullscreen', async ({ page }) => {
         // Start in inline mode
-        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
@@ -224,7 +224,7 @@ for (const host of hosts) {
 
       test('should render content after switching from inline to pip', async ({ page }) => {
         // Start in inline mode
-        await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();

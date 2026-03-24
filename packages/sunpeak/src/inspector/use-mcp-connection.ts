@@ -22,7 +22,7 @@ export interface McpConnectionState {
  *
  * This split avoids React StrictMode issues: the mount-only health check runs
  * once (or safely twice with cancellation), while explicit `reconnect()` calls
- * are triggered by the Simulator's URL-change effect.
+ * are triggered by the Inspector's URL-change effect.
  */
 export function useMcpConnection(initialServerUrl: string | undefined): McpConnectionState {
   const [status, setStatus] = useState<McpConnectionState['status']>(

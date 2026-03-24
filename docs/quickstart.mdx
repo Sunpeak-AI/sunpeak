@@ -6,6 +6,10 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framewo
 
 ## New projects
 
+<Tip>
+Already have an MCP server? Skip the project scaffold and use `sunpeak inspect --server <url>` to test it immediately. See [sunpeak inspect](/api-reference/cli/inspect).
+</Tip>
+
 <Steps>
   <Step title="Install sunpeak">
     **Requirements**: Node.js 20+
@@ -48,7 +52,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framewo
     ```
 
     This starts:
-    - The MCP App simulator at `http://localhost:3000` for local development
+    - The MCP App inspector at `http://localhost:3000` for local development
     - An [MCP server](/mcp-apps/mcp/overview) at `http://localhost:8000` for testing with real hosts like ChatGPT
 
     <Tip>Both servers support Hot Module Reload - your changes reflect instantly!</Tip>
@@ -78,7 +82,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framewo
 </Steps>
 
 <CardGroup cols={2}>
-  <Card horizontal title="Project Scaffold" icon="page" href="/template/project-scaffold">
+  <Card horizontal title="Project Scaffold" icon="page" href="/framework/project-scaffold">
     Explore your new MCP App project.
   </Card>
   <Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">

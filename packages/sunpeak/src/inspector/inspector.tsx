@@ -5,7 +5,7 @@ import type {
   McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { useSimulatorState } from './use-simulator-state';
+import { useInspectorState } from './use-inspector-state';
 import { useMcpConnection } from './use-mcp-connection';
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
@@ -22,19 +22,19 @@ import {
 import { getHostShell, getRegisteredHosts, type HostId } from './hosts';
 import { resolveServerToolResult } from '../types/simulation';
 import type { Simulation } from '../types/simulation';
-import type { ScreenWidth } from './simulator-types';
+import type { ScreenWidth } from './inspector-types';
 
 // Register built-in host shells. These imports live here (in the component file)
 // rather than in the barrel index.ts because Rollup code-splitting can separate
 // side-effect imports from barrel exports, letting consumer bundlers tree-shake
-// them. Importing here makes registration part of the Simulator component's
+// them. Importing here makes registration part of the Inspector component's
 // dependency graph, which can't be tree-shaken since the component is used.
 import '../chatgpt/chatgpt-host';
 import '../claude/claude-host';
 
 const DOCS_BASE_URL = 'https://sunpeak.ai/docs';
 
-export interface SimulatorProps {
+export interface InspectorProps {
   children?: React.ReactNode;
   simulations?: Record<string, Simulation>;
   appName?: string;
@@ -54,7 +54,7 @@ export interface SimulatorProps {
   /** Initial prod-resources mode state. When true, resources load from dist/ instead of HMR. Defaults to false. */
   defaultProdResources?: boolean;
   /** Hide framework-only controls (Prod Resources) in the sidebar. */
-  hideSimulatorModes?: boolean;
+  hideInspectorModes?: boolean;
   /**
    * Demo mode for embedding on marketing sites. When true:
    * - Hides Prod Resources checkbox
@@ -94,7 +94,7 @@ function hasFixtureData(sim: Simulation): boolean {
   return sim.toolResult != null || sim.toolInput != null || sim.serverTools != null;
 }
 
-export function Simulator({
+export function Inspector({
   children,
   simulations: initialSimulations = {},
   appName = 'Sunpeak',
@@ -103,11 +103,11 @@ export function Simulator({
   onCallTool,
   onCallToolDirect,
   defaultProdResources = false,
-  hideSimulatorModes = false,
+  hideInspectorModes = false,
   demoMode = false,
   sandboxUrl,
   mcpServerUrl,
-}: SimulatorProps) {
+}: InspectorProps) {
   // Simulations can be updated when the user reconnects to a different server.
   const [simulations, setSimulations] = React.useState(initialSimulations);
   // Sync with prop changes (e.g., HMR during development).
@@ -152,15 +152,13 @@ export function Simulator({
   );
 
   // Parse URL params once for tool/simulation initialization.
-  // ?prodTools=true is deprecated but still honored — treated as "tool only, no simulation".
   const initUrlParams = React.useMemo(() => {
     if (typeof window === 'undefined') return { tool: null, simulation: null, noMockData: false };
     const params = new URLSearchParams(window.location.search);
-    const prodTools = params.get('prodTools') === 'true';
     return {
       tool: params.get('tool'),
       simulation: params.get('simulation'),
-      noMockData: prodTools,
+      noMockData: false,
     };
   }, []);
 
@@ -191,7 +189,6 @@ export function Simulator({
   // null = "None" (no mock data, call the real server)
   // string = a specific simulation with fixture data
   // ?tool=X without ?simulation=Y means "select tool, no mock data"
-  // ?prodTools=true (deprecated) has the same effect
   const [activeSimulationName, setActiveSimulationName] = React.useState<string | null>(() => {
     if (!selectedToolInfo) return null;
     if (initUrlParams.noMockData) return null;
@@ -214,7 +211,7 @@ export function Simulator({
     setActiveSimulationName(newInfo?.fixtureSimNames[0] ?? null);
   }
 
-  // The effective simulation name for useSimulatorState:
+  // The effective simulation name for useInspectorState:
   // - If a fixture simulation is active, use it (for tool input, tool result, resource URL)
   // - Otherwise, use the base simulation for the tool (for resource URL, tool definition)
   const effectiveSimulationName = activeSimulationName ?? selectedToolInfo?.simNames[0] ?? '';
@@ -223,7 +220,7 @@ export function Simulator({
   // This avoids the one-render lag from the useEffect sync to state.selectedSimulationName.
   const currentSim = simulations[effectiveSimulationName];
 
-  const state = useSimulatorState({ simulations, defaultHost });
+  const state = useInspectorState({ simulations, defaultHost });
   const [serverUrl, setServerUrl] = React.useState(mcpServerUrl ?? '');
   // useMcpConnection does a mount-only health check for the initial URL.
   // URL changes are handled below via connection.reconnect().
@@ -236,7 +233,7 @@ export function Simulator({
   const [showCheck, setShowCheck] = React.useState(false);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Keep useSimulatorState's selection in sync with our tool/simulation selection.
+  // Keep useInspectorState's selection in sync with our tool/simulation selection.
   React.useEffect(() => {
     state.setSelectedSimulationName(effectiveSimulationName);
   }, [effectiveSimulationName]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -269,7 +266,7 @@ export function Simulator({
   // - "None" (null): clear toolResult so the "Press Run" empty state shows.
   // - Simulation selected: restore toolResult from the fixture. This handles the
   //   case where effectiveSimulationName didn't change (e.g., None → same fixture),
-  //   so useSimulatorState's internal sync wouldn't re-run.
+  //   so useInspectorState's internal sync wouldn't re-run.
   const { setToolResult, setToolResultJson, setToolResultError } = state;
   React.useEffect(() => {
     if (activeSimulationName === null) {
@@ -412,7 +409,7 @@ export function Simulator({
         content: [
           {
             type: 'text',
-            text: `[Simulator] Tool "${params.name}" called — no serverTools mock found in simulation "${effectiveSimulationName}".`,
+            text: `[Inspector] Tool "${params.name}" called — no serverTools mock found in simulation "${effectiveSimulationName}".`,
           },
         ],
       };
@@ -668,7 +665,7 @@ export function Simulator({
             </SidebarControl>
 
             {/* ── Prod Resources (framework mode only, hidden in demo mode) ── */}
-            {!hideSimulatorModes && !demoMode && (
+            {!hideInspectorModes && !demoMode && (
               <SidebarCheckbox
                 checked={prodResources}
                 onChange={setProdResources}
@@ -777,7 +774,7 @@ export function Simulator({
               <SidebarControl
                 label="Width"
                 tooltip="Chat width"
-                docsPath="api-reference/simulations/simulator"
+                docsPath="api-reference/simulations/inspector"
               >
                 <SidebarSelect
                   value={state.screenWidth}

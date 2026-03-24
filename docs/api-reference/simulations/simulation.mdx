@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app testing", "ChatGPT app testing",
 
 ## Overview
 
-Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the Simulator for local development or runMCPServer for platform testing with hosts like ChatGPT and Claude.
+Simulations define test scenarios for your resources—combining tool definitions, mock data, and platform state. They can be used with the Inspector for local development or runMCPServer for platform testing with hosts like ChatGPT and Claude.
 
 Simulations are **JSON files** that live in the `tests/simulations/` directory. Each simulation references a tool file by name — tool metadata and resource linkage are handled by the tool files in `src/tools/`.
 
@@ -89,7 +89,7 @@ Each simulation can have different `toolInput` and `toolResult.structuredContent
 
 ## Mocking Server Tool Calls
 
-When a resource calls `callServerTool` (e.g., the review resource calling a backend-only "review" tool), the simulator needs mock responses. Instead of separate simulation files for each backend tool response, you define mock responses inline using the `serverTools` field on the resource's simulation.
+When a resource calls `callServerTool` (e.g., the review resource calling a backend-only "review" tool), the inspector needs mock responses. Instead of separate simulation files for each backend tool response, you define mock responses inline using the `serverTools` field on the resource's simulation.
 
 ```json
 // tests/simulations/review-purchase.json
@@ -150,7 +150,7 @@ Use `structuredContent` in the result to return structured data to the calling r
 </ResponseField>
 
 <ResponseField name="userMessage" type="string">
-  A decorative message shown in the simulator interface. Has no functional purpose.
+  A decorative message shown in the inspector interface. Has no functional purpose.
 </ResponseField>
 
 <ResponseField name="tool" type="string" required>
@@ -273,7 +273,7 @@ interface McpUiResourcePermissions {
 }
 ```
 
-The simulator maps these to iframe `allow` attribute directives. Only declared permissions are enabled.
+The inspector maps these to iframe `allow` attribute directives. Only declared permissions are enabled.
 
 ##### CSP
 
@@ -308,7 +308,7 @@ export const resource: ResourceConfig = {
 
 ## See Also
 
-<Card horizontal title="Simulator" icon="desktop" href="/api-reference/simulations/simulator">
+<Card horizontal title="Inspector" icon="desktop" href="/api-reference/simulations/inspector">
   Component API reference.
 </Card>
 <Card horizontal title="runMCPServer" icon="server" href="/api-reference/simulations/run-mcp-server">

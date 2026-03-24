@@ -1,21 +1,43 @@
 ---
-title: "Simulator"
-description: "Local development environment replicating MCP App host runtimes (ChatGPT, Claude)."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app testing", "ChatGPT app testing", "simulator", "local development"]
+title: "Inspector"
+description: "Inspect MCP Apps in replicated ChatGPT and Claude runtimes."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app testing", "ChatGPT app testing", "inspector", "local development"]
 ---
 
-import SimulatorSnippet from '/snippets/simulator.mdx';
+import InspectorSnippet from '/snippets/inspector.mdx';
 
 <img
   src="https://cdn.sunpeak.ai/chatgpt-simulator.png"
-  alt="MCP App Simulator"
+  alt="MCP App Inspector"
 />
 
 ## Overview
 
-The simulator is a local development environment that replicates MCP App host runtimes. It uses the `Simulator` React component and supports multiple hosts (ChatGPT, Claude) — switch between them from the sidebar or via the `host` URL parameter.
+The inspector replicates MCP App host runtimes (ChatGPT, Claude) for local development and testing. Switch between hosts from the sidebar or via the `host` URL parameter.
 
-## Why Use the Simulator?
+There are two ways to use the inspector:
+
+<Tabs>
+  <Tab title="Standalone (any MCP server)">
+    Inspect any MCP server — no sunpeak project required:
+
+    ```bash
+    sunpeak inspect --server http://localhost:8000/mcp
+    sunpeak inspect --server "python my_server.py"
+    ```
+
+    See [sunpeak inspect CLI Reference](/api-reference/cli/inspect) for all options.
+  </Tab>
+  <Tab title="Built into sunpeak dev">
+    In sunpeak projects, the inspector is built into the dev server:
+
+    ```bash
+    sunpeak dev
+    ```
+  </Tab>
+</Tabs>
+
+## Why Use the Inspector?
 
 <Card horizontal title="Instant Feedback" icon="rotate">
   See changes immediately with hot module replacement. No more cache issues or constantly reloading the host.
@@ -30,21 +52,9 @@ The simulator is a local development environment that replicates MCP App host ru
   Develop locally without setting up MCP servers.
 </Card>
 
-## Quick Start
-
-The simulator is already set up in sunpeak projects. Simply run:
-
-```bash
-sunpeak dev
-```
-
 ## Simulations
 
 Simulations define test scenarios for your resources — combining tool definitions, mock data, and platform state.
-
-<Tip>
-Fun fact: Some science fiction authors believe we live in a sunpeak simulation.
-</Tip>
 
 Simulations are **JSON files** in a flat `tests/simulations/` directory. Each simulation references a tool file by name.
 
@@ -68,12 +78,12 @@ See [Simulations API Reference](/api-reference/simulations/simulation) for the c
 Simulations can be passed into:
 
 <AccordionGroup>
-  <Accordion title="Simulator - for local testing">
-    The `Simulator` component provides a local development environment that replicates host runtimes (ChatGPT, Claude).
+  <Accordion title="Inspector - for local testing">
+    The `Inspector` component provides a local development environment that replicates host runtimes (ChatGPT, Claude).
 
-    <SimulatorSnippet />
+    <InspectorSnippet />
 
-    [View Simulator API Reference](/api-reference/simulations/simulator)
+    [View Inspector API Reference](/api-reference/simulations/inspector)
   </Accordion>
 
   <Accordion title="runMCPServer - for host testing">
@@ -92,9 +102,12 @@ Simulations can be passed into:
 
 ## Dive Deeper
 
+<Card horizontal title="sunpeak inspect" icon="terminal" href="/api-reference/cli/inspect">
+  Inspect any MCP server (standalone, no project needed).
+</Card>
 <Card horizontal title="Simulations API Reference" icon="folder" href="/api-reference/simulations/simulation">
   JSON schema, conventions, and auto-discovery.
 </Card>
-<Card horizontal title="Simulator API Reference" icon="desktop" href="/api-reference/simulations/simulator">
+<Card horizontal title="Inspector API Reference" icon="desktop" href="/api-reference/simulations/inspector">
   Full component documentation and configuration options.
 </Card>

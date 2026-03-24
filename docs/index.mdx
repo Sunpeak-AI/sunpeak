@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Build, test, and ship MCP Apps to ChatGPT, Claude, and more with the sunpeak framework."
+description: "Inspector, testing framework, and app framework for MCP Apps."
 keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framework", "Claude Apps", "Claude Connectors", "sunpeak"]
 ---
 
@@ -41,31 +41,78 @@ npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
   className="w-full aspect-video rounded-xl"
 ></video>
 
-## Overview
+## sunpeak is three things
 
-sunpeak is a framework for building MCP Apps — interactive UIs that run inside AI chat hosts like ChatGPT and Claude. Think Next.js for MCP Apps.
+### 1. Inspector
 
-Using a Review page as an example, sunpeak projects look like:
+<Card horizontal title="Inspector" icon="desktop" href="/mcp-apps-inspector">
+  Test any MCP server in replicated ChatGPT and Claude runtimes.
+</Card>
+
+Test any MCP server — no sunpeak project required:
+
+```bash
+sunpeak inspect --server http://localhost:8000/mcp
+sunpeak inspect --server "python my_server.py"
+```
+
+- Multi-host inspector replicating ChatGPT and Claude runtimes
+- Toggle themes, display modes, device types from the sidebar or URL params
+- Call real tool handlers or use simulation fixtures for mock data
+- Built into `sunpeak dev` for framework users
+
+### 2. Testing Framework
+
+<Card horizontal title="Testing" icon="flask" href="/mcp-apps-testing">
+  Automated tests powered by the inspector and simulations.
+</Card>
+
+Two levels of automated testing for MCP Apps:
+
+**E2E tests** — the inspector as a test runtime. Define simulation fixtures (JSON), write Playwright tests that load them in the inspector across hosts, themes, and display modes:
+
+```typescript
+import { createInspectorUrl } from 'sunpeak/inspector';
+
+test('album cards render in dark mode', async ({ page }) => {
+  await page.goto(createInspectorUrl({
+    simulation: 'show-albums',
+    theme: 'dark',
+    host: 'claude',
+  }));
+  // assert against the rendered resource
+});
+```
+
+**Live tests** — automated browser tests against real ChatGPT (and future hosts). Import `sunpeak/test`, get a `live` fixture that handles auth, message sending, and iframe access:
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('albums render in ChatGPT', async ({ live }) => {
+  const app = await live.invoke('show me albums');
+  await expect(app.locator('h1')).toBeVisible();
+});
+```
+
+### 3. App Framework
+
+Next.js for MCP Apps. Convention-over-configuration with the inspector and testing built in.
 
 <ProjectStructure />
 
-1. **[Runtime APIs](/library/runtime-apis)**: Strongly typed APIs for the MCP Apps runtime, **architected for multi-platform support** (ChatGPT, Claude, and more).
-2. **[Simulator](/library/simulator)**: React component replicating the host runtime to **test Apps locally and automatically**.
-3. **[MCP Server](/library/mcp-server)**: Serve Resources with mock data to real hosts with HMR (**no more cache issues or 5-click manual refreshes**).
-4. **[Project Scaffold](/template/project-scaffold)**: Complete development setup with pre-configured tooling.
-5. **[UI Components](/template/ui-components)**: Production-ready components following MCP App design guidelines.
-6. **Convention over configuration**:
-   - Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example](#resource)).
-   - Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with optional resource link), `schema` (Zod), and a `default` handler ([example](#tool)). Tools without a `resource` field are registered as plain MCP tools (no UI).
-   - Create test state (simulations) by creating a `.json` file in `tests/simulations/` ([example](#simulation)).
+- **[Runtime APIs](/mcp-apps-framework#runtime-apis)**: Multi-platform React hooks for the MCP Apps runtime
+- **[Project Scaffold](/framework/project-scaffold)**: Complete dev setup with pre-configured tooling
+- **[UI Components](/framework/ui-components)**: Production-ready components following MCP App design guidelines
+- **Convention over configuration**: resources, tools, and [simulations](/api-reference/simulations/simulation) are auto-discovered from `src/` and `tests/`
 
 ### The sunpeak CLI
 
-Commands for managing MCP Apps:
-
-- `sunpeak new` - Create a new project
-- `sunpeak dev` - Start dev server with MCP endpoint and live simulator
-- `sunpeak build` - Build resources for production
-- `sunpeak upgrade` - Upgrade sunpeak to latest version
+- [`sunpeak new`](/api-reference/cli/new) - Create a new project
+- [`sunpeak dev`](/api-reference/cli/dev) - Start dev server with inspector and MCP endpoint
+- [`sunpeak inspect`](/api-reference/cli/inspect) - Inspect any MCP server (standalone)
+- [`sunpeak build`](/api-reference/cli/build) - Build resources for production
+- [`sunpeak start`](/api-reference/cli/start) - Start the production MCP server
+- [`sunpeak upgrade`](/api-reference/cli/upgrade) - Upgrade sunpeak to latest version
 
 <Examples />

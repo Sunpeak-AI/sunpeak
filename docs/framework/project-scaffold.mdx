@@ -28,7 +28,7 @@ When you create a new project with `sunpeak new`, the sunpeak framework gives yo
     - Simulation files are flat `*.json` files with a `tool` string field referencing a tool filename.
     - Any filename works — multiple simulations can reference the same tool.
 - `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource.
-    Uses the Simulator to test your resources render properly across hosts (ChatGPT, Claude) and states (tool calls, saved state, dark mode, pip display mode, etc.).
+    Uses the Inspector to test your resources render properly across hosts (ChatGPT, Claude) and states (tool calls, saved state, dark mode, pip display mode, etc.).
 - `tests/live/` - Directory containing live tests that run against real ChatGPT.
     These tests open your browser, send messages to ChatGPT, and validate your app renders correctly in the real host environment.
 
@@ -60,11 +60,11 @@ Vite-native testing framework for component testing. Run with `pnpm test`.
 
 ### Playwright (E2E Tests)
 
-End-to-end testing against the ChatGPT Simulator. Tests live in `tests/e2e/`. Run with `pnpm test:e2e`.
+End-to-end testing against the ChatGPT Inspector. Tests live in `tests/e2e/`. Run with `pnpm test:e2e`.
 
 ### Playwright (Live Tests)
 
-Automated testing against real ChatGPT. Tests live in `tests/live/`. Run with `pnpm test:live`. See the [Testing Guide](/guides/testing#live-testing) for setup details.
+Automated testing against real ChatGPT. Tests live in `tests/live/`. Run with `pnpm test:live`. See the [Testing Guide](/mcp-apps-testing#live-testing) for setup details.
 
 ### Add Your Own Tooling
 

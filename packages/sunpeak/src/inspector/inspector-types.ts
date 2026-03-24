@@ -2,7 +2,7 @@ import { DisplayMode, Theme } from '../types/runtime';
 
 export type ScreenWidth = 'mobile-s' | 'mobile-l' | 'tablet' | 'full';
 
-export type SimulatorConfig = {
+export type InspectorConfig = {
   theme: Theme;
   displayMode: DisplayMode;
   screenWidth: ScreenWidth;

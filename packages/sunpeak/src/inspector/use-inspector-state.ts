@@ -7,7 +7,7 @@ import type {
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Simulation } from '../types/simulation';
-import type { ScreenWidth } from './simulator-types';
+import type { ScreenWidth } from './inspector-types';
 import type { HostId } from './hosts';
 import { extractResourceCSP, type ResourceCSP } from './iframe-resource';
 
@@ -17,12 +17,12 @@ const DEFAULT_THEME: McpUiTheme = 'dark';
 const DEFAULT_DISPLAY_MODE: McpUiDisplayMode = 'inline';
 const DEFAULT_PLATFORM: Platform = 'desktop';
 
-export interface UseSimulatorStateOptions {
+export interface UseInspectorStateOptions {
   simulations: Record<string, Simulation>;
   defaultHost?: HostId;
 }
 
-export interface SimulatorState {
+export interface InspectorState {
   // ── Simulation selection ──
   simulationNames: string[];
   selectedSimulationName: string;
@@ -129,7 +129,7 @@ export interface SimulatorState {
 }
 
 /**
- * Parse URL params for initial simulator values.
+ * Parse URL params for initial inspector values.
  * Supported params:
  * - simulation: simulation name (e.g., 'show-albums')
  * - theme: 'light' | 'dark'
@@ -229,10 +229,10 @@ function parseUrlParams(): {
   };
 }
 
-export function useSimulatorState({
+export function useInspectorState({
   simulations,
   defaultHost = 'chatgpt',
-}: UseSimulatorStateOptions): SimulatorState {
+}: UseInspectorStateOptions): InspectorState {
   // Only list simulations with a UI resource — backend-only tools have nothing to render.
   const simulationNames = Object.keys(simulations)
     .filter((name) => simulations[name].resource)
@@ -305,7 +305,7 @@ export function useSimulatorState({
   };
 
   // Callback for IframeResource's onDisplayModeReady (paint fence ack).
-  // Currently a no-op — the simulator doesn't need to track the confirmed
+  // Currently a no-op — the inspector doesn't need to track the confirmed
   // display mode. Kept as a stable reference to avoid unnecessary re-renders.
   const handleDisplayModeReady = useCallback((_mode: string) => {}, []);
 

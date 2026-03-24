@@ -128,8 +128,8 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBu
  * Start the Vite development server.
  *
  * Starts the MCP server (with Vite HMR for resources) and then launches the
- * inspector UI pointed at it. The inspector handles the simulator UI, tool call
- * proxying, and resource loading — all through the MCP protocol.
+ * inspector pointed at it. The inspector handles the UI, tool call proxying,
+ * and resource loading — all through the MCP protocol.
  */
 export async function dev(projectRoot = process.cwd(), args = []) {
   // Check for package.json
@@ -511,8 +511,8 @@ if (import.meta.hot) {
   startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild: isProdResources });
 
   // Launch the inspector UI pointed at the local MCP server.
-  // This serves the simulator UI via Vite, connecting to our MCP server as a client.
-  // In framework mode, the simulator shows prod-tools/prod-resources toggles instead
+  // This serves the inspector UI via Vite, connecting to our MCP server as a client.
+  // In framework mode, the inspector shows prod-tools/prod-resources toggles instead
   // of the server URL input.
   const mcpUrl = `http://localhost:${mcpPort}/mcp`;
   await inspectServer({
@@ -531,9 +531,8 @@ if (import.meta.hot) {
     // The Tailwind plugin is also passed so source CSS (@import "tailwindcss") is processed.
     ...(isTemplate && {
       resolveAlias: {
-        'sunpeak/simulator': resolve(parentSrc, 'simulator/index.ts'),
+        'sunpeak/inspector': resolve(parentSrc, 'inspector/index.ts'),
         'sunpeak/style.css': resolve(parentSrc, 'style.css'),
-        'sunpeak/chatgpt/globals.css': resolve(parentSrc, 'chatgpt/globals.css'),
       },
       vitePlugins: [tailwindcss()],
       viteCssConfig: lightningcssConfig,

@@ -5,7 +5,7 @@ description: Use when working with sunpeak, or when the user asks to "build an M
 
 # Create Sunpeak App
 
-Sunpeak is a React framework built on `@modelcontextprotocol/ext-apps` for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). It provides React hooks, a dev simulator, a CLI (`sunpeak dev` / `sunpeak build` / `sunpeak start`), and a structured project convention.
+Sunpeak is a React framework built on `@modelcontextprotocol/ext-apps` for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). It provides React hooks, a dev inspector, a CLI (`sunpeak dev` / `sunpeak build` / `sunpeak start`), and a structured project convention.
 
 ## Getting Reference Code
 
@@ -34,7 +34,7 @@ sunpeak-app/
 │   ├── simulations/
 │   │   └── *.json                    # Simulation fixture files (flat directory)
 │   ├── e2e/
-│   │   └── {name}.spec.ts            # Playwright simulator tests
+│   │   └── {name}.spec.ts            # Playwright inspector tests
 │   └── live/
 │       ├── playwright.config.ts      # Live test config (long timeouts, single worker)
 │       └── {name}.spec.ts            # Live tests against real ChatGPT (one per resource)
@@ -191,11 +191,11 @@ export default async function (args: Args, _extra: ToolHandlerExtra) {
 }
 ```
 
-The UI tool returns `reviewTool` in its response, and the resource calls `useCallServerTool` on accept/reject. The tool returns both `content` (human-readable text for the host model) and `structuredContent` (with `status` and `message` for the UI). The resource reads `structuredContent.status` to determine success/error styling and displays `structuredContent.message`. One `review` tool handles all review variants (purchases, diffs, posts) via the `action` field. The simulator returns mock simulation data for `callServerTool` calls, matching real host behavior. See the template's `review` resource for the full implementation.
+The UI tool returns `reviewTool` in its response, and the resource calls `useCallServerTool` on accept/reject. The tool returns both `content` (human-readable text for the host model) and `structuredContent` (with `status` and `message` for the UI). The resource reads `structuredContent.status` to determine success/error styling and displays `structuredContent.message`. One `review` tool handles all review variants (purchases, diffs, posts) via the `action` field. The inspector returns mock simulation data for `callServerTool` calls, matching real host behavior. See the template's `review` resource for the full implementation.
 
 ## Simulation Files
 
-Simulations are JSON fixtures that power the dev simulator. Place them in `tests/simulations/` as flat JSON files:
+Simulations are JSON fixtures that power the dev inspector. Place them in `tests/simulations/` as flat JSON files:
 
 ```json
 {
@@ -217,7 +217,7 @@ Simulations are JSON fixtures that power the dev simulator. Place them in `tests
 
 Key fields:
 - `tool` — String referencing a tool filename in `src/tools/` (without `.ts`)
-- `userMessage` — Decorative text shown in simulator (no functional purpose)
+- `userMessage` — Decorative text shown in inspector (no functional purpose)
 - `toolInput` — Arguments sent to the tool (shown as input to `useToolData`)
 - `toolResult.structuredContent` — The data rendered by `useToolData().output`
 - `toolResult.content[]` — Text fallback for non-UI hosts
@@ -410,11 +410,11 @@ pnpm dev       # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
 pnpm build     # Build resources + compile tools to dist/
 pnpm start     # Start production MCP server (real handlers, auth, Zod validation)
 pnpm test      # Run unit tests (vitest)
-pnpm test:e2e  # Run Playwright e2e tests against simulator
+pnpm test:e2e  # Run Playwright e2e tests against inspector
 pnpm test:live # Run live tests against real ChatGPT (requires tunnel + browser session)
 ```
 
-The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The simulator runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
+The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The inspector runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
 
 Use `sunpeak build && sunpeak start` to test production behavior locally with real handlers instead of simulation fixtures.
 
@@ -533,14 +533,14 @@ These variables use CSS `light-dark()` so they respond to theme changes automati
 
 ## E2E Tests with Playwright
 
-**Critical**: all resource content renders inside an `<iframe>`. Always use `page.frameLocator('iframe')` for resource elements. Only the simulator chrome (`header`, `#root`) uses `page.locator()` directly.
+**Critical**: all resource content renders inside an `<iframe>`. Always use `page.frameLocator('iframe')` for resource elements. Only the inspector chrome (`header`, `#root`) uses `page.locator()` directly.
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from 'sunpeak/chatgpt';
 
 test('renders weather card', async ({ page }) => {
-  await page.goto(createSimulatorUrl({ simulation: 'show-weather', theme: 'light' }));
+  await page.goto(createInspectorUrl({ simulation: 'show-weather', theme: 'light' }));
 
   // Access elements INSIDE the resource iframe
   const iframe = page.frameLocator('iframe');
@@ -553,7 +553,7 @@ test('loads without console errors', async ({ page }) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  await page.goto(createSimulatorUrl({ simulation: 'show-weather', theme: 'dark' }));
+  await page.goto(createInspectorUrl({ simulation: 'show-weather', theme: 'dark' }));
 
   // Wait for content to render
   const iframe = page.frameLocator('iframe');
@@ -571,7 +571,7 @@ test('loads without console errors', async ({ page }) => {
 });
 ```
 
-`createSimulatorUrl(params)` builds the URL for a simulation. Full params:
+`createInspectorUrl(params)` builds the URL for a simulation. Full params:
 
 | Param | Type | Description |
 |-------|------|-------------|

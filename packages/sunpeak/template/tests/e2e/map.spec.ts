@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from 'sunpeak/chatgpt';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Map Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render map container with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-map', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -25,7 +25,7 @@ for (const host of hosts) {
 
       test('should have rounded border in inline mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'light',
             displayMode: 'inline',
@@ -51,7 +51,7 @@ for (const host of hosts) {
 
       test('should have fullscreen expand button in inline mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'light',
             displayMode: 'inline',
@@ -83,7 +83,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-map', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -103,7 +103,7 @@ for (const host of hosts) {
 
     test.describe('Prod Tools Mode', () => {
       test('should show empty state with Run button', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-map', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-map', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -116,7 +116,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in light mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-map', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-map', theme: 'light', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -130,7 +130,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-map', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-map', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -147,7 +147,7 @@ for (const host of hosts) {
     test.describe('Prod Resources Mode', () => {
       test('should activate without errors', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host, prodResources: true })
+          createInspectorUrl({ simulation: 'show-map', theme: 'dark', host, prodResources: true })
         );
 
         const root = page.locator('#root');
@@ -157,7 +157,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render map container with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-map', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -166,7 +166,7 @@ for (const host of hosts) {
 
       test('should have appropriate border color for dark mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'dark',
             displayMode: 'inline',
@@ -197,7 +197,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'show-map', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-map', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const mapContainer = iframe.locator('.antialiased.w-full.overflow-hidden').first();
@@ -218,7 +218,7 @@ for (const host of hosts) {
     test.describe('Fullscreen Mode', () => {
       test('should not have rounded border in fullscreen mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'light',
             displayMode: 'fullscreen',
@@ -242,7 +242,7 @@ for (const host of hosts) {
 
       test('should not show fullscreen button when already in fullscreen', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'light',
             displayMode: 'fullscreen',
@@ -261,7 +261,7 @@ for (const host of hosts) {
 
       test('should show place list sidebar in fullscreen', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'dark',
             displayMode: 'fullscreen',
@@ -278,7 +278,7 @@ for (const host of hosts) {
         // Set viewport to desktop size
         await page.setViewportSize({ width: 1024, height: 768 });
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-map',
             theme: 'light',
             displayMode: 'fullscreen',

@@ -7,7 +7,7 @@ export interface InspectConfigOptions {
   simulationsDir?: string;
   /** Host shells to test (default: ['chatgpt', 'claude']) */
   hosts?: ('chatgpt' | 'claude')[];
-  /** App name in simulator chrome */
+  /** App name in inspector chrome */
   name?: string;
   /** Additional Playwright `use` options */
   use?: Record<string, unknown>;
@@ -15,6 +15,6 @@ export interface InspectConfigOptions {
 
 /**
  * Create a complete Playwright config for testing an external MCP server
- * using the sunpeak simulator.
+ * using the sunpeak inspector.
  */
 export function defineInspectConfig(options: InspectConfigOptions): Record<string, unknown>;

@@ -16,47 +16,48 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript&label=ts&color=FFB800&logoColor=white&labelColor=000035)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&label=react&color=FFB800&logoColor=white&labelColor=000035)](https://reactjs.org/)
 
-Local-first MCP Apps framework.
+Inspector, testing framework, and app framework for MCP Apps.
 
-Quickstart, build, test, and ship your Claude Connector or ChatGPT App!
-
-[Demo (Hosted)](https://sunpeak.ai/simulator) ~
+[Demo (Hosted)](https://sunpeak.ai/inspector) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
 [Discord](https://discord.gg/FB2QNXqRnw) ~
 [Documentation](https://sunpeak.ai/docs) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
+## sunpeak is three things
+
+### 1. Inspector
+
+Test any MCP server in replicated ChatGPT and Claude runtimes — no sunpeak project required.
+
+```bash
+sunpeak inspect --server http://localhost:8000/mcp
+```
+
 <div align="center">
-  <a href="https://sunpeak.ai/docs/library/simulator">
+  <a href="https://sunpeak.ai/docs/mcp-apps-inspector">
     <picture>
-      <img alt="Simulator" src="https://cdn.sunpeak.ai/chatgpt-simulator.png">
+      <img alt="Inspector" src="https://cdn.sunpeak.ai/chatgpt-simulator.png">
     </picture>
   </a>
 </div>
 
-## Quickstart
+- Multi-host inspector replicating ChatGPT and Claude runtimes
+- Toggle themes, display modes, device types from the sidebar or URL params
+- Call real tool handlers or use simulation fixtures for mock data
+- Built into `sunpeak dev` for framework users
 
-Requirements: Node (20+), pnpm (10+)
+### 2. Testing Framework
 
-```bash
-pnpm add -g sunpeak
-sunpeak new
-```
+E2E tests against simulated hosts and live tests against real production hosts.
 
-## Overview
+- **Simulations**: JSON fixtures defining reproducible tool states ([example below](#simulation))
+- **E2E tests**: Playwright + `createInspectorUrl` against the inspector ([example below](#inspector))
+- **Live tests**: Automated browser tests against real ChatGPT via `sunpeak/test`
 
-`sunpeak` is an npm package that helps you build MCP Apps (interactive UI [resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)) while keeping your [MCP server](https://sunpeak.ai/docs/mcp-apps/mcp/overview) client-agnostic. Built on the [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps) (`@modelcontextprotocol/ext-apps`). `sunpeak` consists of:
+### 3. App Framework
 
-### The `sunpeak` library
-
-1. Runtime APIs: Strongly typed React hooks for interacting with the host runtime (`useApp`, `useToolData`, `useAppState`, `useHostContext`, `useUpdateModelContext`, `useAppTools`), architected to **support generic and platform-specific features** (ChatGPT, Claude, etc.). Host-specific hooks like `useUploadFile`, `useRequestModal`, and `useRequestCheckout` are available via `sunpeak/host/chatgpt`, with `isChatGPT()` / `isClaude()` host detection via `sunpeak/host`.
-2. Multi-host simulator: React component replicating host runtimes (ChatGPT, Claude) to **test Apps locally and automatically** via UI, props, or URL parameters.
-3. Live testing: **Automated tests against real ChatGPT** — opens your browser, sends messages, validates your app renders correctly inside the real host. No more manual testing.
-4. MCP server: Serve Resources with mock data to hosts like ChatGPT and Claude with HMR (**no more cache issues or 5-click manual refreshes**).
-
-### The `sunpeak` framework
-
-Next.js for MCP Apps. Using an example App `sunpeak-app` with a `Review` UI ([MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources)), `sunpeak` projects look like:
+Next.js for MCP Apps. Convention-over-configuration project structure with the inspector and testing built in.
 
 ```bash
 sunpeak-app/
@@ -76,26 +77,33 @@ sunpeak-app/
 └── package.json
 ```
 
-1. Project scaffold: Complete development setup with the `sunpeak` library.
-2. UI components: Production-ready components following MCP App design guidelines.
-3. Convention over configuration:
-   1. Create a UI by creating a `.tsx` file in `src/resources/{name}/` that exports a `ResourceConfig` and a React component ([example below](#resource-component)).
-   2. Create a tool by creating a `.ts` file in `src/tools/` that exports `tool` (metadata with optional resource link), `schema` (Zod), and a `default` handler ([example below](#tool-file)). Tools without a `resource` field are registered as plain MCP tools (no UI).
-   3. Create test state (`Simulation`s) by creating a `.json` file in `tests/simulations/` ([example below](#simulation)).
+- **Runtime APIs**: Strongly typed React hooks (`useToolData`, `useAppState`, `useHostContext`, etc.)
+- **Convention over configuration**: Resources, tools, and simulations are auto-discovered
+- **Multi-platform**: Build once, deploy to ChatGPT, Claude, and future hosts
 
-### The `sunpeak` CLI
+## Quickstart
 
-Commands for managing MCP Apps:
+Requirements: Node (20+), pnpm (10+)
 
-- `sunpeak new [name] [resources]` - Create a new project
-- `sunpeak dev` - Start dev server with MCP endpoint and live simulator
-- `sunpeak build` - Build resources and compile tools for production
-- `sunpeak start` - Start the production MCP server (real handlers, auth, Zod validation)
-- `sunpeak upgrade` - Upgrade sunpeak to latest version
+```bash
+pnpm add -g sunpeak
+sunpeak new
+```
+
+## CLI
+
+| Command                               | Description                                 |
+| ------------------------------------- | ------------------------------------------- |
+| `sunpeak new [name] [resources]`      | Create a new project                        |
+| `sunpeak dev`                         | Start dev server + inspector + MCP endpoint |
+| `sunpeak inspect --server <url\|cmd>` | Inspect any MCP server (standalone)         |
+| `sunpeak build`                       | Build resources + tools for production      |
+| `sunpeak start`                       | Start production MCP server                 |
+| `sunpeak upgrade`                     | Upgrade sunpeak to latest version           |
 
 ## Example App
 
-Example `Resource`, `Simulation`, and testing file (using the `Simulator`) for an [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) called "Review".
+Example `Resource`, `Simulation`, and testing file (using the `Inspector`) for an [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) called "Review".
 
 ### `Resource` Component
 
@@ -151,7 +159,7 @@ export default async function (args: Args, extra: ToolHandlerExtra) {
 
 ### `Simulation`
 
-Simulation files provide fixture data for testing. Each references a tool by filename and contains the mock input/output:
+Simulation files provide fixture data for testing UIs. Each references a tool by filename and contains the mock input/output:
 
 ```jsonc
 // tests/simulations/review-diff.json
@@ -172,7 +180,7 @@ Simulation files provide fixture data for testing. Each references a tool by fil
 }
 ```
 
-### `Simulator`
+### `Inspector`
 
 ```bash
 ├── tests/e2e/
@@ -180,15 +188,15 @@ Simulation files provide fixture data for testing. Each references a tool by fil
 └── package.json
 ```
 
-The `Simulator` allows you to set **host state** (like host platform, light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
+The `Inspector` allows you to set **host state** (like host platform, light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
 
-Using the `Simulator` and `Simulation`s, you can test all possible App states locally and automatically across hosts (ChatGPT, Claude)!
+Using the `Inspector` and `Simulation`s, you can test all possible App states locally and automatically across hosts (ChatGPT, Claude)!
 
 ```ts
 // tests/e2e/review.spec.ts
 
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
@@ -197,7 +205,7 @@ for (const host of hosts) {
     test.describe('Light Mode', () => {
       test('should render review title with correct styles', async ({ page }) => {
         const params = { simulation: 'review-diff', theme: 'light', host }; // Set sim & host state.
-        await page.goto(createSimulatorUrl(params));
+        await page.goto(createInspectorUrl(params));
 
         // Resource content renders inside an iframe
         const iframe = page.frameLocator('iframe');

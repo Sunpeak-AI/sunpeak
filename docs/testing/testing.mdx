@@ -1,66 +1,43 @@
 ---
 title: "Testing"
-description: "Testing and validation in sunpeak projects."
+description: "Automated testing of MCP Apps using the inspector, simulations, and live host testing."
 keywords: ["MCP app testing", "ChatGPT app testing", "MCP Apps", "ChatGPT Apps", "Playwright", "e2e testing", "unit testing", "live testing"]
 ---
 
 ## Overview
 
-sunpeak includes pre-configured unit testing, end-to-end testing against the simulator, and live testing against real ChatGPT.
+sunpeak provides two levels of automated Playwright testing for MCP Apps:
 
-**TL;DR**: Run `pnpm test` for unit tests, `pnpm test:e2e` for simulator e2e tests, and `pnpm test:live` for live ChatGPT tests.
+1. **E2E tests** against the [inspector](/inspector/inspector) — the inspector replicates ChatGPT and Claude runtimes locally, and [simulations](/api-reference/simulations/simulation) (JSON fixtures) define reproducible tool states. Playwright loads a simulation in the inspector via URL and asserts against the rendered resource. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
 
-## Testing Commands
+2. **Live tests** against real hosts — `sunpeak/test` provides Playwright fixtures that open real ChatGPT (and future hosts), send messages, wait for app iframes, and let you assert against the rendered result. All host DOM interaction (auth, selectors, iframe access) is maintained by sunpeak — you only write resource assertions.
 
-<ResponseField name="pnpm test" type="command">
-  Run unit tests with Vitest.
-</ResponseField>
+| Command | What it tests | Runtime |
+|---------|--------------|---------|
+| `pnpm test` | Unit tests (Vitest) | jsdom |
+| `pnpm test:e2e` | E2E tests against the inspector | Playwright + inspector |
+| `pnpm test:live` | Live tests against real ChatGPT | Playwright + real host |
 
-<ResponseField name="pnpm test:e2e" type="command">
-  Run end-to-end tests with Playwright against the simulator.
-</ResponseField>
+## E2E Testing
 
-<ResponseField name="pnpm test:live" type="command">
-  Run live tests against real ChatGPT. Requires a tunnel and ChatGPT session.
-</ResponseField>
-
-## Unit Testing
-
-sunpeak uses [Vitest](https://vitest.dev/) with configuration in `vitest.config.ts`. The test environment includes:
-
-- **jsdom**: Browser-like environment for React component testing
-- **@testing-library/react**: For rendering and testing components
-- **@testing-library/jest-dom**: Additional matchers for assertions
-
-All configuration is in `src/test/setup.ts`.
-
-## End-to-End Testing
-
-E2E tests use [Playwright](https://playwright.dev/) and are located in `tests/e2e/` with the naming convention `*.spec.ts`.
-
-The dev server runs automatically when you execute `pnpm test:e2e`—Playwright starts it before running tests.
+E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests.
 
 ```bash
-# Run all e2e tests
-pnpm test:e2e
-
-# Run with UI mode for debugging
-pnpm test:e2e --ui
-
-# Run a specific test file
-pnpm test:e2e tests/e2e/albums.spec.ts
+pnpm test:e2e                              # Run all
+pnpm test:e2e --ui                         # Playwright UI mode
+pnpm test:e2e tests/e2e/albums.spec.ts     # Single file
 ```
 
-## Writing E2E Tests
+### Writing E2E Tests
 
-Use the `createSimulatorUrl` utility to generate type-safe URLs for e2e tests:
+Use `createInspectorUrl` to load a simulation in the inspector with specific host/theme/display mode settings:
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 
 test('should render in light mode', async ({ page }) => {
-  await page.goto(createSimulatorUrl({
+  await page.goto(createInspectorUrl({
     simulation: 'show-albums',
     theme: 'light',
   }));
@@ -70,7 +47,7 @@ test('should render in light mode', async ({ page }) => {
 });
 
 test('should render in fullscreen mode', async ({ page }) => {
-  await page.goto(createSimulatorUrl({
+  await page.goto(createInspectorUrl({
     simulation: 'show-albums',
     theme: 'dark',
     displayMode: 'fullscreen',
@@ -84,19 +61,19 @@ test('should render in fullscreen mode', async ({ page }) => {
 
 <img
   src="https://cdn.sunpeak.ai/sunpeak-docs-fullscreen-dark.png"
-  alt="Simulator set to fullscreen dark mode via URL params"
+  alt="Inspector set to fullscreen dark mode via URL params"
 />
 
 <img
   src="https://cdn.sunpeak.ai/sunpeak-docs-inline-light.png"
-  alt="Simulator set to inline light mode via URL params"
+  alt="Inspector set to inline light mode via URL params"
 />
 
-The `createSimulatorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Simulator API Reference](/api-reference/simulations/simulator#createsimulatorurl) for the complete list.
+The `createInspectorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Inspector API Reference](/api-reference/simulations/inspector#createinspectorurl) for the complete list.
 
 ### Testing Backend-Only Tools
 
-If your resource calls backend tools via `useCallServerTool`, define mock responses using the `serverTools` field in the simulation JSON. The simulator resolves these mocks based on the tool call arguments:
+If your resource calls backend tools via `useCallServerTool`, define mock responses using the `serverTools` field in the simulation JSON. The inspector resolves these mocks based on the tool call arguments:
 
 ```json
 // tests/simulations/review-purchase.json
@@ -126,10 +103,10 @@ If your resource calls backend tools via `useCallServerTool`, define mock respon
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 
 test('should show success when server confirms', async ({ page }) => {
-  await page.goto(createSimulatorUrl({
+  await page.goto(createInspectorUrl({
     simulation: 'review-purchase',
   }));
 
@@ -141,7 +118,7 @@ test('should show success when server confirms', async ({ page }) => {
 });
 
 test('should show cancel when user rejects', async ({ page }) => {
-  await page.goto(createSimulatorUrl({
+  await page.goto(createInspectorUrl({
     simulation: 'review-purchase',
   }));
 
@@ -161,12 +138,12 @@ A typical e2e test file tests a resource across different modes:
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 
 test.describe('Albums Resource', () => {
   test.describe('Light Mode', () => {
     test('should render album cards with correct styles', async ({ page }) => {
-      await page.goto(createSimulatorUrl({
+      await page.goto(createInspectorUrl({
         simulation: 'show-albums',
         theme: 'light',
       }));
@@ -190,7 +167,7 @@ test.describe('Albums Resource', () => {
 
   test.describe('Dark Mode', () => {
     test('should render with dark theme', async ({ page }) => {
-      await page.goto(createSimulatorUrl({
+      await page.goto(createInspectorUrl({
         simulation: 'show-albums',
         theme: 'dark',
       }));
@@ -201,7 +178,7 @@ test.describe('Albums Resource', () => {
 
   test.describe('Fullscreen Mode', () => {
     test('should render in fullscreen', async ({ page }) => {
-      await page.goto(createSimulatorUrl({
+      await page.goto(createInspectorUrl({
         simulation: 'show-albums',
         theme: 'light',
         displayMode: 'fullscreen',
@@ -242,7 +219,7 @@ test.describe('Albums Resource', () => {
   </Accordion>
 
   <Accordion title="Test across hosts, themes, and display modes">
-    Use `createSimulatorUrl` to test your resources in different configurations:
+    Use `createInspectorUrl` to test your resources in different configurations:
     - Multiple hosts (ChatGPT, Claude) via the `host` parameter
     - Light and dark themes
     - Inline, PiP, and fullscreen display modes
@@ -263,9 +240,9 @@ test.describe('Albums Resource', () => {
 
 ## Live Testing
 
-Live tests validate your MCP Apps inside real ChatGPT — not the simulator. They open your browser, navigate to ChatGPT, send messages that trigger tool calls against your MCP server, and verify the rendered app using Playwright assertions.
+Live tests validate your MCP Apps inside real ChatGPT — not the inspector. They open your browser, navigate to ChatGPT, send messages that trigger tool calls against your MCP server, and verify the rendered app using Playwright assertions.
 
-This catches issues that simulator tests can't: real MCP connection behavior, actual LLM tool invocation, host-specific iframe rendering, and production resource loading.
+This catches issues that inspector tests can't: real MCP connection behavior, actual LLM tool invocation, host-specific iframe rendering, and production resource loading.
 
 ### Prerequisites
 
@@ -358,7 +335,7 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
   </Accordion>
 
   <Accordion title="Tunnel not reachable">
-    Verify your tunnel is running and the URL is correct. The test checks `{tunnelUrl}/health` before proceeding.
+    Verify your tunnel is running and the URL is correct. The test checks the tunnel's `/health` endpoint before proceeding.
   </Accordion>
 
   <Accordion title="'ChatGPT DOM may have changed' warning">
@@ -366,7 +343,7 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
   </Accordion>
 
   <Accordion title="Tool not called by ChatGPT">
-    Live tests use specific prompts like "Use the {tool-name} tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected — check ChatGPT settings.
+    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected — check ChatGPT settings.
   </Accordion>
 </AccordionGroup>
 

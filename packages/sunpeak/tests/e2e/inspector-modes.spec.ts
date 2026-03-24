@@ -1,10 +1,10 @@
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 
 /**
- * Package-level e2e tests for simulator mode behavior.
+ * Package-level e2e tests for inspector mode behavior.
  *
- * These verify core simulator features (Tool Result visibility, prod-tools
+ * These verify core inspector features (Tool Result visibility, prod-tools
  * clearing, prod-resources, host switching, display modes, simulation switching)
  * across both host shells. They run against the template dev server but test
  * sunpeak package behavior.
@@ -14,19 +14,19 @@ const hosts = ['chatgpt', 'claude'] as const;
 for (const host of hosts) {
   test.describe(`Tool Result Visibility [${host}]`, () => {
     test('Tool Result section is visible in simulation mode', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       await expect(page.getByTestId('tool-result-section')).toBeVisible();
     });
 
     test('Tool Result section is visible when no simulation selected', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
       await expect(page.getByTestId('tool-result-section')).toBeVisible();
     });
 
     test('Tool Result is empty when no simulation selected', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
       const toolResultTextarea = page.getByTestId('tool-result-textarea');
       await expect(toolResultTextarea).toBeVisible();
@@ -34,7 +34,7 @@ for (const host of hosts) {
     });
 
     test('Tool Result is expanded and populated in simulation mode', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       const toolResultTextarea = page.getByTestId('tool-result-textarea');
       await expect(toolResultTextarea).toBeVisible();
@@ -45,7 +45,7 @@ for (const host of hosts) {
 
   test.describe(`Tool Result Editing [${host}]`, () => {
     test('editing Tool Result updates the rendered resource', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       const iframe = page.frameLocator('iframe').frameLocator('iframe');
 
@@ -77,7 +77,7 @@ for (const host of hosts) {
 
   test.describe(`Run with Real Handlers [${host}]`, () => {
     test('Run button calls real handler and renders real output', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
       const iframe = page.frameLocator('iframe').frameLocator('iframe');
 
@@ -106,7 +106,7 @@ for (const host of hosts) {
   test.describe(`Prod Resources [${host}]`, () => {
     test('resource renders from dist/ build', async ({ page }) => {
       await page.goto(
-        createSimulatorUrl({
+        createInspectorUrl({
           simulation: 'show-albums',
           theme: 'dark',
           host,
@@ -127,7 +127,7 @@ for (const host of hosts) {
   test.describe(`Simulation Switching [${host}]`, () => {
     test('switching tool changes the rendered resource', async ({ page }) => {
       // Start with albums
-      await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       const iframe = page.frameLocator('iframe').frameLocator('iframe');
       await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
@@ -147,7 +147,7 @@ for (const host of hosts) {
 
   test.describe(`Display Modes [${host}]`, () => {
     test('switching to fullscreen changes display mode', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       const iframe = page.frameLocator('iframe').frameLocator('iframe');
       // Wait for resource to render
@@ -165,7 +165,7 @@ for (const host of hosts) {
 
   test.describe(`Theme Switching [${host}]`, () => {
     test('switching theme to light updates the document', async ({ page }) => {
-      await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       // Click "Light" button in Theme toggle
       await page.locator('button[aria-pressed]:has-text("Light")').click();
@@ -180,7 +180,7 @@ for (const host of hosts) {
 test.describe('Host Switching', () => {
   test('switching from ChatGPT to Claude changes conversation chrome', async ({ page }) => {
     await page.goto(
-      createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host: 'chatgpt' })
+      createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host: 'chatgpt' })
     );
 
     const iframe = page.frameLocator('iframe').frameLocator('iframe');
@@ -199,7 +199,7 @@ test.describe('Host Switching', () => {
 
 test.describe('Resource Rendering', () => {
   test('resource renders inside double-iframe sandbox', async ({ page }) => {
-    await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark' }));
+    await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark' }));
 
     // Verify double-iframe structure: outer iframe (sandbox proxy) → inner iframe (app)
     const outerIframe = page.frameLocator('iframe');

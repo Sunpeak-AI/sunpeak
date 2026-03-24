@@ -1,7 +1,7 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { Simulator } from './simulator';
+import { Inspector } from './inspector';
 import type { Simulation } from '../types/simulation';
 
 // Mock fetch for useMcpConnection
@@ -30,23 +30,23 @@ function createSim(overrides: Partial<Simulation> = {}): Simulation {
   };
 }
 
-describe('Simulator', () => {
+describe('Inspector', () => {
   describe('Tool dropdown', () => {
     it('shows Tool dropdown when tools exist', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       expect(screen.getByTestId('tool-selector')).toBeInTheDocument();
     });
 
     it('does not show Tool dropdown when no tools exist', () => {
-      render(<Simulator simulations={{}} />);
+      render(<Inspector simulations={{}} />);
 
       expect(screen.queryByTestId('tool-selector')).not.toBeInTheDocument();
     });
 
     it('deduplicates tools by name', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             'sim-a': createSim({
               name: 'sim-a',
@@ -69,7 +69,7 @@ describe('Simulator', () => {
 
     it('excludes backend-only tools (no resource)', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             'backend-tool': createSim({
               name: 'backend-tool',
@@ -92,7 +92,7 @@ describe('Simulator', () => {
   describe('Simulation dropdown', () => {
     it('shows Simulation dropdown with fixture options when fixtures exist', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { data: 'mock' } },
@@ -111,7 +111,7 @@ describe('Simulator', () => {
 
     it('shows Simulation dropdown with only "None" when no fixtures exist', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim(), // No toolInput, toolResult, or serverTools
           }}
@@ -128,7 +128,7 @@ describe('Simulator', () => {
     });
 
     it('makes "Simulation" label a link to docs when no fixtures exist', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       const link = screen
         .getByTestId('simulation-selector')
@@ -139,7 +139,7 @@ describe('Simulator', () => {
 
     it('includes "None (call server)" option in simulation dropdown', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { mock: true } },
@@ -155,7 +155,7 @@ describe('Simulator', () => {
 
     it('pre-populates mock data when simulation with toolResult is selected', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { data: 'mock' } },
@@ -173,7 +173,7 @@ describe('Simulator', () => {
       const user = userEvent.setup();
 
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { data: 'mock' } },
@@ -201,7 +201,7 @@ describe('Simulator', () => {
 
   describe('Run button', () => {
     it('shows Run button when a tool is selected and onCallTool is provided', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       expect(screen.getByRole('button', { name: /run/i })).toBeInTheDocument();
     });
@@ -210,7 +210,7 @@ describe('Simulator', () => {
       fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
 
       render(
-        <Simulator simulations={{}} mcpServerUrl="http://localhost:8000/mcp" onCallTool={vi.fn()} />
+        <Inspector simulations={{}} mcpServerUrl="http://localhost:8000/mcp" onCallTool={vi.fn()} />
       );
 
       await waitFor(() => {
@@ -226,7 +226,7 @@ describe('Simulator', () => {
         content: [{ type: 'text', text: 'real result' }],
       });
 
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={onCallTool} />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={onCallTool} />);
 
       await user.click(screen.getByRole('button', { name: /run/i }));
 
@@ -240,7 +240,7 @@ describe('Simulator', () => {
 
     it('hides Run button when a simulation with fixture data is selected', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { mocked: true } },
@@ -258,7 +258,7 @@ describe('Simulator', () => {
       const user = userEvent.setup();
 
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { mocked: true } },
@@ -281,15 +281,15 @@ describe('Simulator', () => {
   });
 
   describe('Prod Resources', () => {
-    it('shows Prod Resources checkbox when hideSimulatorModes is false', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+    it('shows Prod Resources checkbox when hideInspectorModes is false', () => {
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       expect(screen.getByRole('checkbox', { name: /prod resources/i })).toBeInTheDocument();
     });
 
-    it('hides Prod Resources checkbox when hideSimulatorModes is true', () => {
+    it('hides Prod Resources checkbox when hideInspectorModes is true', () => {
       render(
-        <Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} hideSimulatorModes />
+        <Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} hideInspectorModes />
       );
 
       expect(screen.queryByRole('checkbox', { name: /prod resources/i })).not.toBeInTheDocument();
@@ -298,7 +298,7 @@ describe('Simulator', () => {
 
   describe('Demo mode', () => {
     it('shows a static example URL in a disabled input', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
 
       const input = screen.getByDisplayValue('http://localhost:8000/mcp');
       expect(input).toBeDisabled();
@@ -306,7 +306,7 @@ describe('Simulator', () => {
 
     it('hides connection status indicator', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           mcpServerUrl="http://localhost:8000/mcp"
           onCallTool={vi.fn()}
@@ -318,20 +318,20 @@ describe('Simulator', () => {
     });
 
     it('hides Prod Resources checkbox', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
 
       expect(screen.queryByRole('checkbox', { name: /prod resources/i })).not.toBeInTheDocument();
     });
 
     it('hides Run button even when no simulation is active', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
 
       // Without demoMode this would show the Run button (no fixture data = no active sim)
       expect(screen.queryByRole('button', { name: /run/i })).not.toBeInTheDocument();
     });
 
     it('hides "None (call server)" option from simulation dropdown', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
 
       const simSelect = screen.getByTestId('simulation-selector').querySelector('select')!;
       const options = Array.from(simSelect.options).map((o) => o.textContent);
@@ -341,7 +341,7 @@ describe('Simulator', () => {
 
     it('still renders simulation content normally', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({
               toolResult: { content: [], structuredContent: { demo: true } },
@@ -358,14 +358,14 @@ describe('Simulator', () => {
 
   describe('MCP Server URL', () => {
     it('always shows MCP Server URL input', () => {
-      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       expect(screen.getByTestId('server-url')).toBeInTheDocument();
     });
 
     it('pre-populates server URL from mcpServerUrl prop', async () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           mcpServerUrl="http://localhost:8000/mcp"
           onCallTool={vi.fn()}
@@ -379,7 +379,7 @@ describe('Simulator', () => {
 
     it('shows connection status indicator when URL is set', async () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           mcpServerUrl="http://localhost:8000/mcp"
           onCallTool={vi.fn()}
@@ -417,7 +417,7 @@ describe('Simulator', () => {
         );
 
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           mcpServerUrl="http://localhost:8000/mcp"
           onCallTool={vi.fn()}
@@ -449,7 +449,7 @@ describe('Simulator', () => {
         );
 
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           mcpServerUrl="http://localhost:8000/mcp"
           onCallTool={vi.fn()}
@@ -476,7 +476,7 @@ describe('Simulator', () => {
       fetchSpy.mockResolvedValueOnce(new Response('', { status: 500 }));
 
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           mcpServerUrl="http://localhost:8000/mcp"
           onCallTool={vi.fn()}
@@ -495,7 +495,7 @@ describe('Simulator', () => {
 
   describe('Empty state', () => {
     it('shows "Enter an MCP server URL" when no URL and no simulations', () => {
-      render(<Simulator simulations={{}} />);
+      render(<Inspector simulations={{}} />);
       expect(screen.getByText('Enter an MCP server URL to get started')).toBeInTheDocument();
     });
 
@@ -503,7 +503,7 @@ describe('Simulator', () => {
       fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
 
       render(
-        <Simulator simulations={{}} mcpServerUrl="http://localhost:8000/mcp" onCallTool={vi.fn()} />
+        <Inspector simulations={{}} mcpServerUrl="http://localhost:8000/mcp" onCallTool={vi.fn()} />
       );
 
       await waitFor(() => {
@@ -517,7 +517,7 @@ describe('Simulator', () => {
   describe('Tool Result visibility', () => {
     it('shows Tool Result section', () => {
       render(
-        <Simulator
+        <Inspector
           simulations={{
             test: createSim({ toolResult: { content: [], structuredContent: { foo: 1 } } }),
           }}
@@ -560,7 +560,7 @@ describe('Simulator', () => {
     it('switching tools updates the simulation dropdown', async () => {
       const user = userEvent.setup();
 
-      render(<Simulator simulations={multiToolSims} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       // albums tool selected by default (alphabetical) — should have 2 fixture sims
       const simSelector = screen.getByTestId('simulation-selector');
@@ -583,7 +583,7 @@ describe('Simulator', () => {
     it('switching simulations updates tool result', async () => {
       const user = userEvent.setup();
 
-      render(<Simulator simulations={multiToolSims} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       const resultTextarea = screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement;
 
@@ -603,7 +603,7 @@ describe('Simulator', () => {
     it('switching simulations for the same tool does not show empty state', async () => {
       const user = userEvent.setup();
 
-      render(<Simulator simulations={multiToolSims} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       // albums-default is auto-selected — should show content (mock data), not "Press Run"
       expect(screen.queryByText(/Press.*Run/)).not.toBeInTheDocument();
@@ -623,7 +623,7 @@ describe('Simulator', () => {
     it('switching simulations does not cause iframe remount when resource URL is the same', async () => {
       const user = userEvent.setup();
 
-      const { container } = render(<Simulator simulations={multiToolSims} onCallTool={vi.fn()} />);
+      const { container } = render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       // Get a reference to the outer iframe element (if rendered).
       // Since unit tests use srcdoc fallback, we check the iframe wrapper div.
@@ -644,7 +644,7 @@ describe('Simulator', () => {
     it('switching tools changes the Tool Result to the new tool fixture', async () => {
       const user = userEvent.setup();
 
-      render(<Simulator simulations={multiToolSims} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       const resultTextarea = screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement;
 
@@ -664,7 +664,7 @@ describe('Simulator', () => {
     it('selecting "None" then selecting a simulation restores mock data', async () => {
       const user = userEvent.setup();
 
-      render(<Simulator simulations={multiToolSims} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       const resultTextarea = screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement;
 
@@ -696,7 +696,7 @@ describe('Simulator', () => {
       });
 
       render(
-        <Simulator
+        <Inspector
           simulations={{ test: createSim() }}
           onCallTool={onCallTool}
           onCallToolDirect={onCallToolDirect}
@@ -732,7 +732,7 @@ describe('Simulator', () => {
         })
       );
 
-      render(<Simulator simulations={{}} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{}} onCallTool={vi.fn()} />);
 
       // Initially: no tools, shows empty state
       expect(screen.getByText('Enter an MCP server URL to get started')).toBeInTheDocument();
@@ -766,7 +766,7 @@ describe('Simulator', () => {
         })
       );
 
-      render(<Simulator simulations={{}} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{}} onCallTool={vi.fn()} />);
 
       const urlInput = screen.getByPlaceholderText('http://localhost:8000/mcp');
       await user.type(urlInput, 'http://remote:3000/mcp{Enter}');
@@ -786,7 +786,7 @@ describe('Simulator', () => {
       // Network-level failure (fetch throws, not HTTP error)
       fetchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
-      render(<Simulator simulations={{}} onCallTool={vi.fn()} />);
+      render(<Inspector simulations={{}} onCallTool={vi.fn()} />);
 
       const urlInput = screen.getByPlaceholderText('http://localhost:8000/mcp');
       await user.type(urlInput, 'http://unreachable:3000/mcp{Enter}');
@@ -798,39 +798,39 @@ describe('Simulator', () => {
   });
 
   // ── Story 3: Programmatic testing (URL params) ──
-  // URL param tests are covered by E2E tests (simulator-modes.spec.ts) which
+  // URL param tests are covered by E2E tests (inspector-modes.spec.ts) which
   // navigate to real URLs. Unit-testing URL params in jsdom is unreliable because
-  // jsdom's window.location is read-only. The createSimulatorUrl function is
-  // tested separately in simulator-url.test.ts.
-  describe('Programmatic: createSimulatorUrl', () => {
+  // jsdom's window.location is read-only. The createInspectorUrl function is
+  // tested separately in inspector-url.test.ts.
+  describe('Programmatic: createInspectorUrl', () => {
     it('generates tool-only URL (no mock data)', async () => {
-      // This is tested at the URL level — the Simulator reads the URL on mount.
+      // This is tested at the URL level — the Inspector reads the URL on mount.
       // The E2E test "Tool Result starts collapsed and empty when no simulation selected"
-      // navigates to createSimulatorUrl({ tool: 'show-albums' }) and verifies the behavior.
-      const { createSimulatorUrl } = await import('./simulator-url');
-      const url = createSimulatorUrl({ tool: 'show-albums', theme: 'dark' });
+      // navigates to createInspectorUrl({ tool: 'show-albums' }) and verifies the behavior.
+      const { createInspectorUrl } = await import('./inspector-url');
+      const url = createInspectorUrl({ tool: 'show-albums', theme: 'dark' });
       expect(url).toContain('tool=show-albums');
       expect(url).not.toContain('simulation=');
     });
 
     it('generates simulation URL (with mock data)', async () => {
-      const { createSimulatorUrl } = await import('./simulator-url');
-      const url = createSimulatorUrl({ simulation: 'show-albums', theme: 'dark' });
+      const { createInspectorUrl } = await import('./inspector-url');
+      const url = createInspectorUrl({ simulation: 'show-albums', theme: 'dark' });
       expect(url).toContain('simulation=show-albums');
       expect(url).not.toContain('tool=');
     });
 
     it('generates combined tool + simulation URL', async () => {
-      const { createSimulatorUrl } = await import('./simulator-url');
-      const url = createSimulatorUrl({ tool: 'show-albums', simulation: 'show-albums' });
+      const { createInspectorUrl } = await import('./inspector-url');
+      const url = createInspectorUrl({ tool: 'show-albums', simulation: 'show-albums' });
       expect(url).toContain('tool=show-albums');
       expect(url).toContain('simulation=show-albums');
     });
 
     it('does not include removed prodTools param', async () => {
-      const { createSimulatorUrl } = await import('./simulator-url');
+      const { createInspectorUrl } = await import('./inspector-url');
       // @ts-expect-error — prodTools was removed from the type
-      const url = createSimulatorUrl({ simulation: 'test', prodTools: true });
+      const url = createInspectorUrl({ simulation: 'test', prodTools: true });
       expect(url).not.toContain('prodTools');
     });
   });

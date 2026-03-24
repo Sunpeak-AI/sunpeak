@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from 'sunpeak/chatgpt';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Carousel Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render carousel cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl').first();
@@ -26,7 +26,7 @@ for (const host of hosts) {
       });
 
       test('should have card with border styling', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl.border').first();
@@ -45,7 +45,7 @@ for (const host of hosts) {
       });
 
       test('should have interactive buttons', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const visitButton = iframe.locator('button:has-text("Visit")').first();
@@ -64,7 +64,7 @@ for (const host of hosts) {
 
     test.describe('Prod Tools Mode', () => {
       test('should show empty state with Run button', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-carousel', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-carousel', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -77,7 +77,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in light mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-carousel', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-carousel', theme: 'light', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -91,7 +91,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'show-carousel', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'show-carousel', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -108,7 +108,7 @@ for (const host of hosts) {
     test.describe('Prod Resources Mode', () => {
       test('should activate without errors', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'show-carousel',
             theme: 'dark',
             host,
@@ -123,7 +123,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render carousel cards with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const card = iframe.locator('.rounded-2xl').first();
@@ -142,7 +142,7 @@ for (const host of hosts) {
       });
 
       test('should have appropriate styling for dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         // Select card by its border + rounded combo
@@ -169,7 +169,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
 
         // Wait for iframe content to render
         const iframe = page.frameLocator('iframe').frameLocator('iframe');

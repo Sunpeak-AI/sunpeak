@@ -1,28 +1,28 @@
 ---
-title: "Simulator"
-description: "API reference for the Simulator component."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app testing", "ChatGPT app testing", "simulator"]
+title: "Inspector"
+description: "API reference for the Inspector component."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app testing", "ChatGPT app testing", "inspector"]
 ---
 
 <Badge color="yellow">sunpeak API</Badge>
 
-import SimulatorSnippet from '/snippets/simulator.mdx';
+import InspectorSnippet from '/snippets/inspector.mdx';
 
 ## Overview
 
-The `Simulator` component provides a local development environment that replicates the MCP App runtime used by hosts like ChatGPT and Claude. It renders your resources inside iframes, matching the production hosting behavior. The simulator supports multiple host shells — switch between ChatGPT and Claude conversation chrome, theming, and reported capabilities from the sidebar or via URL parameters.
+The `Inspector` component provides a local development environment that replicates the MCP App runtime used by hosts like ChatGPT and Claude. It renders your resources inside iframes, matching the production hosting behavior. The inspector supports multiple host shells — switch between ChatGPT and Claude conversation chrome, theming, and reported capabilities from the sidebar or via URL parameters.
 
 ## Import
 
 ```tsx
-import 'sunpeak/style.css'; // Required to style the simulator.
-import { Simulator } from 'sunpeak/simulator';
+import 'sunpeak/style.css'; // Required to style the inspector.
+import { Inspector } from 'sunpeak/inspector';
 ```
 
 
 ## Basic Usage
 
-<SimulatorSnippet />
+<InspectorSnippet />
 
 ## Props
 
@@ -32,11 +32,11 @@ import { Simulator } from 'sunpeak/simulator';
 </ResponseField>
 
 <ResponseField name="appName" type="string" default="Sunpeak App">
-  Name of the app displayed in the simulator UI.
+  Name of the app displayed in the inspector UI.
 </ResponseField>
 
 <ResponseField name="appIcon" type="string">
-  Optional icon (emoji) displayed in the simulator UI.
+  Optional icon (emoji) displayed in the inspector UI.
 </ResponseField>
 
 <ResponseField name="children" type="React.ReactNode">
@@ -52,16 +52,16 @@ import { Simulator } from 'sunpeak/simulator';
 </ResponseField>
 
 <ResponseField name="defaultProdResources" type="boolean" default="false">
-  Initial state of the Prod Resources toggle. When `true`, the simulator loads resources from `dist/` production builds instead of HMR. Set by the `--prod-resources` CLI flag.
+  Initial state of the Prod Resources toggle. When `true`, the inspector loads resources from `dist/` production builds instead of HMR. Set by the `--prod-resources` CLI flag.
 </ResponseField>
 
-<ResponseField name="hideSimulatorModes" type="boolean" default="false">
+<ResponseField name="hideInspectorModes" type="boolean" default="false">
   Hide the Prod Resources checkbox in the sidebar. Used in standalone inspect mode where Prod Resources is not applicable.
 </ResponseField>
 
 ## URL Parameters
 
-The Simulator supports URL parameters for configuring the initial state. This is especially useful for automated testing and sharing specific configurations.
+The Inspector supports URL parameters for configuring the initial state. This is especially useful for automated testing and sharing specific configurations.
 
 ### Supported Parameters
 
@@ -102,25 +102,25 @@ http://localhost:3000/?simulation=show-map&deviceType=mobile&touch=true&hover=fa
 http://localhost:3000/?simulation=show-albums&host=claude&theme=light
 ```
 
-## createSimulatorUrl
+## createInspectorUrl
 
-For type-safe URL generation in tests, use the `createSimulatorUrl` utility:
+For type-safe URL generation in tests, use the `createInspectorUrl` utility:
 
 ### Import
 
 ```typescript
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 ```
 
 ### Usage
 
 ```typescript
 // Basic usage
-createSimulatorUrl({ simulation: 'show-albums', theme: 'light' })
+createInspectorUrl({ simulation: 'show-albums', theme: 'light' })
 // Returns: '/?simulation=show-albums&theme=light'
 
 // With display mode
-createSimulatorUrl({
+createInspectorUrl({
   simulation: 'review-diff',
   theme: 'dark',
   displayMode: 'fullscreen',
@@ -128,7 +128,7 @@ createSimulatorUrl({
 // Returns: '/?simulation=review-diff&theme=dark&displayMode=fullscreen'
 
 // With device simulation
-createSimulatorUrl({
+createInspectorUrl({
   simulation: 'show-map',
   deviceType: 'mobile',
   touch: true,
@@ -137,7 +137,7 @@ createSimulatorUrl({
 // Returns: '/?simulation=show-map&deviceType=mobile&touch=true&hover=false'
 
 // With safe area insets (for notch simulation)
-createSimulatorUrl({
+createInspectorUrl({
   simulation: 'show-carousel',
   safeAreaTop: 44,
   safeAreaBottom: 34,
@@ -146,10 +146,10 @@ createSimulatorUrl({
 
 ```
 
-### SimulatorUrlParams Interface
+### InspectorUrlParams Interface
 
 ```typescript
-interface SimulatorUrlParams {
+interface InspectorUrlParams {
   tool?: string;
   simulation?: string;
   host?: string;
@@ -172,11 +172,11 @@ interface SimulatorUrlParams {
 
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/simulator';
+import { createInspectorUrl } from 'sunpeak/inspector';
 
 test.describe('Albums Resource', () => {
   test('should render in light mode', async ({ page }) => {
-    await page.goto(createSimulatorUrl({
+    await page.goto(createInspectorUrl({
       simulation: 'show-albums',
       theme: 'light',
     }));
@@ -186,7 +186,7 @@ test.describe('Albums Resource', () => {
   });
 
   test('should render in fullscreen dark mode', async ({ page }) => {
-    await page.goto(createSimulatorUrl({
+    await page.goto(createInspectorUrl({
       simulation: 'show-albums',
       theme: 'dark',
       displayMode: 'fullscreen',
@@ -201,7 +201,7 @@ test.describe('Albums Resource', () => {
 
 ## Sidebar Controls
 
-The simulator sidebar provides interactive controls for:
+The inspector sidebar provides interactive controls for:
 
 - **Prod Tools**: Toggle Prod Tools mode — calls real tool handlers instead of simulation mocks (requires `onCallTool` prop)
 - **Prod Resources**: Toggle Prod Resources mode — loads production-built HTML from `dist/` instead of Vite HMR
@@ -221,11 +221,11 @@ The simulator sidebar provides interactive controls for:
 
 ## ChatGPT Mock Runtime
 
-When the **ChatGPT** host is selected, the simulator automatically injects a mock `window.openai` runtime into the resource iframe. This enables:
+When the **ChatGPT** host is selected, the inspector automatically injects a mock `window.openai` runtime into the resource iframe. This enables:
 
 - **`isChatGPT()`** returns `true` — host detection works correctly
-- **ChatGPT-specific hooks** (`useUploadFile`, `useGetFileDownloadUrl`, `useRequestModal`, `useRequestCheckout`) work with stub implementations
-- All mock method calls are logged to the browser console with a `[Simulator]` prefix
+- **ChatGPT-specific hooks** (`useUploadFile`, `useRequestModal`, `useRequestCheckout`) work with stub implementations
+- All mock method calls are logged to the browser console with a `[Inspector]` prefix
 
 When a different host (e.g. Claude) is selected, `window.openai` is not injected and ChatGPT hooks will throw if called.
 

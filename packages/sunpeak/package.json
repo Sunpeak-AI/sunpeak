@@ -1,7 +1,7 @@
 {
   "name": "sunpeak",
-  "version": "0.17.7",
-  "description": "Local-first MCP Apps framework. Quickstart, build, test, and ship your Claude Connector or ChatGPT App!",
+  "version": "0.18.0",
+  "description": "Inspector, testing framework, and app framework for MCP Apps.",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -17,10 +17,10 @@
         "default": "./dist/index.cjs"
       }
     },
-    "./simulator": {
+    "./inspector": {
       "import": {
-        "types": "./dist/simulator/index.d.ts",
-        "default": "./dist/simulator/index.js"
+        "types": "./dist/inspector/index.d.ts",
+        "default": "./dist/inspector/index.js"
       }
     },
     "./chatgpt": {
@@ -36,7 +36,6 @@
       }
     },
     "./style.css": "./dist/style.css",
-    "./chatgpt/globals.css": "./dist/chatgpt/globals.css",
     "./mcp": {
       "import": {
         "types": "./dist/mcp/index.d.ts",
@@ -50,18 +49,6 @@
       }
     },
     "./host/chatgpt": {
-      "import": {
-        "types": "./dist/host/chatgpt/index.d.ts",
-        "default": "./dist/host/chatgpt/index.js"
-      }
-    },
-    "./platform": {
-      "import": {
-        "types": "./dist/host/index.d.ts",
-        "default": "./dist/host/index.js"
-      }
-    },
-    "./platform/chatgpt": {
       "import": {
         "types": "./dist/host/chatgpt/index.d.ts",
         "default": "./dist/host/chatgpt/index.js"
@@ -131,9 +118,9 @@
     "chatgpt-app",
     "mcp-ui",
     "mcp",
-    "chatgpt-simulator",
+    "chatgpt-inspector",
     "claude",
-    "claude-simulator",
+    "claude-inspector",
     "testing",
     "multi-platform",
     "react",

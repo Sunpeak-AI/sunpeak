@@ -205,7 +205,7 @@ return {
 
 When the user clicks "Place Order", the review resource calls `useCallServerTool` with the arguments plus `confirmed: true`. The tool returns both `content` (human-readable text for the host model) and `structuredContent` (with `status` and `message` for the UI). The review resource reads `structuredContent.status` to determine success/error styling and displays `structuredContent.message`. The same `review` tool handles all review variants — purchases, code diffs, social posts — differentiated by the `action` field. See the template's `review` resource for the full implementation.
 
-Tools without a UI are hidden from the simulator's simulation selector (there's nothing to render). They are still registered in the dev MCP server, so they can be called by UI resources via `useCallServerTool` or by the host directly. In production, they work as standard MCP tools.
+Tools without a UI are hidden from the inspector's simulation selector (there's nothing to render). They are still registered in the dev MCP server, so they can be called by UI resources via `useCallServerTool` or by the host directly. In production, they work as standard MCP tools.
 
 ## Multiple Tools Per Resource
 

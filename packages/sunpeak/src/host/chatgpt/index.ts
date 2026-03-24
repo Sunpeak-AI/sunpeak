@@ -24,9 +24,6 @@ export type { OpenAIRuntime } from './openai-types';
 // === File actions ===
 export { useUploadFile } from './use-create-file';
 export type { CreateFileResult } from './use-create-file';
-/** @deprecated Use `useDownloadFile` from `sunpeak` instead. */
-export { useGetFileDownloadUrl } from './use-file-download';
-export type { FileDownloadUrlResult } from './use-file-download';
 
 // === Modal actions ===
 export { useRequestModal } from './use-open-modal';

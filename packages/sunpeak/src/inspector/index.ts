@@ -1,31 +1,31 @@
 /**
- * Generic multi-host simulator for Sunpeak MCP Apps.
+ * Generic multi-host inspector for Sunpeak MCP Apps.
  *
- * The Simulator component provides a dev environment for testing MCP Apps
+ * The Inspector component provides a dev environment for testing MCP Apps
  * against multiple host platforms (ChatGPT, Claude, etc.).
  *
  * @example
  * ```tsx
- * import { simulator } from 'sunpeak';
- * const { Simulator } = simulator;
+ * import { inspector } from 'sunpeak';
+ * const { Inspector } = inspector;
  *
- * <Simulator simulations={simulations} appName="My App" />
+ * <Inspector simulations={simulations} appName="My App" />
  * ```
  *
- * @module sunpeak/simulator
+ * @module sunpeak/inspector
  */
 
 // Register built-in host shells
 import '../chatgpt/chatgpt-host';
 import '../claude/claude-host';
 
-// Core simulator component
-export { Simulator } from './simulator';
-export type { SimulatorProps } from './simulator';
+// Core inspector component
+export { Inspector } from './inspector';
+export type { InspectorProps } from './inspector';
 
-// State hook (for custom simulator builds)
-export { useSimulatorState } from './use-simulator-state';
-export type { UseSimulatorStateOptions, SimulatorState } from './use-simulator-state';
+// State hook (for custom inspector builds)
+export { useInspectorState } from './use-inspector-state';
+export type { UseInspectorStateOptions, InspectorState } from './use-inspector-state';
 
 // Host shell system
 export { registerHostShell, getHostShell, getRegisteredHosts } from './hosts';
@@ -47,12 +47,12 @@ export type { Simulation, ServerToolMock } from '../types/simulation';
 export { resolveServerToolResult } from '../types/simulation';
 
 // Types & URL helpers
-export type { ScreenWidth, SimulatorConfig } from './simulator-types';
-export { SCREEN_WIDTHS } from './simulator-types';
-export { createSimulatorUrl } from './simulator-url';
-export type { SimulatorUrlParams } from './simulator-url';
+export type { ScreenWidth, InspectorConfig } from './inspector-types';
+export { SCREEN_WIDTHS } from './inspector-types';
+export { createInspectorUrl } from './inspector-url';
+export type { InspectorUrlParams } from './inspector-url';
 
-// Sidebar components (for building custom simulators)
+// Sidebar components (for building custom inspectors)
 export {
   SimpleSidebar,
   SidebarControl,

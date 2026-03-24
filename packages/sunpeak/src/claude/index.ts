@@ -1,5 +1,5 @@
 /**
- * Claude-specific exports for the Sunpeak simulator.
+ * Claude-specific exports for the Sunpeak inspector.
  *
  * @module sunpeak/claude
  */
@@ -7,5 +7,5 @@
 // Register Claude host shell (side effect)
 import './claude-host';
 
-// Simulator
-export { Simulator } from '../simulator/simulator';
+// Inspector
+export { Inspector } from '../inspector/inspector';

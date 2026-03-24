@@ -156,7 +156,7 @@ function validateDistCss() {
     { regex: /@utility\s+/, label: '@utility' },
   ];
 
-  const cssFiles = ['dist/style.css', 'dist/chatgpt/globals.css'];
+  const cssFiles = ['dist/style.css'];
   const errors = [];
 
   for (const file of cssFiles) {
@@ -665,7 +665,7 @@ async function validateDevServer(projectDir) {
     }
     printSuccess(`All ${uniqueUris.size} resources readable`);
 
-    // ── 10. Simulator UI: framework mode (no server URL input) ──
+    // ── 10. Inspector UI: framework mode (no server URL input) ──
     const indexResp = await fetch(`http://localhost:${devPort}/`);
     if (!indexResp.ok) throw new Error(`Index page returned ${indexResp.status}`);
     const indexHtml = await indexResp.text();
@@ -675,7 +675,7 @@ async function validateDevServer(projectDir) {
     if (indexHtml.includes('mcpServerUrl')) {
       throw new Error('Framework mode: index page should not contain mcpServerUrl');
     }
-    printSuccess('Simulator UI in framework mode');
+    printSuccess('Inspector UI in framework mode');
 
     // ── 11. Server identity in page title ──
     // The dev server reads name from server.ts or package.json. The template's
@@ -756,13 +756,13 @@ async function validateDevServer(projectDir) {
     const resourceName = firstUri.replace('ui://', '').replace(/-[a-z0-9]+$/, '');
     const distUrl = `http://localhost:${devPort}/dist/${resourceName}/${resourceName}.html`;
 
-    // HEAD (the Simulator polls with HEAD to check readiness)
+    // HEAD (the Inspector polls with HEAD to check readiness)
     const distHeadResp = await fetch(distUrl, { method: 'HEAD' });
     if (!distHeadResp.ok) {
       throw new Error(`Prod resources HEAD ${distUrl} returned ${distHeadResp.status}`);
     }
 
-    // GET (the Simulator loads this in the iframe)
+    // GET (the Inspector loads this in the iframe)
     const distGetResp = await fetch(distUrl);
     const distHtml = await distGetResp.text();
     if (!distHtml.includes('<div id="root">')) throw new Error('Prod resources HTML missing #root');
@@ -842,7 +842,7 @@ try {
   }
   printSuccess('Playwright browsers installed');
 
-  console.log('\nRunning: pnpm test:e2e (package-level simulator e2e)');
+  console.log('\nRunning: pnpm test:e2e (package-level inspector e2e)');
   if (!runCommand('pnpm test:e2e', PACKAGE_ROOT)) throw new Error('pnpm test:e2e failed');
   printSuccess('pnpm test:e2e');
 

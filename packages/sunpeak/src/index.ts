@@ -1,4 +1,4 @@
-import './simulator/globals.css';
+import './inspector/globals.css';
 
 // === MCP Apps SDK re-exports ===
 // Core classes and style functions
@@ -104,14 +104,10 @@ export * from './lib';
 export { isChatGPT, isClaude, detectHost } from './host';
 export type { Host } from './host';
 
-// Deprecated aliases
-export { detectPlatform } from './host';
-export type { Platform } from './host';
-
-// === Generic simulator (multi-host) ===
-// Import as: import { simulator } from 'sunpeak';
-// Usage: <simulator.Simulator ... />
-export * as simulator from './simulator';
+// === Generic inspector (multi-host) ===
+// Import as: import { inspector } from 'sunpeak';
+// Usage: <inspector.Inspector ... />
+export * as inspector from './inspector';
 
 // === ChatGPT-specific exports (namespaced) ===
 // Import as: import { chatgpt } from 'sunpeak';

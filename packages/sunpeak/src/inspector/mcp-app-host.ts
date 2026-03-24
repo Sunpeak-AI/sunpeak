@@ -15,7 +15,7 @@ import type {
   LoggingMessageNotification,
 } from '@modelcontextprotocol/sdk/types.js';
 
-const DEFAULT_HOST_INFO = { name: 'SunpeakSimulator', version: '1.0.0' };
+const DEFAULT_HOST_INFO = { name: 'SunpeakInspector', version: '1.0.0' };
 
 const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
@@ -30,7 +30,7 @@ const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
 
 export interface McpAppHostOptions {
   hostContext?: McpUiHostContext;
-  /** Host info reported to the app via MCP protocol. Defaults to SunpeakSimulator. */
+  /** Host info reported to the app via MCP protocol. Defaults to SunpeakInspector. */
   hostInfo?: { name: string; version: string };
   /** Host capabilities reported to the app. Defaults to baseline MCP capabilities. */
   hostCapabilities?: McpUiHostCapabilities;
@@ -52,8 +52,8 @@ export interface McpAppHostOptions {
 }
 
 /**
- * MCP Apps host for the Sunpeak simulator.
- * Wraps AppBridge to provide a simpler API for the simulator.
+ * MCP Apps host for the Sunpeak inspector.
+ * Wraps AppBridge to provide a simpler API for the inspector.
  * Connects to an iframe via PostMessageTransport.
  */
 export class McpAppHost {
@@ -170,7 +170,7 @@ export class McpAppHost {
         content: [
           {
             type: 'text',
-            text: `[Simulator] Tool "${params.name}" called (no handler configured)`,
+            text: `[Inspector] Tool "${params.name}" called (no handler configured)`,
           },
         ],
       };
@@ -367,7 +367,7 @@ export class McpAppHost {
   /**
    * Debug: Inject state directly into the app's useAppState hook.
    * This bypasses the normal MCP Apps protocol and is intended for
-   * simulator testing/debugging only.
+   * inspector testing/debugging only.
    */
   injectState(state: Record<string, unknown>): void {
     const win = this._contentWindow;
@@ -382,7 +382,7 @@ export class McpAppHost {
 
   /**
    * Update mutable options (callbacks) after construction.
-   * Allows the simulator to swap handlers (e.g. onCallTool) without
+   * Allows the inspector to swap handlers (e.g. onCallTool) without
    * recreating the host and tearing down the iframe connection.
    */
   updateOptions(partial: Partial<McpAppHostOptions>): void {

@@ -2,7 +2,7 @@
  * Playwright config factory for inspect mode (BYOS — Bring Your Own Server).
  *
  * Generates a complete Playwright config that starts `sunpeak inspect` as the
- * webServer and runs e2e tests against the simulator. Follows the same pattern
+ * webServer and runs e2e tests against the inspector. Follows the same pattern
  * as `defineLiveConfig` for live tests.
  *
  * Usage in playwright.config.ts:
@@ -21,7 +21,7 @@ import { getPortSync } from '../get-port.mjs';
  * @param {string} [options.testDir='tests/e2e'] - Test directory
  * @param {string} [options.simulationsDir='tests/simulations'] - Simulation JSON directory
  * @param {string[]} [options.hosts=['chatgpt', 'claude']] - Host shells to test
- * @param {string} [options.name] - App name in simulator chrome
+ * @param {string} [options.name] - App name in inspector chrome
  * @param {Object} [options.use] - Additional Playwright `use` options
  * @returns {import('@playwright/test').PlaywrightTestConfig}
  */

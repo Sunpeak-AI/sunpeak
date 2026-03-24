@@ -9,7 +9,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "file upload", "modal", "c
 
 ## Overview
 
-These hooks wrap the ChatGPT `window.openai` runtime APIs, providing typed React hooks for host-specific features that go beyond the MCP Apps standard. They are available **only when running inside ChatGPT** (or the simulator with the ChatGPT host selected).
+These hooks wrap the ChatGPT `window.openai` runtime APIs, providing typed React hooks for host-specific features that go beyond the MCP Apps standard. They are available **only when running inside ChatGPT** (or the inspector with the ChatGPT host selected).
 
 <Warning>
 These hooks throw if called outside ChatGPT. Always feature-detect with [`isChatGPT()`](/api-reference/functions/host-detection) before using them.
@@ -271,9 +271,9 @@ if (runtime?.openExternal) {
 }
 ```
 
-## Simulator Support
+## Inspector Support
 
-When the ChatGPT host is selected in the [Simulator](/api-reference/simulations/simulator), a mock `window.openai` runtime is automatically injected into the iframe. This makes `isChatGPT()` return `true` and all ChatGPT hooks functional with stub implementations that log to the browser console.
+When the ChatGPT host is selected in the [Inspector](/api-reference/simulations/inspector), a mock `window.openai` runtime is automatically injected into the iframe. This makes `isChatGPT()` return `true` and all ChatGPT hooks functional with stub implementations that log to the browser console.
 
 When a different host (e.g. Claude) is selected, `window.openai` is not injected and `isChatGPT()` returns `false`.
 
@@ -282,6 +282,6 @@ When a different host (e.g. Claude) is selected, `window.openai` is not injected
 <Card horizontal title="Host Detection" icon="radar" href="/api-reference/functions/host-detection">
   Detect which host is running your app.
 </Card>
-<Card horizontal title="Simulator" icon="flask" href="/api-reference/simulations/simulator">
+<Card horizontal title="Inspector" icon="flask" href="/api-reference/simulations/inspector">
   Test ChatGPT hooks locally with the mock runtime.
 </Card>

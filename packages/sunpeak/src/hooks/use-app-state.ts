@@ -41,14 +41,14 @@ export function useAppState<T>(defaultState: T): readonly [T, (state: SetStateAc
   const [state, _setState] = useState<T>(defaultState);
   const pendingSync = useRef<T | null>(null);
 
-  // Listen for debug state injection from simulator (sunpeak/injectState message).
-  // This is a debug feature that allows the simulator to inject state changes
+  // Listen for debug state injection from inspector (sunpeak/injectState message).
+  // This is a debug feature that allows the inspector to inject state changes
   // without going through the normal MCP Apps protocol flow.
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const handler = (event: MessageEvent) => {
-      // Only accept messages from parent (simulator)
+      // Only accept messages from parent (inspector)
       if (event.source !== window.parent) return;
 
       const data = event.data;

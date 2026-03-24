@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { useSimulatorState } from './use-simulator-state';
+import { useInspectorState } from './use-inspector-state';
 import type { Simulation } from '../types/simulation';
 
 function createSim(name: string, hasResource: boolean): Simulation {
@@ -14,14 +14,14 @@ function createSim(name: string, hasResource: boolean): Simulation {
   };
 }
 
-describe('useSimulatorState', () => {
+describe('useInspectorState', () => {
   it('filters out backend-only simulations', () => {
     const simulations = {
       'ui-tool': createSim('ui-tool', true),
       'backend-tool': createSim('backend-tool', false),
     };
 
-    const { result } = renderHook(() => useSimulatorState({ simulations }));
+    const { result } = renderHook(() => useInspectorState({ simulations }));
 
     expect(result.current.simulationNames).toContain('ui-tool');
     expect(result.current.simulationNames).not.toContain('backend-tool');

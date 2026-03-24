@@ -11,13 +11,13 @@ import { HostPage } from './host-page.mjs';
 /**
  * All ChatGPT DOM selectors in one place for easy maintenance.
  *
- * Last verified: 2026-03-17 via live Playwright inspection.
+ * Last verified: 2026-03-24 via live Playwright inspection.
  */
 const SELECTORS = {
   // Chat interface
   chatInput: '#prompt-textarea',
   sendButton: '[data-testid="send-button"]',
-  newChatLink: 'a:has-text("New chat")',
+  newChatLink: '[data-testid="create-new-chat-button"]',
 
   // Login detection — ChatGPT renders two profile buttons (sidebar compact + expanded); always use .first().
   loggedInIndicator: '[data-testid="accounts-profile-button"]',

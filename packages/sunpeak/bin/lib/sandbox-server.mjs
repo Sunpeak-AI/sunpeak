@@ -1,5 +1,5 @@
 /**
- * Separate-origin sandbox server for the simulator's double-iframe architecture.
+ * Separate-origin sandbox server for the inspector's double-iframe architecture.
  *
  * Real hosts (ChatGPT, Claude) run the sandbox proxy iframe on a separate origin
  * (e.g., web-sandbox.oaiusercontent.com). This server replicates that by serving
@@ -10,7 +10,7 @@
  *   - document.referrer is empty (cross-origin navigation)
  *   - The iframe sandbox attribute behaves identically to production
  *
- * The server is started by `sunpeak dev` and its URL is injected into the Simulator
+ * The server is started by `sunpeak dev` and its URL is injected into the Inspector
  * via `__SUNPEAK_SANDBOX_URL__`.
  *
  * NOTE: The proxy HTML and mock openai script are duplicated from sandbox-proxy.ts
@@ -287,18 +287,18 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
  */
 const MOCK_OPENAI_SCRIPT = [
   'window.openai={',
-  'uploadFile:function(f){console.log("[Simulator] uploadFile:",f.name);',
+  'uploadFile:function(f){console.log("[Inspector] uploadFile:",f.name);',
   'return Promise.resolve({fileId:"sim_file_"+Date.now()})},',
-  'getFileDownloadUrl:function(p){console.log("[Simulator] getFileDownloadUrl:",p.fileId);',
-  'return Promise.resolve({downloadUrl:"https://simulator.local/files/"+p.fileId})},',
-  'requestModal:function(p){console.log("[Simulator] requestModal:",JSON.stringify(p));',
+  'getFileDownloadUrl:function(p){console.log("[Inspector] getFileDownloadUrl:",p.fileId);',
+  'return Promise.resolve({downloadUrl:"https://inspector.local/files/"+p.fileId})},',
+  'requestModal:function(p){console.log("[Inspector] requestModal:",JSON.stringify(p));',
   'return Promise.resolve()},',
-  'requestCheckout:function(s){console.log("[Simulator] requestCheckout:",JSON.stringify(s));',
+  'requestCheckout:function(s){console.log("[Inspector] requestCheckout:",JSON.stringify(s));',
   'return Promise.resolve({id:"sim_order_"+Date.now(),checkout_session_id:s.id||"sim_session",status:"completed"})},',
-  'requestClose:function(){console.log("[Simulator] requestClose")},',
-  'requestDisplayMode:function(p){console.log("[Simulator] requestDisplayMode:",p.mode);',
+  'requestClose:function(){console.log("[Inspector] requestClose")},',
+  'requestDisplayMode:function(p){console.log("[Inspector] requestDisplayMode:",p.mode);',
   'return Promise.resolve()},',
-  'sendFollowUpMessage:function(p){console.log("[Simulator] sendFollowUpMessage:",p.prompt)},',
-  'openExternal:function(p){console.log("[Simulator] openExternal:",p.href);window.open(p.href,"_blank")}',
+  'sendFollowUpMessage:function(p){console.log("[Inspector] sendFollowUpMessage:",p.prompt)},',
+  'openExternal:function(p){console.log("[Inspector] openExternal:",p.href);window.open(p.href,"_blank")}',
   '};',
 ].join('');

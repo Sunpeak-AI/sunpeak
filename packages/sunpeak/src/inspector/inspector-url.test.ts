@@ -1,19 +1,19 @@
 import { describe, it, expect } from 'vitest';
-import { createSimulatorUrl } from './simulator-url';
+import { createInspectorUrl } from './inspector-url';
 
-describe('createSimulatorUrl', () => {
+describe('createInspectorUrl', () => {
   it('encodes tool param', () => {
-    const url = createSimulatorUrl({ tool: 'search-products' });
+    const url = createInspectorUrl({ tool: 'search-products' });
     expect(url).toContain('tool=search-products');
   });
 
   it('encodes simulation param', () => {
-    const url = createSimulatorUrl({ simulation: 'search-products' });
+    const url = createInspectorUrl({ simulation: 'search-products' });
     expect(url).toContain('simulation=search-products');
   });
 
   it('combines tool and simulation with other params', () => {
-    const url = createSimulatorUrl({
+    const url = createInspectorUrl({
       simulation: 'search-products',
       host: 'chatgpt',
       theme: 'dark',
@@ -26,7 +26,7 @@ describe('createSimulatorUrl', () => {
   });
 
   it('omits tool and simulation when undefined', () => {
-    const url = createSimulatorUrl({ theme: 'dark' });
+    const url = createInspectorUrl({ theme: 'dark' });
     expect(url).not.toContain('tool=');
     expect(url).not.toContain('simulation=');
   });

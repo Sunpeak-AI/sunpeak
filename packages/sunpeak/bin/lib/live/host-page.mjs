@@ -181,14 +181,9 @@ export class HostPage {
    * Start a new chat conversation.
    */
   async startNewChat() {
-    const newChatLink = this.page.locator(this.selectors.newChatLink).first();
-    const isVisible = await newChatLink.isVisible().catch(() => false);
-    if (isVisible) {
-      await newChatLink.click();
-    } else {
-      await this.page.goto(this.urls.base, { waitUntil: 'domcontentloaded' });
-    }
-
+    // Navigate directly rather than clicking — ChatGPT's sidebar compact
+    // icon can overlay the "New chat" link and intercept pointer events.
+    await this.page.goto(this.urls.base, { waitUntil: 'domcontentloaded' });
     await this.page.locator(this.selectors.chatInput).waitFor({ timeout: 10_000 });
   }
 

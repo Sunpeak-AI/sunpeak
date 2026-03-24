@@ -34,7 +34,7 @@ type Host = 'chatgpt' | 'claude' | 'unknown';
 
 ### Detection Order
 
-1. **Runtime objects** — checks for `window.openai` (injected by ChatGPT and by the simulator when ChatGPT host is selected)
+1. **Runtime objects** — checks for `window.openai` (injected by ChatGPT and by the inspector when ChatGPT host is selected)
 2. **User agent** — checks `navigator.userAgent` for host identifiers
 3. **Hostname** — checks `window.location.hostname` for known host domains
 
@@ -114,16 +114,16 @@ function MyResource() {
 
 ---
 
-## Simulator Behavior
+## Inspector Behavior
 
-In the [Simulator](/api-reference/simulations/simulator), host detection reflects the currently selected host:
+In the [Inspector](/api-reference/simulations/inspector), host detection reflects the currently selected host:
 
 | Host selected | `isChatGPT()` | `isClaude()` | `detectHost()` |
 |---|---|---|---|
 | ChatGPT | `true` | `false` | `'chatgpt'` |
 | Claude | `false` | `false`* | `'unknown'`* |
 
-\* Claude detection relies on user agent or hostname, which aren't present in the simulator. Use [`useHostContext()`](/api-reference/hooks/use-host-context) to read host identity from the MCP protocol instead.
+\* Claude detection relies on user agent or hostname, which aren't present in the inspector. Use [`useHostContext()`](/api-reference/hooks/use-host-context) to read host identity from the MCP protocol instead.
 
 ## See Also
 

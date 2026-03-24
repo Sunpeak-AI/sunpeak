@@ -1,9 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 
 /**
- * Playwright config for package-level simulator e2e tests.
+ * Playwright config for package-level inspector e2e tests.
  *
- * These tests verify simulator behavior (inspect mode, prod-tools, Tool Result
+ * These tests verify inspector behavior (inspect mode, prod-tools, Tool Result
  * editing) using the template project's dev server. They test the sunpeak
  * package itself, not the template app's resources.
  */

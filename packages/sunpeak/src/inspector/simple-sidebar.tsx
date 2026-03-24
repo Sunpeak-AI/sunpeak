@@ -55,7 +55,7 @@ export function SimpleSidebar({ children, controls, headerRight }: SimpleSidebar
   }, [isResizing]);
 
   return (
-    <div className="sunpeak-simulator-root flex h-screen w-full overflow-hidden relative">
+    <div className="sunpeak-inspector-root flex h-screen w-full overflow-hidden relative">
       {/* Resize overlay to capture mouse events during drag */}
       {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
 

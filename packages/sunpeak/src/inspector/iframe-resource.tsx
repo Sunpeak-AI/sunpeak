@@ -254,7 +254,7 @@ function generateScriptHtml(
 /**
  * Build the iframe `allow` attribute from resource-declared permissions.
  * Maps McpUiResourcePermissions to Permission Policy directives and
- * combines them with simulator baseline permissions.
+ * combines them with inspector baseline permissions.
  */
 function buildIframeAllow(permissions: McpUiResourcePermissions | undefined): string {
   const parts: string[] = [
@@ -314,13 +314,13 @@ interface IframeResourceProps {
   /**
    * Called after the iframe has rendered following a display mode change.
    * The callback receives the display mode that was confirmed.
-   * Used by the simulator to hide content during transitions and only
+   * Used by the inspector to hide content during transitions and only
    * reveal it once the app has committed its DOM for the new mode.
    */
   onDisplayModeReady?: (mode: string) => void;
   /**
    * Debug: State to inject directly into the app's useAppState hook.
-   * This bypasses the normal MCP Apps protocol and is for simulator testing.
+   * This bypasses the normal MCP Apps protocol and is for inspector testing.
    */
   debugInjectState?: Record<string, unknown> | null;
   /**
@@ -495,7 +495,7 @@ export function IframeResource({
             }
           } else if (currentSrc) {
             // src mode (dev): send the URL to the proxy for inner iframe src loading.
-            // This is a simulator-specific extension — the proxy creates an inner iframe
+            // This is a inspector-specific extension — the proxy creates an inner iframe
             // with src pointing to the Vite dev server, preserving HMR.
             //
             // When using a separate-origin sandbox server, the src must be absolute
@@ -656,7 +656,7 @@ export function IframeResource({
 
   // Apply containerDimensions constraints as a host-side wrapper so the app
   // reports its natural size via sizechange (no feedback loop) while the
-  // simulator visually enforces the configured dimensions.
+  // inspector visually enforces the configured dimensions.
   //
   // height / maxHeight → clip the iframe vertically with overflow:hidden.
   //   Using a wrapper (not SafeArea inside the app) is intentional: if the

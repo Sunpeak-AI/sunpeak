@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useEffect, useRef, useCallback } from 'react';
-import { SCREEN_WIDTHS, type ScreenWidth } from '../simulator/simulator-types';
+import { SCREEN_WIDTHS, type ScreenWidth } from '../inspector/inspector-types';
 import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;

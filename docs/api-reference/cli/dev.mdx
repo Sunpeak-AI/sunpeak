@@ -1,12 +1,12 @@
 ---
 title: "sunpeak dev"
-description: "Run the simulator and MCP server with HMR."
+description: "Run the inspector and MCP server with HMR."
 keywords: ["MCP Apps", "ChatGPT Apps", "development server", "HMR", "MCP app testing"]
 ---
 
 ## Overview
 
-The `sunpeak dev` command starts a local development server with a built-in simulator and MCP server, allowing you to develop and test your MCP Resources both locally and with hosts like ChatGPT.
+The `sunpeak dev` command starts a local development server with a built-in inspector and MCP server, allowing you to develop and test your MCP Resources both locally and with hosts like ChatGPT.
 
 ```bash
 sunpeak dev
@@ -24,9 +24,9 @@ The dev server uses Vite's hot reload technology for instant feedback:
 - CSS updates apply instantly
 - **MCP server also supports HMR** - no more cache issues or manual refreshes in ChatGPT
 
-### Simulator
+### Inspector
 
-Access the simulator at `http://localhost:3000` to:
+Access the inspector at `http://localhost:3000` to:
 
 - Test your MCP Resources in a ChatGPT-like environment
 - Simulate tool calls and responses
@@ -55,12 +55,12 @@ No manual configuration or entry point files needed!
 
 | Option | Short | Description |
 |--------|-------|-------------|
-| `--port <number>` | `-p` | Port for the simulator (default: 3000, also respects `PORT` env var) |
+| `--port <number>` | `-p` | Port for the inspector (default: 3000, also respects `PORT` env var) |
 | `--prod-resources` | | Serve production-built HTML from `dist/` instead of Vite HMR |
 
 ### Tool and Simulation selection
 
-The simulator sidebar has two primary selectors:
+The inspector sidebar has two primary selectors:
 
 - **Tool dropdown** — selects which tool to inspect. Always visible when tools exist.
 - **Simulation dropdown** — selects a simulation fixture with mock data. Shown when fixtures exist for the selected tool. Includes a "None (call server)" option to bypass mock data and call the real handler via the **Run** button.
@@ -92,12 +92,12 @@ The dev server runs multiple services on different ports:
 
 | Port | Service | Purpose | Configurable |
 |------|---------|---------|-------------|
-| `3000` | Simulator UI | Main dev server with HMR | `--port` flag or `PORT` env |
+| `3000` | Inspector UI | Main dev server with HMR | `--port` flag or `PORT` env |
 | `8000` | MCP server | Tool execution endpoint (tunnel this for ChatGPT/Claude) | Auto-allocated |
 | `24679` | HMR WebSocket | Vite HMR for MCP resource bundles | `SUNPEAK_HMR_PORT` env |
 | `24680` | Sandbox proxy | Cross-origin iframe isolation (local only, not tunneled) | `SUNPEAK_SANDBOX_PORT` env |
 
-Only port `8000` needs to be tunneled (e.g., via ngrok) for ChatGPT/Claude connections. The sandbox proxy server provides real cross-origin isolation for the simulator's iframe architecture, matching how production hosts run apps on a separate sandbox origin.
+Only port `8000` needs to be tunneled (e.g., via ngrok) for ChatGPT/Claude connections. The sandbox proxy server provides real cross-origin isolation for the inspector's iframe architecture, matching how production hosts run apps on a separate sandbox origin.
 
 ## Usage
 
@@ -115,7 +115,7 @@ sunpeak dev --port 3000
 
 Use `sunpeak dev` for:
 
-- Local component development with the simulator
+- Local component development with the inspector
 - Testing with real ChatGPT via the integrated MCP server
 - Rapid iteration with hot reload in either context
 

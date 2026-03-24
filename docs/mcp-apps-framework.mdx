@@ -1,0 +1,130 @@
+---
+title: "MCP App Framework"
+description: "Convention-over-configuration framework for building MCP Apps with the inspector and testing built in."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app framework", "ChatGPT app framework", "React", "MCP server"]
+---
+
+import ProjectStructure from '/snippets/project-structure.mdx';
+
+## Overview
+
+The sunpeak framework is a convention-over-configuration structure for building MCP Apps — like Next.js for AI host applications. It bundles the [inspector](/mcp-apps-inspector) and [testing framework](/mcp-apps-testing) with a structured project layout, auto-discovery, and a CLI.
+
+```bash
+sunpeak new my-app
+cd my-app
+sunpeak dev
+```
+
+<ProjectStructure />
+
+## Convention Over Configuration
+
+sunpeak discovers resources, tools, and simulations from your file system:
+
+- **Resources** from `src/resources/{name}/{name}.tsx` — each exports a React component and a `resource` config
+- **Tools** from `src/tools/{name}.ts` — each exports `tool` (metadata), `schema` (Zod), and a `default` handler. Tools with a `resource` field link to a resource UI.
+- **[Simulations](/api-reference/simulations/simulation)** from `tests/simulations/{name}.json` — JSON fixtures loaded by the inspector and used in E2E tests
+- **Server config** from `src/server.ts` (optional) — exports `server` for identity/icons and `auth()` for request authentication (see [Authorization](/guides/authorization))
+
+## Runtime APIs
+
+sunpeak provides multi-platform React hooks that wrap the [MCP Apps protocol](/mcp-apps/introduction). Write your app logic once, deploy it across ChatGPT, Claude, and future hosts.
+
+### Data Hooks
+
+| Hook | Description |
+|------|-------------|
+| [`useToolInput()`](/api-reference/hooks/use-tool-data) | Arguments passed to the tool by the model |
+| [`useToolResult()`](/api-reference/hooks/use-tool-data) | Structured content returned by the tool handler |
+| [`useAppState()`](/api-reference/hooks/use-app-state) | Persistent state shared with the model via [`useUpdateModelContext()`](/api-reference/hooks/use-update-model-context) |
+| [`useHostContext()`](/api-reference/hooks/use-host-context) | Full host-provided context object |
+
+### Environment Hooks
+
+| Hook | Description |
+|------|-------------|
+| [`useTheme()`](/api-reference/hooks/use-theme) | `'light'` or `'dark'` from the host |
+| [`useDisplayMode()`](/api-reference/hooks/use-display-mode) | `'inline'`, `'pip'`, or `'fullscreen'` |
+| [`usePlatform()`](/api-reference/hooks/use-platform) | `'mobile'`, `'desktop'`, or `'web'` |
+| [`useLocale()`](/api-reference/hooks/use-locale) | BCP 47 language tag (e.g., `'en-US'`) |
+| [`useTimeZone()`](/api-reference/hooks/use-time-zone) | IANA time zone (e.g., `'America/New_York'`) |
+| [`useViewport()`](/api-reference/hooks/use-viewport) | Container dimensions and constraints |
+| [`useSafeArea()`](/api-reference/hooks/use-safe-area) | Device safe area insets |
+| [`useDeviceCapabilities()`](/api-reference/hooks/use-device-capabilities) | Hover and touch support |
+
+### Action Hooks
+
+| Hook | Description |
+|------|-------------|
+| [`useCallServerTool()`](/api-reference/hooks/use-call-server-tool) | Call another tool on your MCP server |
+| [`useOpenLink()`](/api-reference/hooks/use-open-link) | Open a URL in the host browser |
+| [`useDownloadFile()`](/api-reference/hooks/use-download-file) | Trigger a file download |
+| [`useRequestDisplayMode()`](/api-reference/hooks/use-request-display-mode) | Request inline/PiP/fullscreen switch |
+| `useSetAutoScroll()` | Control host auto-scroll behavior |
+
+See the [Hooks API Reference](/api-reference/hooks/use-tool-data) for complete documentation.
+
+### Host Detection
+
+Detect which host your app is running in — see [Host Detection](/api-reference/functions/host-detection):
+
+```typescript
+import { detectHost, isChatGPT, isClaude } from 'sunpeak/host';
+
+if (isChatGPT()) {
+  // ChatGPT-specific behavior
+}
+```
+
+## MCP Server
+
+The MCP server lets you serve your apps to AI hosts like ChatGPT and Claude. During development, [`sunpeak dev`](/api-reference/cli/dev) runs an MCP server that serves simulation fixture data. For production, use [`sunpeak build`](/api-reference/cli/build) followed by [`sunpeak start`](/api-reference/cli/start).
+
+```bash
+sunpeak dev        # Dev server with HMR + inspector + MCP endpoint
+sunpeak build      # Build resources for production
+sunpeak start      # Start the production MCP server
+```
+
+See the [Deployment Guide](/guides/deployment) for connecting to hosts, tunnels, and production setup.
+
+## UI Components
+
+The framework includes pre-built components in `src/resources/` and shared components in `src/components/`. These follow MCP App design guidelines using Tailwind CSS with MCP standard variables:
+
+```tsx
+<div className="text-[var(--color-text-primary)] bg-[var(--color-background-primary)]">
+  Content that adapts to the host theme
+</div>
+```
+
+See [UI Components](/framework/ui-components) for the full list.
+
+## The sunpeak CLI
+
+| Command | Description |
+|---------|-------------|
+| [`sunpeak new`](/api-reference/cli/new) | Create a new project |
+| [`sunpeak dev`](/api-reference/cli/dev) | Dev server with inspector and MCP endpoint |
+| [`sunpeak inspect`](/api-reference/cli/inspect) | [Inspect any MCP server](/mcp-apps-inspector) (standalone) |
+| [`sunpeak build`](/api-reference/cli/build) | Build resources for production |
+| [`sunpeak start`](/api-reference/cli/start) | Start the production MCP server |
+| [`sunpeak upgrade`](/api-reference/cli/upgrade) | Upgrade sunpeak to latest version |
+
+See the [CLI Reference](/cli/cli-overview) for all commands and options.
+
+## Dive Deeper
+
+<Card horizontal title="Inspector" icon="desktop" href="/mcp-apps-inspector">
+  Test MCP Apps in replicated ChatGPT and Claude runtimes.
+</Card>
+<Card horizontal title="Testing Framework" icon="flask" href="/mcp-apps-testing">
+  E2E tests against the inspector. Live tests against real hosts.
+</Card>
+<Card horizontal title="Project Scaffold" icon="folder" href="/framework/project-scaffold">
+  Detailed project structure and file conventions.
+</Card>
+<Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
+  Deploy to production with tunnels and hosting.
+</Card>

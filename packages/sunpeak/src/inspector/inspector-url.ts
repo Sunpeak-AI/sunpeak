@@ -1,9 +1,9 @@
 import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
 
 /**
- * Strongly-typed URL parameters for the Simulator.
+ * Strongly-typed URL parameters for the Inspector.
  *
- * Use with `createSimulatorUrl()` to generate type-safe URL paths for e2e tests.
+ * Use with `createInspectorUrl()` to generate type-safe URL paths for e2e tests.
  *
  * The two primary selectors mirror the sidebar dropdowns:
  * - `tool` — which tool to inspect (Tool dropdown)
@@ -15,23 +15,23 @@ import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
  *
  * @example
  * ```ts
- * import { createSimulatorUrl } from 'sunpeak/simulator';
+ * import { createInspectorUrl } from 'sunpeak/inspector';
  *
  * // Select a tool with no mock data (user must click Run):
- * await page.goto(createSimulatorUrl({ tool: 'show-albums' }));
+ * await page.goto(createInspectorUrl({ tool: 'show-albums' }));
  *
  * // Select a simulation (mock data renders immediately):
- * await page.goto(createSimulatorUrl({ simulation: 'show-albums' }));
+ * await page.goto(createInspectorUrl({ simulation: 'show-albums' }));
  *
  * // Full options:
- * await page.goto(createSimulatorUrl({
+ * await page.goto(createInspectorUrl({
  *   simulation: 'show-albums',
  *   theme: 'dark',
  *   host: 'claude',
  * }));
  * ```
  */
-export interface SimulatorUrlParams {
+export interface InspectorUrlParams {
   /**
    * The simulation name to load (e.g., 'show-albums', 'review-diff').
    * Corresponds to the simulation JSON filename without the `.json` extension.
@@ -54,7 +54,7 @@ export interface SimulatorUrlParams {
   host?: string;
 
   /**
-   * The color theme for the simulator.
+   * The color theme for the inspector.
    * @default 'dark'
    */
   theme?: Theme;
@@ -69,7 +69,7 @@ export interface SimulatorUrlParams {
   displayMode?: DisplayMode;
 
   /**
-   * The locale for the simulator (e.g., 'en-US', 'ja-JP').
+   * The locale for the inspector (e.g., 'en-US', 'ja-JP').
    * @default 'en-US'
    */
   locale?: string;
@@ -127,28 +127,28 @@ export interface SimulatorUrlParams {
 }
 
 /**
- * Creates a URL path with query parameters for the Simulator.
+ * Creates a URL path with query parameters for the Inspector.
  *
- * @param params - The simulator parameters to encode
+ * @param params - The inspector parameters to encode
  * @param basePath - The base path for the URL (default: '/')
  * @returns A URL path string with encoded query parameters
  *
  * @example
  * ```ts
  * // Tool only (no mock data, "Press Run" state):
- * createSimulatorUrl({ tool: 'show-albums' })
+ * createInspectorUrl({ tool: 'show-albums' })
  * // Returns: '/?tool=show-albums'
  *
  * // Simulation (mock data renders immediately):
- * createSimulatorUrl({ simulation: 'show-albums', theme: 'light' })
+ * createInspectorUrl({ simulation: 'show-albums', theme: 'light' })
  * // Returns: '/?simulation=show-albums&theme=light'
  *
  * // Both tool and simulation:
- * createSimulatorUrl({ tool: 'show-albums', simulation: 'show-albums' })
+ * createInspectorUrl({ tool: 'show-albums', simulation: 'show-albums' })
  * // Returns: '/?tool=show-albums&simulation=show-albums'
  * ```
  */
-export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): string {
+export function createInspectorUrl(params: InspectorUrlParams, basePath = '/'): string {
   const searchParams = new URLSearchParams();
 
   if (params.tool !== undefined) {

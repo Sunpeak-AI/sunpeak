@@ -115,7 +115,7 @@ export interface MCPServerHandle {
   /**
    * Notify non-local sessions that resources have changed.
    * Sends `notifications/resources/list_changed` so hosts re-fetch fresh content.
-   * Local sessions (ChatGPT, simulator) are skipped since they use Vite HMR.
+   * Local sessions (ChatGPT, inspector) are skipped since they use Vite HMR.
    */
   invalidateResources(): void;
 }

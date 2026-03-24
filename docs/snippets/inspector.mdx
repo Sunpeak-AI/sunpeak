@@ -4,10 +4,10 @@ For projects using the sunpeak framework, simulations are auto-discovered. Just 
 sunpeak dev
 ```
 
-For custom setups, you can manually configure the simulator:
+For custom setups, you can manually configure the inspector:
 
 ```tsx
-import { Simulator } from 'sunpeak/simulator';
+import { Inspector } from 'sunpeak/inspector';
 import { resource } from './resources/example/example';
 import exampleSimulation from './simulations/show-example.json';
 
@@ -18,7 +18,7 @@ const simulations = [{
   resourceUrl: 'http://localhost:3000/resources/example',
 }];
 
-<Simulator
+<Inspector
   simulations={simulations}
   appName="My App"
   appIcon="🌄"

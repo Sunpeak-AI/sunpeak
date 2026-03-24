@@ -29,9 +29,9 @@ pnpm --filter sunpeak generate-examples  # Regenerate examples/ from template
 
 **All resource content renders inside iframes** — never directly in the host page. This matches how AI chat hosts (ChatGPT, Claude) display apps and enables direct re-export of SDK hooks.
 
-### Multi-Host Simulator
+### Multi-Host Inspector
 
-The simulator supports multiple host platforms via a **HostShell** abstraction. Each host provides:
+The inspector supports multiple host platforms via a **HostShell** abstraction. Each host provides:
 - **Conversation chrome** — the visual shell (message bubbles, headers, input areas)
 - **Theme** — host-specific CSS variables and theme application
 - **Host info & capabilities** — reported to the app via MCP protocol
@@ -39,7 +39,7 @@ The simulator supports multiple host platforms via a **HostShell** abstraction. 
 Switching hosts in the sidebar changes the conversation chrome, theming, and reported host info/capabilities. The sidebar controls, iframe infrastructure, and state management are shared.
 
 ### Rendering Flow (Double-Iframe Sandbox Architecture)
-1. `Simulator` (host page) → `HostShell.Conversation` → `IframeResource`
+1. `Inspector` (host page) → `HostShell.Conversation` → `IframeResource`
 2. `IframeResource` creates an outer `<iframe>` containing a **sandbox proxy** that relays PostMessage between the host and an inner iframe holding the actual app. This two-level architecture matches how production hosts (ChatGPT, Claude) isolate app iframes on a separate origin (e.g., `web-sandbox.oaiusercontent.com`).
    - **Outer iframe**: Loads the sandbox proxy from a separate-origin server (port 24680) or via `srcdoc` (fallback for unit tests).
    - **Inner iframe**: Created by the proxy, loads the app HTML via `src` (dev: Vite HMR URL) or `document.write()` (prod: generated HTML).
@@ -47,7 +47,7 @@ Switching hosts in the sidebar changes the conversation chrome, theming, and rep
 4. Inside the inner iframe, the resource component uses `useApp()` which connects via `PostMessageTransport` to `window.parent` (the proxy), which relays to the host.
 
 ### E2E Tests
-Tests use `page.frameLocator('iframe').frameLocator('iframe')` to access resource content inside the double-iframe. Elements on the simulator chrome (header, `#root`) use `page.locator()` directly. Console error tests filter expected MCP handshake errors.
+Tests use `page.frameLocator('iframe').frameLocator('iframe')` to access resource content inside the double-iframe. Elements on the inspector chrome (header, `#root`) use `page.locator()` directly. Console error tests filter expected MCP handshake errors.
 
 ### Live Tests (`pnpm test:live`)
 Automated tests against real ChatGPT using Playwright. Uses the same `ChatGPTPage` class for selectors, message sending, and iframe handling. Auth flow: saved session → manual login in the opened browser window. Sessions typically last only a few hours because Cloudflare's HttpOnly `cf_clearance` cookie cannot be persisted by `storageState()`. The `global-setup.mjs` handles auth + MCP server refresh in the same browser session (refresh must happen before the browser closes while `cf_clearance` is still valid).
@@ -58,9 +58,9 @@ Automated tests against real ChatGPT using Playwright. Uses the same `ChatGPTPag
 packages/sunpeak/
 ├── src/
 │   ├── index.ts              # Main barrel: SDK re-exports + hooks + types
-│   ├── simulator/            # Generic multi-host simulator core
-│   │   ├── simulator.tsx     # Simulator component (host picker, sidebar, delegates to shell)
-│   │   ├── use-simulator-state.ts  # All simulator state management
+│   ├── inspector/            # Generic multi-host inspector core
+│   │   ├── inspector.tsx     # Inspector component (host picker, sidebar, delegates to shell)
+│   │   ├── use-inspector-state.ts  # All inspector state management
 │   │   ├── hosts.ts          # HostShell interface + registry
 │   │   ├── mcp-app-host.ts   # MCP Apps bridge wrapper (generic, supports streaming partials)
 │   │   ├── iframe-resource.tsx  # Iframe rendering + double-iframe sandbox proxy
@@ -91,19 +91,18 @@ packages/sunpeak/
 ```
 
 ### Export Map (`sunpeak`)
-- `sunpeak` — Hooks, types, SDK re-exports (`App`, `RESOURCE_MIME_TYPE`, `LATEST_PROTOCOL_VERSION`, etc.), `simulator` + `chatgpt` namespaces
-- `sunpeak/simulator` — Generic Simulator, host shell system, infrastructure
-- `sunpeak/chatgpt` — ChatGPT host shell registration + Simulator re-export
-- `sunpeak/claude` — Claude host shell registration + Simulator re-export
+- `sunpeak` — Hooks, types, SDK re-exports (`App`, `RESOURCE_MIME_TYPE`, `LATEST_PROTOCOL_VERSION`, etc.), `inspector` + `chatgpt` namespaces
+- `sunpeak/inspector` — Generic Inspector, host shell system, infrastructure
+- `sunpeak/chatgpt` — ChatGPT host shell registration + Inspector re-export
+- `sunpeak/claude` — Claude host shell registration + Inspector re-export
 - `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), server config (`ServerConfig`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/host` — Host detection
 - `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/test` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
 - `sunpeak/test/config` — Playwright config factory (`defineLiveConfig` with `hosts` array)
-- `sunpeak/test/chatgpt` — ChatGPT-specific Playwright fixtures (backwards compat, `test` with `chatgpt` fixture)
+- `sunpeak/test/chatgpt` — ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture)
 - `sunpeak/test/chatgpt/config` — ChatGPT-specific Playwright config factory
 - `sunpeak/style.css` — Main stylesheet
-- `sunpeak/chatgpt/globals.css` — Simulator globals stylesheet
 
 ## Key Types
 
@@ -152,11 +151,11 @@ interface HostShell {
 
 ## Dev Server (`bin/commands/dev.mjs`)
 
-`sunpeak dev` starts the local MCP server (with Vite HMR for resources) and then launches the inspector pointed at it. This means `sunpeak dev` and `sunpeak inspect` share the same simulator UI codepath — the inspector is the single entry point for all simulator use cases.
+`sunpeak dev` starts the local MCP server (with Vite HMR for resources) and then launches the inspector pointed at it. This means `sunpeak dev` and `sunpeak inspect` share the same inspector UI codepath — the inspector is the single entry point for all inspector use cases.
 
 Architecture:
 1. **MCP server** — Started via `runMCPServer()` with `viteMode: true`. Serves tools, resources (with Vite HMR scripts in `readResource` HTML), and simulation data via a custom `sunpeak/simulations` MCP method.
-2. **Inspector** — `inspectServer()` from `inspect.mjs` connects to the MCP server URL, discovers tools/resources via MCP protocol, and serves the simulator UI with HMR.
+2. **Inspector** — `inspectServer()` from `inspect.mjs` connects to the MCP server URL, discovers tools/resources via MCP protocol, and serves the inspector UI with HMR.
 3. **sandboxServer** — A minimal HTTP server on a separate port (default 24680) for cross-origin iframe isolation.
 
 Port management: The MCP server prefers port 8000 (users typically have an ngrok tunnel on this port). The inspector's Vite dev server uses port 24679 for its HMR WebSocket. The sandboxServer uses port 24680 (configurable via `SUNPEAK_SANDBOX_PORT`). The main dev server listens on the user-facing port (default 3000). All ports use `getPort()` to find free alternatives if the preferred port is taken.
@@ -172,7 +171,7 @@ Two orthogonal flags that toggle real tool handlers and production resource bund
 | `--prod-resources` | Built | Mocked | CI/E2E, catch build regressions |
 | `--prod-tools --prod-resources` | Built | Real handlers | Final smoke test |
 
-**Implementation**: Tool calls flow through MCP protocol to the local server (no Vite middleware). `--prod-tools` sets the initial state of the Prod Tools sidebar checkbox. `--prod-resources` runs `sunpeak build` before starting and sets the initial Prod Resources checkbox state. Both are runtime-toggleable in the sidebar. The `Simulator` component accepts `mcpServerUrl`, `defaultProdTools`, `defaultProdResources`, `hideSimulatorModes`, and `sandboxUrl` props.
+**Implementation**: Tool calls flow through MCP protocol to the local server (no Vite middleware). `--prod-tools` sets the initial state of the Prod Tools sidebar checkbox. `--prod-resources` runs `sunpeak build` before starting and sets the initial Prod Resources checkbox state. Both are runtime-toggleable in the sidebar. The `Inspector` component accepts `mcpServerUrl`, `defaultProdResources`, `hideInspectorModes`, `demoMode`, and `sandboxUrl` props.
 
 ## Documentation (`docs/`)
 
@@ -214,9 +213,9 @@ This is the upstream SDK that sunpeak wraps. Upgrades often introduce new `App` 
    - Export from `src/hooks/index.ts` (alphabetical within the "Action hooks" section).
    - Create a doc page in `docs/api-reference/hooks/` and add to `docs.json`.
 3. **New types/schemas/constants → re-exports** — Add to `src/index.ts` in the appropriate section (method constants, Zod schemas, or protocol types). Update `docs/mcp-apps/types/protocol-reference.mdx`.
-4. **New host capabilities** — Add to `DEFAULT_HOST_CAPABILITIES` in `src/simulator/mcp-app-host.ts` and add the corresponding `bridge.on*` handler.
+4. **New host capabilities** — Add to `DEFAULT_HOST_CAPABILITIES` in `src/inspector/mcp-app-host.ts` and add the corresponding `bridge.on*` handler.
 5. **Update docs version note** — Bump the SDK version in `docs/mcp-apps/introduction.mdx` and `docs/mcp-apps/types/protocol-reference.mdx`.
-6. **Check for deprecations** — If new generic APIs supersede platform-specific hooks (e.g., `useDownloadFile` superseding `useGetFileDownloadUrl`), add `@deprecated` JSDoc to the old hook and remove its docs.
+6. **Check for deprecations** — If new generic APIs supersede platform-specific hooks, remove the old hook and its docs.
 7. **Update `requests.mdx`** — Add sections for new `App` methods in `docs/mcp-apps/app/requests.mdx` and update the `<Note>` listing convenience hooks.
 
 ### SDK Export Structure

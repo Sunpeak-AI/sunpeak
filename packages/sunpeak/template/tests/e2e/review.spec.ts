@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createSimulatorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from 'sunpeak/chatgpt';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
@@ -7,7 +7,7 @@ for (const host of hosts) {
   test.describe(`Review Resource [${host}]`, () => {
     test.describe('Light Mode', () => {
       test('should render review title with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
@@ -25,7 +25,7 @@ for (const host of hosts) {
       });
 
       test('should render change items with type-specific styling', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const changeItem = iframe.locator('li').first();
@@ -45,7 +45,7 @@ for (const host of hosts) {
       });
 
       test('should have interactive apply and cancel buttons', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'light', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
 
@@ -76,7 +76,7 @@ for (const host of hosts) {
 
       test('should have expand fullscreen button in inline mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'light',
             displayMode: 'inline',
@@ -101,7 +101,7 @@ for (const host of hosts) {
 
     test.describe('Prod Tools Mode', () => {
       test('should show empty state with Run button', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'review-diff', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'review-diff', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -114,7 +114,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in light mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'review-diff', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ tool: 'review-diff', theme: 'light', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -128,7 +128,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ tool: 'review-diff', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ tool: 'review-diff', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -145,7 +145,7 @@ for (const host of hosts) {
     test.describe('Prod Resources Mode', () => {
       test('should activate without errors', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'dark',
             host,
@@ -160,7 +160,7 @@ for (const host of hosts) {
 
     test.describe('Dark Mode', () => {
       test('should render review title with correct styles', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
@@ -168,7 +168,7 @@ for (const host of hosts) {
       });
 
       test('should have appropriate text colors for dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const title = iframe.locator('h1').first();
@@ -186,7 +186,7 @@ for (const host of hosts) {
       });
 
       test('should render change items in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
         const changeItem = iframe.locator('li').first();
@@ -201,7 +201,7 @@ for (const host of hosts) {
           }
         });
 
-        await page.goto(createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-diff', theme: 'dark', host }));
 
         // Wait for iframe content to render
         const iframe = page.frameLocator('iframe').frameLocator('iframe');
@@ -222,7 +222,7 @@ for (const host of hosts) {
     test.describe('Fullscreen Mode', () => {
       test('should not show fullscreen button when already in fullscreen', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'light',
             displayMode: 'fullscreen',
@@ -241,7 +241,7 @@ for (const host of hosts) {
 
       test('should render content correctly in fullscreen', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'dark',
             displayMode: 'fullscreen',
@@ -261,7 +261,7 @@ for (const host of hosts) {
 
       test('should render content in fullscreen mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'light',
             displayMode: 'fullscreen',
@@ -282,7 +282,7 @@ for (const host of hosts) {
 
     test.describe('Review Post Simulation', () => {
       test('should render post review in light mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-post', theme: 'light', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-post', theme: 'light', host }));
 
         await page.waitForLoadState('networkidle');
 
@@ -292,7 +292,7 @@ for (const host of hosts) {
       });
 
       test('should render post review in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-post', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-post', theme: 'dark', host }));
 
         await page.waitForLoadState('networkidle');
 
@@ -302,7 +302,7 @@ for (const host of hosts) {
 
       test('should show server success message when confirming', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-post',
             theme: 'dark',
             host,
@@ -324,7 +324,7 @@ for (const host of hosts) {
 
       test('should show server cancel message when rejecting', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-post',
             theme: 'dark',
             host,
@@ -344,7 +344,7 @@ for (const host of hosts) {
     test.describe('Review Purchase Simulation', () => {
       test('should render purchase review in light mode', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({ simulation: 'review-purchase', theme: 'light', host })
+          createInspectorUrl({ simulation: 'review-purchase', theme: 'light', host })
         );
 
         await page.waitForLoadState('networkidle');
@@ -354,7 +354,7 @@ for (const host of hosts) {
       });
 
       test('should render purchase review in dark mode', async ({ page }) => {
-        await page.goto(createSimulatorUrl({ simulation: 'review-purchase', theme: 'dark', host }));
+        await page.goto(createInspectorUrl({ simulation: 'review-purchase', theme: 'dark', host }));
 
         await page.waitForLoadState('networkidle');
 
@@ -364,7 +364,7 @@ for (const host of hosts) {
 
       test('should show loading then result when placing order', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-purchase',
             theme: 'light',
             host,
@@ -385,7 +385,7 @@ for (const host of hosts) {
     test.describe('Server Tool Simulation via serverTools field', () => {
       test('should confirm review-diff and show server success', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'dark',
             host,
@@ -404,7 +404,7 @@ for (const host of hosts) {
 
       test('should cancel review-diff and show server cancelled', async ({ page }) => {
         await page.goto(
-          createSimulatorUrl({
+          createInspectorUrl({
             simulation: 'review-diff',
             theme: 'dark',
             host,

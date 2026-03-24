@@ -9,6 +9,16 @@
   },
   "favicon": "/favicon.png",
   "redirects": [
+    { "source": "/library/simulator", "destination": "/mcp-apps-inspector" },
+    { "source": "/library/runtime-apis", "destination": "/mcp-apps-framework" },
+    { "source": "/library/mcp-server", "destination": "/mcp-apps-framework" },
+    { "source": "/inspector/inspector", "destination": "/mcp-apps-inspector" },
+    { "source": "/inspector/mcp-server", "destination": "/mcp-apps-framework" },
+    { "source": "/testing/testing", "destination": "/mcp-apps-testing" },
+    { "source": "/template/project-scaffold", "destination": "/framework/project-scaffold" },
+    { "source": "/template/ui-components", "destination": "/framework/ui-components" },
+    { "source": "/guides/testing", "destination": "/mcp-apps-testing" },
+    { "source": "/api-reference/simulations/simulator", "destination": "/api-reference/simulations/inspector" },
     { "source": "/mcp-apps/security/csp-cors", "destination": "/mcp-apps/server/csp-cors" },
     { "source": "/mcp-apps/app/events/oncalltool", "destination": "/mcp-apps/app/event-handlers/oncalltool" },
     { "source": "/mcp-apps/app/events/onhostcontextchanged", "destination": "/mcp-apps/app/event-handlers/onhostcontextchanged" },
@@ -35,18 +45,20 @@
             ]
           },
           {
-            "group": "Concepts",
+            "group": "sunpeak is an",
             "pages": [
-              "library/runtime-apis",
-              "library/simulator",
-              "library/mcp-server"
+              "mcp-apps-inspector",
+              "mcp-apps-testing",
+              "mcp-apps-framework"
             ]
           },
           {
-            "group": "Project Structure",
+            "group": "Framework Details",
             "pages": [
-              "template/project-scaffold",
-              "template/ui-components"
+              "framework/project-scaffold",
+              "framework/ui-components",
+              "framework/runtime-apis",
+              "framework/mcp-server"
             ]
           },
           {
@@ -61,8 +73,7 @@
             "pages": [
               "guides/authorization",
               "guides/deployment",
-              "guides/patterns",
-              "guides/testing"
+              "guides/patterns"
             ]
           },
           {
@@ -81,6 +92,7 @@
             "pages": [
               "api-reference/cli/build",
               "api-reference/cli/dev",
+              "api-reference/cli/inspect",
               "api-reference/cli/new",
               "api-reference/cli/start",
               "api-reference/cli/upgrade"
@@ -144,11 +156,11 @@
             ]
           },
           {
-            "group": "Simulations",
+            "group": "Inspector & Simulations",
             "pages": [
+              "api-reference/simulations/inspector",
               "api-reference/simulations/run-mcp-server",
-              "api-reference/simulations/simulation",
-              "api-reference/simulations/simulator"
+              "api-reference/simulations/simulation"
             ]
           },
           {
