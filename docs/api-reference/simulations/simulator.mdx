@@ -44,11 +44,11 @@ import { Simulator } from 'sunpeak/simulator';
 </ResponseField>
 
 <ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
-  Override `callServerTool` resolution. When provided, enables the **Prod Tools** toggle in the sidebar. In Prod Tools mode, tool calls are forwarded to this callback instead of using simulation mock data. The `sunpeak dev` command wires this up automatically.
+  Handler for tool calls. When the user clicks **Run**, or when the app calls `callServerTool`, calls are forwarded to this callback. The `sunpeak dev` command wires this up automatically.
 </ResponseField>
 
-<ResponseField name="defaultProdTools" type="boolean" default="false">
-  Initial state of the Prod Tools toggle. When `true`, the simulator starts in Prod Tools mode. Set by the `--prod-tools` CLI flag.
+<ResponseField name="onCallToolDirect" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
+  Direct tool handler call, bypassing MCP server mock data. Used by the **Run** button to call real handlers. Falls back to `onCallTool` if not provided.
 </ResponseField>
 
 <ResponseField name="defaultProdResources" type="boolean" default="false">
@@ -56,7 +56,7 @@ import { Simulator } from 'sunpeak/simulator';
 </ResponseField>
 
 <ResponseField name="hideSimulatorModes" type="boolean" default="false">
-  Hide the Prod Tools and Prod Resources checkboxes in the sidebar. Useful for embedded or marketing contexts where these modes are not applicable.
+  Hide the Prod Resources checkbox in the sidebar. Used in standalone inspect mode where Prod Resources is not applicable.
 </ResponseField>
 
 ## URL Parameters
@@ -67,7 +67,8 @@ The Simulator supports URL parameters for configuring the initial state. This is
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `simulation` | `string` | First simulation | Simulation name to load |
+| `tool` | `string` | First tool | Tool name to select. When specified without `simulation`, no mock data is loaded ("Press Run" state). |
+| `simulation` | `string` | First fixture | Simulation fixture name to load. Mock data renders immediately. |
 | `host` | `'chatgpt' \| 'claude'` | `'chatgpt'` | Host shell (conversation chrome, theming, capabilities) |
 | `theme` | `'light' \| 'dark'` | `'dark'` | Color theme |
 | `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | `'inline'` | App display mode |
@@ -80,14 +81,16 @@ The Simulator supports URL parameters for configuring the initial state. This is
 | `safeAreaBottom` | `number` | `0` | Bottom safe area inset |
 | `safeAreaLeft` | `number` | `0` | Left safe area inset |
 | `safeAreaRight` | `number` | `0` | Right safe area inset |
-| `prodTools` | `'true' \| 'false'` | `'false'` | Enable Prod Tools mode (real tool handlers) |
 | `prodResources` | `'true' \| 'false'` | `'false'` | Enable Prod Resources mode (dist/ bundles) |
 
 ### Example URLs
 
 ```
-# Load albums simulation in light mode
+# Load albums simulation with mock data
 http://localhost:3000/?simulation=show-albums&theme=light
+
+# Select a tool with no mock data (user clicks Run for real handler)
+http://localhost:3000/?tool=show-albums&theme=dark
 
 # Fullscreen dark mode
 http://localhost:3000/?simulation=review-diff&theme=dark&displayMode=fullscreen
@@ -147,6 +150,7 @@ createSimulatorUrl({
 
 ```typescript
 interface SimulatorUrlParams {
+  tool?: string;
   simulation?: string;
   host?: string;
   theme?: 'light' | 'dark';
@@ -160,7 +164,6 @@ interface SimulatorUrlParams {
   safeAreaBottom?: number;
   safeAreaLeft?: number;
   safeAreaRight?: number;
-  prodTools?: boolean;
   prodResources?: boolean;
 }
 ```

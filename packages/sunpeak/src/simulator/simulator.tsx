@@ -32,6 +32,8 @@ import type { ScreenWidth } from './simulator-types';
 import '../chatgpt/chatgpt-host';
 import '../claude/claude-host';
 
+const DOCS_BASE_URL = 'https://sunpeak.ai/docs';
+
 export interface SimulatorProps {
   children?: React.ReactNode;
   simulations?: Record<string, Simulation>;
@@ -44,17 +46,23 @@ export interface SimulatorProps {
     name: string;
     arguments?: Record<string, unknown>;
   }) => Promise<CallToolResult> | CallToolResult;
-  /** Direct tool handler call, bypassing MCP server mock data. Used by the Prod Tools Run button to call real handlers. Falls back to onCallTool if not provided. */
+  /** Direct tool handler call, bypassing MCP server mock data. Falls back to onCallTool if not provided. */
   onCallToolDirect?: (params: {
     name: string;
     arguments?: Record<string, unknown>;
   }) => Promise<CallToolResult> | CallToolResult;
-  /** Initial prod-tools mode state. Defaults to false. */
-  defaultProdTools?: boolean;
   /** Initial prod-resources mode state. When true, resources load from dist/ instead of HMR. Defaults to false. */
   defaultProdResources?: boolean;
-  /** Hide Prod Tools and Prod Resources toggles in the sidebar (e.g., for marketing/embedded use). */
+  /** Hide framework-only controls (Prod Resources) in the sidebar. */
   hideSimulatorModes?: boolean;
+  /**
+   * Demo mode for embedding on marketing sites. When true:
+   * - Hides Prod Resources checkbox
+   * - Disables the MCP Server URL input (shows a static example URL)
+   * - Hides the Run button (prevents sending real MCP requests)
+   * - Hides connection status indicator
+   */
+  demoMode?: boolean;
   /**
    * Base URL of the separate-origin sandbox server (e.g., "http://localhost:24680").
    * When provided, the outer iframe loads from this URL instead of using srcdoc,
@@ -62,37 +70,164 @@ export interface SimulatorProps {
    */
   sandboxUrl?: string;
   /**
-   * MCP server URL. When provided, the simulator enters "inspect" mode:
-   * shows a server URL input in the sidebar (replacing prod-tools/prod-resources
-   * checkboxes), routes tool calls to the real server, and always shows the
-   * Run button. Simulations still work — those with toolResult use mock data,
-   * those without call the real server.
+   * MCP server URL. Pre-populates the server URL field in the sidebar and
+   * shows connection status. Users can edit this URL at any time to connect
+   * to a different server.
    */
   mcpServerUrl?: string;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
 
+/** Info about a unique tool, derived from simulations. */
+interface ToolInfo {
+  tool: Simulation['tool'];
+  resource?: Simulation['resource'];
+  /** All simulation names for this tool (first entry is the "base" for resource URL). */
+  simNames: string[];
+  /** Simulation names that have fixture data (toolInput, toolResult, or serverTools). */
+  fixtureSimNames: string[];
+}
+
+/** Check whether a simulation has user-authored fixture data. */
+function hasFixtureData(sim: Simulation): boolean {
+  return sim.toolResult != null || sim.toolInput != null || sim.serverTools != null;
+}
+
 export function Simulator({
   children,
-  simulations = {},
+  simulations: initialSimulations = {},
   appName = 'Sunpeak',
   appIcon,
   defaultHost = 'chatgpt',
   onCallTool,
   onCallToolDirect,
-  defaultProdTools = false,
   defaultProdResources = false,
   hideSimulatorModes = false,
+  demoMode = false,
   sandboxUrl,
   mcpServerUrl,
 }: SimulatorProps) {
-  const isInspectMode = mcpServerUrl != null;
-  const state = useSimulatorState({ simulations, defaultHost });
-  const connection = useMcpConnection(mcpServerUrl);
-  const [prodTools, setProdTools] = React.useState(
-    isInspectMode ? true : (state.urlProdTools ?? defaultProdTools)
+  // Simulations can be updated when the user reconnects to a different server.
+  const [simulations, setSimulations] = React.useState(initialSimulations);
+  // Sync with prop changes (e.g., HMR during development).
+  React.useEffect(() => {
+    setSimulations(initialSimulations);
+  }, [initialSimulations]);
+
+  // ── Derive tools from simulations ──
+  // Each unique tool name becomes a ToolInfo with all its associated simulations.
+  const toolMap = React.useMemo(() => {
+    const map = new Map<string, ToolInfo>();
+    for (const [simName, sim] of Object.entries(simulations)) {
+      if (!sim.resource) continue; // Skip backend-only tools
+      const toolName = sim.tool.name;
+      if (!map.has(toolName)) {
+        map.set(toolName, {
+          tool: sim.tool,
+          resource: sim.resource,
+          simNames: [],
+          fixtureSimNames: [],
+        });
+      }
+      const info = map.get(toolName)!;
+      info.simNames.push(simName);
+      if (hasFixtureData(sim)) {
+        info.fixtureSimNames.push(simName);
+      }
+    }
+    return map;
+  }, [simulations]);
+
+  const toolNames = React.useMemo(
+    () =>
+      Array.from(toolMap.keys()).sort((a, b) => {
+        const infoA = toolMap.get(a)!;
+        const infoB = toolMap.get(b)!;
+        const labelA = (infoA.tool.title as string | undefined) || a;
+        const labelB = (infoB.tool.title as string | undefined) || b;
+        return labelA.localeCompare(labelB);
+      }),
+    [toolMap]
   );
+
+  // Parse URL params once for tool/simulation initialization.
+  // ?prodTools=true is deprecated but still honored — treated as "tool only, no simulation".
+  const initUrlParams = React.useMemo(() => {
+    if (typeof window === 'undefined') return { tool: null, simulation: null, noMockData: false };
+    const params = new URLSearchParams(window.location.search);
+    const prodTools = params.get('prodTools') === 'true';
+    return {
+      tool: params.get('tool'),
+      simulation: params.get('simulation'),
+      noMockData: prodTools,
+    };
+  }, []);
+
+  // ── Tool selection ──
+  // ?tool=X explicitly selects a tool. ?simulation=X infers the tool from the simulation.
+  const [selectedToolName, setSelectedToolName] = React.useState(() => {
+    if (initUrlParams.tool && toolMap.has(initUrlParams.tool)) return initUrlParams.tool;
+    if (initUrlParams.simulation) {
+      for (const [toolName, info] of toolMap) {
+        if (info.simNames.includes(initUrlParams.simulation)) return toolName;
+      }
+    }
+    return toolNames[0] ?? '';
+  });
+
+  // Reset tool selection when tools change (e.g., after reconnect)
+  const prevToolNamesRef = React.useRef(toolNames);
+  if (prevToolNamesRef.current !== toolNames) {
+    prevToolNamesRef.current = toolNames;
+    if (toolNames.length > 0 && !toolMap.has(selectedToolName)) {
+      setSelectedToolName(toolNames[0]);
+    }
+  }
+
+  const selectedToolInfo = toolMap.get(selectedToolName);
+
+  // ── Simulation selection ──
+  // null = "None" (no mock data, call the real server)
+  // string = a specific simulation with fixture data
+  // ?tool=X without ?simulation=Y means "select tool, no mock data"
+  // ?prodTools=true (deprecated) has the same effect
+  const [activeSimulationName, setActiveSimulationName] = React.useState<string | null>(() => {
+    if (!selectedToolInfo) return null;
+    if (initUrlParams.noMockData) return null;
+    if (initUrlParams.tool && !initUrlParams.simulation) return null;
+    // ?simulation=X explicitly selects a simulation (if it exists and has fixture data)
+    if (
+      initUrlParams.simulation &&
+      selectedToolInfo.fixtureSimNames.includes(initUrlParams.simulation)
+    ) {
+      return initUrlParams.simulation;
+    }
+    return selectedToolInfo.fixtureSimNames[0] ?? null;
+  });
+
+  // When tool changes, auto-select first fixture simulation (or null)
+  const prevToolNameRef = React.useRef(selectedToolName);
+  if (prevToolNameRef.current !== selectedToolName) {
+    prevToolNameRef.current = selectedToolName;
+    const newInfo = toolMap.get(selectedToolName);
+    setActiveSimulationName(newInfo?.fixtureSimNames[0] ?? null);
+  }
+
+  // The effective simulation name for useSimulatorState:
+  // - If a fixture simulation is active, use it (for tool input, tool result, resource URL)
+  // - Otherwise, use the base simulation for the tool (for resource URL, tool definition)
+  const effectiveSimulationName = activeSimulationName ?? selectedToolInfo?.simNames[0] ?? '';
+
+  // Derive the current simulation directly from simulations + effectiveSimulationName.
+  // This avoids the one-render lag from the useEffect sync to state.selectedSimulationName.
+  const currentSim = simulations[effectiveSimulationName];
+
+  const state = useSimulatorState({ simulations, defaultHost });
+  const [serverUrl, setServerUrl] = React.useState(mcpServerUrl ?? '');
+  // useMcpConnection does a mount-only health check for the initial URL.
+  // URL changes are handled below via connection.reconnect().
+  const connection = useMcpConnection(mcpServerUrl || undefined);
   const [prodResources, setProdResources] = React.useState(
     state.urlProdResources ?? defaultProdResources
   );
@@ -101,57 +236,82 @@ export function Simulator({
   const [showCheck, setShowCheck] = React.useState(false);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Reset hasRun when tool selection changes in prod-tools mode.
-  // When switching back to simulation mode, restore the simulation's tool result.
+  // Keep useSimulatorState's selection in sync with our tool/simulation selection.
   React.useEffect(() => {
-    if (prodTools) {
-      setHasRun(false);
-      state.setToolResult(undefined);
-      state.setToolResultJson('');
-      state.setToolResultError('');
-    } else {
-      const simResult = (state.selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
-      state.setToolResult(simResult);
+    state.setSelectedSimulationName(effectiveSimulationName);
+  }, [effectiveSimulationName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handle URL changes: when the user edits the server URL, reconnect to the new server.
+  // The hook's mount-only health check handles the initial URL — this effect handles changes.
+  const prevServerUrlRef = React.useRef(serverUrl);
+  React.useEffect(() => {
+    const urlChanged = serverUrl !== prevServerUrlRef.current;
+    prevServerUrlRef.current = serverUrl;
+    if (!urlChanged) return;
+    if (serverUrl) {
+      connection.reconnect(serverUrl);
     }
-  }, [prodTools, state.selectedSimulationName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [serverUrl, connection.reconnect]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When reconnecting to a new server succeeds, update simulations.
+  // Only clear on error after a user-initiated reconnect (URL change), not on the
+  // initial health check — so prop-based simulations from fixture files survive
+  // a server that happens to be unreachable on mount.
+  React.useEffect(() => {
+    if (connection.simulations) {
+      setSimulations(connection.simulations as Record<string, Simulation>);
+    } else if (connection.status === 'error' && connection.hasReconnected) {
+      setSimulations({});
+    }
+  }, [connection.simulations, connection.status, connection.hasReconnected]);
+
+  // Sync mock data based on the active simulation selection.
+  // - "None" (null): clear toolResult so the "Press Run" empty state shows.
+  // - Simulation selected: restore toolResult from the fixture. This handles the
+  //   case where effectiveSimulationName didn't change (e.g., None → same fixture),
+  //   so useSimulatorState's internal sync wouldn't re-run.
+  const { setToolResult, setToolResultJson, setToolResultError } = state;
+  React.useEffect(() => {
+    if (activeSimulationName === null) {
+      setToolResult(undefined);
+      setToolResultJson('');
+      setToolResultError('');
+    } else {
+      const sim = simulations[activeSimulationName];
+      const result = (sim?.toolResult as CallToolResult | undefined) ?? undefined;
+      setToolResult(result);
+      setToolResultJson(result ? JSON.stringify(result, null, 2) : '');
+      setToolResultError('');
+    }
+  }, [
+    activeSimulationName,
+    effectiveSimulationName,
+    simulations,
+    setToolResult,
+    setToolResultJson,
+    setToolResultError,
+  ]);
+
+  // Reset hasRun when tool or simulation changes.
+  React.useEffect(() => {
+    setHasRun(false);
+  }, [effectiveSimulationName]);
 
   // Cleanup check timer
   React.useEffect(() => () => clearTimeout(checkTimerRef.current), []);
 
-  // In prod-tools mode, deduplicate simulations by tool name for the Tool dropdown
-  const toolOptions = React.useMemo(() => {
-    if (!prodTools) return [];
-    const seen = new Map<string, string>(); // toolName → first simulationName
-    for (const simName of state.simulationNames) {
-      const sim = simulations[simName];
-      const toolName = sim.tool.name;
-      if (!seen.has(toolName)) {
-        seen.set(toolName, simName);
-      }
-    }
-    return Array.from(seen.entries()).map(([toolName, simName]) => ({
-      value: simName,
-      label: (simulations[simName].tool.title as string | undefined) || toolName,
-    }));
-  }, [prodTools, state.simulationNames, simulations]);
-
   // Run button handler: call the real tool handler with current toolInput.
-  // Uses onCallToolDirect (bypasses MCP mock data) so the real handler runs.
-  // Falls back to onCallTool if no direct handler is available.
-  // In inspect mode, if the simulation has a pre-filled toolResult, use it
-  // directly (mock mode) instead of calling the real server.
+  // Uses currentSim (derived directly from simulations + effectiveSimulationName)
+  // rather than state.selectedSim, which lags one render behind due to the
+  // useEffect sync from effectiveSimulationName → state.setSelectedSimulationName.
   const handleRun = React.useCallback(async () => {
     const caller = onCallToolDirect ?? onCallTool;
-    if (!caller || !state.selectedSim) return;
-    const toolName = state.selectedSim.tool.name;
+    const sim = simulations[effectiveSimulationName];
+    if (!caller || !sim) return;
+    const toolName = sim.tool.name;
     setIsRunning(true);
     try {
-      // Use simulation's pre-filled toolResult as a mock when available in inspect mode
-      const simToolResult = isInspectMode
-        ? (state.selectedSim.toolResult as CallToolResult | undefined)
-        : undefined;
-      const result =
-        simToolResult ?? (await caller({ name: toolName, arguments: state.toolInput }));
+      const result = await caller({ name: toolName, arguments: state.toolInput });
       state.setToolResult(result);
       state.setToolResultJson(JSON.stringify(result, null, 2));
       state.setToolResultError('');
@@ -172,10 +332,11 @@ export function Simulator({
           2
         )
       );
+      setHasRun(true);
     } finally {
       setIsRunning(false);
     }
-  }, [onCallTool, onCallToolDirect, state, isInspectMode]);
+  }, [onCallTool, onCallToolDirect, simulations, effectiveSimulationName, state]);
 
   // Resolve the active host shell
   const activeShell = getHostShell(state.activeHost);
@@ -183,8 +344,6 @@ export function Simulator({
   const ShellConversation = activeShell?.Conversation;
 
   // Merge host style variables and userAgent into the hostContext.
-  // Style variables use CSS light-dark() so they don't depend on theme —
-  // the app handles theme via color-scheme set by applyDocumentTheme().
   const hostContext = React.useMemo(() => {
     const styleVars = activeShell?.styleVariables;
     const userAgent = activeShell?.userAgent;
@@ -198,9 +357,7 @@ export function Simulator({
     return ctx as McpUiHostContext;
   }, [state.hostContext, activeShell]);
 
-  // Apply host style variables to the document root so the simulator chrome
-  // (sidebar, conversation shells) can use them via var(--color-*).
-  // These are the same MCP standard variables sent to the iframe.
+  // Apply host style variables to the document root.
   React.useEffect(() => {
     const vars = activeShell?.styleVariables;
     if (!vars) return;
@@ -210,8 +367,7 @@ export function Simulator({
     }
   }, [activeShell]);
 
-  // Apply host page styles (simulator chrome backgrounds, etc.) to the document root.
-  // Cleans up old properties when switching hosts so stale values don't persist.
+  // Apply host page styles. Cleans up old properties when switching hosts.
   const prevPageStyleKeysRef = React.useRef<string[]>([]);
   React.useEffect(() => {
     const root = document.documentElement;
@@ -232,22 +388,23 @@ export function Simulator({
   }, [activeShell]);
 
   // Handle callServerTool from the iframe.
-  // In simulation mode: prefer serverTools mocks from the fixture, fall back to onCallTool (MCP).
-  // In prod-tools mode: always use onCallTool (MCP → real handlers).
+  // When a simulation is active: prefer serverTools mocks, fall back to MCP.
+  // When "None": always use MCP (real handlers).
+  // Uses simulations[activeSimulationName] directly rather than state.selectedSim,
+  // which lags one render behind due to the useEffect sync.
   const handleCallTool = React.useCallback(
     (params: {
       name: string;
       arguments?: Record<string, unknown>;
     }): CallToolResult | Promise<CallToolResult> => {
-      // In simulation mode, try serverTools mocks first
-      if (!prodTools) {
-        const mock = state.selectedSim?.serverTools?.[params.name];
+      if (activeSimulationName) {
+        const activeSim = simulations[activeSimulationName];
+        const mock = activeSim?.serverTools?.[params.name];
         if (mock) {
           const result = resolveServerToolResult(mock, params.arguments);
           if (result) return result;
         }
       }
-      // Forward to MCP server (real handlers for backend tools)
       if (onCallTool) {
         return onCallTool(params);
       }
@@ -255,34 +412,27 @@ export function Simulator({
         content: [
           {
             type: 'text',
-            text: `[Simulator] Tool "${params.name}" called — no serverTools mock found in simulation "${state.selectedSimulationName}".`,
+            text: `[Simulator] Tool "${params.name}" called — no serverTools mock found in simulation "${effectiveSimulationName}".`,
           },
         ],
       };
     },
-    [onCallTool, prodTools, state.selectedSim, state.selectedSimulationName]
+    [onCallTool, activeSimulationName, simulations, effectiveSimulationName]
   );
 
-  // In prod-tools mode, derive user message from the selected tool
-  const prodToolsUserMessage =
-    prodTools && state.selectedSim
-      ? `Call my ${(state.selectedSim.tool.title as string | undefined) || state.selectedSim.tool.name} tool`
-      : undefined;
+  // Derive user message for the conversation shell
+  const userMessage = currentSim
+    ? (currentSim.userMessage ??
+      `Call my ${(currentSim.tool.title as string | undefined) || currentSim.tool.name} tool`)
+    : undefined;
 
-  // When prod-resources mode is on, override the resource URL to point at dist/ HTML.
-  // The resource name comes from the simulation's resource metadata.
-  // We verify the dist file exists via a HEAD request to avoid loading the
-  // dev server's SPA fallback (which would render a nested simulator).
+  // ── Prod resources ──
   const prodResourcesPath = React.useMemo(() => {
     if (!prodResources || !state.selectedSim?.resource) return undefined;
     const name = state.selectedSim.resource.name as string;
     return `/dist/${name}/${name}.html`;
   }, [prodResources, state.selectedSim?.resource]);
 
-  // Continuously poll the dist file while prod-resources mode is active.
-  // Detects file disappearing (rebuild started → "Building…") and
-  // reappearing (rebuild finished → load iframe). A generation counter
-  // increments on each ready transition to force an iframe remount.
   const [prodResourcesReady, setProdResourcesReady] = React.useState(false);
   const [prodResourcesGeneration, setProdResourcesGeneration] = React.useState(0);
   const prodResourcesWasReady = React.useRef(false);
@@ -306,7 +456,6 @@ export function Simulator({
       if (cancelled) return;
       if (ok) {
         if (!prodResourcesWasReady.current) {
-          // Transition: not ready → ready. Bump generation to remount iframe.
           setProdResourcesGeneration((g) => g + 1);
         }
         prodResourcesWasReady.current = true;
@@ -329,14 +478,36 @@ export function Simulator({
     (prodResourcesPath && prodResourcesReady ? prodResourcesPath : undefined) ?? state.resourceUrl;
   const prodResourcesLoading = !!prodResourcesPath && !prodResourcesReady;
 
-  // Build content.
-  // The wrapper div stays mounted across key changes, providing a themed
-  // background while the iframe (opacity: 0) loads new content.
-  // In prod-tools mode, show empty state until the tool has been run.
-  const showEmptyState = prodTools && !hasRun;
+  // ── Content rendering ──
+  const hasTools = toolNames.length > 0;
+  const hasMockData = activeSimulationName !== null && currentSim?.toolResult != null;
+  const showEmptyState = !hasMockData && !hasRun;
   let content: React.ReactNode;
   const iframeBg = 'var(--sim-bg-conversation, var(--color-background-primary, transparent))';
-  if (showEmptyState) {
+
+  if (!hasTools) {
+    const isConnected = connection.status === 'connected';
+    const isError = connection.status === 'error';
+    content = (
+      <div
+        className="h-full w-full flex items-center justify-center"
+        style={{ background: iframeBg }}
+      >
+        <span
+          className="text-sm text-center max-w-xs"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          {isError
+            ? 'Could not connect to MCP server'
+            : isConnected
+              ? 'No tools with UI resources found on this server'
+              : serverUrl
+                ? 'Connecting\u2026'
+                : 'Enter an MCP server URL to get started'}
+        </span>
+      </div>
+    );
+  } else if (showEmptyState) {
     content = (
       <div
         className="h-full w-full flex items-center justify-center"
@@ -362,7 +533,7 @@ export function Simulator({
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
-          key={`${state.activeHost}-${state.selectedSimulationName}-${prodResources}-${prodResourcesGeneration}`}
+          key={`${state.activeHost}-${effectiveResourceUrl}-${prodResources}-${prodResourcesGeneration}`}
           src={effectiveResourceUrl}
           hostContext={hostContext}
           toolInput={state.toolInput}
@@ -388,7 +559,7 @@ export function Simulator({
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
-          key={`${state.activeHost}-${state.selectedSimulationName}`}
+          key={`${state.activeHost}-${state.resourceScript}`}
           scriptSrc={state.resourceScript}
           hostContext={hostContext}
           toolInput={state.toolInput}
@@ -418,20 +589,57 @@ export function Simulator({
   // Use the active host's theme applier
   const applyTheme = activeShell?.applyTheme;
 
+  // ── Run button (shown in conversation header when no simulation is active) ──
+  // Visible when "None (call server)" is selected OR when no fixtures exist for the tool.
+  // Hidden in demo mode to prevent sending real MCP requests from embedded contexts.
+  const runButton =
+    !demoMode && onCallTool && currentSim && activeSimulationName === null ? (
+      <button
+        type="button"
+        onClick={handleRun}
+        disabled={isRunning}
+        className="rounded-full px-3 py-1 text-sm font-medium transition-opacity disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
+        style={{
+          backgroundColor: 'var(--color-text-primary)',
+          color: 'var(--color-background-primary)',
+        }}
+      >
+        {showCheck ? (
+          <svg
+            width="12"
+            height="12"
+            viewBox="0 0 12 12"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M2 6L5 9L10 3" />
+          </svg>
+        ) : (
+          <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
+            <path d="M0 0L10 6L0 12V0Z" />
+          </svg>
+        )}
+        Run
+      </button>
+    ) : undefined;
+
   return (
     <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
       <SimpleSidebar
         controls={
           <div className="space-y-1">
-            {/* ── Inspect mode: Server URL ── */}
-            {isInspectMode && (
-              <SidebarControl
-                label={
-                  <span className="flex items-center gap-1.5">
-                    MCP Server
+            {/* ── MCP Server URL (always visible; read-only in demo mode) ── */}
+            <SidebarControl
+              label={
+                <span className="flex items-center gap-1.5">
+                  MCP Server
+                  {serverUrl && !demoMode && (
                     <span
                       className="inline-block w-2 h-2 rounded-full"
-                      data-testid="inspect-connection-status"
+                      data-testid="connection-status"
                       style={{
                         backgroundColor:
                           connection.status === 'connected'
@@ -444,31 +652,23 @@ export function Simulator({
                       }}
                       title={connection.error ?? connection.status}
                     />
-                  </span>
-                }
-                tooltip="MCP server URL (set via --server flag)"
-                data-testid="inspect-server-url"
-              >
-                <SidebarInput
-                  value={mcpServerUrl ?? ''}
-                  onChange={() => {}}
-                  disabled
-                  placeholder="http://localhost:8000/mcp"
-                />
-              </SidebarControl>
-            )}
-
-            {/* ── Dev mode toggles (framework mode only) ── */}
-            {!isInspectMode && !hideSimulatorModes && onCallTool && (
-              <SidebarCheckbox
-                checked={prodTools}
-                onChange={setProdTools}
-                label="Prod Tools"
-                tooltip="Use real tool handlers instead of simulations"
-                docsPath="api-reference/cli/dev#prod-tools-and-prod-resources-flags"
+                  )}
+                </span>
+              }
+              tooltip="MCP server URL"
+              data-testid="server-url"
+            >
+              <SidebarInput
+                value={demoMode ? 'http://localhost:8000/mcp' : serverUrl}
+                onChange={demoMode ? () => {} : setServerUrl}
+                applyOnBlur
+                placeholder="http://localhost:8000/mcp"
+                disabled={demoMode}
               />
-            )}
-            {!isInspectMode && !hideSimulatorModes && (
+            </SidebarControl>
+
+            {/* ── Prod Resources (framework mode only, hidden in demo mode) ── */}
+            {!hideSimulatorModes && !demoMode && (
               <SidebarCheckbox
                 checked={prodResources}
                 onChange={setProdResources}
@@ -476,6 +676,80 @@ export function Simulator({
                 tooltip="Load resources from dist/ builds instead of HMR"
                 docsPath="api-reference/cli/dev#prod-tools-and-prod-resources-flags"
               />
+            )}
+
+            {/* ── Tool + Simulation row ── */}
+            {hasTools && (
+              <div className="grid grid-cols-2 gap-2" data-testid="tool-simulation-row">
+                <SidebarControl
+                  label="Tool"
+                  tooltip="Tool to inspect"
+                  docsPath="api-reference/cli/dev"
+                  data-testid="tool-selector"
+                >
+                  <SidebarSelect
+                    value={selectedToolName}
+                    onChange={(value) => setSelectedToolName(value)}
+                    options={toolNames.map((name) => {
+                      const info = toolMap.get(name)!;
+                      return {
+                        value: name,
+                        label: (info.tool.title as string | undefined) || name,
+                      };
+                    })}
+                  />
+                </SidebarControl>
+                <SidebarControl
+                  label={
+                    selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0 ? (
+                      'Simulation'
+                    ) : (
+                      <a
+                        href={`${DOCS_BASE_URL}/api-reference/simulations/simulation`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="no-underline transition-colors"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                        onMouseEnter={(e) => {
+                          (e.target as HTMLElement).style.color = 'var(--color-text-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.target as HTMLElement).style.color = 'var(--color-text-secondary)';
+                        }}
+                      >
+                        Simulation
+                      </a>
+                    )
+                  }
+                  tooltip={
+                    selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
+                      ? 'Test fixture with mock data'
+                      : 'Create simulations for faster testing'
+                  }
+                  docsPath="api-reference/simulations/simulation"
+                  data-testid="simulation-selector"
+                >
+                  <SidebarSelect
+                    value={activeSimulationName ?? '__none__'}
+                    onChange={(value) =>
+                      setActiveSimulationName(value === '__none__' ? null : value)
+                    }
+                    options={[
+                      {
+                        value: '__none__',
+                        label:
+                          selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
+                            ? 'None (call server)'
+                            : 'None',
+                      },
+                      ...(selectedToolInfo?.fixtureSimNames ?? []).map((simName) => ({
+                        value: simName,
+                        label: simName,
+                      })),
+                    ]}
+                  />
+                </SidebarControl>
+              </div>
             )}
 
             {/* ── Host + Width row ── */}
@@ -513,44 +787,6 @@ export function Simulator({
                 />
               </SidebarControl>
             </div>
-
-            {/* ── Tool / Simulation selector ── */}
-            {prodTools && toolOptions.length > 1 && (
-              <SidebarControl
-                label="Tool"
-                tooltip="Tool to call with prod handler"
-                docsPath="api-reference/cli/dev"
-              >
-                <SidebarSelect
-                  value={state.selectedSimulationName}
-                  onChange={(value) => state.setSelectedSimulationName(value)}
-                  options={toolOptions}
-                />
-              </SidebarControl>
-            )}
-            {!prodTools && state.simulationNames.length > 1 && (
-              <SidebarControl
-                label="Simulation"
-                tooltip="Test fixture to render"
-                docsPath="api-reference/simulations/simulation"
-              >
-                <SidebarSelect
-                  value={state.selectedSimulationName}
-                  onChange={(value) => state.setSelectedSimulationName(value)}
-                  options={state.simulationNames.map((name) => {
-                    const sim = simulations[name];
-                    const resourceTitle = sim.resource
-                      ? (sim.resource.title as string | undefined) || sim.resource.name
-                      : undefined;
-                    const toolTitle = (sim.tool.title as string | undefined) || sim.tool.name;
-                    return {
-                      value: name,
-                      label: resourceTitle ? `${resourceTitle}: ${toolTitle}` : toolTitle,
-                    };
-                  })}
-                />
-              </SidebarControl>
-            )}
 
             <SidebarCollapsibleControl
               label="Host Context"
@@ -843,9 +1079,8 @@ export function Simulator({
             </SidebarCollapsibleControl>
 
             <SidebarCollapsibleControl
-              key={`tool-input-${prodTools}`}
               label="Tool Input (JSON)"
-              defaultCollapsed={!prodTools}
+              defaultCollapsed={false}
               tooltip="Arguments passed to the tool"
               docsPath="api-reference/hooks/use-tool-data"
             >
@@ -866,9 +1101,8 @@ export function Simulator({
             </SidebarCollapsibleControl>
 
             <SidebarCollapsibleControl
-              key={`tool-result-${prodTools}`}
               label="Tool Result (JSON)"
-              defaultCollapsed={prodTools}
+              defaultCollapsed={false}
               tooltip="Structured content returned by the tool"
               docsPath="api-reference/hooks/use-tool-data"
               data-testid="tool-result-section"
@@ -911,42 +1145,9 @@ export function Simulator({
             onRequestDisplayMode={state.handleDisplayModeChange}
             appName={appName}
             appIcon={appIcon}
-            userMessage={prodToolsUserMessage ?? state.selectedSim?.userMessage}
+            userMessage={userMessage}
             onContentWidthChange={state.handleContentWidthChange}
-            headerAction={
-              prodTools && onCallTool ? (
-                <button
-                  type="button"
-                  onClick={handleRun}
-                  disabled={isRunning}
-                  className="rounded-full px-3 py-1 text-sm font-medium transition-opacity disabled:opacity-40 flex items-center gap-1.5 cursor-pointer"
-                  style={{
-                    backgroundColor: 'var(--color-text-primary)',
-                    color: 'var(--color-background-primary)',
-                  }}
-                >
-                  {showCheck ? (
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 12 12"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    >
-                      <path d="M2 6L5 9L10 3" />
-                    </svg>
-                  ) : (
-                    <svg width="10" height="12" viewBox="0 0 10 12" fill="currentColor">
-                      <path d="M0 0L10 6L0 12V0Z" />
-                    </svg>
-                  )}
-                  Run
-                </button>
-              ) : undefined
-            }
+            headerAction={runButton}
           >
             {content}
           </ShellConversation>

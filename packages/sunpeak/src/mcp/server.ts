@@ -311,15 +311,15 @@ function createAppServer(
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
 
-          // UI tools: prefer simulation mock data so ChatGPT/Claude get predictable
-          // fixture results. Real handlers are called via the direct endpoint
-          // (/__sunpeak/call-tool-direct) when prod-tools mode is active in the
-          // simulator sidebar. Backend-only tools (no structuredContent) always
-          // use real handlers since they're consumed by callServerTool.
+          // When prodTools is enabled (--prod-tools flag), always use the real
+          // handler so ChatGPT/Claude get live results. Otherwise, prefer simulation
+          // mock data for UI tools so external hosts get predictable fixture results.
+          // Backend-only tools (no structuredContent) always use real handlers.
           const hasMockResult = toolResult?.structuredContent != null;
           const realHandler = simulation.handler;
+          const useLiveHandler = realHandler && (config.prodTools || !hasMockResult);
 
-          if (realHandler && !hasMockResult) {
+          if (useLiveHandler) {
             console.log(`[MCP] CallTool: ${tool.name}${argsStr} → live handler`);
             try {
               const result = await (

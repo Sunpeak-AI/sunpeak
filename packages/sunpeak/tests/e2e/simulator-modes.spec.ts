@@ -19,21 +19,14 @@ for (const host of hosts) {
       await expect(page.getByTestId('tool-result-section')).toBeVisible();
     });
 
-    test('Tool Result section is visible in prod-tools mode', async ({ page }) => {
-      await page.goto(
-        createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host, prodTools: true })
-      );
+    test('Tool Result section is visible when no simulation selected', async ({ page }) => {
+      await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
       await expect(page.getByTestId('tool-result-section')).toBeVisible();
     });
 
-    test('Tool Result starts collapsed and empty in prod-tools mode', async ({ page }) => {
-      await page.goto(
-        createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host, prodTools: true })
-      );
-
-      // Tool Result is collapsed in prod-tools — expand it
-      await page.locator('button:has-text("Tool Result (JSON)")').click();
+    test('Tool Result is empty when no simulation selected', async ({ page }) => {
+      await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
       const toolResultTextarea = page.getByTestId('tool-result-textarea');
       await expect(toolResultTextarea).toBeVisible();
@@ -82,15 +75,13 @@ for (const host of hosts) {
     });
   });
 
-  test.describe(`Prod Tools [${host}]`, () => {
+  test.describe(`Run with Real Handlers [${host}]`, () => {
     test('Run button calls real handler and renders real output', async ({ page }) => {
-      await page.goto(
-        createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host, prodTools: true })
-      );
+      await page.goto(createSimulatorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
       const iframe = page.frameLocator('iframe').frameLocator('iframe');
 
-      // In prod-tools mode, should show "Press Run" placeholder
+      // With tool-only (no simulation), should show "Press Run" placeholder
       await expect(page.locator('text=Press Run to call the tool')).toBeVisible();
 
       // Click the Run button
@@ -103,7 +94,6 @@ for (const host of hosts) {
       });
 
       // Tool Result textarea should be populated with the real handler's response
-      await page.locator('button:has-text("Tool Result (JSON)")').click();
       const toolResultTextarea = page.getByTestId('tool-result-textarea');
       await expect(toolResultTextarea).toBeVisible();
       const value = await toolResultTextarea.inputValue();
@@ -135,21 +125,19 @@ for (const host of hosts) {
   });
 
   test.describe(`Simulation Switching [${host}]`, () => {
-    test('switching simulation changes the rendered resource', async ({ page }) => {
+    test('switching tool changes the rendered resource', async ({ page }) => {
       // Start with albums
       await page.goto(createSimulatorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       const iframe = page.frameLocator('iframe').frameLocator('iframe');
       await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-      // Switch to carousel simulation via the dropdown
-      // Find the Simulation dropdown (not Host/Width which come first)
-      // and switch to a carousel simulation
-      const simSelect = page.locator('select').nth(2);
-      const options = await simSelect.locator('option').allTextContents();
+      // Switch to carousel tool via the Tool dropdown
+      const toolSelect = page.getByTestId('tool-selector').locator('select');
+      const options = await toolSelect.locator('option').allTextContents();
       const carouselOption = options.find((o) => o.toLowerCase().includes('carousel'));
       if (!carouselOption) throw new Error(`No carousel option found in: ${options.join(', ')}`);
-      await simSelect.selectOption({ label: carouselOption });
+      await toolSelect.selectOption({ label: carouselOption });
 
       // The carousel resource should render (different content from albums)
       // Wait for new content — carousel has image slides

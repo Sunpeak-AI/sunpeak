@@ -38,7 +38,7 @@ export { IframeResource, extractResourceCSP } from './iframe-resource';
 export type { ResourceCSP } from './iframe-resource';
 export { ThemeProvider, useThemeContext } from './theme-provider';
 
-// MCP connection (inspect mode)
+// MCP connection
 export { useMcpConnection } from './use-mcp-connection';
 export type { McpConnectionState } from './use-mcp-connection';
 

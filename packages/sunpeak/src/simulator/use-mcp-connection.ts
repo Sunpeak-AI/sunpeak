@@ -5,27 +5,35 @@ export interface McpConnectionState {
   status: 'disconnected' | 'connecting' | 'connected' | 'error';
   /** Error message if status is 'error' */
   error?: string;
-  /** Verify the server connection is alive. */
+  /** Simulations returned after a successful reconnect (undefined until first reconnect or after a failed reconnect) */
+  simulations?: Record<string, unknown>;
+  /** True after at least one user-initiated reconnect has been attempted (URL change). */
+  hasReconnected: boolean;
+  /** Connect to a new MCP server URL. Returns discovered simulations on success. */
   reconnect: (url: string) => Promise<void>;
 }
 
 /**
  * Hook for managing MCP server connection status via the dev server proxy.
  *
- * On mount (when `serverUrl` is provided), verifies the connection is alive
- * by fetching `/__sunpeak/list-tools`. Tracks connection status for display
- * in the sidebar (colored dot indicator).
+ * On mount (when `initialServerUrl` is provided), verifies the connection is alive
+ * by fetching `/__sunpeak/list-tools`. URL changes are handled by the caller
+ * via `reconnect()`, which posts to `/__sunpeak/connect`.
  *
- * Tool calling is handled separately via the `onCallTool` prop — this
- * hook only manages the connection lifecycle and status display.
+ * This split avoids React StrictMode issues: the mount-only health check runs
+ * once (or safely twice with cancellation), while explicit `reconnect()` calls
+ * are triggered by the Simulator's URL-change effect.
  */
-export function useMcpConnection(serverUrl: string | undefined): McpConnectionState {
+export function useMcpConnection(initialServerUrl: string | undefined): McpConnectionState {
   const [status, setStatus] = useState<McpConnectionState['status']>(
-    serverUrl ? 'connecting' : 'disconnected'
+    initialServerUrl ? 'connecting' : 'disconnected'
   );
   const [error, setError] = useState<string | undefined>();
+  const [simulations, setSimulations] = useState<Record<string, unknown> | undefined>();
+  const [hasReconnected, setHasReconnected] = useState(false);
 
   const reconnect = useCallback(async (url: string) => {
+    setHasReconnected(true);
     setStatus('connecting');
     setError(undefined);
     try {
@@ -35,28 +43,34 @@ export function useMcpConnection(serverUrl: string | undefined): McpConnectionSt
         body: JSON.stringify({ url }),
       });
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `Connection failed (${res.status})`);
+        let message = `Connection failed (${res.status})`;
+        try {
+          const json = await res.json();
+          if (json.error) message = json.error;
+        } catch {
+          // Response wasn't JSON — use default message
+        }
+        throw new Error(message);
       }
+      const data = await res.json();
       setStatus('connected');
+      setSimulations(data.simulations ?? undefined);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       setError(message);
       setStatus('error');
+      setSimulations(undefined);
     }
   }, []);
 
-  // Connect on mount when serverUrl is provided
+  // Initial health check (mount-only). Verifies the connection is alive
+  // when the component mounts with a pre-configured server URL.
+  // In React StrictMode the first invocation is cancelled; the second runs to completion.
   useEffect(() => {
-    if (!serverUrl) {
-      setStatus('disconnected');
-      return;
-    }
-    // Initial connection — the inspect server already connected at startup,
-    // so we just verify the connection is alive via list-tools.
+    if (!initialServerUrl) return;
     let cancelled = false;
+    setStatus('connecting');
     (async () => {
-      setStatus('connecting');
       try {
         const res = await fetch('/__sunpeak/list-tools');
         if (cancelled) return;
@@ -71,7 +85,8 @@ export function useMcpConnection(serverUrl: string | undefined): McpConnectionSt
     return () => {
       cancelled = true;
     };
-  }, [serverUrl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Mount-only — URL changes are handled by the caller via reconnect()
 
-  return { status, error, reconnect };
+  return { status, error, simulations, hasReconnected, reconnect };
 }

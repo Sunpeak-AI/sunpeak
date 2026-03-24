@@ -139,4 +139,11 @@ export interface MCPServerConfig {
    * When not provided, resources serve pre-built HTML (production mode).
    */
   viteServer?: unknown; // ViteDevServer type, kept as unknown to avoid hard dependency
+  /**
+   * When true, UI tool calls always use the real handler (bypassing simulation
+   * mock data). When false (default), UI tools with structuredContent in their
+   * simulation return mock data — real handlers are only used for backend-only
+   * tools. Set by `--prod-tools` flag in `sunpeak dev`.
+   */
+  prodTools?: boolean;
 }
