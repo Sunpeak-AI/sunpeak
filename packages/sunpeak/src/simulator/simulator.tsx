@@ -735,13 +735,18 @@ export function Simulator({
                       setActiveSimulationName(value === '__none__' ? null : value)
                     }
                     options={[
-                      {
-                        value: '__none__',
-                        label:
-                          selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
-                            ? 'None (call server)'
-                            : 'None',
-                      },
+                      ...(demoMode
+                        ? []
+                        : [
+                            {
+                              value: '__none__',
+                              label:
+                                selectedToolInfo &&
+                                selectedToolInfo.fixtureSimNames.length > 0
+                                  ? 'None (call server)'
+                                  : 'None',
+                            },
+                          ]),
                       ...(selectedToolInfo?.fixtureSimNames ?? []).map((simName) => ({
                         value: simName,
                         label: simName,

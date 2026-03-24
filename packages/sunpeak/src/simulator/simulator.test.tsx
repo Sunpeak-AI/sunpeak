@@ -330,6 +330,15 @@ describe('Simulator', () => {
       expect(screen.queryByRole('button', { name: /run/i })).not.toBeInTheDocument();
     });
 
+    it('hides "None (call server)" option from simulation dropdown', () => {
+      render(<Simulator simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
+
+      const simSelect = screen.getByTestId('simulation-selector').querySelector('select')!;
+      const options = Array.from(simSelect.options).map((o) => o.textContent);
+      expect(options).not.toContain('None (call server)');
+      expect(options).not.toContain('None');
+    });
+
     it('still renders simulation content normally', () => {
       render(
         <Simulator
