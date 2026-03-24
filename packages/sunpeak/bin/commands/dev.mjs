@@ -526,14 +526,17 @@ if (import.meta.hot) {
     projectRoot,
     noBegging,
     open: !process.env.CI && !process.env.SUNPEAK_LIVE_TEST,
-    // In workspace dev mode, resolve sunpeak JS imports to source TypeScript files
-    // so the inspector's Vite server doesn't require a pre-built dist/ directory.
-    // Only alias JS entry points — CSS imports (sunpeak/style.css, sunpeak/chatgpt/globals.css)
-    // must resolve to dist/ since the inspector Vite server lacks the Tailwind plugin.
+    // In workspace dev mode, resolve sunpeak imports to source files so the
+    // inspector's Vite server works without a pre-built dist/ directory.
+    // The Tailwind plugin is also passed so source CSS (@import "tailwindcss") is processed.
     ...(isTemplate && {
       resolveAlias: {
         'sunpeak/simulator': resolve(parentSrc, 'simulator/index.ts'),
+        'sunpeak/style.css': resolve(parentSrc, 'style.css'),
+        'sunpeak/chatgpt/globals.css': resolve(parentSrc, 'chatgpt/globals.css'),
       },
+      vitePlugins: [tailwindcss()],
+      viteCssConfig: lightningcssConfig,
     }),
     // Direct tool handler call for Prod Tools Run button.
     // Re-imports via Vite SSR on each call so handlers pick up HMR changes.

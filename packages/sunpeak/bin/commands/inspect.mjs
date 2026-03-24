@@ -510,6 +510,8 @@ function readRequestBody(req) {
  * @param {(name: string, args: Record<string, unknown>) => Promise<object>} [opts.callToolDirect] - Direct handler call (bypasses MCP, for prod-tools)
  * @param {() => Promise<void>} [opts.onCleanup] - Additional cleanup callback on exit
  * @param {Record<string, string>} [opts.resolveAlias] - Vite resolve aliases (e.g., to map sunpeak imports to source)
+ * @param {object[]} [opts.vitePlugins] - Additional Vite plugins (e.g., Tailwind for source CSS)
+ * @param {object} [opts.viteCssConfig] - Vite css config override (e.g., lightningcss customAtRules)
  */
 export async function inspectServer(opts) {
   const {
@@ -525,6 +527,8 @@ export async function inspectServer(opts) {
     open,
     onCleanup,
     resolveAlias,
+    vitePlugins: extraVitePlugins = [],
+    viteCssConfig,
   } = opts;
 
   // Load favicon from sunpeak package for the inspector UI.
@@ -626,8 +630,10 @@ export async function inspectServer(opts) {
     root: SUNPEAK_PKG_DIR,
     configFile: false,
     ...(resolveAlias ? { resolve: { alias: resolveAlias } } : {}),
+    ...(viteCssConfig ? { css: { lightningcss: viteCssConfig } } : {}),
     plugins: [
       react(),
+      ...extraVitePlugins,
       sunpeakInspectVirtualPlugin(
         simulations,
         simulatorServerUrl,
