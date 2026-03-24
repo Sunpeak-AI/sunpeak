@@ -5,6 +5,7 @@ import { createRequire } from 'module';
 import { pathToFileURL } from 'url';
 import { toPascalCase } from '../lib/patterns.mjs';
 import { extractResourceExport } from '../lib/extract-resource.mjs';
+import { lightningcssConfig } from '../lib/css.mjs';
 
 /**
  * Resolve the ESM entry point for a package from a specific project directory.
@@ -236,6 +237,9 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
             plugins: [react(), tailwindcss(), inlineCssPlugin(buildOutDir)],
             define: {
               'process.env.NODE_ENV': JSON.stringify('production'),
+            },
+            css: {
+              lightningcss: lightningcssConfig,
             },
             resolve: {
               conditions: ['style', 'import', 'module', 'browser', 'default'],

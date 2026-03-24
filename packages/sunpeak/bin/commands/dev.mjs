@@ -8,6 +8,7 @@ import { pathToFileURL } from 'url';
 import { spawn } from 'child_process';
 import { getPort } from '../lib/get-port.mjs';
 import { startSandboxServer } from '../lib/sandbox-server.mjs';
+import { lightningcssConfig } from '../lib/css.mjs';
 import { inspectServer } from './inspect.mjs';
 
 /**
@@ -422,6 +423,7 @@ if (import.meta.hot) {
     root: projectRoot,
     cacheDir: 'node_modules/.vite-mcp',
     plugins: [react(), tailwindcss(), sunpeakEntryPlugin()],
+    css: { lightningcss: lightningcssConfig },
     resolve: {
       alias: {
         '@': path.resolve(projectRoot, 'src'),
