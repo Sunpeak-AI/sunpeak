@@ -533,7 +533,7 @@ export function Simulator({
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
-          key={`${state.activeHost}-${effectiveResourceUrl}-${prodResources}-${prodResourcesGeneration}`}
+          key={`${state.activeHost}-${state.selectedSimulationName}-${effectiveResourceUrl}-${prodResources}-${prodResourcesGeneration}`}
           src={effectiveResourceUrl}
           hostContext={hostContext}
           toolInput={state.toolInput}
@@ -559,7 +559,7 @@ export function Simulator({
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
-          key={`${state.activeHost}-${state.resourceScript}`}
+          key={`${state.activeHost}-${state.selectedSimulationName}-${state.resourceScript}`}
           scriptSrc={state.resourceScript}
           hostContext={hostContext}
           toolInput={state.toolInput}
@@ -741,8 +741,7 @@ export function Simulator({
                             {
                               value: '__none__',
                               label:
-                                selectedToolInfo &&
-                                selectedToolInfo.fixtureSimNames.length > 0
+                                selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
                                   ? 'None (call server)'
                                   : 'None',
                             },

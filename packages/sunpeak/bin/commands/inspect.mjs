@@ -509,6 +509,7 @@ function readRequestBody(req) {
  * @param {boolean} [opts.open] - Whether to open browser (default: !CI && !SUNPEAK_LIVE_TEST)
  * @param {(name: string, args: Record<string, unknown>) => Promise<object>} [opts.callToolDirect] - Direct handler call (bypasses MCP, for prod-tools)
  * @param {() => Promise<void>} [opts.onCleanup] - Additional cleanup callback on exit
+ * @param {Record<string, string>} [opts.resolveAlias] - Vite resolve aliases (e.g., to map sunpeak imports to source)
  */
 export async function inspectServer(opts) {
   const {
@@ -523,6 +524,7 @@ export async function inspectServer(opts) {
     noBegging = false,
     open,
     onCleanup,
+    resolveAlias,
   } = opts;
 
   // Load favicon from sunpeak package for the inspector UI.
@@ -623,6 +625,7 @@ export async function inspectServer(opts) {
   const server = await createServer({
     root: SUNPEAK_PKG_DIR,
     configFile: false,
+    ...(resolveAlias ? { resolve: { alias: resolveAlias } } : {}),
     plugins: [
       react(),
       sunpeakInspectVirtualPlugin(
