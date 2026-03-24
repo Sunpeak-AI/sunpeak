@@ -56,32 +56,33 @@ No manual configuration or entry point files needed!
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--port <number>` | `-p` | Port for the simulator (default: 3000, also respects `PORT` env var) |
-| `--prod-tools` | | Start with **Prod Tools** mode enabled (real tool handlers). Can also be toggled from the sidebar at runtime. |
 | `--prod-resources` | | Serve production-built HTML from `dist/` instead of Vite HMR |
 
-### `--prod-tools` and `--prod-resources` flags
+### Tool and Simulation selection
 
-These two orthogonal flags let you test different combinations of UI and tool behavior:
+The simulator sidebar has two primary selectors:
 
-| Flags | UI | Tools | Use case |
-|-------|-----|-------|----------|
-| *(none)* | HMR | Mocked | Day-to-day development |
-| `--prod-tools` | HMR | Real handlers | Integration testing with real backend logic |
-| `--prod-resources` | Production bundle | Mocked | Catch build regressions, CI/E2E testing |
-| `--prod-tools --prod-resources` | Production bundle | Real handlers | Final smoke test (simulator shell around production behavior) |
+- **Tool dropdown** — selects which tool to inspect. Always visible when tools exist.
+- **Simulation dropdown** — selects a simulation fixture with mock data. Shown when fixtures exist for the selected tool. Includes a "None (call server)" option to bypass mock data and call the real handler via the **Run** button.
+
+For programmatic testing, these map to URL parameters:
 
 ```bash
-# Integration test: real tool handlers with HMR UI
-sunpeak dev --prod-tools
+# Mock data renders immediately (simulation fixture selected):
+http://localhost:3000/?simulation=show-albums&theme=dark
 
-# CI/E2E: production bundles with mock data
-sunpeak dev --prod-resources
-
-# Full smoke test: production bundles with real handlers
-sunpeak dev --prod-tools --prod-resources
+# No mock data — user clicks Run for real handler:
+http://localhost:3000/?tool=show-albums&theme=dark
 ```
 
-When `--prod-resources` is used, `sunpeak build` runs automatically before the dev server starts. The built HTML is served from `dist/`.
+### `--prod-resources` flag
+
+When `--prod-resources` is used, `sunpeak build` runs automatically before the dev server starts. The built HTML is served from `dist/` instead of Vite HMR. Useful for catching build regressions in CI/E2E testing.
+
+```bash
+# CI/E2E: production bundles with simulation mock data
+sunpeak dev --prod-resources
+```
 
 ## Configuration
 

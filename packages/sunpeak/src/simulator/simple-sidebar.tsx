@@ -380,6 +380,13 @@ export function SidebarInput({
           setIsEditing(false);
           onChange(draft);
         }}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            setIsEditing(false);
+            onChange(draft);
+            (e.target as HTMLInputElement).blur();
+          }
+        }}
         placeholder={placeholder}
         disabled={disabled}
         className="w-full h-7 text-xs rounded-md px-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed"

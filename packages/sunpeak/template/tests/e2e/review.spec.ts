@@ -101,9 +101,7 @@ for (const host of hosts) {
 
     test.describe('Prod Tools Mode', () => {
       test('should show empty state with Run button', async ({ page }) => {
-        await page.goto(
-          createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host, prodTools: true })
-        );
+        await page.goto(createSimulatorUrl({ tool: 'review-diff', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -116,9 +114,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in light mode', async ({ page }) => {
-        await page.goto(
-          createSimulatorUrl({ simulation: 'review-diff', theme: 'light', host, prodTools: true })
-        );
+        await page.goto(createSimulatorUrl({ tool: 'review-diff', theme: 'light', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();
@@ -132,9 +128,7 @@ for (const host of hosts) {
       });
 
       test('should have themed empty state colors in dark mode', async ({ page }) => {
-        await page.goto(
-          createSimulatorUrl({ simulation: 'review-diff', theme: 'dark', host, prodTools: true })
-        );
+        await page.goto(createSimulatorUrl({ tool: 'review-diff', theme: 'dark', host }));
 
         const emptyState = page.locator('text=Press Run to call the tool');
         await expect(emptyState).toBeVisible();

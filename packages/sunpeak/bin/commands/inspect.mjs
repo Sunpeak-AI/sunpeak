@@ -206,11 +206,11 @@ function mergeSimulationFixtures(dir, simulations) {
  * Vite plugin that serves virtual modules for the inspect entry point.
  *
  * @param {Record<string, object>} simulations - Simulation objects
- * @param {string|null} serverUrl - MCP server URL (null in framework mode to hide server UI)
+ * @param {string} serverUrl - MCP server URL
  * @param {string} appName - Display name
  * @param {string|null} appIcon - Icon URL or emoji
  * @param {string} sandboxUrl - Sandbox server URL
- * @param {{ defaultProdTools?: boolean, defaultProdResources?: boolean }} [modeFlags] - Mode toggles
+ * @param {{ defaultProdResources?: boolean, hideSimulatorModes?: boolean }} [modeFlags] - Mode toggles
  */
 function sunpeakInspectVirtualPlugin(simulations, serverUrl, appName, appIcon, sandboxUrl, modeFlags = {}) {
   const ENTRY_ID = 'virtual:sunpeak-inspect-entry';
@@ -224,13 +224,6 @@ function sunpeakInspectVirtualPlugin(simulations, serverUrl, appName, appIcon, s
     load(id) {
       if (id !== RESOLVED_ENTRY_ID) return;
 
-      // In framework mode (serverUrl is null), don't pass mcpServerUrl to the
-      // Simulator — this enables the prod-tools/prod-resources toggles and hides
-      // the server URL input in the sidebar.
-      const mcpServerUrlProp = serverUrl != null
-        ? `mcpServerUrl: ${JSON.stringify(serverUrl)},`
-        : '';
-
       return `
 import { createElement, StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -242,8 +235,8 @@ const simulations = ${JSON.stringify(simulations)};
 const appName = ${JSON.stringify(appName ?? 'MCP Inspector')};
 const appIcon = ${JSON.stringify(appIcon ?? null)};
 const sandboxUrl = ${JSON.stringify(sandboxUrl)};
-const defaultProdTools = ${JSON.stringify(modeFlags.defaultProdTools ?? false)};
 const defaultProdResources = ${JSON.stringify(modeFlags.defaultProdResources ?? false)};
+const hideSimulatorModes = ${JSON.stringify(modeFlags.hideSimulatorModes ?? false)};
 
 const onCallTool = async (params) => {
   const res = await fetch('/__sunpeak/call-tool', {
@@ -268,14 +261,14 @@ root.render(
   createElement(StrictMode, null,
     createElement(Simulator, {
       simulations,
-      ${mcpServerUrlProp}
+      mcpServerUrl: ${JSON.stringify(serverUrl)},
       appName,
       appIcon,
       sandboxUrl,
       onCallTool,
       onCallToolDirect,
-      defaultProdTools,
       defaultProdResources,
+      hideSimulatorModes,
     })
   )
 );
@@ -287,9 +280,10 @@ root.render(
 /**
  * Vite plugin for MCP server proxy endpoints.
  * @param {() => import('@modelcontextprotocol/sdk/client/index.js').Client} getClient
- * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object> }} [pluginOpts]
+ * @param {(client: import('@modelcontextprotocol/sdk/client/index.js').Client) => void} setClient
+ * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null }} [pluginOpts]
  */
-function sunpeakInspectEndpointsPlugin(getClient, pluginOpts = {}) {
+function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   return {
     name: 'sunpeak-inspect-endpoints',
     configureServer(server) {
@@ -390,11 +384,8 @@ function sunpeakInspectEndpointsPlugin(getClient, pluginOpts = {}) {
         }
       });
 
-      // Reconnect to a new server URL.
-      // Currently acknowledges without actually reconnecting — the MCP client
-      // connection is established at startup. Changing the URL in the sidebar
-      // requires restarting the inspect server. This endpoint exists so the
-      // useMcpConnection hook can verify the server is reachable.
+      // Reconnect to a new MCP server URL.
+      // Creates a new MCP client connection and replaces the current one.
       server.middlewares.use('/__sunpeak/connect', async (req, res) => {
         if (req.method !== 'POST') {
           res.writeHead(405);
@@ -402,12 +393,47 @@ function sunpeakInspectEndpointsPlugin(getClient, pluginOpts = {}) {
           return;
         }
 
+        const body = await readRequestBody(req);
+        let parsed;
         try {
-          // Verify the MCP client is still connected by listing tools
-          const client = getClient();
-          await client.listTools();
+          parsed = JSON.parse(body);
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          return;
+        }
+
+        const url = parsed.url;
+        if (!url) {
+          // No URL provided — just verify current connection
+          try {
+            const client = getClient();
+            await client.listTools();
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'ok' }));
+          } catch (err) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+          }
+          return;
+        }
+
+        try {
+          // Close old connection (best effort)
+          try { await getClient().close(); } catch { /* ignore */ }
+
+          // Create new connection
+          const newConnection = await createMcpConnection(url);
+          setClient(newConnection.client);
+
+          // Discover tools and resources from the new server
+          const simulations = await discoverSimulations(newConnection.client);
+          // Merge fixture data so simulations have mock toolInput/toolResult
+          if (pluginOpts.simulationsDir) {
+            mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ status: 'ok' }));
+          res.end(JSON.stringify({ status: 'ok', simulations }));
         } catch (err) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
@@ -476,8 +502,7 @@ function readRequestBody(req) {
  * @param {number} [opts.port] - Dev server port (default: 3000)
  * @param {string} [opts.name] - App name override
  * @param {string} [opts.sandboxUrl] - Existing sandbox server URL (skips creating one)
- * @param {boolean} [opts.frameworkMode] - If true, hide server URL UI and show mode toggles
- * @param {boolean} [opts.defaultProdTools] - Initial prod tools state
+ * @param {boolean} [opts.frameworkMode] - If true, show framework-only controls (Prod Resources)
  * @param {boolean} [opts.defaultProdResources] - Initial prod resources state
  * @param {string} [opts.projectRoot] - Project directory for serving /dist/ files (prod resources)
  * @param {boolean} [opts.noBegging] - Suppress star message
@@ -493,7 +518,6 @@ export async function inspectServer(opts) {
     name: nameOverride,
     sandboxUrl: existingSandboxUrl,
     frameworkMode = false,
-    defaultProdTools = false,
     defaultProdResources = false,
     projectRoot = null,
     noBegging = false,
@@ -552,6 +576,7 @@ export async function inspectServer(opts) {
     mergeSimulationFixtures(simulationsDir, simulations);
   }
 
+
   // Start or reuse sandbox server
   let sandbox;
   let ownsSandbox = false;
@@ -590,9 +615,7 @@ export async function inspectServer(opts) {
 </body>
 </html>`;
 
-  // In framework mode, don't pass serverUrl to the Simulator (hides the server
-  // URL input in the sidebar, enables prod-tools/prod-resources toggles).
-  const simulatorServerUrl = frameworkMode ? null : serverArg;
+  const simulatorServerUrl = serverArg;
 
   // Create the Vite server.
   // Use the sunpeak package dir as root to avoid scanning the user's project
@@ -608,11 +631,13 @@ export async function inspectServer(opts) {
         serverAppName,
         serverAppIcon,
         sandbox.url,
-        { defaultProdTools, defaultProdResources }
+        { defaultProdResources, hideSimulatorModes: !frameworkMode }
       ),
-      sunpeakInspectEndpointsPlugin(() => mcpConnection.client, {
-        callToolDirect: opts.callToolDirect,
-      }),
+      sunpeakInspectEndpointsPlugin(
+        () => mcpConnection.client,
+        (newClient) => { mcpConnection.client = newClient; },
+        { callToolDirect: opts.callToolDirect, simulationsDir }
+      ),
       // Serve /dist/{name}/{name}.html from the project directory (for Prod Resources mode).
       // The Simulator polls these paths via HEAD to check if built resources exist.
       // Only intercepts .html files under /dist/ — other /dist/ paths (like sunpeak's

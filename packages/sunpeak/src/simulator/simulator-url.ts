@@ -5,15 +5,28 @@ import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
  *
  * Use with `createSimulatorUrl()` to generate type-safe URL paths for e2e tests.
  *
+ * The two primary selectors mirror the sidebar dropdowns:
+ * - `tool` — which tool to inspect (Tool dropdown)
+ * - `simulation` — which simulation fixture to load (Simulation dropdown)
+ *
+ * When only `tool` is specified, no mock data is loaded ("Press Run" state).
+ * When `simulation` is specified, mock data from that fixture renders immediately.
+ * When both are specified, the tool is selected and the simulation provides mock data.
+ *
  * @example
  * ```ts
- * import { createSimulatorUrl } from 'sunpeak/chatgpt';
+ * import { createSimulatorUrl } from 'sunpeak/simulator';
  *
- * // In e2e tests:
+ * // Select a tool with no mock data (user must click Run):
+ * await page.goto(createSimulatorUrl({ tool: 'show-albums' }));
+ *
+ * // Select a simulation (mock data renders immediately):
+ * await page.goto(createSimulatorUrl({ simulation: 'show-albums' }));
+ *
+ * // Full options:
  * await page.goto(createSimulatorUrl({
  *   simulation: 'show-albums',
  *   theme: 'dark',
- *   displayMode: 'fullscreen',
  *   host: 'claude',
  * }));
  * ```
@@ -22,8 +35,16 @@ export interface SimulatorUrlParams {
   /**
    * The simulation name to load (e.g., 'show-albums', 'review-diff').
    * Corresponds to the simulation JSON filename without the `.json` extension.
+   * When specified, mock data from the simulation fixture renders immediately.
    */
   simulation?: string;
+
+  /**
+   * The tool name to select (e.g., 'show-albums', 'show-map').
+   * When specified without `simulation`, no mock data is loaded — the user
+   * must click Run to call the real handler.
+   */
+  tool?: string;
 
   /**
    * The host shell to use (e.g., 'chatgpt', 'claude').
@@ -100,28 +121,13 @@ export interface SimulatorUrlParams {
   safeAreaRight?: number;
 
   /**
-   * Enable Prod Tools mode (real tool handlers instead of simulation mocks).
-   */
-  prodTools?: boolean;
-
-  /**
    * Enable Prod Resources mode (production dist/ bundles instead of HMR).
    */
   prodResources?: boolean;
-
-  /**
-   * MCP server URL for inspect mode. Encoded into the URL for informational purposes.
-   */
-  serverUrl?: string;
-
-  /**
-   * Pre-select a tool by name (alternative to the `simulation` param).
-   */
-  tool?: string;
 }
 
 /**
- * Creates a URL path with query parameters for the ChatGPT Simulator.
+ * Creates a URL path with query parameters for the Simulator.
  *
  * @param params - The simulator parameters to encode
  * @param basePath - The base path for the URL (default: '/')
@@ -129,40 +135,25 @@ export interface SimulatorUrlParams {
  *
  * @example
  * ```ts
- * // Basic usage
+ * // Tool only (no mock data, "Press Run" state):
+ * createSimulatorUrl({ tool: 'show-albums' })
+ * // Returns: '/?tool=show-albums'
+ *
+ * // Simulation (mock data renders immediately):
  * createSimulatorUrl({ simulation: 'show-albums', theme: 'light' })
  * // Returns: '/?simulation=show-albums&theme=light'
  *
- * // With display mode
- * createSimulatorUrl({
- *   simulation: 'review-diff',
- *   theme: 'dark',
- *   displayMode: 'fullscreen',
- * })
- * // Returns: '/?simulation=review-diff&theme=dark&displayMode=fullscreen'
- *
- * // With device simulation
- * createSimulatorUrl({
- *   simulation: 'show-map',
- *   deviceType: 'mobile',
- *   touch: true,
- *   hover: false,
- * })
- * // Returns: '/?simulation=show-map&deviceType=mobile&touch=true&hover=false'
- *
- * // With safe area insets (for notch simulation)
- * createSimulatorUrl({
- *   simulation: 'show-carousel',
- *   safeAreaTop: 44,
- *   safeAreaBottom: 34,
- * })
- * // Returns: '/?simulation=show-carousel&safeAreaTop=44&safeAreaBottom=34'
+ * // Both tool and simulation:
+ * createSimulatorUrl({ tool: 'show-albums', simulation: 'show-albums' })
+ * // Returns: '/?tool=show-albums&simulation=show-albums'
  * ```
  */
 export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): string {
   const searchParams = new URLSearchParams();
 
-  // Add each defined parameter
+  if (params.tool !== undefined) {
+    searchParams.set('tool', params.tool);
+  }
   if (params.simulation !== undefined) {
     searchParams.set('simulation', params.simulation);
   }
@@ -202,18 +193,10 @@ export function createSimulatorUrl(params: SimulatorUrlParams, basePath = '/'): 
   if (params.safeAreaRight !== undefined) {
     searchParams.set('safeAreaRight', String(params.safeAreaRight));
   }
-  if (params.prodTools !== undefined) {
-    searchParams.set('prodTools', String(params.prodTools));
-  }
   if (params.prodResources !== undefined) {
     searchParams.set('prodResources', String(params.prodResources));
   }
-  if (params.serverUrl !== undefined) {
-    searchParams.set('serverUrl', params.serverUrl);
-  }
-  if (params.tool !== undefined) {
-    searchParams.set('tool', params.tool);
-  }
+
   const queryString = searchParams.toString();
   return queryString ? `${basePath}?${queryString}` : basePath;
 }

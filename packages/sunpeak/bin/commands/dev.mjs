@@ -158,11 +158,11 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // Parse --no-begging flag
   const noBegging = args.includes('--no-begging');
 
-  // Parse --prod-tools and --prod-resources flags
+  // Parse flags
   const isProdTools = args.includes('--prod-tools');
   const isProdResources = args.includes('--prod-resources');
 
-  if (isProdTools) console.log('Prod Tools enabled by default (toggle in simulator sidebar)');
+  if (isProdTools) console.log('Prod Tools: MCP tool calls will use real handlers instead of simulation mocks');
   if (isProdResources) console.log('Prod Resources: resources will use production-built HTML from dist/');
 
   console.log(`Starting dev server on port ${port}...`);
@@ -494,6 +494,8 @@ if (import.meta.hot) {
     // In --prod-resources mode, don't pass viteServer so the MCP server serves pre-built HTML.
     // Otherwise, pass it so ChatGPT gets Vite HMR.
     viteServer: isProdResources ? undefined : mcpViteServer,
+    // When --prod-tools is set, UI tool calls use real handlers instead of simulation mocks.
+    prodTools: isProdTools,
   });
 
   // Wait for the MCP server to be listening before starting the inspector
@@ -518,7 +520,6 @@ if (import.meta.hot) {
     name: serverDisplayName,
     sandboxUrl: sandbox.url,
     frameworkMode: true,
-    defaultProdTools: isProdTools,
     defaultProdResources: isProdResources,
     projectRoot,
     noBegging,

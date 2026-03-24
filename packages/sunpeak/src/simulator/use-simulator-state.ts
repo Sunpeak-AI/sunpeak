@@ -124,7 +124,7 @@ export interface SimulatorState {
   permissions: McpUiResourcePermissions | undefined;
   prefersBorder: boolean;
   // ── URL param overrides ──
-  urlProdTools: boolean | undefined;
+  urlTool: string | undefined;
   urlProdResources: boolean | undefined;
 }
 
@@ -142,11 +142,12 @@ export interface SimulatorState {
  * - touch: 'true' | 'false'
  * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
  * - host: 'chatgpt' | 'claude'
- * - prodTools: 'true' | 'false'
+ * - tool: tool name (e.g., 'show-albums') — selects tool without mock data
  * - prodResources: 'true' | 'false'
  */
 function parseUrlParams(): {
   simulation?: string;
+  tool?: string;
   theme?: McpUiTheme;
   displayMode?: McpUiDisplayMode;
   locale?: string;
@@ -156,7 +157,6 @@ function parseUrlParams(): {
   deviceCapabilities?: { hover?: boolean; touch?: boolean };
   safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
   host?: HostId;
-  prodTools?: boolean;
   prodResources?: boolean;
 } {
   if (typeof window === 'undefined') return {};
@@ -164,6 +164,7 @@ function parseUrlParams(): {
   const params = new URLSearchParams(window.location.search);
 
   const simulation = params.get('simulation') ?? undefined;
+  const tool = params.get('tool') ?? undefined;
   const theme = params.get('theme') as McpUiTheme | null;
   const displayMode = params.get('displayMode') as McpUiDisplayMode | null;
   const locale = params.get('locale');
@@ -173,10 +174,6 @@ function parseUrlParams(): {
   const containerMaxWidth = maxWidthParam ? Number(maxWidthParam) : undefined;
   const host = (params.get('host') as HostId) ?? undefined;
 
-  // Prod modes
-  const prodToolsParam = params.get('prodTools');
-  const prodTools =
-    prodToolsParam === 'true' ? true : prodToolsParam === 'false' ? false : undefined;
   const prodResourcesParam = params.get('prodResources');
   const prodResources =
     prodResourcesParam === 'true' ? true : prodResourcesParam === 'false' ? false : undefined;
@@ -218,6 +215,7 @@ function parseUrlParams(): {
 
   return {
     simulation,
+    tool,
     theme: theme ?? undefined,
     displayMode: displayMode ?? undefined,
     locale: locale ?? undefined,
@@ -227,7 +225,6 @@ function parseUrlParams(): {
     deviceCapabilities,
     safeAreaInsets,
     host: host ?? undefined,
-    prodTools,
     prodResources,
   };
 }
@@ -425,7 +422,7 @@ export function useSimulatorState({
   const [toolResultError, setToolResultError] = useState('');
   const [modelContextError, setModelContextError] = useState('');
 
-  // Reset tool data when simulation changes
+  // Reset tool data when simulation changes.
   useEffect(() => {
     const newInput = selectedSim?.toolInput ?? {};
     const newResult = (selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
@@ -598,7 +595,7 @@ export function useSimulatorState({
     csp,
     permissions,
     prefersBorder,
-    urlProdTools: urlParams.prodTools,
+    urlTool: urlParams.tool,
     urlProdResources: urlParams.prodResources,
   };
 }
