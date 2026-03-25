@@ -68,6 +68,7 @@ export class McpAppHost {
   private _prevDisplayMode: string | undefined;
   private _pendingToolInput: McpUiToolInputNotification['params'] | null = null;
   private _pendingToolResult: McpUiToolResultNotification['params'] | null = null;
+  private _messageListener: ((event: MessageEvent) => void) | null = null;
 
   constructor(options: McpAppHostOptions = {}) {
     this.options = options;
@@ -94,7 +95,6 @@ export class McpAppHost {
     };
 
     this.bridge.onopenlink = async ({ url }) => {
-      console.log('[MCP App] openLink:', url);
       if (this.options.onOpenLink) {
         this.options.onOpenLink(url);
       } else {
@@ -103,35 +103,63 @@ export class McpAppHost {
           const parsed = new URL(url);
           if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
             console.warn('[MCP App] openLink blocked non-http(s) URL:', url);
-            return {};
+          } else {
+            window.open(url, '_blank');
           }
         } catch {
           console.warn('[MCP App] openLink blocked invalid URL:', url);
-          return {};
         }
-        window.open(url, '_blank');
       }
-      return {};
+      const ack = {};
+      console.log(
+        `%c[MCP ↓]%c host → app: %copenLink ack`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        ack
+      );
+      return ack;
     };
 
     this.bridge.onmessage = async ({ role, content }) => {
       if (this.options.onMessage) {
         this.options.onMessage(role, content);
-      } else {
-        // Default: log to console
-        console.log('[MCP App] sendMessage:', { role, content });
       }
-      return {};
+      const ack = {};
+      console.log(
+        `%c[MCP ↓]%c host → app: %csendMessage ack`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        ack
+      );
+      return ack;
     };
 
     this.bridge.onrequestdisplaymode = async ({ mode }) => {
       this.options.onDisplayModeChange?.(mode);
-      return { mode };
+      const result = { mode };
+      console.log(
+        `%c[MCP ↓]%c host → app: %crequestDisplayMode result`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        result
+      );
+      return result;
     };
 
     this.bridge.onupdatemodelcontext = async ({ content, structuredContent }) => {
       this.options.onUpdateModelContext?.(content ?? [], structuredContent);
-      return {};
+      const ack = {};
+      console.log(
+        `%c[MCP ↓]%c host → app: %cupdateModelContext ack`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        ack
+      );
+      return ack;
     };
 
     this.bridge.onsizechange = (params) => {
@@ -163,28 +191,42 @@ export class McpAppHost {
     };
 
     this.bridge.oncalltool = async (params) => {
+      let result: CallToolResult;
       if (this.options.onCallTool) {
-        return this.options.onCallTool(params);
+        result = await this.options.onCallTool(params);
+      } else {
+        result = {
+          content: [
+            {
+              type: 'text',
+              text: `[Inspector] Tool "${params.name}" called (no handler configured)`,
+            },
+          ],
+        };
       }
-      // Default: log to console and return empty result
-      console.log('[MCP App] callServerTool:', params.name, params.arguments);
-      return {
-        content: [
-          {
-            type: 'text',
-            text: `[Inspector] Tool "${params.name}" called (no handler configured)`,
-          },
-        ],
-      };
+      console.log(
+        `%c[MCP ↓]%c host → app: %ccallServerTool result(${params.name})`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        result
+      );
+      return result;
     };
 
     this.bridge.ondownloadfile = async ({ contents }) => {
       if (this.options.onDownloadFile) {
         this.options.onDownloadFile(contents);
-      } else {
-        console.log('[MCP App] downloadFile:', contents.length, 'item(s)');
       }
-      return {};
+      const ack = {};
+      console.log(
+        `%c[MCP ↓]%c host → app: %cdownloadFile ack`,
+        'color:#f9a8d4',
+        'color:inherit',
+        'color:#93c5fd',
+        ack
+      );
+      return ack;
     };
 
     this.bridge.onrequestteardown = () => {
@@ -206,7 +248,33 @@ export class McpAppHost {
    * Connect to an iframe's contentWindow.
    */
   async connectToIframe(contentWindow: Window): Promise<void> {
+    // Clean up previous listener if reconnecting
+    if (this._messageListener) {
+      window.removeEventListener('message', this._messageListener);
+    }
+
     this._contentWindow = contentWindow;
+
+    // Log incoming MCP protocol messages from the app (skip sunpeak internals)
+    this._messageListener = (event: MessageEvent) => {
+      if (event.source !== contentWindow) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
+      const method: string | undefined = data.method;
+      // Skip sunpeak-internal and sandbox infrastructure messages
+      if (method?.startsWith('sunpeak/') || method === 'ui/notifications/sandbox-proxy-ready')
+        return;
+      const label = method ?? (data.id != null ? `response #${data.id}` : 'unknown');
+      console.log(
+        `%c[MCP ↑]%c app → host: %c${label}`,
+        'color:#6ee7b7',
+        'color:inherit',
+        'color:#93c5fd',
+        data
+      );
+    };
+    window.addEventListener('message', this._messageListener);
+
     const transport = new PostMessageTransport(contentWindow, contentWindow);
     await this.bridge.connect(transport);
   }
@@ -254,7 +322,8 @@ export class McpAppHost {
         // Format as a valid JSON-RPC 2.0 notification so the SDK's
         // PostMessageTransport parses it without error. Unknown notification
         // methods are silently ignored by the bridge.
-        win.postMessage({ jsonrpc: '2.0', method: 'sunpeak/fence', params: { fenceId: id } }, '*');
+        const fenceMsg = { jsonrpc: '2.0', method: 'sunpeak/fence', params: { fenceId: id } };
+        win.postMessage(fenceMsg, '*');
       } catch {
         // Detached or cross-origin window
         cleanup();
@@ -269,6 +338,13 @@ export class McpAppHost {
    * to commit its DOM before firing onDisplayModeReady.
    */
   setHostContext(context: McpUiHostContext): void {
+    console.log(
+      `%c[MCP ↓]%c host → app: %csetHostContext`,
+      'color:#f9a8d4',
+      'color:inherit',
+      'color:#93c5fd',
+      context
+    );
     this.bridge.setHostContext(context);
 
     const currentMode = context.displayMode;
@@ -287,6 +363,13 @@ export class McpAppHost {
    */
   sendToolInput(args: Record<string, unknown>): void {
     const params: McpUiToolInputNotification['params'] = { arguments: args };
+    console.log(
+      `%c[MCP ↓]%c host → app: %csendToolInput`,
+      'color:#f9a8d4',
+      'color:inherit',
+      'color:#93c5fd',
+      params
+    );
     if (this._initialized) {
       this.bridge.sendToolInput(params);
     } else {
@@ -299,6 +382,13 @@ export class McpAppHost {
    * If the app hasn't initialized yet, the result is queued.
    */
   sendToolResult(result: CallToolResult): void {
+    console.log(
+      `%c[MCP ↓]%c host → app: %csendToolResult`,
+      'color:#f9a8d4',
+      'color:inherit',
+      'color:#93c5fd',
+      result
+    );
     if (this._initialized) {
       this.bridge.sendToolResult(result);
     } else {
@@ -312,6 +402,13 @@ export class McpAppHost {
    */
   sendToolInputPartial(args: Record<string, unknown>): void {
     const params: McpUiToolInputPartialNotification['params'] = { arguments: args };
+    console.log(
+      `%c[MCP ↓]%c host → app: %csendToolInputPartial`,
+      'color:#f9a8d4',
+      'color:inherit',
+      'color:#93c5fd',
+      params
+    );
     if (this._initialized) {
       this.bridge.sendToolInputPartial(params);
     }
@@ -324,6 +421,13 @@ export class McpAppHost {
    */
   sendToolCancelled(reason?: string): void {
     const params: McpUiToolCancelledNotification['params'] = reason ? { reason } : {};
+    console.log(
+      `%c[MCP ↓]%c host → app: %csendToolCancelled`,
+      'color:#f9a8d4',
+      'color:inherit',
+      'color:#93c5fd',
+      params
+    );
     if (this._initialized) {
       this.bridge.sendToolCancelled(params);
     }
@@ -354,6 +458,10 @@ export class McpAppHost {
    * Close the connection.
    */
   async close(): Promise<void> {
+    if (this._messageListener) {
+      window.removeEventListener('message', this._messageListener);
+      this._messageListener = null;
+    }
     this._fenceCleanup?.();
     this._fenceCleanup = null;
     try {
