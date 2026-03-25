@@ -132,6 +132,7 @@
               "api-reference/hooks/use-platform",
               "api-reference/hooks/use-read-server-resource",
               "api-reference/hooks/use-request-display-mode",
+              "api-reference/hooks/use-request-teardown",
               "api-reference/hooks/use-safe-area",
               "api-reference/hooks/use-send-log",
               "api-reference/hooks/use-send-message",

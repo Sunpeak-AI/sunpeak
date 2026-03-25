@@ -256,6 +256,19 @@ app.sendLog({
 });
 ```
 
+## requestTeardown
+
+Request the host to tear down this app. The host may approve or ignore the request. If approved, the host will send the standard `ui/resource-teardown` request back to the app (triggering [`onteardown`](/mcp-apps/app/event-handlers/onteardown)) before unmounting the iframe.
+
+```ts
+async requestTeardown(params?: {}): Promise<void>
+```
+
+```ts
+// App-initiated close (e.g., "Done" button)
+await app.requestTeardown();
+```
+
 ## [sendSizeChanged](/mcp-apps/app/requests/send-size-changed)
 
 Manually notify the host of a UI size change. If `autoResize` is enabled (default), this is called automatically.
@@ -269,5 +282,5 @@ app.sendSizeChanged({ width: 400, height: 600 });
 ```
 
 <Tip>
-The [sunpeak framework](/quickstart) provides React convenience hooks that wrap these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useDownloadFile`](/api-reference/hooks/use-download-file), [`useListServerResources`](/api-reference/hooks/use-list-server-resources), [`useReadServerResource`](/api-reference/hooks/use-read-server-resource), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), and [`useSendLog`](/api-reference/hooks/use-send-log).
+The [sunpeak framework](/quickstart) provides React convenience hooks that wrap these methods: [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), [`useDownloadFile`](/api-reference/hooks/use-download-file), [`useListServerResources`](/api-reference/hooks/use-list-server-resources), [`useReadServerResource`](/api-reference/hooks/use-read-server-resource), [`useSendMessage`](/api-reference/hooks/use-send-message), [`useUpdateModelContext`](/api-reference/hooks/use-update-model-context), [`useOpenLink`](/api-reference/hooks/use-open-link), [`useRequestDisplayMode`](/api-reference/hooks/use-request-display-mode), [`useRequestTeardown`](/api-reference/hooks/use-request-teardown), and [`useSendLog`](/api-reference/hooks/use-send-log).
 </Tip>

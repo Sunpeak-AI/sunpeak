@@ -42,6 +42,8 @@ export interface McpAppHostOptions {
   onLog?: (params: LoggingMessageNotification['params']) => void;
   onCallTool?: (params: CallToolRequest['params']) => CallToolResult | Promise<CallToolResult>;
   onDownloadFile?: (contents: unknown[]) => void;
+  /** Called when the app requests teardown (app-initiated close). */
+  onRequestTeardown?: () => void;
   /** Called after the iframe confirms rendering in a new display mode (paint fence resolved). */
   onDisplayModeReady?: (mode: string) => void;
   /**
@@ -183,6 +185,14 @@ export class McpAppHost {
         console.log('[MCP App] downloadFile:', contents.length, 'item(s)');
       }
       return {};
+    };
+
+    this.bridge.onrequestteardown = () => {
+      if (this.options.onRequestTeardown) {
+        this.options.onRequestTeardown();
+      } else {
+        console.log('[MCP App] requestTeardown (app requested close)');
+      }
     };
 
     // Double-iframe sandbox support: when the proxy signals readiness,

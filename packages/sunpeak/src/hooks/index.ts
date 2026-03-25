@@ -59,6 +59,7 @@ export type {
   ReadServerResourceResult,
 } from './use-read-server-resource';
 export { useRequestDisplayMode } from './use-request-display-mode';
+export { useRequestTeardown } from './use-request-teardown';
 export type { AppDisplayMode } from './use-request-display-mode';
 export { useSendLog } from './use-send-log';
 export type { LogLevel, SendLogParams } from './use-send-log';

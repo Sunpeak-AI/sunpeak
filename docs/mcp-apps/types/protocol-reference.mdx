@@ -7,7 +7,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "protocol reference", "request types", "n
 
 <Badge color="green">MCP Apps SDK</Badge>
 
-<Note>This documentation covers MCP Apps SDK v1.2.2 (`@modelcontextprotocol/ext-apps`).</Note>
+<Note>This documentation covers MCP Apps SDK v1.3.1 (`@modelcontextprotocol/ext-apps`).</Note>
 
 ```ts
 import type {
@@ -31,6 +31,7 @@ import type {
   McpUiHostContextChangedNotification,
   McpUiInitializedNotification,
   McpUiSizeChangedNotification,
+  McpUiRequestTeardownNotification,
   AppRequest,
   AppNotification,
   AppResult,
@@ -85,6 +86,7 @@ import type {
 |------|--------|-------------|
 | `McpUiInitializedNotification` | `ui/notifications/initialized` | Initialization complete |
 | `McpUiSizeChangedNotification` | `ui/notifications/size-changed` | UI size change: `{ width?; height? }` |
+| `McpUiRequestTeardownNotification` | `ui/notifications/request-teardown` | App requests host to tear it down |
 
 ## Union Types
 
@@ -93,7 +95,7 @@ These union types group all possible message types in the protocol. They are use
 | Type | Description |
 |------|-------------|
 | `AppRequest` | Union of all request types: initialization, View → Host requests (`openLink`, `downloadFile`, `sendMessage`, `updateModelContext`, `requestDisplayMode`, `sendLog`, `sendSizeChanged`), proxied MCP server requests (`callServerTool`, `readServerResource`, `listServerResources`), Host → View requests (`resourceTeardown`), and ping |
-| `AppNotification` | Union of all notification types in both directions: Host → View (`toolInput`, `toolInputPartial`, `toolResult`, `toolCancelled`, `hostContextChanged`) and View → Host (`initialized`, `sizeChanged`) |
+| `AppNotification` | Union of all notification types in both directions: Host → View (`toolInput`, `toolInputPartial`, `toolResult`, `toolCancelled`, `hostContextChanged`) and View → Host (`initialized`, `sizeChanged`, `requestTeardown`) |
 | `AppResult` | Union of all result types corresponding to each request type |
 
 ```ts
@@ -117,6 +119,7 @@ import {
   DOWNLOAD_FILE_METHOD,
   MESSAGE_METHOD,
   REQUEST_DISPLAY_MODE_METHOD,
+  REQUEST_TEARDOWN_METHOD,
   RESOURCE_TEARDOWN_METHOD,
   SIZE_CHANGED_METHOD,
   TOOL_INPUT_METHOD,
@@ -135,6 +138,7 @@ import {
 | `DOWNLOAD_FILE_METHOD` | `"ui/download-file"` |
 | `MESSAGE_METHOD` | `"ui/message"` |
 | `REQUEST_DISPLAY_MODE_METHOD` | `"ui/request-display-mode"` |
+| `REQUEST_TEARDOWN_METHOD` | `"ui/notifications/request-teardown"` |
 | `RESOURCE_TEARDOWN_METHOD` | `"ui/resource-teardown"` |
 | `SIZE_CHANGED_METHOD` | `"ui/notifications/size-changed"` |
 | `TOOL_INPUT_METHOD` | `"ui/notifications/tool-input"` |
@@ -240,6 +244,7 @@ import {
   McpUiToolCancelledNotificationSchema,
   McpUiHostContextChangedNotificationSchema,
   McpUiSizeChangedNotificationSchema,
+  McpUiRequestTeardownNotificationSchema,
 } from "@modelcontextprotocol/ext-apps";
 ```
 
@@ -251,6 +256,7 @@ import {
 | `McpUiToolCancelledNotificationSchema` | `McpUiToolCancelledNotification` — tool cancelled |
 | `McpUiHostContextChangedNotificationSchema` | `McpUiHostContextChangedNotification` — context update |
 | `McpUiSizeChangedNotificationSchema` | `McpUiSizeChangedNotification` — size change |
+| `McpUiRequestTeardownNotificationSchema` | `McpUiRequestTeardownNotification` — app-initiated teardown request |
 
 ### Metadata Schemas
 

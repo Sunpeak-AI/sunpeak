@@ -1,0 +1,51 @@
+---
+title: "useRequestTeardown"
+description: "Request app-initiated teardown."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "teardown", "close", "request teardown"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+Returns a function to request the host to tear down the app. If the host approves, it will send the standard teardown signal back (triggering any [`useTeardown`](/api-reference/hooks/use-teardown) callbacks) before unmounting the iframe.
+
+This is for app-initiated close, as opposed to host-initiated teardown handled by `useTeardown`.
+
+<Card horizontal title="Wraps requestTeardown" icon="cube" href="/mcp-apps/app/requests">
+  MCP Apps SDK reference
+</Card>
+
+## Import
+
+```tsx
+import { useRequestTeardown } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useRequestTeardown(): () => Promise<void>
+```
+
+## Returns
+
+<ResponseField name="requestTeardown" type="() => Promise<void>">
+  Function to request the host to tear down this app.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useRequestTeardown } from 'sunpeak';
+
+function MyResource() {
+  const requestTeardown = useRequestTeardown();
+
+  return (
+    <button onClick={() => requestTeardown()}>
+      Close App
+    </button>
+  );
+}
+```
