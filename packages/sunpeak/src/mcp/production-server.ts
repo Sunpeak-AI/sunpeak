@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer, type RegisteredResource } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import {
@@ -12,6 +12,7 @@ import {
   registerAppResource,
   RESOURCE_MIME_TYPE,
 } from '@modelcontextprotocol/ext-apps/server';
+import { injectResolvedDomain, injectDefaultDomain } from './resolve-domain.js';
 
 import type { AuthInfo, CallToolResult, ServerConfig, ToolHandlerExtra } from './types.js';
 
@@ -130,6 +131,13 @@ export interface ProductionServerConfig {
   resources: ProductionResource[];
   /** Auth function from server entry (populates extra.authInfo via req.auth) */
   auth?: AuthFunction;
+  /**
+   * Public URL of the MCP server (e.g. `'https://example.com/mcp'`).
+   * Used to auto-compute a default `_meta.ui.domain` for resources that
+   * don't specify one. Without this, resources without an explicit domain
+   * may trigger host warnings (e.g. ChatGPT's "Widget domain is not set").
+   */
+  serverUrl?: string;
 }
 
 /**
@@ -148,6 +156,13 @@ export interface WebHandlerConfig {
   resources: ProductionResource[];
   /** Auth function for Web Standard Request objects */
   auth?: WebAuthFunction;
+  /**
+   * Public URL of the MCP server (e.g. `'https://example.com/mcp'`).
+   * Used to auto-compute a default `_meta.ui.domain` for resources that
+   * don't specify one. Without this, resources without an explicit domain
+   * may trigger host warnings (e.g. ChatGPT's "Widget domain is not set").
+   */
+  serverUrl?: string;
 }
 
 // ============================================================================
@@ -161,7 +176,14 @@ export interface WebHandlerConfig {
  * Resources serve pre-built HTML with their _meta preserved.
  */
 export function createProductionMcpServer(config: ProductionServerConfig): McpServer {
-  const { name = 'sunpeak-app', version = '0.1.0', serverInfo, tools, resources } = config;
+  const {
+    name = 'sunpeak-app',
+    version = '0.1.0',
+    serverInfo,
+    tools,
+    resources,
+    serverUrl,
+  } = config;
 
   const mcpServer = new McpServer(
     {
@@ -181,6 +203,26 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
     { capabilities: { resources: {}, tools: {} } }
   );
 
+  // Capture the connecting host's clientInfo.name after MCP initialization.
+  // Read callbacks close over this variable to resolve host-specific domain maps.
+  // Also update listing-level _meta on all resources so that `resources/list`
+  // returns the resolved domain (hosts like ChatGPT check domain from the listing).
+  let clientName: string | undefined;
+  mcpServer.server.oninitialized = () => {
+    clientName = mcpServer.server.getClientVersion()?.name;
+
+    for (const handle of resourceHandles) {
+      const currentMeta = handle.metadata?._meta as Record<string, unknown> | undefined;
+      const resolved = injectResolvedDomain(currentMeta, clientName) ?? currentMeta;
+      const withDefault = serverUrl
+        ? injectDefaultDomain(resolved, clientName, serverUrl)
+        : resolved;
+      if (withDefault !== resolved) {
+        handle.update({ metadata: { ...handle.metadata, _meta: withDefault } });
+      }
+    }
+  };
+
   // Build resource lookup: resource name → ProductionResource
   const resourceByName = new Map<string, ProductionResource>();
   for (const res of resources) {
@@ -190,6 +232,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   // Track registered resource URIs to avoid duplicates
   // (multiple tools can reference the same resource, e.g. review-diff and review-post)
   const registeredResources = new Set<string>();
+  const resourceHandles: RegisteredResource[] = [];
 
   let toolCount = 0;
 
@@ -233,7 +276,7 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
       // Register resource (once per URI)
       if (!registeredResources.has(res.uri)) {
         registeredResources.add(res.uri);
-        registerAppResource(
+        const handle = registerAppResource(
           mcpServer,
           res.name,
           res.uri,
@@ -241,17 +284,24 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
             description: res.description,
             _meta: res._meta,
           },
-          async () => ({
-            contents: [
-              {
-                uri: res.uri,
-                mimeType: RESOURCE_MIME_TYPE,
-                text: res.html,
-                _meta: res._meta,
-              },
-            ],
-          })
+          async () => {
+            const resolved = injectResolvedDomain(res._meta, clientName) ?? res._meta;
+            const readMeta = serverUrl
+              ? injectDefaultDomain(resolved, clientName, serverUrl)
+              : resolved;
+            return {
+              contents: [
+                {
+                  uri: res.uri,
+                  mimeType: RESOURCE_MIME_TYPE,
+                  text: res.html,
+                  _meta: readMeta,
+                },
+              ],
+            };
+          }
         );
+        resourceHandles.push(handle);
       }
 
       // Register tool with UI metadata via registerAppTool
@@ -625,8 +675,15 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
 
     // New session (POST without session ID = initialization)
     if (req.method === 'POST') {
-      const { name, version, serverInfo, tools, resources } = config;
-      const server = createProductionMcpServer({ name, version, serverInfo, tools, resources });
+      const { name, version, serverInfo, tools, resources, serverUrl } = config;
+      const server = createProductionMcpServer({
+        name,
+        version,
+        serverInfo,
+        tools,
+        resources,
+        serverUrl,
+      });
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id) => {

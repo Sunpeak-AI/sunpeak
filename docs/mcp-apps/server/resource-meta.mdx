@@ -176,13 +176,36 @@ function computeDomainForClaude(mcpServerUrl: string): string {
   return `${hash}.claudemcpcontent.com`;
 }
 
-// Usage
+// Usage (single host)
 _meta: {
   ui: {
     domain: computeDomainForClaude("https://example.com/mcp"),
   },
 }
 ```
+
+#### Cross-platform servers
+
+A server that supports multiple hosts needs different domain values per host. The sunpeak framework accepts a map of `clientInfo.name` to domain string, with an optional `default` fallback for unmatched hosts:
+
+```ts
+import { computeClaudeDomain, computeChatGPTDomain } from "sunpeak/mcp";
+
+const SERVER_URL = "https://example.com/mcp";
+
+// sunpeak resolves the correct value based on the connecting host's clientInfo.name
+_meta: {
+  ui: {
+    domain: {
+      claude: computeClaudeDomain(SERVER_URL),
+      "openai-mcp": computeChatGPTDomain(SERVER_URL),
+      default: "fallback.example.com",
+    },
+  },
+}
+```
+
+Without sunpeak, detect the host in your `resources/read` handler and return the appropriate string. The MCP `initialize` handshake includes `clientInfo.name`, which identifies the connecting host.
 
 If omitted, the host uses its default sandbox origin.
 

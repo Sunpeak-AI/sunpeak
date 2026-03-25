@@ -1,5 +1,6 @@
 import type { Resource } from '@modelcontextprotocol/sdk/types.js';
 import type { McpUiResourceMeta } from '@modelcontextprotocol/ext-apps';
+import type { DomainConfig } from '../mcp/resolve-domain.js';
 
 /**
  * Configuration for an MCP App resource, exported from resource .tsx files.
@@ -14,7 +15,25 @@ export type ResourceConfig = Omit<Resource, 'uri' | 'name'> & {
   name?: string;
   title?: string;
   _meta?: {
-    ui?: McpUiResourceMeta;
+    ui?: Omit<McpUiResourceMeta, 'domain'> & {
+      /**
+       * Dedicated sandbox origin for this resource.
+       *
+       * Can be a single string (used for all hosts) or a map of
+       * `clientInfo.name` → domain string for host-specific values.
+       * Use `'default'` as a fallback key for unmatched hosts.
+       *
+       * @example
+       * ```ts
+       * domain: {
+       *   claude: computeClaudeDomain('https://my-server.com/mcp'),
+       *   'openai-mcp': computeChatGPTDomain('https://my-server.com/mcp'),
+       *   default: 'fallback.example.com',
+       * }
+       * ```
+       */
+      domain?: DomainConfig;
+    };
     [key: string]: unknown;
   };
 };

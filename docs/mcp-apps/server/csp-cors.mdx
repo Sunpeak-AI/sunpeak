@@ -100,6 +100,31 @@ registerAppResource(server, "Dashboard", "ui://dashboard/view.html", {
 }));
 ```
 
+### Cross-platform servers
+
+When your server connects to multiple hosts, each host expects a different domain format. The sunpeak framework handles this with a per-host domain map:
+
+```ts
+import { computeClaudeDomain, computeChatGPTDomain } from "sunpeak/mcp";
+
+const SERVER_URL = "https://example.com/mcp";
+
+_meta: {
+  ui: {
+    csp: { connectDomains: ["https://api.example.com"] },
+    domain: {
+      claude: computeClaudeDomain(SERVER_URL),
+      "openai-mcp": computeChatGPTDomain(SERVER_URL),
+      default: "fallback.example.com",
+    },
+  },
+}
+```
+
+Map keys are the host's MCP `clientInfo.name`. The framework resolves the correct value at request time. Use `default` as a fallback for hosts you haven't mapped.
+
+Without sunpeak, detect the host via `clientInfo.name` from the MCP `initialize` handshake and return the appropriate domain string in your `resources/read` handler.
+
 <Info>
 The `domain` format is host-specific. Check each host's documentation for its supported format. The Claude pattern above uses SHA-256 hashing of the MCP server URL.
 </Info>

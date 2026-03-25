@@ -14,6 +14,7 @@ import type { RegisteredResource, RegisteredTool } from '@modelcontextprotocol/s
 
 import { z } from 'zod';
 import { type MCPServerConfig, type MCPServerHandle, type SimulationWithDist } from './types.js';
+import { injectResolvedDomain, injectDefaultDomain } from './resolve-domain.js';
 
 export type { MCPServerConfig, MCPServerHandle, SimulationWithDist } from './types.js';
 
@@ -198,6 +199,24 @@ function createAppServer(
     { capabilities: { resources: {}, tools: {} } }
   );
 
+  // Capture the connecting host's clientInfo.name after MCP initialization.
+  // Read callbacks close over this variable to resolve host-specific domain maps.
+  // Also update listing-level _meta on all resources so that `resources/list`
+  // returns the resolved domain (hosts like ChatGPT check domain from the listing).
+  let clientName: string | undefined;
+  mcpServer.server.oninitialized = () => {
+    clientName = mcpServer.server.getClientVersion()?.name;
+
+    for (const [, handle] of resourceHandles) {
+      const currentMeta = handle.metadata?._meta as Record<string, unknown> | undefined;
+      const resolved = injectResolvedDomain(currentMeta, clientName) ?? currentMeta;
+      const withDefault = injectDefaultDomain(resolved, clientName, localDevServerUrl);
+      if (withDefault !== resolved) {
+        handle.update({ metadata: { ...handle.metadata, _meta: withDefault } });
+      }
+    }
+  };
+
   // Track registered resource URIs and tool names to avoid duplicate registration
   // (multiple simulations can share the same resource or tool, e.g. review-diff and review-post)
   const registeredUriSet = new Set<string>();
@@ -245,7 +264,9 @@ function createAppServer(
             const prodBuild = needsProdBuild(
               (extra?.requestInfo?.headers as Record<string, string | string[] | undefined>) ?? {}
             );
-            const readMeta = viteMode && !prodBuild ? injectViteCSP(resourceMeta) : resourceMeta;
+            const baseMeta = viteMode && !prodBuild ? injectViteCSP(resourceMeta) : resourceMeta;
+            const resolvedMeta = injectResolvedDomain(baseMeta, clientName) ?? baseMeta;
+            const readMeta = injectDefaultDomain(resolvedMeta, clientName, localDevServerUrl);
 
             let content: string;
             try {
