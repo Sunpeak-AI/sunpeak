@@ -77,11 +77,95 @@ Examples:
 }
 
 /**
+ * Create an in-memory OAuth client provider for the inspector.
+ * The provider stores tokens, client info, and code verifier in memory.
+ * When `redirectToAuthorization()` is called, it stores the URL for retrieval.
+ *
+ * @param {string} redirectUrl - The callback URL for OAuth redirects
+ * @param {{ clientId?: string, clientSecret?: string }} [opts]
+ * @returns {{ provider: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, getAuthUrl: () => URL | undefined }}
+ */
+function createInMemoryOAuthProvider(redirectUrl, opts = {}) {
+  let _tokens;
+  let _clientInfo;
+  let _codeVerifier;
+  let _authUrl;
+  let _discoveryState;
+  // Cryptographic state parameter for CSRF protection on the OAuth callback.
+  const _stateParam = crypto.randomUUID();
+
+  // If pre-registered client credentials were provided, seed the client info
+  // so the SDK skips dynamic client registration.
+  if (opts.clientId) {
+    _clientInfo = {
+      client_id: opts.clientId,
+      ...(opts.clientSecret ? { client_secret: opts.clientSecret } : {}),
+    };
+  }
+
+  const provider = {
+    get redirectUrl() {
+      return redirectUrl;
+    },
+    get clientMetadata() {
+      return {
+        redirect_uris: [new URL(redirectUrl)],
+        client_name: 'sunpeak Inspector',
+        token_endpoint_auth_method: opts.clientSecret ? 'client_secret_post' : 'none',
+        grant_types: ['authorization_code', 'refresh_token'],
+        response_types: ['code'],
+      };
+    },
+    // Return the state parameter so the SDK includes it in the authorization URL.
+    state() {
+      return _stateParam;
+    },
+    clientInformation() {
+      return _clientInfo;
+    },
+    saveClientInformation(info) {
+      _clientInfo = info;
+    },
+    tokens() {
+      return _tokens;
+    },
+    saveTokens(tokens) {
+      _tokens = tokens;
+    },
+    redirectToAuthorization(url) {
+      _authUrl = url;
+    },
+    saveCodeVerifier(verifier) {
+      _codeVerifier = verifier;
+    },
+    codeVerifier() {
+      return _codeVerifier;
+    },
+    // Cache discovery state so the second auth() call (token exchange)
+    // doesn't re-discover metadata from scratch.
+    saveDiscoveryState(state) {
+      _discoveryState = state;
+    },
+    discoveryState() {
+      return _discoveryState;
+    },
+  };
+
+  return {
+    provider,
+    getAuthUrl: () => _authUrl,
+    hasTokens: () => !!_tokens,
+    stateParam: _stateParam,
+  };
+}
+
+/**
  * Create an MCP client connection.
  * @param {string} serverArg - URL or command string
+ * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider }} [authConfig]
  * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport }>}
  */
-async function createMcpConnection(serverArg) {
+async function createMcpConnection(serverArg, authConfig) {
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
   const client = new Client({ name: 'sunpeak-inspector', version: '1.0.0' });
 
@@ -90,7 +174,18 @@ async function createMcpConnection(serverArg) {
     const { StreamableHTTPClientTransport } = await import(
       '@modelcontextprotocol/sdk/client/streamableHttp.js'
     );
-    const transport = new StreamableHTTPClientTransport(new URL(serverArg));
+
+    const transportOpts = {};
+
+    if (authConfig?.type === 'bearer' && authConfig.bearerToken) {
+      transportOpts.requestInit = {
+        headers: { Authorization: `Bearer ${authConfig.bearerToken}` },
+      };
+    } else if (authConfig?.type === 'oauth' && authConfig.authProvider) {
+      transportOpts.authProvider = authConfig.authProvider;
+    }
+
+    const transport = new StreamableHTTPClientTransport(new URL(serverArg), transportOpts);
     await client.connect(transport);
     return { client, transport };
   } else {
@@ -283,6 +378,16 @@ root.render(
  * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null }} [pluginOpts]
  */
 function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
+  // In-memory OAuth state keyed by server URL, persisted across reconnects.
+  /** @type {Map<string, { provider: any, getAuthUrl: () => URL | undefined, hasTokens: () => boolean, stateParam: string }>} */
+  const oauthProviders = new Map();
+  // Map OAuth state parameter → { serverUrl, oauthState } for CSRF-safe callback matching.
+  // Stores a direct reference to the provider that initiated the flow, so even if
+  // oauthProviders[serverUrl] is overwritten by a concurrent flow, the callback
+  // still completes with the correct provider (which holds the right codeVerifier
+  // and clientInformation).
+  /** @type {Map<string, { serverUrl: string, oauthState: any }>} */
+  const pendingOAuthFlows = new Map();
   return {
     name: 'sunpeak-inspect-endpoints',
     configureServer(server) {
@@ -421,8 +526,21 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           // Close old connection (best effort)
           try { await getClient().close(); } catch { /* ignore */ }
 
+          // Build auth config from request
+          const authConfig = parsed.auth;
+          let connectionAuth;
+          if (authConfig?.type === 'bearer' && authConfig.bearerToken) {
+            connectionAuth = { type: 'bearer', bearerToken: authConfig.bearerToken };
+          } else if (authConfig?.type === 'oauth') {
+            // Reuse existing OAuth provider if we have one for this server
+            const existing = oauthProviders.get(url);
+            if (existing?.hasTokens()) {
+              connectionAuth = { type: 'oauth', authProvider: existing.provider };
+            }
+          }
+
           // Create new connection
-          const newConnection = await createMcpConnection(url);
+          const newConnection = await createMcpConnection(url, connectionAuth);
           setClient(newConnection.client);
 
           // Discover tools and resources from the new server
@@ -431,6 +549,273 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           if (pluginOpts.simulationsDir) {
             mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
           }
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ status: 'ok', simulations }));
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+
+      // ── OAuth flow endpoints ──
+
+      // Start OAuth: discover metadata, register client, return authorization URL
+      server.middlewares.use('/__sunpeak/oauth/start', async (req, res) => {
+        if (req.method !== 'POST') {
+          res.writeHead(405);
+          res.end('Method not allowed');
+          return;
+        }
+
+        const body = await readRequestBody(req);
+        let parsed;
+        try { parsed = JSON.parse(body); } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          return;
+        }
+
+        const { url: serverUrl, scope, clientId, clientSecret } = parsed;
+        if (!serverUrl) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing url' }));
+          return;
+        }
+
+        try {
+          // Determine callback URL from the Vite server's address
+          const addr = server.httpServer?.address();
+          const port = typeof addr === 'object' && addr ? addr.port : 3000;
+          const callbackUrl = `http://localhost:${port}/__sunpeak/oauth/callback`;
+
+          // Check if we already have a working provider with tokens for this server.
+          // If so, try to connect directly before creating a fresh provider.
+          const existingState = oauthProviders.get(serverUrl);
+          if (existingState?.hasTokens()) {
+            try {
+              // Close old connection (best effort)
+              try { await getClient().close(); } catch { /* ignore */ }
+
+              const newConnection = await createMcpConnection(serverUrl, {
+                type: 'oauth',
+                authProvider: existingState.provider,
+              });
+              setClient(newConnection.client);
+              const simulations = await discoverSimulations(newConnection.client);
+              if (pluginOpts.simulationsDir) {
+                mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
+              }
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({ status: 'authorized', simulations }));
+              return;
+            } catch {
+              // Tokens may be expired, fall through to fresh auth below
+            }
+          }
+
+          // Always create a fresh provider for an explicit Authorize click.
+          // This ensures the user's current credentials (or lack thereof) are
+          // used, not stale ones from a previous attempt.
+          const oauthState = createInMemoryOAuthProvider(callbackUrl, { clientId, clientSecret });
+          oauthProviders.set(serverUrl, oauthState);
+
+          // Run the SDK auth flow — will call redirectToAuthorization() if needed
+          const { auth } = await import('@modelcontextprotocol/sdk/client/auth.js');
+          const result = await auth(oauthState.provider, {
+            serverUrl,
+            scope,
+          });
+
+          if (result === 'REDIRECT') {
+            const authUrl = oauthState.getAuthUrl();
+            if (!authUrl) {
+              throw new Error('OAuth flow requested redirect but no authorization URL was generated');
+            }
+            // Register the state parameter so the callback can find the right provider.
+            // Clean up any stale pending flows for the same server URL first
+            // (e.g., user closed the popup without completing the previous attempt).
+            for (const [key, val] of pendingOAuthFlows) {
+              if (val.serverUrl === serverUrl) pendingOAuthFlows.delete(key);
+            }
+            pendingOAuthFlows.set(oauthState.stateParam, { serverUrl, oauthState });
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'redirect', authUrl: authUrl.toString() }));
+          } else {
+            // AUTHORIZED — tokens were already available (shouldn't normally happen on first call)
+            try { await getClient().close(); } catch { /* ignore */ }
+            const newConnection = await createMcpConnection(serverUrl, {
+              type: 'oauth',
+              authProvider: oauthState.provider,
+            });
+            setClient(newConnection.client);
+            const simulations = await discoverSimulations(newConnection.client);
+            if (pluginOpts.simulationsDir) {
+              mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
+            }
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: 'authorized', simulations }));
+          }
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+
+      // OAuth callback: serves an HTML page that sends the code back to the inspector.
+      // The state parameter is validated server-side in /__sunpeak/oauth/complete.
+      server.middlewares.use('/__sunpeak/oauth/callback', async (req, res) => {
+        // Parse code + state from query params
+        const reqUrl = new URL(req.url, 'http://localhost');
+        const code = reqUrl.searchParams.get('code');
+        const state = reqUrl.searchParams.get('state');
+        const error = reqUrl.searchParams.get('error');
+        const errorDescription = reqUrl.searchParams.get('error_description');
+
+        // Escape values for safe embedding in <script> — JSON.stringify alone
+        // doesn't escape "</script>" sequences which would break out of the tag.
+        const safeJson = (val) => JSON.stringify(val).replace(/</g, '\\u003c');
+
+        const html = `<!DOCTYPE html>
+<html><head><title>OAuth Callback</title></head>
+<body>
+<script>
+(function() {
+  var code = ${safeJson(code)};
+  var state = ${safeJson(state)};
+  var error = ${safeJson(error)};
+  var errorDescription = ${safeJson(errorDescription)};
+
+  // Use our own origin as the postMessage targetOrigin to prevent leaking data cross-origin.
+  var origin = location.origin;
+
+  // Send a message to the opener window. Uses postMessage when window.opener is
+  // available, falls back to BroadcastChannel for OAuth providers that set
+  // Cross-Origin-Opener-Policy (COOP) which nullifies window.opener.
+  function notify(msg) {
+    if (window.opener) {
+      window.opener.postMessage(msg, origin);
+    } else if (typeof BroadcastChannel !== 'undefined') {
+      var bc = new BroadcastChannel('sunpeak-oauth');
+      bc.postMessage(msg);
+      bc.close();
+    }
+  }
+
+  if (error) {
+    notify({ type: 'sunpeak-oauth-callback', error: error, errorDescription: errorDescription });
+    document.body.textContent = 'Authorization failed: ' + (errorDescription || error);
+    setTimeout(function() { window.close(); }, 2000);
+    return;
+  }
+
+  if (!code) {
+    document.body.textContent = 'No authorization code received.';
+    return;
+  }
+
+  document.body.textContent = 'Completing authorization...';
+
+  // Post the code + state to the server to exchange for tokens.
+  // The state is validated server-side to prevent CSRF.
+  fetch('/__sunpeak/oauth/complete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ code: code, state: state })
+  })
+  .then(function(res) { return res.json(); })
+  .then(function(data) {
+    if (data.error) {
+      notify({ type: 'sunpeak-oauth-callback', error: data.error });
+      document.body.textContent = 'Authorization failed: ' + data.error;
+    } else {
+      notify({ type: 'sunpeak-oauth-callback', success: true, simulations: data.simulations });
+      document.body.textContent = 'Authorized! You can close this window.';
+    }
+    setTimeout(function() { window.close(); }, 1000);
+  })
+  .catch(function(err) {
+    notify({ type: 'sunpeak-oauth-callback', error: err.message });
+    document.body.textContent = 'Error: ' + err.message;
+  });
+})();
+</script>
+</body></html>`;
+
+        res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+        res.end(html);
+      });
+
+      // Complete OAuth: exchange authorization code for tokens and connect
+      server.middlewares.use('/__sunpeak/oauth/complete', async (req, res) => {
+        if (req.method !== 'POST') {
+          res.writeHead(405);
+          res.end('Method not allowed');
+          return;
+        }
+
+        const body = await readRequestBody(req);
+        let parsed;
+        try { parsed = JSON.parse(body); } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          return;
+        }
+
+        const { code, state } = parsed;
+        if (!code) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing authorization code' }));
+          return;
+        }
+        if (!state) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Missing state parameter' }));
+          return;
+        }
+
+        // Look up the provider via the state parameter (CSRF protection).
+        // Uses the direct provider reference from the pending flow, not the
+        // oauthProviders map, so concurrent flows for the same server URL
+        // don't clobber each other's codeVerifier/clientInformation.
+        const pending = pendingOAuthFlows.get(state);
+        pendingOAuthFlows.delete(state); // Consume — single-use
+
+        if (!pending) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid or expired OAuth state. Start the flow again.' }));
+          return;
+        }
+
+        const { serverUrl, oauthState } = pending;
+
+        try {
+          // Exchange the code for tokens
+          const { auth } = await import('@modelcontextprotocol/sdk/client/auth.js');
+          const result = await auth(oauthState.provider, {
+            serverUrl,
+            authorizationCode: code,
+          });
+
+          if (result !== 'AUTHORIZED') {
+            throw new Error('Token exchange did not result in authorization');
+          }
+
+          // Store the now-authorized provider so reconnects can reuse tokens.
+          oauthProviders.set(serverUrl, oauthState);
+
+          // Create MCP connection with the authorized provider
+          try { await getClient().close(); } catch { /* ignore */ }
+          const newConnection = await createMcpConnection(serverUrl, {
+            type: 'oauth',
+            authProvider: oauthState.provider,
+          });
+          setClient(newConnection.client);
+
+          const simulations = await discoverSimulations(newConnection.client);
+          if (pluginOpts.simulationsDir) {
+            mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
+          }
+
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ status: 'ok', simulations }));
         } catch (err) {
@@ -460,7 +845,10 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           }
 
           const mimeType = content.mimeType || 'text/html';
-          res.writeHead(200, { 'Content-Type': `${mimeType}; charset=utf-8` });
+          res.writeHead(200, {
+            'Content-Type': `${mimeType}; charset=utf-8`,
+            'X-Content-Type-Options': 'nosniff',
+          });
           if (typeof content.text === 'string') {
             res.end(content.text);
           } else if (content.blob) {

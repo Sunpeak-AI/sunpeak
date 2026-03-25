@@ -1,5 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 
+export type AuthType = 'none' | 'bearer' | 'oauth';
+
+export interface AuthConfig {
+  type: AuthType;
+  /** Bearer token (when type === 'bearer') */
+  bearerToken?: string;
+}
+
 export interface McpConnectionState {
   /** Current connection status */
   status: 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -10,7 +18,9 @@ export interface McpConnectionState {
   /** True after at least one user-initiated reconnect has been attempted (URL change). */
   hasReconnected: boolean;
   /** Connect to a new MCP server URL. Returns discovered simulations on success. */
-  reconnect: (url: string) => Promise<void>;
+  reconnect: (url: string, auth?: AuthConfig) => Promise<void>;
+  /** Update connection state after OAuth completes (bypasses /__sunpeak/connect). */
+  setConnected: (simulations?: Record<string, unknown>) => void;
 }
 
 /**
@@ -32,15 +42,19 @@ export function useMcpConnection(initialServerUrl: string | undefined): McpConne
   const [simulations, setSimulations] = useState<Record<string, unknown> | undefined>();
   const [hasReconnected, setHasReconnected] = useState(false);
 
-  const reconnect = useCallback(async (url: string) => {
+  const reconnect = useCallback(async (url: string, auth?: AuthConfig) => {
     setHasReconnected(true);
     setStatus('connecting');
     setError(undefined);
     try {
+      const body: Record<string, unknown> = { url };
+      if (auth && auth.type !== 'none') {
+        body.auth = auth;
+      }
       const res = await fetch('/__sunpeak/connect', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         let message = `Connection failed (${res.status})`;
@@ -61,6 +75,13 @@ export function useMcpConnection(initialServerUrl: string | undefined): McpConne
       setStatus('error');
       setSimulations(undefined);
     }
+  }, []);
+
+  const setConnected = useCallback((sims?: Record<string, unknown>) => {
+    setHasReconnected(true);
+    setStatus('connected');
+    setError(undefined);
+    setSimulations(sims);
   }, []);
 
   // Initial health check (mount-only). Verifies the connection is alive
@@ -88,5 +109,5 @@ export function useMcpConnection(initialServerUrl: string | undefined): McpConne
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Mount-only — URL changes are handled by the caller via reconnect()
 
-  return { status, error, simulations, hasReconnected, reconnect };
+  return { status, error, simulations, hasReconnected, reconnect, setConnected };
 }

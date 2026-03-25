@@ -6,7 +6,7 @@ import type {
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { useInspectorState } from './use-inspector-state';
-import { useMcpConnection } from './use-mcp-connection';
+import { useMcpConnection, type AuthType, type AuthConfig } from './use-mcp-connection';
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
 import {
@@ -222,6 +222,16 @@ export function Inspector({
 
   const state = useInspectorState({ simulations, defaultHost });
   const [serverUrl, setServerUrl] = React.useState(mcpServerUrl ?? '');
+  const [authType, setAuthType] = React.useState<AuthType>('none');
+  const [bearerToken, setBearerToken] = React.useState('');
+  const [oauthScopes, setOauthScopes] = React.useState('');
+  const [oauthClientId, setOauthClientId] = React.useState('');
+  const [oauthClientSecret, setOauthClientSecret] = React.useState('');
+  const [oauthStatus, setOauthStatus] = React.useState<
+    'none' | 'authorizing' | 'authorized' | 'error'
+  >('none');
+  const [oauthError, setOauthError] = React.useState<string | undefined>();
+
   // useMcpConnection does a mount-only health check for the initial URL.
   // URL changes are handled below via connection.reconnect().
   const connection = useMcpConnection(mcpServerUrl || undefined);
@@ -232,11 +242,23 @@ export function Inspector({
   const [hasRun, setHasRun] = React.useState(false);
   const [showCheck, setShowCheck] = React.useState(false);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
+  const oauthCleanupRef = React.useRef<(() => void) | undefined>(undefined);
 
   // Keep useInspectorState's selection in sync with our tool/simulation selection.
   React.useEffect(() => {
     state.setSelectedSimulationName(effectiveSimulationName);
   }, [effectiveSimulationName]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Build the current auth config for reconnects
+  const currentAuthConfig = React.useMemo<AuthConfig | undefined>(() => {
+    if (authType === 'bearer' && bearerToken) {
+      return { type: 'bearer', bearerToken };
+    }
+    if (authType === 'oauth') {
+      return { type: 'oauth' };
+    }
+    return undefined;
+  }, [authType, bearerToken]);
 
   // Handle URL changes: when the user edits the server URL, reconnect to the new server.
   // The hook's mount-only health check handles the initial URL — this effect handles changes.
@@ -246,9 +268,136 @@ export function Inspector({
     prevServerUrlRef.current = serverUrl;
     if (!urlChanged) return;
     if (serverUrl) {
-      connection.reconnect(serverUrl);
+      // Reset OAuth status when URL changes
+      setOauthStatus('none');
+      setOauthError(undefined);
+      if (authType === 'oauth') {
+        // Don't auto-connect for OAuth — user must click Authorize
+        return;
+      }
+      connection.reconnect(serverUrl, currentAuthConfig);
     }
-  }, [serverUrl, connection.reconnect]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [serverUrl, connection.reconnect, authType, currentAuthConfig]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // OAuth flow handler (disabled in demo mode)
+  const handleStartOAuth = React.useCallback(async () => {
+    if (!serverUrl || demoMode) return;
+    setOauthStatus('authorizing');
+    setOauthError(undefined);
+
+    // Open a blank popup immediately (synchronous, inside the click handler)
+    // so browsers treat it as a user-initiated action and don't block it.
+    // We'll navigate it to the auth URL after the server responds.
+    const popup = window.open(
+      'about:blank',
+      `sunpeak-oauth-${Date.now()}`,
+      'width=600,height=700,popup=yes'
+    );
+
+    try {
+      const res = await fetch('/__sunpeak/oauth/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: serverUrl,
+          scope: oauthScopes || undefined,
+          clientId: oauthClientId || undefined,
+          clientSecret: oauthClientSecret || undefined,
+        }),
+      });
+      if (!res.ok) {
+        let message = `OAuth start failed (${res.status})`;
+        try {
+          const json = await res.json();
+          if (json.error) message = json.error;
+        } catch {
+          // Response wasn't JSON
+        }
+        throw new Error(message);
+      }
+      const data = await res.json();
+
+      if (data.error) {
+        popup?.close();
+        setOauthError(data.error);
+        setOauthStatus('error');
+        return;
+      }
+
+      if (data.status === 'authorized') {
+        // Already authorized (tokens were cached)
+        popup?.close();
+        setOauthStatus('authorized');
+        connection.setConnected(data.simulations);
+        return;
+      }
+
+      if (data.status === 'redirect' && data.authUrl) {
+        // Navigate the pre-opened popup to the authorization URL.
+        // If the popup was blocked, show an error.
+        if (!popup || popup.closed) {
+          setOauthError('Popup was blocked. Allow popups for this site and try again.');
+          setOauthStatus('error');
+          return;
+        }
+        popup.location.href = data.authUrl;
+
+        // Listen for the popup's callback via two channels:
+        // 1. postMessage — works when window.opener is available
+        // 2. BroadcastChannel — fallback for OAuth providers that set
+        //    Cross-Origin-Opener-Policy (COOP) which nullifies window.opener
+        let checkClosed: ReturnType<typeof setInterval>;
+        let bc: BroadcastChannel | undefined;
+        const cleanup = () => {
+          clearInterval(checkClosed);
+          window.removeEventListener('message', handleMessage);
+          bc?.close();
+          oauthCleanupRef.current = undefined;
+        };
+        // Store cleanup so it runs on unmount if the popup is still open.
+        oauthCleanupRef.current?.();
+        oauthCleanupRef.current = cleanup;
+        const handleOAuthResult = (result: Record<string, unknown>) => {
+          cleanup();
+          if (result.error) {
+            setOauthError((result.errorDescription || result.error) as string);
+            setOauthStatus('error');
+          } else if (result.success) {
+            setOauthStatus('authorized');
+            connection.setConnected(result.simulations as Record<string, unknown> | undefined);
+          }
+        };
+        // Channel 1: postMessage (origin-verified)
+        const handleMessage = (event: MessageEvent) => {
+          if (event.origin !== window.location.origin) return;
+          if (event.data?.type !== 'sunpeak-oauth-callback') return;
+          handleOAuthResult(event.data);
+        };
+        window.addEventListener('message', handleMessage);
+        // Channel 2: BroadcastChannel (same-origin by spec, no extra check needed)
+        if (typeof BroadcastChannel !== 'undefined') {
+          bc = new BroadcastChannel('sunpeak-oauth');
+          bc.onmessage = (event) => {
+            if (event.data?.type !== 'sunpeak-oauth-callback') return;
+            handleOAuthResult(event.data);
+          };
+        }
+
+        // Clean up if popup is closed without completing
+        checkClosed = setInterval(() => {
+          if (popup?.closed) {
+            cleanup();
+            // Only reset if still authorizing (not yet completed)
+            setOauthStatus((prev) => (prev === 'authorizing' ? 'none' : prev));
+          }
+        }, 500);
+      }
+    } catch (err) {
+      popup?.close();
+      setOauthError(err instanceof Error ? err.message : String(err));
+      setOauthStatus('error');
+    }
+  }, [serverUrl, oauthScopes, oauthClientId, oauthClientSecret, demoMode, connection]);
 
   // When reconnecting to a new server succeeds, update simulations.
   // Only clear on error after a user-initiated reconnect (URL change), not on the
@@ -294,8 +443,14 @@ export function Inspector({
     setHasRun(false);
   }, [effectiveSimulationName]);
 
-  // Cleanup check timer
-  React.useEffect(() => () => clearTimeout(checkTimerRef.current), []);
+  // Cleanup timers and OAuth listeners on unmount
+  React.useEffect(
+    () => () => {
+      clearTimeout(checkTimerRef.current);
+      oauthCleanupRef.current?.();
+    },
+    []
+  );
 
   // Run button handler: call the real tool handler with current toolInput.
   // Uses currentSim (derived directly from simulations + effectiveSimulationName)
@@ -663,6 +818,103 @@ export function Inspector({
                 disabled={demoMode}
               />
             </SidebarControl>
+
+            {/* ── Authentication (hidden in demo mode) ── */}
+            {!demoMode && (
+              <SidebarCollapsibleControl
+                key={`auth-${authType === 'none' ? 'none' : 'active'}`}
+                label="Authentication"
+                defaultCollapsed={authType === 'none'}
+              >
+                <div className="space-y-1">
+                  <SidebarSelect
+                    value={authType}
+                    onChange={(value) => {
+                      const newType = value as AuthType;
+                      setAuthType(newType);
+                      setOauthStatus('none');
+                      setOauthError(undefined);
+                      // Reconnect without auth when switching to "none"
+                      if (newType === 'none' && serverUrl) {
+                        connection.reconnect(serverUrl);
+                      }
+                    }}
+                    options={[
+                      { value: 'none', label: 'None' },
+                      { value: 'bearer', label: 'Bearer Token' },
+                      { value: 'oauth', label: 'OAuth' },
+                    ]}
+                  />
+
+                  {authType === 'bearer' && (
+                    <SidebarInput
+                      type="password"
+                      value={bearerToken}
+                      onChange={(value) => {
+                        setBearerToken(value);
+                        // Reconnect with the new token when applied
+                        if (serverUrl && value) {
+                          connection.reconnect(serverUrl, { type: 'bearer', bearerToken: value });
+                        }
+                      }}
+                      applyOnBlur
+                      placeholder="Paste your token"
+                    />
+                  )}
+
+                  {authType === 'oauth' && (
+                    <div className="space-y-1">
+                      <SidebarInput
+                        value={oauthClientId}
+                        onChange={setOauthClientId}
+                        applyOnBlur
+                        placeholder="Client ID (optional)"
+                      />
+                      {oauthClientId && (
+                        <SidebarInput
+                          type="password"
+                          value={oauthClientSecret}
+                          onChange={setOauthClientSecret}
+                          applyOnBlur
+                          placeholder="Client Secret (optional)"
+                        />
+                      )}
+                      <SidebarInput
+                        value={oauthScopes}
+                        onChange={setOauthScopes}
+                        applyOnBlur
+                        placeholder="Scopes (optional)"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleStartOAuth}
+                        disabled={!serverUrl || oauthStatus === 'authorizing'}
+                        className="w-full h-7 text-xs rounded-md px-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{
+                          backgroundColor:
+                            oauthStatus === 'authorized' ? '#22c55e' : 'var(--color-text-primary)',
+                          color: 'var(--color-background-primary)',
+                        }}
+                      >
+                        {oauthStatus === 'authorizing'
+                          ? 'Authorizing\u2026'
+                          : oauthStatus === 'authorized'
+                            ? 'Authorized'
+                            : 'Authorize'}
+                      </button>
+                      {oauthError && (
+                        <div
+                          className="text-[9px]"
+                          style={{ color: 'var(--color-text-danger, #dc2626)' }}
+                        >
+                          {oauthError}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </SidebarCollapsibleControl>
+            )}
 
             {/* ── Prod Resources (framework mode only, hidden in demo mode) ── */}
             {!hideInspectorModes && !demoMode && (

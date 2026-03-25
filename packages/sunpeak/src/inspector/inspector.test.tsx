@@ -356,6 +356,107 @@ describe('Inspector', () => {
     });
   });
 
+  describe('Authentication', () => {
+    it('shows Authentication section when not in demo mode', () => {
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+
+      expect(screen.getByText('Authentication')).toBeInTheDocument();
+    });
+
+    it('hides Authentication section in demo mode', () => {
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} demoMode />);
+
+      expect(screen.queryByText('Authentication')).not.toBeInTheDocument();
+    });
+
+    it('shows auth type selector with None, Bearer Token, and OAuth options', async () => {
+      const user = userEvent.setup();
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+
+      // Expand the Authentication section (collapsed by default when authType is 'none')
+      await user.click(screen.getByText('Authentication'));
+
+      // Find the select inside the Authentication section
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      const options = Array.from(authSelect.options).map((o) => o.textContent);
+      expect(options).toContain('None');
+      expect(options).toContain('Bearer Token');
+      expect(options).toContain('OAuth');
+    });
+
+    it('shows password-masked input when Bearer Token is selected', async () => {
+      const user = userEvent.setup();
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+
+      // Expand auth section
+      await user.click(screen.getByText('Authentication'));
+
+      // Select Bearer Token — find the select inside the Authentication section
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      await user.selectOptions(authSelect, 'bearer');
+
+      // Should show a password input
+      const tokenInput = screen.getByPlaceholderText('Paste your token');
+      expect(tokenInput).toHaveAttribute('type', 'password');
+    });
+
+    it('shows Authorize button and Scopes input when OAuth is selected', async () => {
+      const user = userEvent.setup();
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+
+      await user.click(screen.getByText('Authentication'));
+
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      await user.selectOptions(authSelect, 'oauth');
+
+      expect(screen.getByRole('button', { name: 'Authorize' })).toBeInTheDocument();
+      expect(screen.getByPlaceholderText('Scopes (optional)')).toBeInTheDocument();
+    });
+
+    it('reconnects with bearer token when token is entered', async () => {
+      const user = userEvent.setup();
+
+      fetchSpy
+        .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
+        .mockResolvedValueOnce(new Response('{"status":"ok"}', { status: 200 }));
+
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          mcpServerUrl="http://localhost:8000/mcp"
+          onCallTool={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('connection-status')).toBeInTheDocument();
+      });
+
+      // Expand auth section and select Bearer Token
+      await user.click(screen.getByText('Authentication'));
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      await user.selectOptions(authSelect, 'bearer');
+
+      // Enter a token and blur to apply
+      const tokenInput = screen.getByPlaceholderText('Paste your token');
+      await user.type(tokenInput, 'secret-token');
+      await user.tab(); // blur
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          '/__sunpeak/connect',
+          expect.objectContaining({
+            body: expect.stringContaining('"bearerToken":"secret-token"'),
+          })
+        );
+      });
+    });
+  });
+
   describe('MCP Server URL', () => {
     it('always shows MCP Server URL input', () => {
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);

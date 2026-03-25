@@ -346,7 +346,7 @@ interface SidebarInputProps {
   /** When provided, onChange is only called on blur instead of on every keystroke. */
   applyOnBlur?: boolean;
   placeholder?: string;
-  type?: 'text' | 'number';
+  type?: 'text' | 'number' | 'password';
   disabled?: boolean;
 }
 

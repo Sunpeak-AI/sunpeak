@@ -79,6 +79,73 @@ describe('useMcpConnection', () => {
     );
   });
 
+  it('reconnect sends auth config in the request body', async () => {
+    // Initial health check succeeds
+    fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
+
+    const { result } = renderHook(() => useMcpConnection('http://localhost:8000/mcp'));
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    // Reconnect with bearer auth
+    fetchSpy.mockResolvedValueOnce(new Response('{"status":"ok"}', { status: 200 }));
+
+    await act(() =>
+      result.current.reconnect('http://localhost:9000/mcp', {
+        type: 'bearer',
+        bearerToken: 'my-token',
+      })
+    );
+
+    expect(result.current.status).toBe('connected');
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/__sunpeak/connect',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          url: 'http://localhost:9000/mcp',
+          auth: { type: 'bearer', bearerToken: 'my-token' },
+        }),
+      })
+    );
+  });
+
+  it('reconnect omits auth config when type is none', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
+
+    const { result } = renderHook(() => useMcpConnection('http://localhost:8000/mcp'));
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    fetchSpy.mockResolvedValueOnce(new Response('{"status":"ok"}', { status: 200 }));
+
+    await act(() => result.current.reconnect('http://localhost:9000/mcp', { type: 'none' }));
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      '/__sunpeak/connect',
+      expect.objectContaining({
+        body: JSON.stringify({ url: 'http://localhost:9000/mcp' }),
+      })
+    );
+  });
+
+  it('setConnected transitions to connected with simulations', async () => {
+    const { result } = renderHook(() => useMcpConnection(undefined));
+    expect(result.current.status).toBe('disconnected');
+
+    const sims = { 'my-tool': { name: 'my-tool' } };
+    act(() => result.current.setConnected(sims));
+
+    expect(result.current.status).toBe('connected');
+    expect(result.current.simulations).toBe(sims);
+    expect(result.current.hasReconnected).toBe(true);
+    expect(result.current.error).toBeUndefined();
+  });
+
   it('reconnect transitions to error on failure', async () => {
     // Initial health check succeeds
     fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
