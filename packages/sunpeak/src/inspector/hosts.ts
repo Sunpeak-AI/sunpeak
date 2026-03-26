@@ -80,6 +80,18 @@ export interface HostShell {
    * Values should use CSS light-dark() for automatic theme adaptation.
    */
   pageStyles?: Record<string, string>;
+  /**
+   * Display modes this host supports.
+   * The sidebar display mode picker only shows modes in this list.
+   * Defaults to ['inline', 'pip', 'fullscreen'] if not specified.
+   */
+  availableDisplayModes?: McpUiDisplayMode[];
+  /**
+   * CSS containing @font-face rules for the host's custom fonts.
+   * Injected into the inspector page when this host is active so the
+   * conversation chrome can use the same font as the real host.
+   */
+  fontCss?: string;
 }
 
 // ── Host Shell Registry ──────────────────────────────────────────

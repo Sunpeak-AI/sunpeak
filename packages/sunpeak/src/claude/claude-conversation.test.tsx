@@ -42,7 +42,7 @@ describe('ClaudeConversation', () => {
 
     expect(screen.getByTestId('fullscreen-content')).toBeInTheDocument();
     expect(container.querySelector('footer')).toBeInTheDocument();
-    expect(screen.getAllByPlaceholderText('Reply to sunpeak...').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Reply to sunpeak...').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Back')).toBeInTheDocument();
   });
 

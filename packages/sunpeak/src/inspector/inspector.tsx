@@ -340,7 +340,7 @@ export function Inspector({
   const registeredHosts = getRegisteredHosts();
   const ShellConversation = activeShell?.Conversation;
 
-  // Merge host style variables and userAgent into the hostContext.
+  // Merge host style variables, userAgent, and availableDisplayModes into hostContext.
   const hostContext = React.useMemo(() => {
     const styleVars = activeShell?.styleVariables;
     const userAgent = activeShell?.userAgent;
@@ -351,11 +351,25 @@ export function Inspector({
     if (userAgent) {
       (ctx as McpUiHostContext).userAgent = userAgent;
     }
+    if (activeShell?.availableDisplayModes) {
+      (ctx as McpUiHostContext).availableDisplayModes = activeShell.availableDisplayModes;
+    }
     return ctx as McpUiHostContext;
   }, [state.hostContext, activeShell]);
 
-  // Apply host style variables to the document root.
+  // Reset display mode to inline if the active host doesn't support it.
+  const { displayMode, setDisplayMode } = state;
   React.useEffect(() => {
+    const modes = activeShell?.availableDisplayModes;
+    if (modes && !modes.includes(displayMode)) {
+      setDisplayMode('inline');
+    }
+  }, [activeShell, displayMode, setDisplayMode]);
+
+  // Apply host style variables to the document root.
+  // Uses useLayoutEffect so variables are set BEFORE paint, preventing a flash
+  // of stale colors when switching hosts and then toggling theme.
+  React.useLayoutEffect(() => {
     const vars = activeShell?.styleVariables;
     if (!vars) return;
     const root = document.documentElement;
@@ -365,8 +379,9 @@ export function Inspector({
   }, [activeShell]);
 
   // Apply host page styles. Cleans up old properties when switching hosts.
+  // Uses useLayoutEffect to stay in sync with style variables above.
   const prevPageStyleKeysRef = React.useRef<string[]>([]);
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const root = document.documentElement;
     for (const key of prevPageStyleKeysRef.current) {
       root.style.removeProperty(key);
@@ -381,6 +396,26 @@ export function Inspector({
       prevPageStyleKeysRef.current = keys;
     } else {
       prevPageStyleKeysRef.current = [];
+    }
+  }, [activeShell]);
+
+  // Inject host font CSS (@font-face rules) so the conversation chrome
+  // uses the same font as the real host (e.g., Anthropic Sans for Claude).
+  React.useLayoutEffect(() => {
+    const fontCss = activeShell?.fontCss;
+    const id = 'sunpeak-host-fonts';
+    const existing = document.getElementById(id);
+    if (!fontCss) {
+      existing?.remove();
+      return;
+    }
+    if (existing) {
+      existing.textContent = fontCss;
+    } else {
+      const style = document.createElement('style');
+      style.id = id;
+      style.textContent = fontCss;
+      document.head.appendChild(style);
     }
   }, [activeShell]);
 
@@ -838,7 +873,11 @@ export function Inspector({
                       { value: 'inline', label: 'Inline' },
                       { value: 'pip', label: 'PiP' },
                       { value: 'fullscreen', label: 'Full' },
-                    ]}
+                    ].filter(
+                      (opt) =>
+                        !activeShell?.availableDisplayModes ||
+                        activeShell.availableDisplayModes.includes(opt.value as McpUiDisplayMode)
+                    )}
                   />
                 </SidebarControl>
 

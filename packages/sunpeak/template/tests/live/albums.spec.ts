@@ -25,6 +25,16 @@ test('albums tool renders photo grid with correct styles', async ({ live }) => {
   });
   expect(containerStyles.overflow).toBe('hidden');
 
+  // Background: the app's root should have a resolved background color
+  // (from --color-background-primary or the CSS Canvas system color),
+  // not transparent. A transparent root would show the host container
+  // rather than the app's own styled background.
+  const rootBg = await app
+    .locator(':root')
+    .evaluate((el) => window.getComputedStyle(el).backgroundColor);
+  expect(rootBg).not.toBe('rgba(0, 0, 0, 0)');
+  expect(rootBg).toMatch(/^rgb/);
+
   // Theme: text color has appropriate luminance in light mode
   const textColor = await albumCard.evaluate((el) => window.getComputedStyle(el).color);
   assertTextContrast(textColor);

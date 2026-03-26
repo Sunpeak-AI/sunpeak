@@ -42,7 +42,7 @@ export function generateSandboxProxyHtml(platformScript?: string): string {
 <head>
 <meta name="color-scheme" content="${colorScheme}" />
 <style>
-html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
 iframe { border: none; width: 100%; height: 100%; display: block; }
 </style>
 </head>
@@ -103,6 +103,16 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
           }
         }, 150);
         return;
+      }
+
+      // Sync color-scheme on the inner iframe element when theme changes.
+      // This ensures prefers-color-scheme resolves correctly inside the app.
+      // Important: do NOT set color-scheme on the proxy's own document —
+      // changing it from the initial 'dark' causes Chrome to re-evaluate
+      // the CSS Canvas as opaque white, blocking the host's conversation
+      // background from showing through the transparent proxy.
+      if (data.method === 'ui/notifications/host-context-changed' && data.params && data.params.theme) {
+        if (innerFrame) innerFrame.style.colorScheme = data.params.theme;
       }
 
       // Forward all other messages to the inner iframe

@@ -105,6 +105,8 @@ export function ClaudeConversation({
         transform: 'translate(0)',
         backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
         color: 'var(--color-text-primary)',
+        fontFamily: 'var(--font-sans)',
+        WebkitFontSmoothing: 'antialiased',
       }}
     >
       {/* ─── Fullscreen chrome overlay ─── */}
@@ -139,18 +141,24 @@ export function ClaudeConversation({
             }}
           >
             <div className="max-w-[48rem] mx-auto">
-              <input
-                type="text"
-                name="userInput"
-                disabled
-                placeholder="Reply to sunpeak..."
-                className="w-full rounded-xl px-4 py-2.5 text-sm"
+              <div
+                className="relative rounded-[20px] px-4 py-2.5"
                 style={{
                   backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
-                  border: '1px solid var(--color-border-primary)',
-                  color: 'var(--color-text-primary)',
+                  boxShadow:
+                    '0 4px 20px rgba(0, 0, 0, 0.035), 0 0 0 0.5px var(--color-border-tertiary)',
                 }}
-              />
+              >
+                <div
+                  className="w-full text-base outline-none opacity-50"
+                  style={{
+                    lineHeight: '1.4',
+                    color: 'var(--color-text-tertiary)',
+                  }}
+                >
+                  Reply to sunpeak...
+                </div>
+              </div>
             </div>
           </footer>
         </div>
@@ -182,8 +190,12 @@ export function ClaudeConversation({
               <div className="px-4 py-4">
                 <div className="max-w-[48rem] mx-auto flex justify-end">
                   <div
-                    className="inline-block rounded-2xl px-4 py-2.5 text-sm max-w-[85%]"
+                    className="inline-flex rounded-xl max-w-[85%] break-words"
                     style={{
+                      padding: '10px 16px',
+                      lineHeight: '22.4px',
+                      fontSize: '16px',
+                      fontWeight: 430,
                       backgroundColor:
                         'var(--sim-bg-user-bubble, var(--color-background-tertiary))',
                     }}
@@ -292,18 +304,23 @@ export function ClaudeConversation({
             }}
           >
             <div className="max-w-[48rem] mx-auto px-4 py-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  name="userInput"
-                  disabled
-                  placeholder="Reply to sunpeak..."
-                  className="w-full rounded-xl px-4 py-2.5 text-sm"
+              <div
+                className="relative rounded-[20px] px-4 py-2.5"
+                style={{
+                  backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
+                  boxShadow:
+                    '0 4px 20px rgba(0, 0, 0, 0.035), 0 0 0 0.5px var(--color-border-tertiary)',
+                }}
+              >
+                <div
+                  className="w-full text-base outline-none opacity-50"
                   style={{
-                    backgroundColor: 'var(--sim-bg-reply-input, var(--color-background-secondary))',
-                    border: '1px solid var(--color-border-primary)',
+                    lineHeight: '1.4',
+                    color: 'var(--color-text-tertiary)',
                   }}
-                />
+                >
+                  Reply to sunpeak...
+                </div>
               </div>
             </div>
           </footer>

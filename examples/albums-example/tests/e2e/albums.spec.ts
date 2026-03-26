@@ -222,21 +222,25 @@ for (const host of hosts) {
         });
       });
 
-      test('should render content after switching from inline to pip', async ({ page }) => {
-        // Start in inline mode
-        await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+      // Claude doesn't support PiP — only run this test for hosts that have the button.
+      (host === 'claude' ? test.skip : test)(
+        'should render content after switching from inline to pip',
+        async ({ page }) => {
+          // Start in inline mode
+          await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
-        const iframe = page.frameLocator('iframe').frameLocator('iframe');
-        await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
+          const iframe = page.frameLocator('iframe').frameLocator('iframe');
+          await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-        // Switch to PiP via sidebar
-        await page.locator('button:has-text("PiP")').click();
+          // Switch to PiP via sidebar
+          await page.locator('button:has-text("PiP")').click();
 
-        // Content should still be visible after the mode transition
-        await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible({
-          timeout: 5000,
-        });
-      });
+          // Content should still be visible after the mode transition
+          await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible({
+            timeout: 5000,
+          });
+        }
+      );
     });
   });
 }
