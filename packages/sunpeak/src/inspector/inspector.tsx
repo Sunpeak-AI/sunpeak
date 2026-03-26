@@ -238,6 +238,8 @@ export function Inspector({
   const [prodResources, setProdResources] = React.useState(
     state.urlProdResources ?? defaultProdResources
   );
+  const showSidebar = state.urlSidebar !== false;
+  const showDevOverlay = state.urlDevOverlay !== false;
   const [isRunning, setIsRunning] = React.useState(false);
   const [hasRun, setHasRun] = React.useState(false);
   const [showCheck, setShowCheck] = React.useState(false);
@@ -438,7 +440,7 @@ export function Inspector({
     setToolResultError,
   ]);
 
-  // Reset hasRun when tool or simulation changes.
+  // Reset hasRun and timing when tool or simulation changes.
   React.useEffect(() => {
     setHasRun(false);
   }, [effectiveSimulationName]);
@@ -462,20 +464,47 @@ export function Inspector({
     if (!caller || !sim) return;
     const toolName = sim.tool.name;
     setIsRunning(true);
+    const startTime = performance.now();
     try {
       const result = await caller({ name: toolName, arguments: state.toolInput });
-      state.setToolResult(result);
-      state.setToolResultJson(JSON.stringify(result, null, 2));
+      const clientMs = Math.round((performance.now() - startTime) * 10) / 10;
+      // Prefer server-reported timing (_meta._sunpeak.requestTimeMs) when available,
+      // since it measures actual handler execution. Fall back to client round-trip
+      // for non-sunpeak servers that don't include server-side timing.
+      const resultMeta = (result as Record<string, unknown>)?._meta as
+        | Record<string, unknown>
+        | undefined;
+      const serverMs = (resultMeta?._sunpeak as Record<string, unknown> | undefined)?.requestTimeMs;
+      const durationMs = typeof serverMs === 'number' ? serverMs : clientMs;
+      const resultWithTiming = {
+        ...result,
+        _meta: { ...resultMeta, _sunpeak: { requestTimeMs: durationMs } },
+      };
+      state.setToolResult(resultWithTiming);
+      // Strip _sunpeak timing from the display JSON so the textarea shows the
+      // clean result the app would receive. The server may include _meta._sunpeak.
+      const displayResult = resultMeta?._sunpeak
+        ? (() => {
+            const { _sunpeak: _, ...cleanMeta } = resultMeta;
+            const clean = { ...result } as Record<string, unknown>;
+            clean._meta = Object.keys(cleanMeta).length > 0 ? cleanMeta : undefined;
+            if (clean._meta === undefined) delete clean._meta;
+            return clean;
+          })()
+        : result;
+      state.setToolResultJson(JSON.stringify(displayResult, null, 2));
       state.setToolResultError('');
       setHasRun(true);
       setShowCheck(true);
       clearTimeout(checkTimerRef.current);
       checkTimerRef.current = setTimeout(() => setShowCheck(false), 2000);
     } catch (err) {
+      const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
       const message = err instanceof Error ? err.message : String(err);
       state.setToolResult({
         content: [{ type: 'text', text: `Error: ${message}` }],
         isError: true,
+        _meta: { _sunpeak: { requestTimeMs: durationMs } },
       });
       state.setToolResultJson(
         JSON.stringify(
@@ -661,8 +690,13 @@ export function Inspector({
     };
   }, [prodResourcesPath]);
 
-  const effectiveResourceUrl =
+  const baseResourceUrl =
     (prodResourcesPath && prodResourcesReady ? prodResourcesPath : undefined) ?? state.resourceUrl;
+  // Append devOverlay=false to the resource URL so the server can strip the overlay script
+  const effectiveResourceUrl =
+    baseResourceUrl && !showDevOverlay
+      ? `${baseResourceUrl}${baseResourceUrl.includes('?') ? '&' : '?'}devOverlay=false`
+      : baseResourceUrl;
   const prodResourcesLoading = !!prodResourcesPath && !prodResourcesReady;
 
   // ── Content rendering ──
@@ -812,6 +846,32 @@ export function Inspector({
         Run
       </button>
     ) : undefined;
+
+  const conversationContent = ShellConversation ? (
+    <ShellConversation
+      screenWidth={state.screenWidth}
+      displayMode={state.displayMode}
+      platform={state.platform}
+      onRequestDisplayMode={state.handleDisplayModeChange}
+      appName={appName}
+      appIcon={appIcon}
+      userMessage={userMessage}
+      onContentWidthChange={state.handleContentWidthChange}
+      headerAction={runButton}
+    >
+      {content}
+    </ShellConversation>
+  ) : (
+    content
+  );
+
+  if (!showSidebar) {
+    return (
+      <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
+        <div className="flex h-screen w-screen">{conversationContent}</div>
+      </ThemeProvider>
+    );
+  }
 
   return (
     <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
@@ -1429,23 +1489,7 @@ export function Inspector({
           </div>
         }
       >
-        {ShellConversation ? (
-          <ShellConversation
-            screenWidth={state.screenWidth}
-            displayMode={state.displayMode}
-            platform={state.platform}
-            onRequestDisplayMode={state.handleDisplayModeChange}
-            appName={appName}
-            appIcon={appIcon}
-            userMessage={userMessage}
-            onContentWidthChange={state.handleContentWidthChange}
-            headerAction={runButton}
-          >
-            {content}
-          </ShellConversation>
-        ) : (
-          content
-        )}
+        {conversationContent}
       </SimpleSidebar>
     </ThemeProvider>
   );

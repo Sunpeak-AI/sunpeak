@@ -173,6 +173,27 @@ Two orthogonal flags that toggle real tool handlers and production resource bund
 
 **Implementation**: Tool calls flow through MCP protocol to the local server (no Vite middleware). `--prod-tools` sets the initial state of the Prod Tools sidebar checkbox. `--prod-resources` runs `sunpeak build` before starting and sets the initial Prod Resources checkbox state. Both are runtime-toggleable in the sidebar. The `Inspector` component accepts `mcpServerUrl`, `defaultProdResources`, `hideInspectorModes`, `demoMode`, and `sandboxUrl` props.
 
+### Dev Overlay
+
+In development mode (`viteMode`), a small overlay appears in the bottom-right corner of every resource showing:
+- **Resource:** HH:MM:SS timestamp when the resource HTML was generated (detects stale cached resources in ChatGPT)
+- **Tool:** millisecond duration of the most recent tool call
+
+The overlay is injected at `readResource` time in `getDevOverlayScript()` (server.ts). Both values are baked into the HTML: `servedAt` from `Date.now()`, `toolMs` from the module-level `lastToolTimingMs` (set by tool handlers on completion). For inspector re-runs (same iframe, new tool call), a PostMessage listener updates the timing via `_meta._sunpeak.requestTimeMs`.
+
+The overlay is **never** present in production builds (only injected when `viteMode` is true). It can be disabled via:
+- `devOverlay=false` URL param on the inspector (strips via regex in `/__sunpeak/read-resource`)
+- `SUNPEAK_DEV_OVERLAY=false` environment variable (disables server-side injection)
+- `defineLiveConfig({ devOverlay: false })` in live test configs (passes the env var to the dev server)
+
+### Inspector URL Parameters
+
+The inspector reads `sidebar` and `devOverlay` URL params (parsed in `use-inspector-state.ts`):
+- `sidebar=false` — hides the sidebar, renders only conversation content (useful for headless testing or embedding)
+- `devOverlay=false` — strips the dev overlay from resource HTML (for e2e tests where the overlay could interfere with assertions)
+
+Template e2e tests import `createInspectorUrl` from `tests/e2e/helpers.ts` which wraps the original with `devOverlay: false` as default. The `dev-overlay.spec.ts` test files (excluded from `sunpeak new` via `dev-` prefix filter in `new.mjs`) test the overlay explicitly.
+
 ## Documentation (`docs/`)
 
 Docs are built with [Mintlify](https://mintlify.com). Structure:

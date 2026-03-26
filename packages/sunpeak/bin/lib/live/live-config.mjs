@@ -32,6 +32,7 @@ const GLOBAL_SETUP_PATH = join(__dirname, 'global-setup.mjs');
  * @param {string} [options.timezoneId] - Timezone (e.g., 'America/New_York')
  * @param {{ latitude: number, longitude: number }} [options.geolocation] - Geolocation coordinates
  * @param {string[]} [options.permissions] - Browser permissions to grant (e.g., ['geolocation'])
+ * @param {boolean} [options.devOverlay=true] - Show the dev overlay (resource timestamp + tool timing) in resources
  * @param {Object} [options.use] - Additional Playwright `use` options (merged with defaults)
  */
 export function createLiveConfig(hostOptions, options = {}) {
@@ -40,6 +41,7 @@ export function createLiveConfig(hostOptions, options = {}) {
     testDir = '.',
     authDir,
     vitePort = getPortSync(3456),
+    devOverlay = true,
     colorScheme,
     viewport,
     locale,
@@ -89,7 +91,7 @@ export function createLiveConfig(hostOptions, options = {}) {
       },
     ],
     webServer: {
-      command: `SUNPEAK_LIVE_TEST=1 SUNPEAK_SANDBOX_PORT=${getPortSync(24680)} pnpm dev -- --prod-resources --port ${vitePort}`,
+      command: `SUNPEAK_LIVE_TEST=1 SUNPEAK_SANDBOX_PORT=${getPortSync(24680)}${devOverlay ? '' : ' SUNPEAK_DEV_OVERLAY=false'} pnpm dev -- --prod-resources --port ${vitePort}`,
       url: `http://localhost:${vitePort}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

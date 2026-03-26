@@ -23,6 +23,9 @@ export interface LiveConfigOptions {
   /** Browser permissions to grant (e.g., ['geolocation']). */
   permissions?: string[];
 
+  /** Show the dev overlay (resource timestamp + tool timing) in resources. Default: true */
+  devOverlay?: boolean;
+
   /** Additional Playwright `use` options, merged with defaults. */
   use?: Record<string, unknown>;
 }

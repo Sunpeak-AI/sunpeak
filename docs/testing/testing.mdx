@@ -71,6 +71,10 @@ test('should render in fullscreen mode', async ({ page }) => {
 
 The `createInspectorUrl` function accepts parameters for configuring host, theme, display mode, device type, safe area insets, and more. See the [Inspector API Reference](/api-reference/simulations/inspector#createinspectorurl) for the complete list.
 
+<Tip>
+Your project's `tests/e2e/helpers.ts` wraps `createInspectorUrl` with `devOverlay: false` so the dev timing overlay doesn't interfere with element assertions. Import from `./helpers` instead of `sunpeak/chatgpt` in your e2e tests.
+</Tip>
+
 ### Testing Backend-Only Tools
 
 If your resource calls backend tools via `useCallServerTool`, define mock responses using the `serverTools` field in the simulation JSON. The inspector resolves these mocks based on the tool call arguments:

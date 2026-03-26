@@ -535,9 +535,11 @@ These variables use CSS `light-dark()` so they respond to theme changes automati
 
 **Critical**: all resource content renders inside an `<iframe>`. Always use `page.frameLocator('iframe')` for resource elements. Only the inspector chrome (`header`, `#root`) uses `page.locator()` directly.
 
+Import `createInspectorUrl` from `./helpers` (not `sunpeak/chatgpt` directly) so the dev overlay is hidden by default and doesn't interfere with element assertions.
+
 ```typescript
 import { test, expect } from '@playwright/test';
-import { createInspectorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from './helpers';
 
 test('renders weather card', async ({ page }) => {
   await page.goto(createInspectorUrl({ simulation: 'show-weather', theme: 'light' }));

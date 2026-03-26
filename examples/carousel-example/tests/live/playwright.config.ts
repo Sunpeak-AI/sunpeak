@@ -1,3 +1,3 @@
 import { defineLiveConfig } from 'sunpeak/test/config';
 
-export default defineLiveConfig();
+export default defineLiveConfig({ devOverlay: false });

@@ -175,6 +175,11 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
         return false;
       }
 
+      // Skip framework-internal test files (dev overlay tests are for sunpeak development, not user projects)
+      if ((src.includes('/tests/e2e/') || src.includes('/tests/live/')) && name.startsWith('dev-')) {
+        return false;
+      }
+
       // Skip deps.json files (build-time metadata, not needed in scaffolded projects)
       if (name === 'deps.json' && src.includes('/resources/')) {
         return false;

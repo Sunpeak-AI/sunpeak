@@ -20,6 +20,7 @@ const { join, resolve, dirname } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
 import { getPort } from '../lib/get-port.mjs';
 import { startSandboxServer } from '../lib/sandbox-server.mjs';
+import { getDevOverlayScript } from '../lib/dev-overlay.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SUNPEAK_PKG_DIR = resolve(__dirname, '..', '..');
@@ -850,7 +851,18 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             'X-Content-Type-Options': 'nosniff',
           });
           if (typeof content.text === 'string') {
-            res.end(content.text);
+            const stripOverlay = url.searchParams.get('devOverlay') === 'false';
+            let text = content.text;
+            if (stripOverlay) {
+              // Strip dev overlay (e.g., for e2e tests)
+              text = text.replace(/<script>(?:(?!<\/script>)[\s\S])*?__sunpeak-dev-timing(?:(?!<\/script>)[\s\S])*?<\/script>/g, '');
+            } else if (process.env.SUNPEAK_DEV_OVERLAY !== 'false' && !text.includes('__sunpeak-dev-timing') && text.includes('</body>')) {
+              // Inject dev overlay into resources from non-sunpeak servers.
+              // The overlay shows resource served timestamp and tool timing (from
+              // _meta._sunpeak.requestTimeMs on the PostMessage tool-result notification).
+              text = text.replace('</body>', `${getDevOverlayScript(Date.now(), null)}\n</body>`);
+            }
+            res.end(text);
           } else if (content.blob) {
             res.end(Buffer.from(content.blob, 'base64'));
           } else {

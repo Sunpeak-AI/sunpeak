@@ -412,6 +412,7 @@ if (!Component) {
 if (import.meta.hot) {
   import.meta.hot.accept();
 }
+
 `;
       }
     },
@@ -547,11 +548,14 @@ if (import.meta.hot) {
         if (typeof mod.default !== 'function') {
           throw new Error(`Tool "${name}" has no default export handler`);
         }
+        const startTime = performance.now();
         const result = await mod.default(args, {});
+        const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
         if (typeof result === 'string') {
-          return { content: [{ type: 'text', text: result }] };
+          return { content: [{ type: 'text', text: result }], _meta: { _sunpeak: { requestTimeMs: durationMs } } };
         }
-        return result;
+        const typed = result ?? {};
+        return { ...typed, _meta: { ...typed._meta, _sunpeak: { requestTimeMs: durationMs } } };
       }
       throw new Error(`Tool "${name}" not found`);
     },

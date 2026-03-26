@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createInspectorUrl } from 'sunpeak/chatgpt';
+import { createInspectorUrl } from './helpers';
 
 const hosts = ['chatgpt', 'claude'] as const;
 
