@@ -813,6 +813,58 @@ describe('Inspector', () => {
     });
   });
 
+  describe('Run button timing', () => {
+    it('does not leak _sunpeak timing into the tool result JSON textarea', async () => {
+      const user = userEvent.setup();
+      const onCallTool = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'timed result' }],
+      });
+
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={onCallTool} />);
+
+      await user.click(screen.getByRole('button', { name: /run/i }));
+
+      await waitFor(() => {
+        const textarea = screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement;
+        // The JSON textarea shows the clean result (no _sunpeak timing)
+        expect(textarea.value).toContain('timed result');
+        expect(textarea.value).not.toContain('requestTimeMs');
+      });
+    });
+
+    it('shows tool result even when the handler throws', async () => {
+      const user = userEvent.setup();
+      const onCallTool = vi.fn().mockRejectedValue(new Error('boom'));
+
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={onCallTool} />);
+
+      await user.click(screen.getByRole('button', { name: /run/i }));
+
+      await waitFor(() => {
+        const textarea = screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement;
+        expect(textarea.value).toContain('Error: boom');
+      });
+    });
+
+    it('preserves existing _meta from tool result in the JSON textarea', async () => {
+      const user = userEvent.setup();
+      const onCallTool = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'ok' }],
+        _meta: { existing: 'value' },
+      });
+
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={onCallTool} />);
+
+      await user.click(screen.getByRole('button', { name: /run/i }));
+
+      // The result textarea shows the original _meta (without _sunpeak)
+      await waitFor(() => {
+        const textarea = screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement;
+        expect(textarea.value).toContain('"existing"');
+      });
+    });
+  });
+
   // ── Story 2: Inspect-only user ──
   describe('Inspect-only: exploring external servers', () => {
     it('starts empty, then populates after reconnect', async () => {

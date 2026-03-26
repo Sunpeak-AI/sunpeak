@@ -124,6 +124,21 @@ export interface InspectorUrlParams {
    * Enable Prod Resources mode (production dist/ bundles instead of HMR).
    */
   prodResources?: boolean;
+
+  /**
+   * Show the inspector sidebar. Useful for headless testing or embedding
+   * the inspector as a pure resource viewer.
+   * @default true
+   */
+  sidebar?: boolean;
+
+  /**
+   * Show the dev overlay (resource timestamp + tool timing) inside resources.
+   * Set to false to hide it during e2e tests so it doesn't interfere with
+   * element assertions.
+   * @default true
+   */
+  devOverlay?: boolean;
 }
 
 /**
@@ -195,6 +210,12 @@ export function createInspectorUrl(params: InspectorUrlParams, basePath = '/'): 
   }
   if (params.prodResources !== undefined) {
     searchParams.set('prodResources', String(params.prodResources));
+  }
+  if (params.sidebar !== undefined) {
+    searchParams.set('sidebar', String(params.sidebar));
+  }
+  if (params.devOverlay !== undefined) {
+    searchParams.set('devOverlay', String(params.devOverlay));
   }
 
   const queryString = searchParams.toString();

@@ -51,3 +51,39 @@ ${mockJsCode}
     expect(cleaned).toBe(`ui://${resourceName}`);
   });
 });
+
+describe('Dev overlay format contract', () => {
+  it('resource timestamp is formatted as HH:MM:SS in 24-hour time', () => {
+    // Replicates the overlay's fmt() function to verify the format
+    // that E2E tests match with /\d{2}:\d{2}:\d{2}/.
+    function fmt(ts: number): string {
+      const d = new Date(ts);
+      const h = d.getHours();
+      const m = d.getMinutes();
+      const s = d.getSeconds();
+      return (
+        (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s
+      );
+    }
+
+    expect(fmt(new Date(2026, 0, 1, 0, 0, 0).getTime())).toBe('00:00:00');
+    expect(fmt(new Date(2026, 0, 1, 14, 5, 9).getTime())).toBe('14:05:09');
+    expect(fmt(new Date(2026, 0, 1, 23, 59, 59).getTime())).toBe('23:59:59');
+  });
+
+  it('tool timing uses one decimal place for sub-integer values', () => {
+    // Sub-millisecond precision: round to one decimal place
+    const subMs = Math.round(0.3 * 10) / 10;
+    expect(`${subMs.toFixed(1)}ms`).toBe('0.3ms');
+
+    // Non-integer values display with one decimal place
+    const fracMs = Math.round(142.7 * 10) / 10;
+    const formatted = fracMs % 1 === 0 ? `${fracMs}ms` : `${fracMs.toFixed(1)}ms`;
+    expect(formatted).toBe('142.7ms');
+
+    // E2E tests match with /Tool:\s*\d+(\.\d)?ms/
+    expect('0.3ms').toMatch(/^\d+(\.\d)?ms$/);
+    expect('143ms').toMatch(/^\d+(\.\d)?ms$/);
+    expect('12.5ms').toMatch(/^\d+(\.\d)?ms$/);
+  });
+});

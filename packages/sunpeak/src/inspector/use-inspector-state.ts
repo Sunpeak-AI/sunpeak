@@ -126,6 +126,8 @@ export interface InspectorState {
   // ── URL param overrides ──
   urlTool: string | undefined;
   urlProdResources: boolean | undefined;
+  urlSidebar: boolean | undefined;
+  urlDevOverlay: boolean | undefined;
 }
 
 /**
@@ -158,6 +160,8 @@ function parseUrlParams(): {
   safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
   host?: HostId;
   prodResources?: boolean;
+  sidebar?: boolean;
+  devOverlay?: boolean;
 } {
   if (typeof window === 'undefined') return {};
 
@@ -177,6 +181,13 @@ function parseUrlParams(): {
   const prodResourcesParam = params.get('prodResources');
   const prodResources =
     prodResourcesParam === 'true' ? true : prodResourcesParam === 'false' ? false : undefined;
+
+  const sidebarParam = params.get('sidebar');
+  const sidebar = sidebarParam === 'false' ? false : sidebarParam === 'true' ? true : undefined;
+
+  const devOverlayParam = params.get('devOverlay');
+  const devOverlay =
+    devOverlayParam === 'false' ? false : devOverlayParam === 'true' ? true : undefined;
 
   // Map deviceType param to MCP Apps platform
   const deviceType = params.get('deviceType');
@@ -226,6 +237,8 @@ function parseUrlParams(): {
     safeAreaInsets,
     host: host ?? undefined,
     prodResources,
+    sidebar,
+    devOverlay,
   };
 }
 
@@ -597,5 +610,7 @@ export function useInspectorState({
     prefersBorder,
     urlTool: urlParams.tool,
     urlProdResources: urlParams.prodResources,
+    urlSidebar: urlParams.sidebar,
+    urlDevOverlay: urlParams.devOverlay,
   };
 }

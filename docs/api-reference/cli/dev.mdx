@@ -73,7 +73,26 @@ http://localhost:3000/?simulation=show-albums&theme=dark
 
 # No mock data — user clicks Run for real handler:
 http://localhost:3000/?tool=show-albums&theme=dark
+
+# Hide the sidebar (resource viewer only):
+http://localhost:3000/?simulation=show-albums&sidebar=false
+
+# Hide the dev overlay (for e2e tests):
+http://localhost:3000/?simulation=show-albums&devOverlay=false
 ```
+
+### Dev Overlay
+
+During development, a small overlay appears in the bottom-right corner of each resource showing:
+
+- **Resource:** the timestamp when the resource HTML was served (helps detect stale cached resources in ChatGPT)
+- **Tool:** the duration of the most recent tool call in milliseconds
+
+The overlay is only present in development, never in production builds. To hide it:
+
+- **Inspector URL param:** `devOverlay=false` (used by e2e tests via the `tests/e2e/helpers.ts` wrapper)
+- **Environment variable:** `SUNPEAK_DEV_OVERLAY=false` disables it server-wide (used by the live test config's `devOverlay` option)
+- **Live test config:** `defineLiveConfig({ devOverlay: false })` passes the env var to the dev server
 
 ### `--prod-resources` flag
 
@@ -96,6 +115,8 @@ The dev server runs multiple services on different ports:
 | `8000` | MCP server | Tool execution endpoint (tunnel this for ChatGPT/Claude) | Auto-allocated |
 | `24679` | HMR WebSocket | Vite HMR for MCP resource bundles | `SUNPEAK_HMR_PORT` env |
 | `24680` | Sandbox proxy | Cross-origin iframe isolation (local only, not tunneled) | `SUNPEAK_SANDBOX_PORT` env |
+
+Set `SUNPEAK_DEV_OVERLAY=false` to disable the dev overlay across all resources served by this server.
 
 Only port `8000` needs to be tunneled (e.g., via ngrok) for ChatGPT/Claude connections. The sandbox proxy server provides real cross-origin isolation for the inspector's iframe architecture, matching how production hosts run apps on a separate sandbox origin.
 
