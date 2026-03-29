@@ -239,7 +239,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       const { tool } = await extractToolExport(toolPath);
       toolMap.set(toolName, { tool, path: toolPath });
     } catch (err) {
-      console.warn(`Warning: Could not extract metadata from tool ${toolName}: ${err.message}`);
+      console.warn(`Warning: Could not extract metadata from tool "${toolName}" (${toolPath}):\n  ${err.message}\n  Expected: export const tool: AppToolConfig = { ... }`);
     }
   }
 
@@ -271,7 +271,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
         toolHandlerMap.set(toolName, { handler: mod.default, outputSchema: mod.outputSchema });
       }
     } catch (err) {
-      console.warn(`Warning: Could not load handler for tool "${toolName}": ${err.message}`);
+      console.warn(`Warning: Could not load handler for tool "${toolName}" (${relativePath}):\n  ${err.message}`);
     }
   }
 
@@ -287,7 +287,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     const toolEntry = toolMap.get(toolName);
     const tool = toolEntry?.tool;
     if (!tool) {
-      console.warn(`Warning: Tool "${toolName}" not found for simulation "${simName}". Skipping.`);
+      console.warn(`Warning: Tool "${toolName}" not found for simulation "${simName}". Expected file: src/tools/${toolName}.ts`);
       continue;
     }
 

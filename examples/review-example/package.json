@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "sunpeak": "^0.18.6",
+    "sunpeak": "^0.18.8",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
@@ -32,7 +32,7 @@
     "react-dom": "^19.2.4",
     "tailwindcss": "^4.2.2",
     "typescript": "^5.9.3",
-    "vite": "^8.0.1",
-    "vitest": "^4.1.0"
+    "vite": "^8.0.3",
+    "vitest": "^4.1.2"
   }
 }

@@ -846,23 +846,45 @@ export function startProductionHttpServer(
     }
   });
 
-  httpServer.on('clientError', (err: Error, socket) => {
-    log('error', 'HTTP client error', { error: err.message });
+  httpServer.on('clientError', (err: NodeJS.ErrnoException, socket) => {
+    if (
+      err.code === 'HPE_INVALID_METHOD' &&
+      'rawPacket' in err &&
+      Buffer.isBuffer((err as Record<string, unknown>).rawPacket) &&
+      ((err as Record<string, unknown>).rawPacket as Buffer)[0] === 0x16
+    ) {
+      log(
+        'error',
+        'Received HTTPS request on HTTP server. ' +
+          "If you're using ngrok, make sure the upstream is http:// (not https://). " +
+          'Example: ngrok http 8000'
+      );
+    } else {
+      log('error', 'HTTP client error', { error: err.message });
+    }
     socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
   });
 
   const displayHost = host === '0.0.0.0' ? 'localhost' : host;
+  const requestedPort = port;
 
   const onListening = () => {
     const addr = httpServer.address() as { port: number };
-    log('info', `Server listening on http://${displayHost}:${addr.port}`);
+    if (addr.port !== requestedPort) {
+      log(
+        'info',
+        `Server listening on http://${displayHost}:${addr.port} (port ${requestedPort} was in use)`
+      );
+    } else {
+      log('info', `Server listening on http://${displayHost}:${addr.port}`);
+    }
     log('info', `MCP endpoint: http://${displayHost}:${addr.port}${MCP_PATH}`);
     log('info', `Health check: http://${displayHost}:${addr.port}/health`);
   };
 
   httpServer.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
-      log('warn', `Port ${port} in use, finding an available port...`);
+      log('warn', `Port ${requestedPort} is in use, trying another port...`);
       // onListening is already registered as a .once('listening') from the first .listen() call
       httpServer.listen(0, host);
     } else {
