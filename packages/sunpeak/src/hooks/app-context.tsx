@@ -7,6 +7,11 @@
  *
  * The provider preserves the App instance across React Fast Refresh (HMR)
  * by storing it at module scope, matching the previous useApp() behavior.
+ *
+ * Connection resilience: if the initial PostMessage handshake doesn't complete
+ * within a timeout, the provider automatically retries with exponential backoff.
+ * This handles race conditions where the host iframe bridge isn't ready when the
+ * app first mounts (common on first load in ChatGPT and Claude).
  */
 import { createContext, useState, useEffect, type ReactNode } from 'react';
 import { App, PostMessageTransport } from '@modelcontextprotocol/ext-apps';
@@ -35,6 +40,84 @@ export const AppContext = createContext<AppState>(defaultState);
 let _app: App | null = null;
 let _connecting: Promise<App> | null = null;
 
+/** Timeout for a single connection attempt (ms). */
+const CONNECT_TIMEOUT_MS = 5_000;
+/** Maximum number of retry attempts before giving up. */
+const MAX_RETRIES = 3;
+/** Base delay for exponential backoff between retries (ms). */
+const RETRY_BASE_DELAY_MS = 500;
+
+/**
+ * Race a promise against a timeout. Rejects with a TimeoutError if the
+ * promise doesn't settle within `ms` milliseconds.
+ */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('Connection timed out')), ms);
+    promise.then(
+      (v) => {
+        clearTimeout(timer);
+        resolve(v);
+      },
+      (e) => {
+        clearTimeout(timer);
+        reject(e);
+      }
+    );
+  });
+}
+
+/**
+ * Attempt to connect to the host with timeout and retries.
+ * Each attempt creates a fresh transport + App instance so stale PostMessage
+ * listeners from a previous failed attempt don't interfere.
+ */
+async function connectWithRetry(
+  appInfo: { name: string; version: string },
+  capabilities: Record<string, unknown>,
+  onAppCreated?: (app: App) => void
+): Promise<App> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    if (attempt > 0) {
+      const delay = RETRY_BASE_DELAY_MS * 2 ** (attempt - 1);
+      await new Promise((r) => setTimeout(r, delay));
+    }
+
+    let transport: PostMessageTransport | null = null;
+    try {
+      transport = new PostMessageTransport(window.parent, window.parent);
+      const newApp = new App(appInfo, capabilities);
+      onAppCreated?.(newApp);
+      await withTimeout(newApp.connect(transport), CONNECT_TIMEOUT_MS);
+      return newApp;
+    } catch (err) {
+      // Clean up the transport's PostMessage listener so it doesn't linger.
+      if (transport) {
+        try {
+          await transport.close();
+        } catch {
+          /* ignore close errors */
+        }
+      }
+      lastError = err instanceof Error ? err : new Error('Connection failed');
+      if (attempt < MAX_RETRIES) {
+        console.warn(
+          `[sunpeak] Connection attempt ${attempt + 1}/${MAX_RETRIES + 1} failed, retrying...`,
+          lastError.message
+        );
+      }
+    }
+  }
+
+  console.error(
+    '[sunpeak] All connection attempts failed. Try refreshing the page or opening a new chat.\n' +
+      'Troubleshooting: https://sunpeak.ai/docs/guides/troubleshooting'
+  );
+  throw lastError ?? new Error('Failed to connect');
+}
+
 export function AppProvider({ appInfo, capabilities, onAppCreated, children }: AppProviderProps) {
   const [state, setState] = useState<AppState>(() =>
     _app ? { app: _app, isConnected: true, error: null } : defaultState
@@ -53,18 +136,12 @@ export function AppProvider({ appInfo, capabilities, onAppCreated, children }: A
 
     // Connection already in flight (StrictMode double-mount) — wait for it.
     if (!_connecting) {
-      _connecting = (async () => {
-        const transport = new PostMessageTransport(window.parent, window.parent);
-        const newApp = new App(appInfo, capabilities ?? {});
-        onAppCreated?.(newApp);
-        await newApp.connect(transport);
-        _app = newApp;
-        return newApp;
-      })();
+      _connecting = connectWithRetry(appInfo, capabilities ?? {}, onAppCreated);
     }
 
     _connecting.then(
       (connectedApp) => {
+        _app = connectedApp;
         if (!cancelled) {
           setState({ app: connectedApp, isConnected: true, error: null });
         }

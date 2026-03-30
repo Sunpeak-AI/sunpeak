@@ -1144,10 +1144,13 @@ export async function inspectServer(opts) {
   server.printUrls();
   server.bindCLIShortcuts({ print: true });
 
+  // Print troubleshooting link (dimmed)
+  console.log('\n  \x1b[2mApp not loading? \u2192 https://sunpeak.ai/docs/guides/troubleshooting\x1b[0m');
+
   // Print star-begging message unless suppressed
   if (!noBegging) {
     // #FFB800 in 24-bit ANSI color
-    console.log('\n\n\x1b[38;2;255;184;0m\u2b50\ufe0f \u2192 \u2764\ufe0f  https://github.com/Sunpeak-AI/sunpeak\x1b[0m\n');
+    console.log('\n\x1b[38;2;255;184;0m\u2b50\ufe0f \u2192 \u2764\ufe0f  https://github.com/Sunpeak-AI/sunpeak\x1b[0m\n');
   }
 
   // Cleanup on exit

@@ -126,6 +126,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   });
 
   function createInnerFrame(params) {
+    clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
 
     innerFrame = document.createElement('iframe');
@@ -145,6 +146,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   }
 
   function createInnerFrameWithSrc(params) {
+    clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
 
     innerFrame = document.createElement('iframe');
@@ -222,9 +224,20 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
     '});}});';
 
   // Signal to the host that the proxy is ready.
-  // Use setTimeout to ensure the host's PostMessageTransport listener
-  // is set up before we send the ready notification. The srcdoc is parsed
-  // synchronously by the browser, which can race with React's ref callback.
+  // The srcdoc is parsed synchronously by the browser, which can race with
+  // React's ref callback that sets up the PostMessage listener. To handle
+  // this, we send the ready notification repeatedly until the host
+  // acknowledges it (by sending content to load). The interval is cleared
+  // as soon as we receive any message from the host (createInnerFrame or
+  // createInnerFrameWithSrc), or after 10 seconds as a safety limit.
+  var readyInterval = setInterval(function() {
+    window.parent.postMessage({
+      jsonrpc: '2.0',
+      method: 'ui/notifications/sandbox-proxy-ready',
+      params: {}
+    }, '*');
+  }, 200);
+  // Send the first one immediately (next tick)
   setTimeout(function() {
     window.parent.postMessage({
       jsonrpc: '2.0',
@@ -232,6 +245,9 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
       params: {}
     }, '*');
   }, 0);
+  // Stop retrying after 10 seconds — if the host hasn't responded by then,
+  // something else is wrong.
+  setTimeout(function() { clearInterval(readyInterval); }, 10000);
 })();
 </script>
 </body>

@@ -239,7 +239,12 @@ export class McpAppHost {
 
     // Double-iframe sandbox support: when the proxy signals readiness,
     // notify the host so it can deliver the app HTML.
+    // The proxy retries the ready signal periodically, so we guard against
+    // calling onSandboxReady more than once.
+    let sandboxReadyFired = false;
     this.bridge.onsandboxready = () => {
+      if (sandboxReadyFired) return;
+      sandboxReadyFired = true;
       this.options.onSandboxReady?.();
     };
   }

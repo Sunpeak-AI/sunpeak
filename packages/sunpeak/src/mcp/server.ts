@@ -677,6 +677,13 @@ async function handleMcpRequest(
         console.warn(`[MCP] Accept header negotiation (expected with some clients)`);
         return;
       }
+      // "Server not initialized" fires when a client sends a non-initialization request
+      // to a transport that hasn't completed the MCP handshake yet. This is normal during
+      // parallel connection attempts (e.g. multiple test workers) — the client retries
+      // with a fresh initialization. Don't log these as errors.
+      if (error.message?.includes('Server not initialized')) {
+        return;
+      }
       const id = transport.sessionId;
       console.error(`[MCP] Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}:`, error);
     };

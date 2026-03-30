@@ -230,6 +230,18 @@ Install the `create-sunpeak-app` skill to give your coding agent (Claude Code, C
 npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
 ```
 
+## Troubleshooting
+
+If your app doesn't render in ChatGPT or Claude:
+
+1. **Check your tunnel** is running and pointing to the correct port
+2. **Restart `sunpeak dev`** to clear stale connections
+3. **Refresh or re-add the MCP server** in the host's settings (Settings > MCP Servers)
+4. **Hard refresh** the host page (`Cmd+Shift+R` / `Ctrl+Shift+R`)
+5. **Open a new chat** in the host (cached iframes persist per-conversation)
+
+Full guide: [sunpeak.ai/docs/guides/troubleshooting](https://sunpeak.ai/docs/guides/troubleshooting)
+
 ## Resources
 
 - [MCP Apps Documentation](https://sunpeak.ai/docs/mcp-apps/introduction)

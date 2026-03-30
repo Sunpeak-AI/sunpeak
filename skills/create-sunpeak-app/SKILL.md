@@ -674,6 +674,19 @@ The live test runner imports your browser session, starts `sunpeak dev --prod-re
 6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).
 7. **Forgetting text fallback** — Include `toolResult.content[]` in simulations for non-UI hosts.
 
+## Troubleshooting: App Not Rendering in ChatGPT/Claude
+
+If the app doesn't show up after the tool is called, follow these steps:
+
+1. **Check your tunnel** — verify ngrok (or equivalent) is running, pointing to the right port, and using `http` not `https` upstream (`ngrok http 8000`).
+2. **Check your dev server** — make sure `sunpeak dev` is running and the MCP server started on the expected port (watch for "port was in use" messages).
+3. **Restart `sunpeak dev`** — stops the dev server (`Ctrl+C`) and starts fresh. This clears stale connections.
+4. **Refresh or re-add the MCP server** — in the host's settings, click refresh on the MCP server entry, or remove and re-add it with the tunnel URL.
+5. **Hard refresh the host page** — `Cmd+Shift+R` / `Ctrl+Shift+R` clears cached MCP connections.
+6. **Open a new chat** — both hosts cache iframe content per-conversation. A new chat forces a fresh connection.
+
+Full troubleshooting guide: https://sunpeak.ai/docs/guides/troubleshooting
+
 ## References
 
 - [sunpeak Documentation](https://sunpeak.ai/docs)

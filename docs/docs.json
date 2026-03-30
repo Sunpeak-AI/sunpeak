@@ -73,7 +73,8 @@
             "pages": [
               "guides/authorization",
               "guides/deployment",
-              "guides/patterns"
+              "guides/patterns",
+              "guides/troubleshooting"
             ]
           },
           {

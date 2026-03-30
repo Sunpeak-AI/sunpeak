@@ -208,6 +208,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   });
 
   function createInnerFrame(params) {
+    clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
 
     innerFrame = document.createElement('iframe');
@@ -226,6 +227,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   }
 
   function createInnerFrameWithSrc(params) {
+    clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
 
     innerFrame = document.createElement('iframe');
@@ -296,7 +298,15 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
     'e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:fid}},"*");' +
     '});}});';
 
-  // Signal readiness to the host
+  // Signal readiness to the host. Retry every 200ms in case the host's
+  // PostMessage listener isn't attached yet (srcdoc race with React refs).
+  var readyInterval = setInterval(function() {
+    window.parent.postMessage({
+      jsonrpc: '2.0',
+      method: 'ui/notifications/sandbox-proxy-ready',
+      params: {}
+    }, '*');
+  }, 200);
   setTimeout(function() {
     window.parent.postMessage({
       jsonrpc: '2.0',
@@ -304,6 +314,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
       params: {}
     }, '*');
   }, 0);
+  setTimeout(function() { clearInterval(readyInterval); }, 10000);
 })();
 </script>
 </body>
