@@ -87,6 +87,15 @@ export interface HostShell {
    */
   availableDisplayModes?: McpUiDisplayMode[];
   /**
+   * Safe area insets per display mode.
+   * When the user switches display modes in the inspector, the safe area
+   * is automatically updated to match (unless the user has manually overridden it).
+   * Extracted from real hosts via the host-sync tool.
+   */
+  safeAreaByDisplayMode?: Partial<
+    Record<McpUiDisplayMode, { top?: number; bottom?: number; left?: number; right?: number }>
+  >;
+  /**
    * CSS containing @font-face rules for the host's custom fonts.
    * Injected into the inspector page when this host is active so the
    * conversation chrome can use the same font as the real host.

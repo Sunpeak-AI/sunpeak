@@ -5,7 +5,7 @@ import { Conversation } from './chatgpt-conversation';
 
 /**
  * ChatGPT host version info — matches what ChatGPT reports via the MCP protocol.
- * Verified against production ChatGPT on 2026-03-19.
+ * Verified against production ChatGPT on 2026-03-30.
  */
 const CHATGPT_HOST_INFO = {
   name: 'chatgpt',
@@ -37,7 +37,7 @@ function applyChatGPTTheme(theme: 'light' | 'dark'): void {
 
 /**
  * ChatGPT style variables — matches SDK defaults exactly.
- * Verified against production ChatGPT on 2026-03-19.
+ * Verified against production ChatGPT on 2026-03-30.
  */
 const CHATGPT_STYLE_VARIABLES = {
   ...DEFAULT_STYLE_VARIABLES,
@@ -52,6 +52,11 @@ registerHostShell({
   hostCapabilities: CHATGPT_HOST_CAPABILITIES,
   userAgent: 'chatgpt',
   styleVariables: CHATGPT_STYLE_VARIABLES,
+  safeAreaByDisplayMode: {
+    inline: {},
+    fullscreen: { bottom: 150 },
+    pip: {},
+  },
   pageStyles: {
     '--sim-bg-sidebar': 'light-dark(#ffffff, #212121)',
     '--sim-bg-conversation': 'light-dark(#ffffff, #212121)',
