@@ -9,6 +9,7 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './inspector-types';
 import type { HostId } from './hosts';
+import { getHostShell } from './hosts';
 import { extractResourceCSP, type ResourceCSP } from './iframe-resource';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
@@ -463,6 +464,20 @@ export function useInspectorState({
       _setDisplayMode('fullscreen');
     }
   }, [screenWidth, displayMode]);
+
+  // Auto-apply safe area insets when display mode or host changes
+  useEffect(() => {
+    const shell = getHostShell(activeHost);
+    const modeInsets = shell?.safeAreaByDisplayMode?.[displayMode];
+    if (modeInsets) {
+      setSafeAreaInsets({
+        top: modeInsets.top ?? 0,
+        bottom: modeInsets.bottom ?? 0,
+        left: modeInsets.left ?? 0,
+        right: modeInsets.right ?? 0,
+      });
+    }
+  }, [displayMode, activeHost]);
 
   // ── Host callbacks ──
 

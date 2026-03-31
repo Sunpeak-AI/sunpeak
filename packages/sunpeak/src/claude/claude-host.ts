@@ -5,7 +5,7 @@ import { ClaudeConversation } from './claude-conversation';
 
 /**
  * Claude host version info — matches what Claude reports via the MCP protocol.
- * Verified against production Claude on 2026-03-25.
+ * Verified against production Claude on 2026-03-30.
  */
 const CLAUDE_HOST_INFO = {
   name: 'Claude',
@@ -14,7 +14,7 @@ const CLAUDE_HOST_INFO = {
 
 /**
  * Claude host capabilities — matches what Claude reports via the MCP protocol.
- * Verified against production Claude on 2026-03-25.
+ * Verified against production Claude on 2026-03-30.
  *
  * Notable: Claude supports downloadFile, updateModelContext.image, and
  * message.text. serverTools and serverResources both report listChanged.
@@ -42,7 +42,7 @@ function applyClaudeTheme(theme: 'light' | 'dark'): void {
 
 /**
  * Claude style variable overrides — warm beige/cream palette with Anthropic Sans.
- * Verified against production Claude on 2026-03-25.
+ * Verified against production Claude on 2026-03-30.
  *
  * Only overrides values that differ from DEFAULT_STYLE_VARIABLES.
  * Claude sends all variables via styles.variables using light-dark(rgba()) format.
@@ -140,6 +140,10 @@ registerHostShell({
     '--sim-bg-conversation': 'light-dark(rgb(250, 249, 245), rgb(38, 38, 36))',
     '--sim-bg-user-bubble': 'light-dark(rgb(240, 238, 230), rgb(20, 20, 19))',
     '--sim-bg-reply-input': 'light-dark(rgb(255, 255, 255), rgb(48, 48, 46))',
+  },
+  safeAreaByDisplayMode: {
+    inline: {},
+    fullscreen: { top: 16, right: 16, bottom: 138, left: 16 },
   },
   availableDisplayModes: ['inline', 'fullscreen'],
   fontCss: `@font-face {
