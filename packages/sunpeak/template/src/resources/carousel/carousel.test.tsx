@@ -17,6 +17,8 @@ let mockToolOutput: { places: Place[] } = { places: [] };
 let mockDeviceCapabilities: { hover?: boolean; touch?: boolean } = { hover: true, touch: false };
 let mockDisplayMode = 'inline';
 
+const mockRequestDisplayMode = vi.fn();
+
 vi.mock('sunpeak', () => ({
   useToolData: () => ({
     output: mockToolOutput,
@@ -29,6 +31,7 @@ vi.mock('sunpeak', () => ({
   }),
   useDeviceCapabilities: () => mockDeviceCapabilities,
   useDisplayMode: () => mockDisplayMode,
+  useRequestDisplayMode: () => ({ requestDisplayMode: mockRequestDisplayMode }),
   SafeArea: ({ children, ...props }: { children: React.ReactNode; [key: string]: unknown }) => (
     <div data-testid="safe-area" {...props}>
       {children}
@@ -41,10 +44,21 @@ vi.mock('./components', () => ({
   Carousel: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="carousel">{children}</div>
   ),
-  Card: ({ header, buttonSize }: { header: React.ReactNode; buttonSize?: string }) => (
-    <div data-testid="card" data-button-size={buttonSize}>
+  Card: ({
+    header,
+    buttonSize,
+    onClick,
+  }: {
+    header: React.ReactNode;
+    buttonSize?: string;
+    onClick?: () => void;
+  }) => (
+    <div data-testid="card" data-button-size={buttonSize} onClick={onClick}>
       {header}
     </div>
+  ),
+  PlaceDetail: ({ place }: { place: { name: string } }) => (
+    <div data-testid="place-detail">{place.name}</div>
   ),
 }));
 

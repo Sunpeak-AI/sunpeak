@@ -34,6 +34,12 @@ interface CarouselCard {
   location: string
   image: string
   description: string
+  address?: string
+  phone?: string
+  hours?: string
+  priceRange?: string
+  highlights?: string[]
+  tips?: string[]
 }
 ```
 
@@ -69,6 +75,30 @@ interface CarouselCard {
   Description text displayed in the card body.
 </ResponseField>
 
+<ResponseField name="places[].address" type="string">
+  Street address, shown in the fullscreen detail view.
+</ResponseField>
+
+<ResponseField name="places[].phone" type="string">
+  Phone number, shown in the fullscreen detail view.
+</ResponseField>
+
+<ResponseField name="places[].hours" type="string">
+  Operating hours, shown in the fullscreen detail view.
+</ResponseField>
+
+<ResponseField name="places[].priceRange" type="string">
+  Price range indicator (e.g. "Free", "$$"), shown as a badge in the detail view.
+</ResponseField>
+
+<ResponseField name="places[].highlights" type="string[]">
+  List of highlight tags displayed as badges in the fullscreen detail view.
+</ResponseField>
+
+<ResponseField name="places[].tips" type="string[]">
+  List of tips displayed in the fullscreen detail view.
+</ResponseField>
+
 ## Features
 
 ### Carousel Navigation
@@ -88,6 +118,21 @@ Each card includes:
 - Metadata showing rating, category, and location
 - Description text
 - Two action buttons (Visit and Learn More)
+
+Clicking a card or its "Learn More" button opens a fullscreen detail view. The primary "Visit" button triggers its own action without opening fullscreen.
+
+### Fullscreen Detail View
+
+When a card is clicked, the resource requests fullscreen mode and displays a detail view with:
+- Centered hero image (preserves aspect ratio, never stretched)
+- Star rating and category/price badges
+- Full description text
+- Info grid with address, hours, and phone when available
+- Highlight tags displayed as colored badges
+- Tips displayed as a styled list
+- Action buttons (Visit, Learn More)
+
+The detail view relies on the host's built-in close button to return to the inline carousel. When the host switches back to inline mode, the carousel automatically re-renders without needing explicit back navigation.
 
 ### Responsive Button Sizing
 

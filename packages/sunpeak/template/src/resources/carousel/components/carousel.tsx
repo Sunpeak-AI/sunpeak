@@ -13,6 +13,8 @@ export type CarouselProps = {
   cardWidth?: number | { inline?: number; fullscreen?: number };
   displayMode?: string;
   className?: string;
+  /** Called with true when a drag starts, false when it settles. Useful for suppressing click handlers during drag. */
+  onDraggingChange?: (dragging: boolean) => void;
 };
 
 export function Carousel({
@@ -23,6 +25,7 @@ export function Carousel({
   cardWidth,
   displayMode = 'inline',
   className,
+  onDraggingChange,
 }: CarouselProps) {
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
@@ -78,6 +81,23 @@ export function Carousel({
       emblaApi.off('reInit', onSelect);
     };
   }, [emblaApi, onSelect]);
+
+  // Track drag state so consumers can suppress click handlers during/after a drag.
+  // Uses 'scroll' (not 'pointerDown') so simple taps don't count as drags.
+  React.useEffect(() => {
+    if (!emblaApi || !onDraggingChange) return;
+
+    const onScroll = () => onDraggingChange(true);
+    const onSettle = () => onDraggingChange(false);
+
+    emblaApi.on('scroll', onScroll);
+    emblaApi.on('settle', onSettle);
+
+    return () => {
+      emblaApi.off('scroll', onScroll);
+      emblaApi.off('settle', onSettle);
+    };
+  }, [emblaApi, onDraggingChange]);
 
   // Sync external index changes to carousel scroll position
   React.useEffect(() => {

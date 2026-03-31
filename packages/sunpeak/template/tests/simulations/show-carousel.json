@@ -17,7 +17,17 @@
           "category": "Waterfront",
           "location": "Austin",
           "image": "https://cdn.sunpeak.ai/demo/austin1.jpeg",
-          "description": "Scenic lake perfect for kayaking, paddleboarding, and trails."
+          "description": "Scenic lake perfect for kayaking, paddleboarding, and trails. The hike-and-bike trail that circles the lake is one of the most popular outdoor destinations in Austin, offering 10 miles of paths with views of the downtown skyline.",
+          "address": "1820 S Lakeshore Blvd, Austin, TX 78741",
+          "phone": "(512) 974-6700",
+          "hours": "Open 24 hours",
+          "priceRange": "Free",
+          "highlights": ["Kayaking", "Paddleboarding", "Hike & Bike Trail", "Dog Friendly"],
+          "tips": [
+            "Go early in the morning to avoid crowds on the trail.",
+            "Rent kayaks from the boathouse on the south shore for the best skyline views.",
+            "The Boardwalk section on the south side is the newest and least crowded part."
+          ]
         },
         {
           "id": "2",
@@ -26,7 +36,17 @@
           "category": "Historic Site",
           "location": "Austin",
           "image": "https://cdn.sunpeak.ai/demo/austin2.jpeg",
-          "description": "Stunning capitol building with free tours and beautiful grounds."
+          "description": "Stunning capitol building with free tours and beautiful grounds. Built in 1888, the building is taller than the U.S. Capitol and features a stunning rotunda with portraits of every Texas governor.",
+          "address": "1100 Congress Ave, Austin, TX 78701",
+          "phone": "(512) 463-0063",
+          "hours": "Mon-Fri 7am-10pm, Sat-Sun 9am-8pm",
+          "priceRange": "Free",
+          "highlights": ["Free Guided Tours", "Architecture", "Historical Exhibits", "Gift Shop"],
+          "tips": [
+            "Free guided tours run every 30-45 minutes and are well worth the time.",
+            "Visit the underground extension for the modern legislative offices.",
+            "The south grounds have great photo spots with the building in the background."
+          ]
         },
         {
           "id": "3",
@@ -35,7 +55,17 @@
           "category": "Architecture",
           "location": "Austin",
           "image": "https://cdn.sunpeak.ai/demo/austin3.jpeg",
-          "description": "Century-old performance and movie theatre in the heart of downtown Austin."
+          "description": "Century-old performance and movie theatre in the heart of downtown Austin. Opened in 1915, this beautifully restored venue hosts classic film screenings, live performances, and comedy shows year-round.",
+          "address": "713 Congress Ave, Austin, TX 78701",
+          "phone": "(512) 472-5470",
+          "hours": "Box office: Mon-Fri 10am-6pm",
+          "priceRange": "$$",
+          "highlights": ["Classic Films", "Live Music", "Comedy Shows", "Historic Venue"],
+          "tips": [
+            "Check the Summer Classic Film Series for discounted screenings.",
+            "The balcony seats offer the best view of the ornate ceiling.",
+            "Arrive early to grab a drink at the bar before the show."
+          ]
         },
         {
           "id": "4",
@@ -44,7 +74,17 @@
           "category": "Park",
           "location": "Austin",
           "image": "https://cdn.sunpeak.ai/demo/austin4.jpeg",
-          "description": "Popular park with trails, sports fields, and Barton Springs Pool."
+          "description": "Popular park with trails, sports fields, and Barton Springs Pool. This 350-acre metropolitan park sits along the south bank of Lady Bird Lake and is home to the Austin City Limits music festival.",
+          "address": "2100 Barton Springs Rd, Austin, TX 78704",
+          "phone": "(512) 974-6700",
+          "hours": "5am-10pm daily",
+          "priceRange": "Free",
+          "highlights": ["Barton Springs Pool", "Botanical Garden", "Disc Golf", "ACL Festival"],
+          "tips": [
+            "Barton Springs Pool is spring-fed and stays 68°F year-round.",
+            "The botanical garden entrance is on the west side of the park.",
+            "Parking fills up fast on weekends. Take the bus or bike instead."
+          ]
         },
         {
           "id": "5",
@@ -53,7 +93,16 @@
           "category": "Landmark",
           "location": "Austin",
           "image": "https://cdn.sunpeak.ai/demo/austin5.jpeg",
-          "description": "Vibrant street with unique shops, restaurants, and live music."
+          "description": "Lively street with unique shops, restaurants, and live music. Known locally as SoCo, this stretch south of Lady Bird Lake is the heart of Austin's eclectic culture, with vintage stores, food trucks, and murals.",
+          "address": "South Congress Ave, Austin, TX 78704",
+          "hours": "Shops typically 10am-8pm",
+          "priceRange": "$-$$$",
+          "highlights": ["Shopping", "Food Trucks", "Street Art", "Live Music"],
+          "tips": [
+            "First Thursday of every month features extended hours and street vendors.",
+            "The 'I love you so much' mural on the side of Jo's Coffee is an iconic photo spot.",
+            "Walk south past Oltorf St for less crowded, more local shops."
+          ]
         }
       ]
     }

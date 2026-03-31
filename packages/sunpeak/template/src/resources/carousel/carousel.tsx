@@ -1,6 +1,14 @@
-import { useToolData, useDeviceCapabilities, useDisplayMode, SafeArea } from 'sunpeak';
+import { useState, useRef, useCallback } from 'react';
+import {
+  useToolData,
+  useDeviceCapabilities,
+  useDisplayMode,
+  useRequestDisplayMode,
+  SafeArea,
+} from 'sunpeak';
 import type { ResourceConfig } from 'sunpeak';
-import { Carousel, Card } from './components';
+import { Carousel, Card, PlaceDetail } from './components';
+import type { PlaceDetailData } from './components';
 
 export const resource: ResourceConfig = {
   title: 'Carousel',
@@ -19,18 +27,10 @@ export const resource: ResourceConfig = {
  * Production-ready Carousel Resource
  *
  * This resource displays places in a carousel layout with cards.
- * Can be dropped into any production environment without changes.
+ * Click a card to open it fullscreen with detailed information.
  */
 
-interface CarouselCard {
-  id: string;
-  name: string;
-  rating: number;
-  category: string;
-  location: string;
-  image: string;
-  description: string;
-}
+type CarouselCard = PlaceDetailData;
 
 interface CarouselInput {
   city?: string;
@@ -50,7 +50,19 @@ export function CarouselResource() {
   >();
   const { touch: hasTouch = false } = useDeviceCapabilities();
   const displayMode = useDisplayMode();
+  const { requestDisplayMode } = useRequestDisplayMode();
+  const [selectedPlace, setSelectedPlace] = useState<CarouselCard | null>(null);
+  const isDraggingRef = useRef(false);
   const places = output?.places ?? [];
+
+  // Only show detail view when actually in fullscreen. If the host externally
+  // switches back to inline, the condition below naturally falls through to the
+  // carousel without needing to clear selectedPlace via an effect.
+  const showDetail = displayMode === 'fullscreen' && selectedPlace !== null;
+
+  const handleDraggingChange = useCallback((dragging: boolean) => {
+    isDraggingRef.current = dragging;
+  }, []);
 
   if (isLoading) {
     const searchContext = inputPartial?.city;
@@ -86,6 +98,20 @@ export function CarouselResource() {
     );
   }
 
+  const handleCardClick = async (place: CarouselCard) => {
+    if (isDraggingRef.current) return;
+    setSelectedPlace(place);
+    await requestDisplayMode('fullscreen');
+  };
+
+  if (showDetail) {
+    return (
+      <SafeArea className="h-full">
+        <PlaceDetail place={selectedPlace} buttonSize={hasTouch ? 'md' : 'sm'} />
+      </SafeArea>
+    );
+  }
+
   return (
     <SafeArea className="p-4">
       <Carousel
@@ -94,6 +120,7 @@ export function CarouselResource() {
         showEdgeGradients={true}
         cardWidth={220}
         displayMode={displayMode}
+        onDraggingChange={handleDraggingChange}
       >
         {places.map((place: CarouselCard) => (
           <Card
@@ -101,8 +128,9 @@ export function CarouselResource() {
             image={place.image}
             imageAlt={place.name}
             header={place.name}
-            metadata={`\u2B50 ${place.rating} \u2022 ${place.category} \u2022 ${place.location}`}
+            metadata={`⭐ ${place.rating} • ${place.category} • ${place.location}`}
             buttonSize={hasTouch ? 'md' : 'sm'}
+            onClick={() => handleCardClick(place)}
             button1={{
               isPrimary: true,
               onClick: () => console.log(`Visit ${place.name}`),
@@ -110,7 +138,7 @@ export function CarouselResource() {
             }}
             button2={{
               isPrimary: false,
-              onClick: () => console.log(`Learn more about ${place.name}`),
+              onClick: () => handleCardClick(place),
               children: 'Learn More',
             }}
           >
