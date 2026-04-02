@@ -44,6 +44,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
   }
 
   const jsonLogs = args.includes('--json-logs');
+  const sse = args.includes('--sse');
 
   // Import production server from sunpeak
   const isTemplate = projectRoot.endsWith('/template') || projectRoot.endsWith('\\template');
@@ -191,7 +192,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
   console.log(`\nStarting ${name} v${version} on ${host}:${port}...`);
 
   startProductionHttpServer(
-    { name, version, serverInfo: serverConfig, tools, resources, auth },
+    { name, version, serverInfo: serverConfig, tools, resources, auth, ...(sse ? { enableJsonResponse: false } : {}) },
     { port, host }
   );
 }
