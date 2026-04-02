@@ -78,6 +78,10 @@ app.listen(3000);
   Auth function called on every request. Return `AuthInfo` to authenticate, `null` to reject with 401. See [Server Entry](/api-reference/tools/server-entry).
 </ResponseField>
 
+<ResponseField name="enableJsonResponse" type="boolean" default="true">
+  Respond with JSON instead of SSE streams. Recommended for serverless environments (Lambda, Workers, Vercel Edge) where holding open SSE connections is unreliable. Set to `false` if you need SSE streaming for long-running tool calls.
+</ResponseField>
+
 ## `createHandler`
 
 Creates a Web Standard request handler for serverless and edge runtimes.
@@ -115,7 +119,7 @@ export default app;
 
 ### `WebHandlerConfig`
 
-Same shape as `ProductionServerConfig`, except `auth` takes a Web Standard `Request`:
+Same shape as `ProductionServerConfig` (including `enableJsonResponse`, which defaults to `true`), except `auth` takes a Web Standard `Request`:
 
 <ResponseField name="auth" type="(req: Request) => AuthInfo | null">
   Auth function for Web Standard environments. Return `AuthInfo` to authenticate, `null` to reject with 401.

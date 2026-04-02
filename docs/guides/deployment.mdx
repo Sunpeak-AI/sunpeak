@@ -116,6 +116,8 @@ export default app;
 
 Unlike `createMcpHandler`, the web handler does **not** do path matching — it handles every request it receives. Mount it behind your own router.
 
+Both `createMcpHandler` and `createHandler` use JSON responses by default (`enableJsonResponse: true`), which works reliably across all environments including serverless. If you need SSE streaming (e.g., for progress updates on long-running tool calls), set `enableJsonResponse: false` in your config. See [Production Server API](/api-reference/tools/production-server) for details.
+
 <Info>
 For fully custom MCP server setups, `sunpeak/mcp` also re-exports `registerAppTool`, `registerAppResource`, and `RESOURCE_MIME_TYPE` from the [MCP Apps SDK](https://github.com/anthropics/ext-apps). See [Server Helpers](/api-reference/simulations/run-mcp-server#server-helpers) for the full list.
 </Info>
@@ -183,7 +185,7 @@ location /mcp {
     proxy_pass http://127.0.0.1:8000;
     proxy_http_version 1.1;
     proxy_set_header Connection '';
-    proxy_buffering off;       # Required for SSE streaming
+    proxy_buffering off;       # Required if enableJsonResponse is false (SSE mode)
 }
 
 location /health {

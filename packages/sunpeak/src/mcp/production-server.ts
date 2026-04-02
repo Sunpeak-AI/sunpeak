@@ -138,6 +138,12 @@ export interface ProductionServerConfig {
    * may trigger host warnings (e.g. ChatGPT's "Widget domain is not set").
    */
   serverUrl?: string;
+  /**
+   * Respond with JSON instead of SSE streams.
+   * Recommended for serverless environments (Lambda, Workers, Vercel Edge)
+   * where holding open SSE connections is unreliable. Defaults to `true`.
+   */
+  enableJsonResponse?: boolean;
 }
 
 /**
@@ -163,6 +169,12 @@ export interface WebHandlerConfig {
    * may trigger host warnings (e.g. ChatGPT's "Widget domain is not set").
    */
   serverUrl?: string;
+  /**
+   * Respond with JSON instead of SSE streams.
+   * Recommended for serverless environments (Lambda, Workers, Vercel Edge)
+   * where holding open SSE connections is unreliable. Defaults to `true`.
+   */
+  enableJsonResponse?: boolean;
 }
 
 // ============================================================================
@@ -524,6 +536,7 @@ export function createMcpHandler(
       const server = createProductionMcpServer(config);
       const transport = new StreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
+        enableJsonResponse: config.enableJsonResponse ?? true,
         onsessioninitialized: (id) => {
           sessions.set(id, { server, transport, lastActivity: Date.now() });
           log('info', `Session started: ${id.substring(0, 8)}...`, {
@@ -686,6 +699,7 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
       });
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
+        enableJsonResponse: config.enableJsonResponse ?? true,
         onsessioninitialized: (id) => {
           sessions.set(id, { server, transport, lastActivity: Date.now() });
           log('info', `Session started: ${id.substring(0, 8)}...`, {
