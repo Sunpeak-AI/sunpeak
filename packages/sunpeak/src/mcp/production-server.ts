@@ -5,7 +5,6 @@ import { randomUUID } from 'node:crypto';
 import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
 import { McpServer, type RegisteredResource } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import {
   registerAppTool,
@@ -396,6 +395,48 @@ const CORS_HEADERS = {
 } as const;
 
 // ============================================================================
+// Node.js ↔ Web Standard conversion helpers
+// ============================================================================
+
+/** Convert a Node.js IncomingMessage to a minimal Web Standard Request (body is passed separately). */
+function nodeReqToWebRequest(req: IncomingMessage): Request {
+  const url = new URL(req.url!, `http://${req.headers.host ?? 'localhost'}`);
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value != null) {
+      headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+    }
+  }
+  return new Request(url.toString(), { method: req.method, headers });
+}
+
+/** Pipe a Web Standard Response (including streaming SSE) back to a Node.js ServerResponse. */
+async function pipeWebResponseToNode(webResponse: Response, res: ServerResponse): Promise<void> {
+  const headers: Record<string, string> = {};
+  webResponse.headers.forEach((value, key) => {
+    headers[key] = value;
+  });
+  res.writeHead(webResponse.status, headers);
+
+  if (!webResponse.body) {
+    res.end();
+    return;
+  }
+
+  const reader = webResponse.body.getReader();
+  res.on('close', () => reader.cancel());
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!res.destroyed) res.write(value);
+    }
+  } finally {
+    if (!res.destroyed) res.end();
+  }
+}
+
+// ============================================================================
 // Composable Node.js MCP request handler (Streamable HTTP)
 // ============================================================================
 
@@ -434,7 +475,7 @@ export function createMcpHandler(
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
   interface Session {
     server: McpServer;
-    transport: StreamableHTTPServerTransport;
+    transport: WebStandardStreamableHTTPServerTransport;
     lastActivity: number;
   }
 
@@ -472,20 +513,16 @@ export function createMcpHandler(
       return;
     }
 
-    // Set CORS headers for all MCP responses
-    for (const [key, value] of Object.entries(CORS_HEADERS)) {
-      res.setHeader(key, value);
-    }
-
     // Auth
+    let authInfo: AuthInfo | undefined;
     if (authFn) {
-      const authInfo = await authFn(req);
-      if (!authInfo) {
-        res.writeHead(401, { 'WWW-Authenticate': 'Bearer' });
+      const result = await authFn(req);
+      if (!result) {
+        res.writeHead(401, { ...CORS_HEADERS, 'WWW-Authenticate': 'Bearer' });
         res.end('Unauthorized');
         return;
       }
-      (req as IncomingMessage & { auth?: AuthInfo }).auth = authInfo;
+      authInfo = result;
     }
 
     // Parse body for POST requests (needed for logging + transport)
@@ -517,6 +554,7 @@ export function createMcpHandler(
       }
     }
 
+    const webRequest = nodeReqToWebRequest(req);
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
     // Route to existing session
@@ -527,14 +565,15 @@ export function createMcpHandler(
         return;
       }
       session.lastActivity = Date.now();
-      await session.transport.handleRequest(req, res, parsedBody);
+      const webResponse = await session.transport.handleRequest(webRequest, { parsedBody, authInfo });
+      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
       return;
     }
 
     // New session (POST without session ID = initialization)
     if (req.method === 'POST') {
       const server = createProductionMcpServer(config);
-      const transport = new StreamableHTTPServerTransport({
+      const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: config.enableJsonResponse ?? true,
         onsessioninitialized: (id) => {
@@ -575,7 +614,8 @@ export function createMcpHandler(
       };
 
       await server.connect(transport);
-      await transport.handleRequest(req, res, parsedBody);
+      const webResponse = await transport.handleRequest(webRequest, { parsedBody, authInfo });
+      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
       return;
     }
 
@@ -739,8 +779,9 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
 /** Add CORS headers to a response (including streaming SSE responses). */
 function addCorsHeaders(response: Response): Response {
   const headers = new Headers(response.headers);
-  headers.set('Access-Control-Allow-Origin', '*');
-  headers.set('Access-Control-Expose-Headers', 'mcp-session-id');
+  for (const [key, value] of Object.entries(CORS_HEADERS)) {
+    headers.set(key, value);
+  }
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
