@@ -56,6 +56,7 @@ No manual configuration or entry point files needed!
 | Option | Short | Description |
 |--------|-------|-------------|
 | `--port <number>` | `-p` | Port for the inspector (default: 3000, also respects `PORT` env var) |
+| `--prod-tools` | | Call real tool handlers instead of simulation mock data |
 | `--prod-resources` | | Serve production-built HTML from `dist/` instead of Vite HMR |
 
 ### Tool and Simulation selection
@@ -94,6 +95,15 @@ The overlay is only present in development, never in production builds. To hide 
 - **Environment variable:** `SUNPEAK_DEV_OVERLAY=false` disables it server-wide (used by the live test config's `devOverlay` option)
 - **Live test config:** `defineLiveConfig({ devOverlay: false })` passes the env var to the dev server
 
+### `--prod-tools` flag
+
+When `--prod-tools` is used, tool calls execute your real handlers in `src/tools/` instead of returning simulation mock data. The sidebar's "Prod Tools" checkbox starts enabled (and can be toggled at runtime).
+
+```bash
+# Integration testing: real handlers with HMR UI
+sunpeak dev --prod-tools
+```
+
 ### `--prod-resources` flag
 
 When `--prod-resources` is used, `sunpeak build` runs automatically before the dev server starts. The built HTML is served from `dist/` instead of Vite HMR. Useful for catching build regressions in CI/E2E testing.
@@ -102,6 +112,17 @@ When `--prod-resources` is used, `sunpeak build` runs automatically before the d
 # CI/E2E: production bundles with simulation mock data
 sunpeak dev --prod-resources
 ```
+
+### Combining flags
+
+The two flags are orthogonal and can be combined:
+
+| Flags | UI | Tools | Use case |
+|-------|-----|-------|----------|
+| *(none)* | HMR | Mocked | Day-to-day development |
+| `--prod-tools` | HMR | Real handlers | Integration testing |
+| `--prod-resources` | Built | Mocked | CI/E2E, catch build regressions |
+| `--prod-tools --prod-resources` | Built | Real handlers | Final smoke test before shipping |
 
 ## Configuration
 
