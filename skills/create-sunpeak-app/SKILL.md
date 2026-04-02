@@ -27,7 +27,7 @@ sunpeak-app/
 │   │       └── {name}.tsx            # Resource component + ResourceConfig export
 │   ├── tools/
 │   │   └── {name}.ts                 # Tool metadata, Zod schema, handler
-│   ├── server.ts                     # Optional server entry (auth, config)
+│   ├── server.ts                     # Optional server entry (auth, config, icons)
 │   └── styles/
 │       └── globals.css               # Tailwind imports
 ├── tests/
@@ -118,7 +118,7 @@ export function WeatherResource() {
 
 ## Tool Files
 
-Each tool `.ts` file exports metadata, a Zod schema, and a handler. The `resource` field links a tool to its UI — omit it for data-only tools:
+Each tool `.ts` file exports metadata, a Zod schema, an optional output schema, and a handler. The `resource` field links a tool to its UI — omit it for data-only tools:
 
 ```ts
 // src/tools/show-weather.ts
@@ -140,7 +140,14 @@ export const schema = {
   units: z.enum(['metric', 'imperial']).describe('Temperature units'),
 };
 
-// 3. Handler — return structured data for the UI
+// 3. Optional output schema (enables structured output validation)
+export const outputSchema = {
+  temperature: z.number(),
+  condition: z.string(),
+  humidity: z.number(),
+};
+
+// 4. Handler — return structured data for the UI
 export default async function (args: { city: string; units?: string }, extra: ToolHandlerExtra) {
   return {
     structuredContent: {
@@ -272,6 +279,7 @@ All hooks are imported from `sunpeak`:
 | `useHostInfo()` | `{ hostVersion, hostCapabilities }` | Host name, version, and supported capabilities |
 | `useTeardown(fn)` | `void` | Register a teardown handler |
 | `useAppTools(config)` | `void` | Register tools the app provides to the host (bidirectional tool calling) |
+| `useRequestTeardown()` | `() => Promise<void>` | Request the host to tear down this app instance |
 | `useAppState(initial)` | `[state, setState]` | React state that auto-syncs to host model context via `updateModelContext()` |
 
 ### `useRequestDisplayMode` details
@@ -406,12 +414,20 @@ function MyResource() {
 ## Commands
 
 ```bash
-pnpm dev       # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
-pnpm build     # Build resources + compile tools to dist/
-pnpm start     # Start production MCP server (real handlers, auth, Zod validation)
-pnpm test      # Run unit tests (vitest)
-pnpm test:e2e  # Run Playwright e2e tests against inspector
-pnpm test:live # Run live tests against real ChatGPT (requires tunnel + browser session)
+pnpm dev        # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
+pnpm build      # Build resources + compile tools to dist/
+pnpm start      # Start production MCP server (real handlers, auth, Zod validation)
+pnpm test       # Run unit tests (vitest)
+pnpm test:e2e   # Run Playwright e2e tests against inspector
+pnpm test:live  # Run live tests against real ChatGPT (requires tunnel + browser session)
+```
+
+Additional CLI commands:
+```bash
+sunpeak new         # Scaffold a new sunpeak app project
+sunpeak inspect     # Run the inspector standalone (without starting a dev server)
+sunpeak upgrade     # Upgrade sunpeak to the latest version
+sunpeak validate    # Full CI pipeline: lint + build + test + e2e
 ```
 
 The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The inspector runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
@@ -533,7 +549,7 @@ These variables use CSS `light-dark()` so they respond to theme changes automati
 
 ## E2E Tests with Playwright
 
-**Critical**: all resource content renders inside an `<iframe>`. Always use `page.frameLocator('iframe')` for resource elements. Only the inspector chrome (`header`, `#root`) uses `page.locator()` directly.
+**Critical**: resource content renders inside a **double-iframe** (outer sandbox proxy + inner app iframe). In e2e tests, the template's `createInspectorUrl` helper handles iframe nesting so you only need a single `page.frameLocator('iframe')`. Only the inspector chrome (`header`, `#root`) uses `page.locator()` directly.
 
 Import `createInspectorUrl` from `./helpers` (not `sunpeak/chatgpt` directly) so the dev overlay is hidden by default and doesn't interfere with element assertions.
 
@@ -544,7 +560,7 @@ import { createInspectorUrl } from './helpers';
 test('renders weather card', async ({ page }) => {
   await page.goto(createInspectorUrl({ simulation: 'show-weather', theme: 'light' }));
 
-  // Access elements INSIDE the resource iframe
+  // Access elements INSIDE the resource iframe (helper resolves double-iframe nesting)
   const iframe = page.frameLocator('iframe');
   await expect(iframe.locator('h1')).toHaveText('Austin');
 });
@@ -586,6 +602,11 @@ test('loads without console errors', async ({ page }) => {
 | `touch` | `boolean` | Enable touch capability |
 | `hover` | `boolean` | Enable hover capability |
 | `safeAreaTop/Bottom/Left/Right` | `number` | Safe area insets in pixels |
+| `tool` | `string` | Select a specific tool (without mock data) |
+| `maxHeight` | `number` | Container max height in pixels (for PiP mode) |
+| `prodResources` | `boolean` | Use production-built resource bundles |
+| `sidebar` | `boolean` | Show/hide inspector sidebar |
+| `devOverlay` | `boolean` | Show/hide dev overlay (timestamp + tool timing) |
 
 ## ResourceConfig Fields
 
@@ -686,6 +707,23 @@ If the app doesn't show up after the tool is called, follow these steps:
 6. **Open a new chat** — both hosts cache iframe content per-conversation. A new chat forces a fresh connection.
 
 Full troubleshooting guide: https://sunpeak.ai/docs/guides/troubleshooting
+
+## Export Paths
+
+| Import | Contents |
+|--------|----------|
+| `sunpeak` | Hooks, types, SDK re-exports, `SafeArea`, `inspector` + `chatgpt` namespaces |
+| `sunpeak/mcp` | Server utilities (`runMCPServer`, `createMcpHandler`, `createProductionMcpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`), server config (`ServerConfig`) |
+| `sunpeak/inspector` | Generic Inspector, host shell system, infrastructure |
+| `sunpeak/chatgpt` | ChatGPT host shell + Inspector re-export |
+| `sunpeak/claude` | Claude host shell + Inspector re-export |
+| `sunpeak/host` | Host detection (`isChatGPT`, `isClaude`, `detectHost`) |
+| `sunpeak/host/chatgpt` | ChatGPT-specific hooks (`useUploadFile`, `useRequestModal`, `useRequestCheckout`) |
+| `sunpeak/test` | Host-agnostic Playwright fixtures (`test` with `live` fixture, `expect`, `setColorScheme`) |
+| `sunpeak/test/config` | Playwright config factory (`defineLiveConfig` with `hosts` array) |
+| `sunpeak/test/chatgpt` | ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture) |
+| `sunpeak/test/chatgpt/config` | ChatGPT-specific Playwright config factory |
+| `sunpeak/style.css` | Main stylesheet |
 
 ## References
 
