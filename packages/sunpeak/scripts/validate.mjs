@@ -376,10 +376,11 @@ async function validateProductionServer(exampleDir) {
     });
     if (!mcpResp.ok) throw new Error(`MCP endpoint returned ${mcpResp.status}`);
 
-    const sseText = await mcpResp.text();
-    const dataLine = sseText.split('\n').find(l => l.startsWith('data: '));
-    if (!dataLine) throw new Error(`MCP response missing data line: ${sseText.substring(0, 200)}`);
-    const mcpBody = JSON.parse(dataLine.slice(6));
+    const responseText = await mcpResp.text();
+    // enableJsonResponse defaults to true, so the response is plain JSON.
+    // Fall back to SSE parsing if the server was started with --sse.
+    const dataLine = responseText.split('\n').find(l => l.startsWith('data: '));
+    const mcpBody = dataLine ? JSON.parse(dataLine.slice(6)) : JSON.parse(responseText);
     if (!mcpBody.result?.serverInfo) throw new Error(`MCP initialize response missing serverInfo: ${JSON.stringify(mcpBody)}`);
     printSuccess(`MCP initialize responded (${mcpBody.result.serverInfo.name} v${mcpBody.result.serverInfo.version})`);
   } finally {
