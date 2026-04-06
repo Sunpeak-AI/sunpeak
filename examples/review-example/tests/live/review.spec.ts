@@ -1,4 +1,4 @@
-import { test, expect } from 'sunpeak/test';
+import { test, expect } from 'sunpeak/test/live';
 
 test('review tool renders review card with correct styles', async ({ live }) => {
   const app = await live.invoke('review-diff');

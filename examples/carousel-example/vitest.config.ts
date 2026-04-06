@@ -8,7 +8,7 @@ const parentSrc = path.resolve(__dirname, '../src');
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'jsdom',
+    environment: 'happy-dom',
     setupFiles: './tests/setup.ts',
     exclude: ['**/node_modules/**', '**/tests/e2e/**', '**/tests/live/**'],
   },

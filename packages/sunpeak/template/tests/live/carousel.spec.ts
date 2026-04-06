@@ -1,4 +1,4 @@
-import { test, expect } from 'sunpeak/test';
+import { test, expect } from 'sunpeak/test/live';
 
 test('carousel tool renders cards with correct styles', async ({ live }) => {
   const app = await live.invoke('show-carousel');

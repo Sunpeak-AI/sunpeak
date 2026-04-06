@@ -565,7 +565,10 @@ export function createMcpHandler(
         return;
       }
       session.lastActivity = Date.now();
-      const webResponse = await session.transport.handleRequest(webRequest, { parsedBody, authInfo });
+      const webResponse = await session.transport.handleRequest(webRequest, {
+        parsedBody,
+        authInfo,
+      });
       await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
       return;
     }

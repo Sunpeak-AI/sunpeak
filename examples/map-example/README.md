@@ -14,17 +14,24 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 
 ## Commands
 
+**Testing:**
+
 ```bash
-pnpm test              # Run tests with Vitest.
-pnpm test:e2e          # Run end-to-end tests with Playwright.
-pnpm test:live         # Run live tests against real ChatGPT.
-sunpeak dev            # Start dev server + MCP endpoint.
-sunpeak build          # Build resources and compile tools for production.
-sunpeak start          # Start the production MCP server.
-sunpeak upgrade        # Upgrade sunpeak to latest version.
+sunpeak test              # Run e2e tests against the inspector.
+sunpeak test --unit       # Run unit tests with Vitest.
+sunpeak test --live       # Run live tests against real ChatGPT.
 ```
 
-The template includes a minimal test setup with Vitest. You can add additional tooling (linting, formatting, type-checking) as needed for your project.
+**Development and production:**
+
+```bash
+sunpeak dev               # Start dev server + MCP endpoint.
+sunpeak build             # Build resources and compile tools for production.
+sunpeak start             # Start the production MCP server.
+sunpeak upgrade           # Upgrade sunpeak to latest version.
+```
+
+E2e tests use the `mcp` fixture from `sunpeak/test` to call tools and assert against rendered UI across ChatGPT and Claude hosts. Unit tests use Vitest with happy-dom. You can add additional tooling (linting, formatting, type-checking) as needed for your project.
 
 ## Project Structure
 

@@ -37,7 +37,7 @@ function getVersion() {
   }
 
   // Commands that don't require a package.json
-  const standaloneCommands = ['new', 'upgrade', 'inspect', 'help', undefined];
+  const standaloneCommands = ['new', 'upgrade', 'inspect', 'test', 'help', undefined];
 
   if (command && !standaloneCommands.includes(command)) {
     checkPackageJson();
@@ -79,6 +79,13 @@ function getVersion() {
       }
       break;
 
+    case 'test':
+      {
+        const { runTest } = await import(join(COMMANDS_DIR, 'test.mjs'));
+        await runTest(args);
+      }
+      break;
+
     case 'upgrade':
       {
         const { upgrade } = await import(join(COMMANDS_DIR, 'upgrade.mjs'));
@@ -100,16 +107,22 @@ function getVersion() {
 Install:
   pnpm add -g sunpeak
 
-Usage:
+Testing (works with any MCP server):
+  sunpeak inspect          Inspect any MCP server in the inspector
+    --server, -s <url|cmd> MCP server URL or stdio command (required)
+    --simulations <dir>    Simulation JSON directory
+  sunpeak test             Run e2e tests against the inspector
+    init                   Scaffold test infrastructure into a project
+    --unit                 Run unit tests (vitest)
+    --live                 Run live tests against real hosts
+
+App framework (for sunpeak projects):
   sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server + inspector + MCP endpoint
     --no-begging           Suppress GitHub star message
   sunpeak build            Build resources + tools for production
   sunpeak start            Start production MCP server
     --port, -p             Server port (default: 8000, or PORT env)
-  sunpeak inspect          Inspect any MCP server in the inspector
-    --server, -s <url|cmd> MCP server URL or stdio command (required)
-    --simulations <dir>    Simulation JSON directory
   sunpeak upgrade          Upgrade sunpeak to latest version
   sunpeak --version        Show version number
 

@@ -1,11 +1,11 @@
-import { test, expect } from 'sunpeak/test';
+import { test, expect } from 'sunpeak/test/live';
 
 test('carousel tool renders cards with correct styles', async ({ live }) => {
   const app = await live.invoke('show-carousel');
 
   // First place from simulation data: "Lady Bird Lake"
   await expect(app.locator('img').first()).toBeVisible({ timeout: 15_000 });
-  await expect(app.getByText('Lady Bird Lake')).toBeVisible();
+  await expect(app.getByRole('heading', { name: 'Lady Bird Lake' })).toBeVisible();
   const buttons = app.locator('button');
   expect(await buttons.count()).toBeGreaterThanOrEqual(1);
 
@@ -43,7 +43,7 @@ test('carousel tool renders cards with correct styles', async ({ live }) => {
 
   // Switch to dark mode and verify the app re-themes correctly
   await live.setColorScheme('dark', app);
-  await expect(app.getByText('Lady Bird Lake')).toBeVisible();
+  await expect(app.getByRole('heading', { name: 'Lady Bird Lake' })).toBeVisible();
   const darkBorderColor = await app
     .locator('div[class*="rounded"]')
     .first()

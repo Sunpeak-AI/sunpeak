@@ -1,4 +1,4 @@
-import { test, expect } from 'sunpeak/test';
+import { test, expect } from 'sunpeak/test/live';
 
 test('albums tool renders photo grid with correct styles', async ({ live }) => {
   const app = await live.invoke('show-albums');
