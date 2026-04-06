@@ -10,17 +10,24 @@ import * as p from '@clack/prompts';
  * - JS/TS projects: root-level config + test files
  * - sunpeak projects: migrate to defineConfig()
  */
-export async function testInit() {
+export async function testInit(args = []) {
   p.intro('Setting up sunpeak tests');
+
+  // Parse --server flag from CLI args
+  const serverIdx = args.indexOf('--server');
+  const cliServer =
+    serverIdx !== -1 && args[serverIdx + 1]
+      ? args[serverIdx + 1]
+      : undefined;
 
   const projectType = detectProjectType();
 
   if (projectType === 'sunpeak') {
     await initSunpeakProject();
   } else if (projectType === 'js') {
-    await initJsProject();
+    await initJsProject(cliServer);
   } else {
-    await initExternalProject();
+    await initExternalProject(cliServer);
   }
 
   p.outro('Done!');
@@ -45,7 +52,15 @@ function detectProjectType() {
   return 'external';
 }
 
-async function getServerConfig() {
+async function getServerConfig(cliServer) {
+  // If provided via --server flag, detect type automatically
+  if (cliServer) {
+    if (cliServer.startsWith('http://') || cliServer.startsWith('https://')) {
+      return { type: 'url', value: cliServer };
+    }
+    return { type: 'command', value: cliServer };
+  }
+
   const serverType = await p.select({
     message: 'How does your MCP server start?',
     options: [
@@ -107,10 +122,10 @@ function generateServerConfigBlock(server, relativeTo = '.') {
   },`;
 }
 
-async function initExternalProject() {
+async function initExternalProject(cliServer) {
   p.log.info('Detected non-JS project. Creating self-contained test directory.');
 
-  const server = await getServerConfig();
+  const server = await getServerConfig(cliServer);
   const testDir = join(process.cwd(), 'tests', 'sunpeak');
 
   if (existsSync(testDir)) {
@@ -200,10 +215,10 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
   p.log.message('  npx sunpeak test');
 }
 
-async function initJsProject() {
+async function initJsProject(cliServer) {
   p.log.info('Detected JS/TS project. Adding test config at project root.');
 
-  const server = await getServerConfig();
+  const server = await getServerConfig(cliServer);
   const cwd = process.cwd();
 
   // Create playwright.config.ts
