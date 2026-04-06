@@ -16,8 +16,11 @@ sunpeak provides three levels of automated testing for MCP Apps:
 
 | Command | What it tests | Runtime |
 |---------|--------------|---------|
-| `sunpeak test` | E2E tests against the inspector | Playwright + inspector |
-| `sunpeak test --unit` | Unit tests (Vitest) | happy-dom |
+| `sunpeak test` | Unit + e2e tests | Vitest + Playwright |
+| `sunpeak test --unit` | Unit tests only | Vitest + happy-dom |
+| `sunpeak test --e2e` | E2E tests only | Playwright + inspector |
+| `sunpeak test --visual` | E2E tests with visual regression | Playwright + inspector |
+| `sunpeak test --visual --update` | Update visual regression baselines | Playwright + inspector |
 | `sunpeak test --live` | Live tests against real ChatGPT | Playwright + real host |
 
 ## E2E Testing
@@ -25,9 +28,10 @@ sunpeak provides three levels of automated testing for MCP Apps:
 E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests. Tests run against both ChatGPT and Claude hosts via Playwright projects.
 
 ```bash
-sunpeak test                               # Run all
-sunpeak test -- --ui                       # Playwright UI mode
-sunpeak test tests/e2e/albums.spec.ts      # Single file
+sunpeak test                               # Run unit + e2e
+sunpeak test --e2e                         # E2E only
+sunpeak test --e2e -- --ui                 # Playwright UI mode
+sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
 ```
 
 ### Writing E2E Tests
@@ -177,6 +181,77 @@ test('pip mode works (ChatGPT only)', async ({ mcp }) => {
 });
 ```
 
+## Visual Regression Testing
+
+Visual regression tests capture screenshots of your resources and compare them against saved baselines. This catches unintended visual changes across themes, display modes, and hosts.
+
+Screenshot comparisons only run when you pass `--visual`. Without it, `mcp.screenshot()` calls are silently skipped, so you can include them in your regular e2e tests without affecting normal runs.
+
+### Running Visual Tests
+
+```bash
+sunpeak test --visual                  # Compare against baselines
+sunpeak test --visual --update         # Update baselines
+```
+
+### Writing Visual Tests
+
+Use `mcp.screenshot()` in any e2e test. It accepts an optional name and Playwright `toHaveScreenshot` options:
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('albums renders correctly in light mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+  await mcp.screenshot('albums-light');
+});
+
+test('albums renders correctly in dark mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'dark' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+  await mcp.screenshot('albums-dark');
+});
+```
+
+### Screenshot Targets
+
+By default, `screenshot()` captures the app content inside the double-iframe. Use the `target` option to capture the full inspector page, or pass a specific `element` locator:
+
+```typescript
+// Screenshot just the app (default)
+await mcp.screenshot('app-view');
+
+// Screenshot the full inspector page (host chrome + app)
+await mcp.screenshot('full-page', { target: 'page' });
+
+// Screenshot a specific element
+await mcp.screenshot('album-card', {
+  element: result.app().locator('button:has-text("Summer Slice")'),
+});
+```
+
+### Configuring Visual Defaults
+
+Pass a `visual` option to `defineConfig()` to set project-wide defaults for screenshot comparison:
+
+```typescript
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig({
+  visual: {
+    threshold: 0.2,
+    maxDiffPixelRatio: 0.05,
+    snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{testFilePath}/{arg}{ext}',
+  },
+});
+```
+
+All Playwright `toHaveScreenshot` options (threshold, maxDiffPixelRatio, maxDiffPixels, animations, etc.) are supported. The `snapshotPathTemplate` controls where baseline images are stored.
+
 ## Testing Best Practices
 
 <AccordionGroup>
@@ -212,6 +287,14 @@ test('pip mode works (ChatGPT only)', async ({ mcp }) => {
     ```
 
     See [MCP Apps Display Modes](/mcp-apps/introduction#what-display-modes-are-available) for how hosts handle inline, fullscreen, and PiP views.
+  </Accordion>
+
+  <Accordion title="Add visual regression tests for key states">
+    Use `mcp.screenshot()` in tests that cover important visual states (light/dark theme, fullscreen, empty states). Visual tests catch CSS regressions that functional assertions miss:
+    ```typescript
+    await mcp.screenshot('albums-dark');
+    await mcp.screenshot('albums-fullscreen', { target: 'page' });
+    ```
   </Accordion>
 
   <Accordion title="Clean up after tests">

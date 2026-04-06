@@ -107,10 +107,13 @@ sunpeak new
 | Command                               | Description                                 |
 | ------------------------------------- | ------------------------------------------- |
 | `sunpeak inspect --server <url\|cmd>` | Inspect any MCP server in the inspector     |
-| `sunpeak test`                        | Run e2e tests against the inspector         |
-| `sunpeak test init`                   | Scaffold test infrastructure into a project |
-| `sunpeak test --unit`                 | Run unit tests (Vitest)                     |
+| `sunpeak test`                        | Run unit + e2e tests                        |
+| `sunpeak test --unit`                 | Run unit tests only (Vitest)                |
+| `sunpeak test --e2e`                  | Run e2e tests only (Playwright)             |
+| `sunpeak test --visual`               | Run e2e tests with visual regression        |
+| `sunpeak test --visual --update`      | Update visual regression baselines          |
 | `sunpeak test --live`                 | Run live tests against real hosts           |
+| `sunpeak test init`                   | Scaffold test infrastructure into a project |
 
 **App framework** (for sunpeak projects):
 

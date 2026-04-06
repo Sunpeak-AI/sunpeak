@@ -98,13 +98,13 @@ packages/sunpeak/
 - `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), server config (`ServerConfig`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
 - `sunpeak/host` — Host detection
 - `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
-- `sunpeak/test` — MCP-first Playwright fixtures (`test` with `mcp` fixture, `expect` with MCP-native matchers)
-- `sunpeak/test/config` — Playwright config factory (`defineConfig` — auto-detects sunpeak projects, or accepts `server` option for external MCP servers)
+- `sunpeak/test` — MCP-first Playwright fixtures (`test` with `mcp` fixture including `screenshot()` for visual regression, `expect` with MCP-native matchers)
+- `sunpeak/test/config` — Playwright config factory (`defineConfig` — auto-detects sunpeak projects, or accepts `server` option for external MCP servers; supports `visual` option for visual regression config)
 - `sunpeak/test/live` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
 - `sunpeak/test/live/config` — Live test config factory (`defineLiveConfig` with `hosts` array)
 - `sunpeak/test/live/chatgpt` — ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture)
 - `sunpeak/test/live/chatgpt/config` — ChatGPT-specific Playwright config factory
-- `sunpeak/test/inspect/config` — Inspect config factory for external MCP servers (`defineInspectConfig`)
+- `sunpeak/test/inspect/config` — Inspect config factory for external MCP servers (`defineInspectConfig`; supports `visual` option for visual regression config)
 - `sunpeak/style.css` — Main stylesheet
 
 ## Key Types
@@ -205,7 +205,7 @@ The testing framework has three composable layers, each usable in isolation:
 2. **Testing Framework** (Layer 2) — `sunpeak/test` exports an `mcp` Playwright fixture with `callTool()`, MCP-native matchers (`toBeError`, `toHaveTextContent`), and `defineConfig()`. Works for any MCP server. `sunpeak test init` scaffolds test infrastructure.
 3. **sunpeak Framework** (Layer 3) — Template e2e tests use Layer 2's fixture and config. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend.
 
-**CLI**: `sunpeak test` runs e2e tests, `sunpeak test --unit` runs vitest, `sunpeak test --live` runs live tests, `sunpeak test init` scaffolds test infrastructure.
+**CLI**: `sunpeak test` runs unit + e2e tests, `sunpeak test --unit` runs only vitest, `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test init` scaffolds test infrastructure. Flags are additive: `--unit --e2e --live` runs all three. `--update` implies `--visual`.
 
 ## Documentation (`docs/`)
 

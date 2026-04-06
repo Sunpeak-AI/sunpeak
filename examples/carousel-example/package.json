@@ -7,15 +7,17 @@
     "dev": "sunpeak dev",
     "build": "sunpeak build",
     "start": "sunpeak start",
-    "test": "vitest run",
-    "test:e2e": "playwright test",
-    "test:live": "playwright test --config tests/live/playwright.config.ts"
+    "test": "sunpeak test",
+    "test:unit": "sunpeak test --unit",
+    "test:e2e": "sunpeak test --e2e",
+    "test:visual": "sunpeak test --visual",
+    "test:live": "sunpeak test --live"
   },
   "dependencies": {
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
-    "sunpeak": "^0.18.15",
+    "sunpeak": "^0.19.1",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },

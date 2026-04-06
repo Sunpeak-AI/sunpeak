@@ -280,7 +280,7 @@ function runScaffoldSmokeTest() {
     return runSteps([
       { name: 'pnpm install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
       { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
-      { name: 'pnpm test', command: 'pnpm test' },
+      { name: 'pnpm test:unit', command: 'pnpm test:unit' },
       { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
     ], projectDir);
   } finally {
@@ -319,9 +319,8 @@ async function testExample(resource, index) {
   return runSteps([
     { name: 'pnpm install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
     { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
-    { name: 'pnpm test', command: 'pnpm test' },
     { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
-    { name: 'pnpm test:e2e', command: 'pnpm test:e2e' },
+    { name: 'pnpm test', command: 'pnpm test' },
   ], exampleDir, env);
 }
 
@@ -934,7 +933,42 @@ try {
   printSuccess(`All parallel tasks passed (${parallelDuration}s wall time)`);
 
   // ==========================================================================
-  // Phase 5: Production server smoke test
+  // Phase 5: Visual regression testing (template)
+  // ==========================================================================
+  printSection('VISUAL REGRESSION TESTS');
+
+  // Run visual tests against the template (which has all resources).
+  // First pass: create baselines with --update.
+  // Second pass: verify screenshots match baselines.
+  {
+    const visualPort = await getPort(6790);
+    const visualSandboxPort = await getPort(24685);
+    const visualEnv = {
+      SUNPEAK_TEST_PORT: String(visualPort),
+      SUNPEAK_SANDBOX_PORT: String(visualSandboxPort),
+    };
+
+    console.log('Creating visual baselines...');
+    if (!runCommand('pnpm test:visual -- --update tests/e2e/visual.spec.ts', TEMPLATE_ROOT, visualEnv)) {
+      throw new Error('Visual baseline creation failed');
+    }
+    printSuccess('Visual baselines created');
+
+    console.log('\nVerifying visual snapshots match...');
+    if (!runCommand('pnpm test:visual -- tests/e2e/visual.spec.ts', TEMPLATE_ROOT, visualEnv)) {
+      throw new Error('Visual regression verification failed');
+    }
+    printSuccess('Visual snapshots verified');
+
+    // Clean up baselines (template is part of the monorepo, not a user project)
+    const screenshotsDir = join(TEMPLATE_ROOT, 'tests/e2e/__screenshots__');
+    if (existsSync(screenshotsDir)) {
+      rmSync(screenshotsDir, { recursive: true });
+    }
+  }
+
+  // ==========================================================================
+  // Phase 6: Production server smoke test
   // ==========================================================================
   printSection('PRODUCTION SERVER');
 
@@ -950,7 +984,7 @@ try {
   await validateProductionServer(lastExampleDir);
 
   // ==========================================================================
-  // Phase 5b: Inspect mode integration test
+  // Phase 6b: Inspect mode integration test
   // ==========================================================================
   printSection('INSPECT MODE');
 
@@ -964,14 +998,14 @@ try {
   await validateInspectMode(TEMPLATE_ROOT);
 
   // ==========================================================================
-  // Phase 5c: Dev server integration test
+  // Phase 6c: Dev server integration test
   // ==========================================================================
   printSection('DEV SERVER');
 
   await validateDevServer(TEMPLATE_ROOT);
 
   // ==========================================================================
-  // Phase 6: Live tests (opt-in, requires tunnel)
+  // Phase 7: Live tests (opt-in, requires tunnel)
   // ==========================================================================
   if (liveMode) {
     printSection('LIVE TESTS');

@@ -415,11 +415,14 @@ function MyResource() {
 
 Testing (works with any MCP server):
 ```bash
-sunpeak inspect     # Inspect any MCP server in the inspector (standalone)
-sunpeak test        # Run e2e tests against the inspector (Playwright)
-sunpeak test init   # Scaffold test infrastructure into a project
-sunpeak test --unit # Run unit tests (vitest)
-sunpeak test --live # Run live tests against real ChatGPT (requires tunnel + browser session)
+sunpeak inspect              # Inspect any MCP server in the inspector (standalone)
+sunpeak test                 # Run unit + e2e tests
+sunpeak test --unit          # Run unit tests only (vitest)
+sunpeak test --e2e           # Run e2e tests only (Playwright)
+sunpeak test --visual        # Run e2e tests with visual regression comparison
+sunpeak test --visual --update  # Update visual regression baselines
+sunpeak test init            # Scaffold test infrastructure into a project
+sunpeak test --live          # Run live tests against real ChatGPT (requires tunnel + browser session)
 ```
 
 App framework (for sunpeak projects):
@@ -609,6 +612,7 @@ test('pip mode (skip on Claude)', async ({ mcp }) => {
 | `runTool()` | Click Run button, wait for resource, return `ToolResult` |
 | `setTheme(theme)` | Switch to `'light'` or `'dark'` via sidebar |
 | `setDisplayMode(mode)` | Switch to `'inline'`, `'pip'`, or `'fullscreen'` via sidebar |
+| `screenshot(name?, options?)` | Take a screenshot and compare against a baseline (only runs with `--visual`) |
 | `page` | Raw Playwright `Page` for chrome-level assertions |
 | `host` | Current host ID (`'chatgpt'` or `'claude'`) from Playwright project |
 
@@ -637,6 +641,45 @@ test('pip mode (skip on Claude)', async ({ mcp }) => {
 | `theme` | `'light' \| 'dark'` | Color theme (default: inspector default) |
 | `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode |
 | `prodResources` | `boolean` | Use production-built resource bundles |
+
+### Visual Regression Testing
+
+Use `mcp.screenshot()` to capture and compare screenshots against saved baselines. Comparisons only run with `sunpeak test --visual`. Without it, `screenshot()` silently skips, so you can include it in regular e2e tests.
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('albums renders correctly', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+  await mcp.screenshot('albums-light');
+});
+```
+
+`screenshot()` options:
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `target` | `'app' \| 'page'` | What to capture: `'app'` (inner iframe, default) or `'page'` (full inspector) |
+| `element` | `Locator` | Specific locator to screenshot instead of the default target |
+| `threshold` | `number` | Pixel comparison threshold (0-1) |
+| `maxDiffPixelRatio` | `number` | Maximum allowed ratio of differing pixels (0-1) |
+
+All Playwright `toHaveScreenshot` options are passed through.
+
+Configure project-wide visual defaults:
+
+```typescript
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig({
+  visual: {
+    threshold: 0.2,
+    maxDiffPixelRatio: 0.05,
+  },
+});
+```
 
 ### Playwright Config
 

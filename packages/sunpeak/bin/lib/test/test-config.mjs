@@ -41,6 +41,7 @@ export function defineConfig(options = {}) {
     simulationsDir,
     globalSetup,
     use: userUse,
+    visual,
   } = options;
 
   const { port, sandboxPort } = resolvePorts();
@@ -67,6 +68,7 @@ export function defineConfig(options = {}) {
     port,
     use: userUse,
     globalSetup,
+    visual,
     webServer: {
       command,
       healthUrl: `http://localhost:${port}/health`,

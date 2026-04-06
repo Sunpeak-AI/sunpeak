@@ -17,7 +17,10 @@ import { getPortSync } from '../get-port.mjs';
  * @param {string} [options.globalSetup] - Global setup file path
  * @returns {import('@playwright/test').PlaywrightTestConfig}
  */
-export function createBaseConfig({ hosts, testDir, webServer, port, use, globalSetup }) {
+export function createBaseConfig({ hosts, testDir, webServer, port, use, globalSetup, visual }) {
+  // Separate snapshot path from other visual options passed to expect.toHaveScreenshot
+  const { snapshotPathTemplate, ...toHaveScreenshotDefaults } = visual ?? {};
+
   return {
     ...(globalSetup ? { globalSetup } : {}),
     testDir,
@@ -27,6 +30,18 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
     // Limit workers to avoid overwhelming the double-iframe sandbox proxy.
     workers: process.env.CI ? 1 : 2,
     reporter: 'list',
+    // Only override snapshot path when visual config is provided, to avoid
+    // changing Playwright's default for projects that don't use visual testing.
+    ...(visual
+      ? {
+          snapshotPathTemplate:
+            snapshotPathTemplate ??
+            '{testDir}/__screenshots__/{projectName}/{testFilePath}/{arg}{ext}',
+        }
+      : {}),
+    ...(Object.keys(toHaveScreenshotDefaults).length > 0
+      ? { expect: { toHaveScreenshot: toHaveScreenshotDefaults } }
+      : {}),
     use: {
       baseURL: `http://localhost:${port}`,
       trace: 'on-first-retry',

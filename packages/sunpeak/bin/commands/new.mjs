@@ -176,7 +176,9 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
       }
 
       // Skip framework-internal test files (dev overlay tests are for sunpeak development, not user projects)
-      if ((src.includes('/tests/e2e/') || src.includes('/tests/live/')) && name.startsWith('dev-')) {
+      // Skip visual.spec.ts — it references specific resources and serves as a template/example.
+      // Users should write their own visual tests for their selected resources.
+      if ((src.includes('/tests/e2e/') || src.includes('/tests/live/')) && (name.startsWith('dev-') || name === 'visual.spec.ts')) {
         return false;
       }
 

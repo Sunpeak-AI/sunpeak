@@ -1,4 +1,11 @@
-import type { Page, FrameLocator, TestType, Expect } from '@playwright/test';
+import type {
+  Page,
+  FrameLocator,
+  Locator,
+  TestType,
+  Expect,
+  PageAssertionsToHaveScreenshotOptions,
+} from '@playwright/test';
 
 /**
  * Result from calling an MCP tool via the inspector.
@@ -29,6 +36,22 @@ export interface CallToolOptions {
   prodResources?: boolean;
   /** Additional inspector URL parameters. */
   [key: string]: unknown;
+}
+
+/**
+ * Options for screenshot().
+ *
+ * Extends Playwright's toHaveScreenshot() options with sunpeak-specific
+ * `target` and `element` fields. All standard Playwright options (threshold,
+ * maxDiffPixelRatio, maxDiffPixels, mask, maskColor, animations, caret,
+ * fullPage, clip, scale, stylePath, omitBackground, timeout, etc.)
+ * are passed through directly.
+ */
+export interface ScreenshotOptions extends PageAssertionsToHaveScreenshotOptions {
+  /** What to screenshot: 'app' (inner iframe content) or 'page' (full inspector). Default: 'app'. */
+  target?: 'app' | 'page';
+  /** Specific locator to screenshot instead of the default target. */
+  element?: Locator;
 }
 
 /**
@@ -66,6 +89,16 @@ export interface McpFixture {
 
   /** Change the display mode via the sidebar buttons. */
   setDisplayMode(mode: 'inline' | 'pip' | 'fullscreen'): Promise<void>;
+
+  /**
+   * Take a screenshot and compare against a baseline.
+   * Only performs the comparison when visual testing is enabled
+   * (`sunpeak test --visual`). Silently skips otherwise.
+   *
+   * @param name - Snapshot name (auto-generated from test title if omitted)
+   * @param options - Screenshot and comparison options
+   */
+  screenshot(name?: string, options?: ScreenshotOptions): Promise<void>;
 }
 
 /**

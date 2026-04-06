@@ -36,6 +36,7 @@ export function defineInspectConfig(options) {
     hosts = ['chatgpt', 'claude'],
     name,
     use: userUse,
+    visual,
   } = options;
 
   if (!server) {
@@ -60,6 +61,7 @@ export function defineInspectConfig(options) {
     testDir,
     port,
     use: userUse,
+    visual,
     webServer: {
       command,
       healthUrl: `http://localhost:${port}/health`,

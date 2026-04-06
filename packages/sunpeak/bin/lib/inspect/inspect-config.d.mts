@@ -1,3 +1,5 @@
+import type { VisualConfig } from '../test/test-config.d.mts';
+
 export interface InspectConfigOptions {
   /** MCP server URL or stdio command string (required) */
   server: string;
@@ -11,6 +13,8 @@ export interface InspectConfigOptions {
   name?: string;
   /** Additional Playwright `use` options */
   use?: Record<string, unknown>;
+  /** Visual regression testing configuration */
+  visual?: VisualConfig;
 }
 
 /**

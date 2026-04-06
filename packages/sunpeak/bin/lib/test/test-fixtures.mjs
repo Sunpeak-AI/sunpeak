@@ -180,6 +180,49 @@ const test = base.extend({
         // Wait for display mode transition
         await page.waitForTimeout(500);
       },
+
+      /**
+       * Take a screenshot and compare against a baseline.
+       * Only performs the comparison when visual testing is enabled
+       * (`sunpeak test --visual`). Silently skips otherwise, so tests
+       * that include screenshot() calls still pass during normal runs.
+       *
+       * Accepts all Playwright toHaveScreenshot() options (threshold,
+       * maxDiffPixelRatio, maxDiffPixels, mask, animations, caret,
+       * fullPage, clip, scale, stylePath, etc.) and passes them through.
+       *
+       * @param {string} [name] - Snapshot name (auto-generated from test title if omitted)
+       * @param {Object} [options] - Screenshot and comparison options
+       * @param {'app' | 'page'} [options.target='app'] - What to screenshot
+       * @param {import('@playwright/test').Locator} [options.element] - Specific locator to screenshot
+       */
+      async screenshot(name, options = {}) {
+        if (process.env.SUNPEAK_VISUAL !== 'true') return;
+
+        // Support screenshot(options) without a name
+        if (typeof name === 'object' && name !== null) {
+          options = name;
+          name = undefined;
+        }
+
+        const { target = 'app', element, ...playwrightOptions } = options;
+
+        let locator;
+        if (element) {
+          locator = element;
+        } else if (target === 'page') {
+          locator = page.locator('#root');
+        } else {
+          locator = page.frameLocator('iframe').frameLocator('iframe').locator('body');
+        }
+
+        const fullName = name && !name.endsWith('.png') ? `${name}.png` : name;
+        const args = fullName
+          ? [fullName, playwrightOptions]
+          : [playwrightOptions];
+
+        await expect(locator).toHaveScreenshot(...args);
+      },
     };
 
     await use(fixture);

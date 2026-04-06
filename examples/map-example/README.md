@@ -17,9 +17,12 @@ That's it! Edit the resource files in [./src/resources/](./src/resources/) to bu
 **Testing:**
 
 ```bash
-sunpeak test              # Run e2e tests against the inspector.
-sunpeak test --unit       # Run unit tests with Vitest.
-sunpeak test --live       # Run live tests against real ChatGPT.
+sunpeak test                      # Run unit + e2e tests.
+sunpeak test --unit               # Run unit tests only (Vitest).
+sunpeak test --e2e                # Run e2e tests only (Playwright).
+sunpeak test --visual             # Run e2e tests with visual regression.
+sunpeak test --visual --update    # Update visual regression baselines.
+sunpeak test --live               # Run live tests against real ChatGPT.
 ```
 
 **Development and production:**

@@ -16,8 +16,11 @@ sunpeak provides three levels of automated testing for MCP Apps:
 
 | Command | What it tests | Runtime |
 |---------|--------------|---------|
-| `sunpeak test` | E2E tests against the inspector | Playwright + inspector |
-| `sunpeak test --unit` | Unit tests (Vitest) | happy-dom |
+| `sunpeak test` | Unit + e2e tests | Vitest + Playwright |
+| `sunpeak test --unit` | Unit tests only | Vitest + happy-dom |
+| `sunpeak test --e2e` | E2E tests only | Playwright + inspector |
+| `sunpeak test --visual` | E2E tests with visual regression | Playwright + inspector |
+| `sunpeak test --visual --update` | Update visual regression baselines | Playwright + inspector |
 | `sunpeak test --live` | Live tests against real ChatGPT | Playwright + real host |
 
 ## E2E Testing
@@ -25,9 +28,10 @@ sunpeak provides three levels of automated testing for MCP Apps:
 E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests. Tests run against both ChatGPT and Claude hosts via Playwright projects.
 
 ```bash
-sunpeak test                               # Run all
-sunpeak test -- --ui                       # Playwright UI mode
-sunpeak test tests/e2e/albums.spec.ts      # Single file
+sunpeak test                               # Run unit + e2e
+sunpeak test --e2e                         # E2E only
+sunpeak test --e2e -- --ui                 # Playwright UI mode
+sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
 ```
 
 ### Writing E2E Tests
@@ -139,6 +143,50 @@ test('should render in fullscreen', async ({ mcp }) => {
   const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+});
+```
+
+## Visual Regression Testing
+
+Visual regression tests capture screenshots and compare them against saved baselines. This catches unintended visual changes across themes, display modes, and hosts.
+
+Screenshot comparisons only run when you pass `--visual`. Without it, `mcp.screenshot()` calls are silently skipped, so you can include them in your regular e2e tests without affecting normal runs.
+
+```bash
+sunpeak test --visual                  # Compare against baselines
+sunpeak test --visual --update         # Update baselines
+```
+
+Use `mcp.screenshot()` in any e2e test:
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('albums renders correctly', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+  await mcp.screenshot('albums-light');
+});
+```
+
+By default, `screenshot()` captures the app inside the double-iframe. Use `target: 'page'` for the full inspector, or pass a specific `element` locator:
+
+```typescript
+await mcp.screenshot('full-page', { target: 'page' });
+await mcp.screenshot('card', { element: app.locator('.card') });
+```
+
+Configure project-wide visual defaults in your Playwright config:
+
+```typescript
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig({
+  visual: {
+    threshold: 0.2,
+    maxDiffPixelRatio: 0.05,
+  },
 });
 ```
 
