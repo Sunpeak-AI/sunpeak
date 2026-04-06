@@ -413,21 +413,22 @@ function MyResource() {
 
 ## Commands
 
+Testing (works with any MCP server):
 ```bash
-pnpm dev        # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
-pnpm build      # Build resources + compile tools to dist/
-pnpm start      # Start production MCP server (real handlers, auth, Zod validation)
-pnpm test       # Run unit tests (vitest)
-pnpm test:e2e   # Run Playwright e2e tests against inspector
-pnpm test:live  # Run live tests against real ChatGPT (requires tunnel + browser session)
+sunpeak inspect     # Inspect any MCP server in the inspector (standalone)
+sunpeak test        # Run e2e tests against the inspector (Playwright)
+sunpeak test init   # Scaffold test infrastructure into a project
+sunpeak test --unit # Run unit tests (vitest)
+sunpeak test --live # Run live tests against real ChatGPT (requires tunnel + browser session)
 ```
 
-Additional CLI commands:
+App framework (for sunpeak projects):
 ```bash
 sunpeak new         # Scaffold a new sunpeak app project
-sunpeak inspect     # Run the inspector standalone (without starting a dev server)
+sunpeak dev         # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
+sunpeak build       # Build resources + compile tools to dist/
+sunpeak start       # Start production MCP server (real handlers, auth, Zod validation)
 sunpeak upgrade     # Upgrade sunpeak to the latest version
-sunpeak validate    # Full CI pipeline: lint + build + test + e2e
 ```
 
 The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The inspector runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
@@ -547,37 +548,35 @@ Use MCP standard CSS variables via Tailwind arbitrary values instead of raw colo
 
 These variables use CSS `light-dark()` so they respond to theme changes automatically. The `dark:` Tailwind variant also works via `[data-theme="dark"]`.
 
-## E2E Tests with Playwright
+## E2E Tests with the `mcp` Fixture
 
-**Critical**: resource content renders inside a **double-iframe** (outer sandbox proxy + inner app iframe). In e2e tests, the template's `createInspectorUrl` helper handles iframe nesting so you only need a single `page.frameLocator('iframe')`. Only the inspector chrome (`header`, `#root`) uses `page.locator()` directly.
-
-Import `createInspectorUrl` from `./helpers` (not `sunpeak/chatgpt` directly) so the dev overlay is hidden by default and doesn't interfere with element assertions.
+Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture handles inspector navigation, double-iframe traversal, URL construction, and host selection. Tests run automatically across ChatGPT and Claude hosts via Playwright projects.
 
 ```typescript
-import { test, expect } from '@playwright/test';
-import { createInspectorUrl } from './helpers';
+import { test, expect } from 'sunpeak/test';
 
-test('renders weather card', async ({ page }) => {
-  await page.goto(createInspectorUrl({ simulation: 'show-weather', theme: 'light' }));
-
-  // Access elements INSIDE the resource iframe (helper resolves double-iframe nesting)
-  const iframe = page.frameLocator('iframe');
-  await expect(iframe.locator('h1')).toHaveText('Austin');
+test('renders weather card', async ({ mcp }) => {
+  const result = await mcp.callTool('show-weather');
+  const app = result.app();
+  await expect(app.locator('h1')).toHaveText('Austin');
 });
 
-test('loads without console errors', async ({ page }) => {
+test('renders in dark mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-weather', {}, { theme: 'dark' });
+  const app = result.app();
+  await expect(app.locator('h1')).toBeVisible();
+});
+
+test('loads without console errors', async ({ mcp }) => {
   const errors: string[] = [];
-  page.on('console', (msg) => {
+  mcp.page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  await page.goto(createInspectorUrl({ simulation: 'show-weather', theme: 'dark' }));
+  const result = await mcp.callTool('show-weather', {}, { theme: 'dark' });
+  const app = result.app();
+  await expect(app.locator('h1')).toBeVisible();
 
-  // Wait for content to render
-  const iframe = page.frameLocator('iframe');
-  await expect(iframe.locator('h1')).toBeVisible();
-
-  // Filter expected MCP handshake noise
   const unexpectedErrors = errors.filter(
     (e) =>
       !e.includes('[IframeResource]') &&
@@ -587,26 +586,66 @@ test('loads without console errors', async ({ page }) => {
   );
   expect(unexpectedErrors).toHaveLength(0);
 });
+
+test('prod tools empty state', async ({ mcp }) => {
+  await mcp.openTool('show-weather');
+  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
+});
+
+test('pip mode (skip on Claude)', async ({ mcp }) => {
+  test.skip(mcp.host === 'claude', 'Claude does not support PiP');
+  const result = await mcp.callTool('show-weather');
+  await mcp.setDisplayMode('pip');
+  await expect(result.app().locator('h1')).toBeVisible({ timeout: 5000 });
+});
 ```
 
-`createInspectorUrl(params)` builds the URL for a simulation. Full params:
+### `mcp` Fixture API
 
-| Param | Type | Description |
-|-------|------|-------------|
-| `simulation` | `string` | Simulation filename without `.json` (e.g. `'show-weather'`) |
-| `host` | `'chatgpt' \| 'claude'` | Host shell (default: `'chatgpt'`) |
-| `theme` | `'light' \| 'dark'` | Color theme (default: `'dark'`) |
-| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode (default: `'inline'`) |
-| `locale` | `string` | Locale string, e.g. `'en-US'` |
-| `deviceType` | `'mobile' \| 'tablet' \| 'desktop'` | Device type preset |
-| `touch` | `boolean` | Enable touch capability |
-| `hover` | `boolean` | Enable hover capability |
-| `safeAreaTop/Bottom/Left/Right` | `number` | Safe area insets in pixels |
-| `tool` | `string` | Select a specific tool (without mock data) |
-| `maxHeight` | `number` | Container max height in pixels (for PiP mode) |
+| Method | Description |
+|--------|-------------|
+| `callTool(name, input?, options?)` | Navigate to simulation, wait for render, return `ToolResult` |
+| `openTool(name, options?)` | Navigate to tool with no mock data ("Press Run" state) |
+| `runTool()` | Click Run button, wait for resource, return `ToolResult` |
+| `setTheme(theme)` | Switch to `'light'` or `'dark'` via sidebar |
+| `setDisplayMode(mode)` | Switch to `'inline'`, `'pip'`, or `'fullscreen'` via sidebar |
+| `page` | Raw Playwright `Page` for chrome-level assertions |
+| `host` | Current host ID (`'chatgpt'` or `'claude'`) from Playwright project |
+
+### `ToolResult` API
+
+| Property/Method | Description |
+|--------|-------------|
+| `app()` | Get FrameLocator for rendered resource UI (handles double-iframe) |
+| `content` | Raw MCP content items |
+| `structuredContent` | Structured content from tool response |
+| `isError` | Whether the tool returned an error |
+
+### MCP-Native Matchers
+
+| Matcher | Description |
+|---------|-------------|
+| `expect(result).toBeError()` | Assert tool result is an error |
+| `expect(result).toHaveTextContent(str)` | Assert any content text contains string |
+| `expect(result).toHaveStructuredContent(shape)` | Assert structuredContent matches shape |
+| `expect(result).toHaveContentType(type)` | Assert content includes item of given type |
+
+### `callTool` Options
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `theme` | `'light' \| 'dark'` | Color theme (default: inspector default) |
+| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode |
 | `prodResources` | `boolean` | Use production-built resource bundles |
-| `sidebar` | `boolean` | Show/hide inspector sidebar |
-| `devOverlay` | `boolean` | Show/hide dev overlay (timestamp + tool timing) |
+
+### Playwright Config
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig();
+// Creates per-host projects (chatgpt, claude). Tests run once per host automatically.
+```
 
 ## ResourceConfig Fields
 
@@ -635,11 +674,11 @@ Live tests validate MCP Apps inside real ChatGPT. They use Playwright to open th
 
 ### Live Test Pattern
 
-One spec file per resource. Import `test` and `expect` from `sunpeak/test` — the `live` fixture handles login, MCP refresh, and host-specific message formatting.
+One spec file per resource. Import `test` and `expect` from `sunpeak/test/live` — the `live` fixture handles login, MCP refresh, and host-specific message formatting.
 
 ```typescript
 // tests/live/weather.spec.ts
-import { test, expect } from 'sunpeak/test';
+import { test, expect } from 'sunpeak/test/live';
 
 test('weather tool renders forecast', async ({ live }) => {
   const app = await live.invoke('show me the weather in Austin');
@@ -650,7 +689,7 @@ test('weather tool renders forecast', async ({ live }) => {
 Config is a one-liner:
 ```typescript
 // tests/live/playwright.config.ts
-import { defineLiveConfig } from 'sunpeak/test/config';
+import { defineLiveConfig } from 'sunpeak/test/live/config';
 export default defineLiveConfig();
 // Add hosts: defineLiveConfig({ hosts: ['chatgpt', 'claude'] })
 // Generates one Playwright project per host. Tests switch themes internally via live.setColorScheme().
@@ -689,7 +728,7 @@ The live test runner imports your browser session, starts `sunpeak dev --prod-re
 
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.
 2. **Missing `<SafeArea>`** — Always wrap content in `<SafeArea>` to respect host safe area insets.
-3. **Wrong Playwright locator** — Use `page.frameLocator('iframe').frameLocator('iframe').locator(...)` for resource content (double-iframe sandbox architecture), never `page.locator(...)`.
+3. **Wrong Playwright locator** — Use `result.app().locator(...)` (from `mcp.callTool()`) for resource content. This handles the double-iframe sandbox architecture. Use `mcp.page.locator(...)` only for inspector chrome elements.
 4. **Hardcoded colors** — Use MCP standard CSS variables via Tailwind arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`) not raw colors.
 5. **Simulation tool mismatch** — The `"tool"` field in simulation JSON must match a tool filename in `src/tools/` (e.g. `"tool": "show-weather"` matches `src/tools/show-weather.ts`).
 6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).

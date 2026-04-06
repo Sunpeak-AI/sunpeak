@@ -16,7 +16,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript&label=ts&color=FFB800&logoColor=white&labelColor=000035)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&label=react&color=FFB800&logoColor=white&labelColor=000035)](https://reactjs.org/)
 
-Inspector, testing framework, and app framework for MCP Apps.
+Inspector, testing framework, and runtime framework for MCP servers and MCP Apps.
 
 [Demo (Hosted)](https://sunpeak.ai/inspector) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
@@ -28,7 +28,7 @@ Inspector, testing framework, and app framework for MCP Apps.
 
 ### 1. Inspector
 
-Test any MCP server in replicated ChatGPT and Claude runtimes — no sunpeak project required.
+Manually test any MCP server in replicated ChatGPT and Claude runtimes.
 
 ```bash
 sunpeak inspect --server http://localhost:8000/mcp
@@ -45,15 +45,25 @@ sunpeak inspect --server http://localhost:8000/mcp
 - Multi-host inspector replicating ChatGPT and Claude runtimes
 - Toggle themes, display modes, device types from the sidebar or URL params
 - Call real tool handlers or use simulation fixtures for mock data
-- Built into `sunpeak dev` for framework users
 
 ### 2. Testing Framework
 
-E2E tests against simulated hosts and live tests against real production hosts.
+Automatically test any MCP server against replicated ChatGPT and Claude runtimes.
 
-- **Simulations**: JSON fixtures defining reproducible tool states ([example below](#simulation))
-- **E2E tests**: Playwright + `createInspectorUrl` against the inspector ([example below](#inspector))
-- **Live tests**: Automated browser tests against real ChatGPT via `sunpeak/test`
+```ts
+import { test, expect } from 'sunpeak/test';
+
+test('review tool renders title', async ({ mcp }) => {
+  const result = await mcp.callTool('review-diff');
+  const app = result.app();
+  await expect(app.locator('h1:has-text("Refactor")')).toBeVisible();
+});
+```
+
+- **Works for any MCP server**: `sunpeak test init` scaffolds tests for Python, Go, TS, or any language
+- **MCP-native assertions**: `toBeError()`, `toHaveTextContent()`, `toHaveStructuredContent()`
+- **Multi-host**: Tests run against ChatGPT and Claude hosts automatically
+- **Live tests**: Automated browser tests against real ChatGPT via `sunpeak/test/live`
 
 ### 3. App Framework
 
@@ -92,135 +102,25 @@ sunpeak new
 
 ## CLI
 
+**Testing** (works with any MCP server):
+
 | Command                               | Description                                 |
 | ------------------------------------- | ------------------------------------------- |
-| `sunpeak new [name] [resources]`      | Create a new project                        |
-| `sunpeak dev`                         | Start dev server + inspector + MCP endpoint |
-| `sunpeak inspect --server <url\|cmd>` | Inspect any MCP server (standalone)         |
-| `sunpeak build`                       | Build resources + tools for production      |
-| `sunpeak start`                       | Start production MCP server                 |
-| `sunpeak upgrade`                     | Upgrade sunpeak to latest version           |
+| `sunpeak inspect --server <url\|cmd>` | Inspect any MCP server in the inspector     |
+| `sunpeak test`                        | Run e2e tests against the inspector         |
+| `sunpeak test init`                   | Scaffold test infrastructure into a project |
+| `sunpeak test --unit`                 | Run unit tests (Vitest)                     |
+| `sunpeak test --live`                 | Run live tests against real hosts           |
 
-## Example App
+**App framework** (for sunpeak projects):
 
-Example `Resource`, `Simulation`, and testing file (using the `Inspector`) for an [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) called "Review".
-
-### `Resource` Component
-
-Each resource `.tsx` file exports both the React component and the [MCP resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources) metadata:
-
-```tsx
-// src/resources/review/review.tsx
-
-import { useToolData } from 'sunpeak';
-import type { ResourceConfig } from 'sunpeak';
-
-export const resource: ResourceConfig = {
-  description: 'Visualize and review a code change',
-  _meta: { ui: { csp: { resourceDomains: ['https://cdn.example.com'] } } },
-};
-
-export function ReviewResource() {
-  const { output: data } = useToolData<unknown, { title: string }>();
-
-  return <h1>Review: {data?.title}</h1>;
-}
-```
-
-### Tool File
-
-Each tool `.ts` file exports metadata (with an optional resource link for UI tools), a Zod schema, and a handler:
-
-```ts
-// src/tools/review-diff.ts
-
-import { z } from 'zod';
-import type { AppToolConfig, ToolHandlerExtra } from 'sunpeak/mcp';
-
-export const tool: AppToolConfig = {
-  resource: 'review',
-  title: 'Diff Review',
-  description: 'Show a review dialog for a proposed code diff',
-  annotations: { readOnlyHint: false },
-  _meta: { ui: { visibility: ['model', 'app'] } },
-};
-
-export const schema = {
-  changesetId: z.string().describe('Unique identifier for the changeset'),
-  title: z.string().describe('Title describing the changes'),
-};
-
-type Args = z.infer<z.ZodObject<typeof schema>>;
-
-export default async function (args: Args, extra: ToolHandlerExtra) {
-  return { structuredContent: { title: args.title, sections: [] } };
-}
-```
-
-### `Simulation`
-
-Simulation files provide fixture data for testing UIs. Each references a tool by filename and contains the mock input/output:
-
-```jsonc
-// tests/simulations/review-diff.json
-
-{
-  "tool": "review-diff",                      // References src/tools/review-diff.ts
-  "userMessage": "Refactor the auth module to use JWT tokens.",
-  "toolInput": {
-    "changesetId": "cs_789",
-    "title": "Refactor Authentication Module"
-  },
-  "toolResult": {
-    "structuredContent": {
-      "title": "Refactor Authentication Module",
-      "sections": [...]
-    }
-  }
-}
-```
-
-### `Inspector`
-
-```bash
-├── tests/e2e/
-│   └── review.spec.ts # This! (not pictured above for simplicity)
-└── package.json
-```
-
-The `Inspector` allows you to set **host state** (like host platform, light/dark mode) via URL params, which can be rendered alongside your `Simulation`s and tested via pre-configured Playwright end-to-end tests (`.spec.ts`).
-
-Using the `Inspector` and `Simulation`s, you can test all possible App states locally and automatically across hosts (ChatGPT, Claude)!
-
-```ts
-// tests/e2e/review.spec.ts
-
-import { test, expect } from '@playwright/test';
-import { createInspectorUrl } from 'sunpeak/inspector';
-
-const hosts = ['chatgpt', 'claude'] as const;
-
-for (const host of hosts) {
-  test.describe(`Review Resource [${host}]`, () => {
-    test.describe('Light Mode', () => {
-      test('should render review title with correct styles', async ({ page }) => {
-        const params = { simulation: 'review-diff', theme: 'light', host }; // Set sim & host state.
-        await page.goto(createInspectorUrl(params));
-
-        // Resource content renders inside an iframe
-        const iframe = page.frameLocator('iframe');
-        const title = iframe.locator('h1:has-text("Refactor Authentication Module")');
-        await expect(title).toBeVisible();
-
-        const color = await title.evaluate((el) => window.getComputedStyle(el).color);
-
-        // Light mode should render dark text.
-        expect(color).toBe('rgb(13, 13, 13)');
-      });
-    });
-  });
-}
-```
+| Command                          | Description                                 |
+| -------------------------------- | ------------------------------------------- |
+| `sunpeak new [name] [resources]` | Create a new project                        |
+| `sunpeak dev`                    | Start dev server + inspector + MCP endpoint |
+| `sunpeak build`                  | Build resources + tools for production      |
+| `sunpeak start`                  | Start production MCP server                 |
+| `sunpeak upgrade`                | Upgrade sunpeak to latest version           |
 
 ## Coding Agent Skill
 

@@ -1,4 +1,4 @@
-import { test, expect } from 'sunpeak/test';
+import { test, expect } from 'sunpeak/test/live';
 
 test('map tool renders interactive map with correct styles', async ({ live }) => {
   const app = await live.invoke('show-map');

@@ -2,16 +2,19 @@
  * Playwright config factory for inspect mode (BYOS — Bring Your Own Server).
  *
  * Generates a complete Playwright config that starts `sunpeak inspect` as the
- * webServer and runs e2e tests against the inspector. Follows the same pattern
- * as `defineLiveConfig` for live tests.
+ * webServer and runs e2e tests against the inspector.
  *
  * Usage in playwright.config.ts:
  *   import { defineInspectConfig } from 'sunpeak/test/inspect/config';
  *   export default defineInspectConfig({
  *     server: 'http://localhost:8000/mcp',
  *   });
+ *
+ * Note: For new projects, prefer `defineConfig` from 'sunpeak/test/config'
+ * which auto-detects the project type and handles both sunpeak projects
+ * and external servers.
  */
-import { getPortSync } from '../get-port.mjs';
+import { createBaseConfig, resolvePorts } from '../test/base-config.mjs';
 
 /**
  * Create a complete Playwright config for testing an external MCP server.
@@ -19,7 +22,7 @@ import { getPortSync } from '../get-port.mjs';
  * @param {Object} options
  * @param {string} options.server - MCP server URL or stdio command (required)
  * @param {string} [options.testDir='tests/e2e'] - Test directory
- * @param {string} [options.simulationsDir='tests/simulations'] - Simulation JSON directory
+ * @param {string} [options.simulationsDir] - Simulation JSON directory
  * @param {string[]} [options.hosts=['chatgpt', 'claude']] - Host shells to test
  * @param {string} [options.name] - App name in inspector chrome
  * @param {Object} [options.use] - Additional Playwright `use` options
@@ -39,12 +42,12 @@ export function defineInspectConfig(options) {
     throw new Error('defineInspectConfig: `server` option is required');
   }
 
-  const port = Number(process.env.SUNPEAK_TEST_PORT) || getPortSync(6776);
-  const sandboxPort = Number(process.env.SUNPEAK_SANDBOX_PORT) || getPortSync(24680);
+  const { port, sandboxPort } = resolvePorts();
 
   // Build the sunpeak inspect command
   const serverArg = server.includes(' ') ? `"${server}"` : server;
   const command = [
+    `SUNPEAK_SANDBOX_PORT=${sandboxPort}`,
     'npx sunpeak inspect',
     `--server ${serverArg}`,
     ...(simulationsDir ? [`--simulations ${simulationsDir}`] : []),
@@ -52,25 +55,14 @@ export function defineInspectConfig(options) {
     ...(name ? [`--name "${name}"`] : []),
   ].join(' ');
 
-  return {
+  return createBaseConfig({
+    hosts,
     testDir,
-    fullyParallel: true,
-    forbidOnly: !!process.env.CI,
-    retries: process.env.CI ? 2 : 1,
-    // Limit workers to avoid overwhelming the double-iframe sandbox proxy.
-    workers: process.env.CI ? 1 : 2,
-    reporter: 'list',
-    use: {
-      baseURL: `http://localhost:${port}`,
-      trace: 'on-first-retry',
-      ...userUse,
-    },
-    projects: hosts.map((host) => ({ name: host })),
+    port,
+    use: userUse,
     webServer: {
-      command: `SUNPEAK_SANDBOX_PORT=${sandboxPort} ${command}`,
-      url: `http://localhost:${port}/health`,
-      reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
+      command,
+      healthUrl: `http://localhost:${port}/health`,
     },
-  };
+  });
 }
