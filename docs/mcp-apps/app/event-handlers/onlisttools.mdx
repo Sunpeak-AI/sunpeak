@@ -22,18 +22,20 @@ Because this is a **request** handler, the host waits for your response. Return 
 ## Signature
 
 ```ts
-app.onlisttools = async () => Promise<{ tools: string[] }>;
+app.onlisttools = async (params, extra) => Promise<ListToolsResult>;
 ```
 
 ## Parameters
 
-This handler receives no parameters.
+<ResponseField name="params" type="ListToolsRequest['params']">
+  Standard MCP list tools request parameters (includes optional `cursor` for pagination).
+</ResponseField>
 
 ## Returns
 
-<ResponseField name="result" type="object">
-  <ResponseField name="tools" type="string[]" required>
-    Array of tool names that this app provides. Each name must correspond to a tool handled by [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool).
+<ResponseField name="result" type="ListToolsResult">
+  <ResponseField name="tools" type="Tool[]" required>
+    Array of tool definitions. Each tool must have a `name` and `inputSchema` (with `type: "object"`). Optional fields: `description`, `annotations`.
   </ResponseField>
 </ResponseField>
 
@@ -52,7 +54,12 @@ const app = new App(
 );
 
 app.onlisttools = async () => {
-  return { tools: ["get-selection", "format-text"] };
+  return {
+    tools: [
+      { name: "get-selection", inputSchema: { type: "object" } },
+      { name: "format-text", inputSchema: { type: "object" } },
+    ],
+  };
 };
 
 await app.connect();
@@ -66,9 +73,11 @@ When `listChanged: true` is set, the host will re-query `onlisttools` after rece
 let hasSelection = false;
 
 app.onlisttools = async () => {
-  const tools = ["format-text"];
+  const tools = [
+    { name: "format-text", inputSchema: { type: "object" } },
+  ];
   if (hasSelection) {
-    tools.push("get-selection");
+    tools.push({ name: "get-selection", inputSchema: { type: "object" } });
   }
   return { tools };
 };
@@ -91,7 +100,12 @@ The tools declared here must be handled in [`oncalltool`](/mcp-apps/app/event-ha
 
 ```ts
 app.onlisttools = async () => {
-  return { tools: ["get-selection", "format-text"] };
+  return {
+    tools: [
+      { name: "get-selection", inputSchema: { type: "object" } },
+      { name: "format-text", inputSchema: { type: "object" } },
+    ],
+  };
 };
 
 app.oncalltool = async (params) => {

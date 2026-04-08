@@ -13,7 +13,12 @@ import { App } from "@modelcontextprotocol/ext-apps";
 
 ## Overview
 
-The `App` class exposes setter properties for handling host notifications and requests. These are convenience wrappers around `setNotificationHandler()` and `setRequestHandler()` from the MCP SDK's `Protocol` class. For making requests from the View to the host, see [Requests](/mcp-apps/app/requests).
+The `App` class supports two patterns for handling host notifications and requests:
+
+1. **Setter properties** (`app.ontoolinput = ...`) follow DOM-model replace semantics (like `el.onclick`). Assigning replaces any previous handler; assigning `undefined` clears it.
+2. **addEventListener** (`app.addEventListener("toolinput", ...)`) supports multiple listeners and cleanup via `removeEventListener`. Preferred when you need composable handlers.
+
+Both patterns are convenience wrappers around `setNotificationHandler()` and `setRequestHandler()` from the MCP SDK's `Protocol` class. For making requests from the View to the host, see [Requests](/mcp-apps/app/requests).
 
 <Warning>
 Register handlers **before** calling `connect()` to avoid missing notifications during the initialization handshake.
@@ -163,7 +168,12 @@ Return the list of tools this app provides. Requires declaring `tools` capabilit
 
 ```ts
 app.onlisttools = async () => {
-  return { tools: ["get-selection", "format-text"] };
+  return {
+    tools: [
+      { name: "get-selection", inputSchema: { type: "object" } },
+      { name: "format-text", inputSchema: { type: "object" } },
+    ],
+  };
 };
 ```
 

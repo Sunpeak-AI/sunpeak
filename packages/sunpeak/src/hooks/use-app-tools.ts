@@ -52,12 +52,21 @@ export function useAppTools(config: AppToolsConfig): void {
   useEffect(() => {
     if (!app) return;
 
-    // The SDK's onlisttools type expects tool names as strings.
-    // Full tool metadata (description, schema) is registered server-side
-    // via registerAppTool; this just advertises names to the host at runtime.
+    // Advertise app-provided tools to the host. Full tool metadata (description,
+    // schema) is registered server-side via registerAppTool; this provides
+    // the runtime tool list to the host's listTools request.
     // eslint-disable-next-line react-hooks/immutability
     app.onlisttools = () => {
-      return Promise.resolve({ tools: config.tools.map((t) => t.name) });
+      return Promise.resolve({
+        tools: config.tools.map((t) => ({
+          name: t.name,
+          ...(t.description ? { description: t.description } : {}),
+          inputSchema: {
+            type: 'object' as const,
+            ...t.inputSchema,
+          },
+        })),
+      });
     };
 
     app.oncalltool = (params) => {

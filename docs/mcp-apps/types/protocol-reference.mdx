@@ -7,7 +7,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "protocol reference", "request types", "n
 
 <Badge color="green">MCP Apps SDK</Badge>
 
-<Note>This documentation covers MCP Apps SDK v1.3.2 (`@modelcontextprotocol/ext-apps`).</Note>
+<Note>This documentation covers MCP Apps SDK v1.5.0 (`@modelcontextprotocol/ext-apps`).</Note>
 
 ```ts
 import type {
@@ -35,6 +35,7 @@ import type {
   AppRequest,
   AppNotification,
   AppResult,
+  AppEventMap,
 } from "@modelcontextprotocol/ext-apps";
 ```
 
@@ -106,6 +107,20 @@ function logMessage(msg: AppRequest | AppNotification | AppResult) {
   console.log(`[${msg.method}]`, msg);
 }
 ```
+
+## Event Maps
+
+Type-safe maps of event names to notification `params` types, used by `addEventListener` / `removeEventListener`.
+
+```ts
+import type { AppEventMap } from "@modelcontextprotocol/ext-apps";
+import type { AppBridgeEventMap } from "@modelcontextprotocol/ext-apps/app-bridge";
+```
+
+| Type | Side | Events |
+|------|------|--------|
+| `AppEventMap` | View (App) | `toolinput`, `toolinputpartial`, `toolresult`, `toolcancelled`, `hostcontextchanged` |
+| `AppBridgeEventMap` | Host (AppBridge) | `sizechange`, `sandboxready`, `initialized`, `requestteardown`, `loggingmessage` |
 
 ## Method Constants
 
