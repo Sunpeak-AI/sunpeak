@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "production server", "createMcpHandler", "createHandler",
 
 ## Overview
 
-Sunpeak provides three ways to run a production MCP server, from zero-config to full control:
+sunpeak provides three ways to run a production MCP server, from zero-config to full control:
 
 | Approach | Use case |
 |----------|----------|
@@ -66,6 +66,10 @@ app.listen(3000);
   Server version reported to hosts.
 </ResponseField>
 
+<ResponseField name="serverInfo" type="ServerConfig">
+  Full server identity. Overrides `name` and `version` when provided. Supports additional fields like `title`, `description`, `websiteUrl`, and `icons`.
+</ResponseField>
+
 <ResponseField name="tools" type="ProductionTool[]" required>
   Tool registrations. Each has a `name`, `tool` config (optional resource link, title, description), optional `schema` (Zod shape for input validation), and `handler` function. Tools without a `resource` are registered as plain MCP tools (no UI).
 </ResponseField>
@@ -78,8 +82,16 @@ app.listen(3000);
   Auth function called on every request. Return `AuthInfo` to authenticate, `null` to reject with 401. See [Server Entry](/api-reference/tools/server-entry).
 </ResponseField>
 
+<ResponseField name="serverUrl" type="string">
+  Public URL of the MCP server (e.g. `'https://example.com/mcp'`). Used to auto-compute a default `_meta.ui.domain` for resources that don't specify one. Without this, resources without an explicit domain may trigger host warnings (e.g. ChatGPT's "Widget domain is not set").
+</ResponseField>
+
 <ResponseField name="enableJsonResponse" type="boolean" default="true">
   Respond with JSON instead of SSE streams. Recommended for serverless environments (Lambda, Workers, Vercel Edge) where holding open SSE connections is unreliable. Set to `false` if you need SSE streaming for long-running tool calls.
+</ResponseField>
+
+<ResponseField name="stateless" type="boolean" default="false">
+  Enable stateless mode for serverless and horizontally-scaled deployments. When `true`, every request creates a fresh MCP server instance with no session tracking. The host is identified from HTTP headers (`User-Agent`, `x-anthropic-client`, `x-openai-session`) on every request. See [Serverless Deployment](/guides/deployment#serverless--edge-deployment) and [Horizontal Scaling](/guides/deployment#horizontal-scaling).
 </ResponseField>
 
 ## `createHandler`
@@ -119,7 +131,7 @@ export default app;
 
 ### `WebHandlerConfig`
 
-Same shape as `ProductionServerConfig` (including `enableJsonResponse`, which defaults to `true`), except `auth` takes a Web Standard `Request`:
+Same shape as `ProductionServerConfig` (including `enableJsonResponse` and `stateless`), except `auth` takes a Web Standard `Request`:
 
 <ResponseField name="auth" type="(req: Request) => AuthInfo | null">
   Auth function for Web Standard environments. Return `AuthInfo` to authenticate, `null` to reject with 401.

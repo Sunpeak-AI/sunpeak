@@ -13,6 +13,7 @@ export {
   createProductionMcpServer,
   startProductionHttpServer,
   setJsonLogging,
+  detectClientFromHeaders,
 } from './production-server.js';
 export type {
   ProductionTool,

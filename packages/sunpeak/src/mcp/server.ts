@@ -624,6 +624,16 @@ async function handleMcpRequest(
           parsed.method === 'resources/read' ? ` uri=${JSON.stringify(parsed.params?.uri)}` : '';
         console.log(`[MCP] ← ${parsed.method}${extra}${sidStr}`);
       }
+      // Log request headers when SUNPEAK_LOG_HEADERS is set (for debugging host detection)
+      if (process.env.SUNPEAK_LOG_HEADERS) {
+        const headerEntries: Record<string, string> = {};
+        for (const [key, value] of Object.entries(req.headers)) {
+          if (value != null) {
+            headerEntries[key] = Array.isArray(value) ? value.join(', ') : value;
+          }
+        }
+        console.log(`[MCP] Headers: ${JSON.stringify(headerEntries, null, 2)}`);
+      }
     } catch {
       res.writeHead(400).end('Invalid JSON');
       return;
@@ -682,6 +692,12 @@ async function handleMcpRequest(
       // parallel connection attempts (e.g. multiple test workers) — the client retries
       // with a fresh initialization. Don't log these as errors.
       if (error.message?.includes('Server not initialized')) {
+        return;
+      }
+      // "Only one SSE stream is allowed per session" fires when Claude reconnects its
+      // GET SSE stream before the previous one is fully closed. The SDK rejects the
+      // duplicate, but Claude retries and the connection recovers. Harmless.
+      if (error.message?.includes('Only one SSE stream')) {
         return;
       }
       const id = transport.sessionId;

@@ -95,7 +95,7 @@ packages/sunpeak/
 - `sunpeak/inspector` — Generic Inspector, host shell system, infrastructure
 - `sunpeak/chatgpt` — ChatGPT host shell registration + Inspector re-export
 - `sunpeak/claude` — Claude host shell registration + Inspector re-export
-- `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), server config (`ServerConfig`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `WebHandlerConfig`, `WebAuthFunction`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`)
+- `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`, `setJsonLogging`, `detectClientFromHeaders`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), server config (`ServerConfig`, `MCPServerConfig`, `MCPServerHandle`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `HttpServerOptions`, `AuthFunction`, `WebAuthFunction`, `WebHandlerConfig`), domain resolution (`resolveDomain`, `computeClaudeDomain`, `computeChatGPTDomain`, `injectResolvedDomain`, `injectDefaultDomain`, `DomainConfig`), favicon (`FAVICON_BASE64`, `FAVICON_DATA_URI`, `FAVICON_BUFFER`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`, `RESOURCE_URI_META_KEY`, `RESOURCE_MIME_TYPE`, `McpUiAppToolConfig`, `McpUiAppResourceConfig`, `ToolConfig`, `ToolCallback`, `ReadResourceCallback`, `ResourceMetadata`)
 - `sunpeak/host` — Host detection
 - `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
 - `sunpeak/test` — MCP-first Playwright fixtures (`test` with `mcp` fixture including `screenshot()` for visual regression, `expect` with MCP-native matchers)
@@ -227,7 +227,7 @@ When sunpeak package APIs change (new hooks, new features, deprecations, etc.), 
 1. **`docs/`** — Mintlify docs pages (hook docs, MCP Apps SDK docs, cross-references)
 2. **READMEs** — `README.md` files throughout the monorepo (`packages/sunpeak/README.md`, root `README.md`, template `README.md`)
 3. **`skills/create-sunpeak-app/SKILL.md`** — Agent skill reference with hook tables, code examples, and usage patterns
-4. **Marketing website** — Separate repository (`../sunpeak-website/` or similar) with feature descriptions and code samples
+4. **This file**
 
 ## Upgrading Dependencies
 
