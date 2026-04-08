@@ -65,12 +65,15 @@ export async function startSandboxServer({ preferredPort = 24680 } = {}) {
     } else if (
       err.code === 'HPE_INVALID_METHOD' &&
       err.rawPacket instanceof Buffer &&
-      err.rawPacket[0] === 0x16
+      err.rawPacket[0] >= 0x14 &&
+      err.rawPacket[0] <= 0x18
     ) {
       console.error(
         'Received HTTPS request on sandbox server (port ' + port + '). ' +
         'If you\'re using ngrok, make sure the upstream is http:// (not https://). ' +
-        'Example: ngrok http 8000'
+        'Example: ngrok http 8000\n' +
+        'If this only happens in Safari, use Chrome for `sunpeak dev` instead. ' +
+        'Safari is not compatible with the dev server. Production deploys (`sunpeak start`) work in all browsers.'
       );
     } else {
       console.error('Sandbox server client error', err);
