@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 
 import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
-import { McpServer, type RegisteredResource } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import {
   registerAppTool,
@@ -143,6 +143,16 @@ export interface ProductionServerConfig {
    * where holding open SSE connections is unreliable. Defaults to `true`.
    */
   enableJsonResponse?: boolean;
+  /**
+   * Enable stateless mode for serverless and horizontally-scaled deployments.
+   *
+   * When `true`, every request creates a fresh MCP server instance with no
+   * session tracking. This means:
+   * - No in-memory session map (works across Lambda invocations, multiple instances)
+   * - No `mcp-session-id` validation (requests aren't tied to a specific instance)
+   * - The MCP SDK's stateless transport is used (`sessionIdGenerator: undefined`)
+   */
+  stateless?: boolean;
 }
 
 /**
@@ -174,6 +184,43 @@ export interface WebHandlerConfig {
    * where holding open SSE connections is unreliable. Defaults to `true`.
    */
   enableJsonResponse?: boolean;
+  /**
+   * Enable stateless mode for serverless and horizontally-scaled deployments.
+   *
+   * When `true`, every request creates a fresh MCP server instance with no
+   * session tracking. This means:
+   * - No in-memory session map (works across Lambda invocations, multiple instances)
+   * - No `mcp-session-id` validation (requests aren't tied to a specific instance)
+   * - The MCP SDK's stateless transport is used (`sessionIdGenerator: undefined`)
+   */
+  stateless?: boolean;
+}
+
+/**
+ * Internal config extension — handlers pass detected client name to the server factory.
+ * Not part of the public API.
+ */
+interface InternalServerConfig extends ProductionServerConfig {
+  /** Detected client name from HTTP headers (e.g. 'openai-mcp', 'claude') */
+  _clientName?: string;
+}
+
+/** Build an InternalServerConfig from any handler config + detected client name. */
+function toInternalConfig(
+  config: ProductionServerConfig | WebHandlerConfig,
+  clientName: string | undefined
+): InternalServerConfig {
+  return {
+    name: config.name,
+    version: config.version,
+    serverInfo: config.serverInfo,
+    tools: config.tools,
+    resources: config.resources,
+    serverUrl: config.serverUrl,
+    enableJsonResponse: config.enableJsonResponse,
+    stateless: config.stateless,
+    _clientName: clientName,
+  };
 }
 
 // ============================================================================
@@ -195,6 +242,8 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
     resources,
     serverUrl,
   } = config;
+  // Handlers detect the host from HTTP headers and pass it via _clientName.
+  const clientName = (config as InternalServerConfig)._clientName;
 
   const mcpServer = new McpServer(
     {
@@ -214,26 +263,6 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
     { capabilities: { resources: {}, tools: {} } }
   );
 
-  // Capture the connecting host's clientInfo.name after MCP initialization.
-  // Read callbacks close over this variable to resolve host-specific domain maps.
-  // Also update listing-level _meta on all resources so that `resources/list`
-  // returns the resolved domain (hosts like ChatGPT check domain from the listing).
-  let clientName: string | undefined;
-  mcpServer.server.oninitialized = () => {
-    clientName = mcpServer.server.getClientVersion()?.name;
-
-    for (const handle of resourceHandles) {
-      const currentMeta = handle.metadata?._meta as Record<string, unknown> | undefined;
-      const resolved = injectResolvedDomain(currentMeta, clientName) ?? currentMeta;
-      const withDefault = serverUrl
-        ? injectDefaultDomain(resolved, clientName, serverUrl)
-        : resolved;
-      if (withDefault !== resolved) {
-        handle.update({ metadata: { ...handle.metadata, _meta: withDefault } });
-      }
-    }
-  };
-
   // Build resource lookup: resource name → ProductionResource
   const resourceByName = new Map<string, ProductionResource>();
   for (const res of resources) {
@@ -243,7 +272,6 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
   // Track registered resource URIs to avoid duplicates
   // (multiple tools can reference the same resource, e.g. review-diff and review-post)
   const registeredResources = new Set<string>();
-  const resourceHandles: RegisteredResource[] = [];
 
   let toolCount = 0;
 
@@ -287,32 +315,33 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
       // Register resource (once per URI)
       if (!registeredResources.has(res.uri)) {
         registeredResources.add(res.uri);
-        const handle = registerAppResource(
+
+        // Resolve domain maps and auto-compute defaults at registration time.
+        // clientName is detected from HTTP headers by the handler.
+        const resolvedMeta = injectResolvedDomain(res._meta, clientName) ?? res._meta;
+        const finalMeta = serverUrl
+          ? injectDefaultDomain(resolvedMeta, clientName, serverUrl)
+          : resolvedMeta;
+
+        registerAppResource(
           mcpServer,
           res.name,
           res.uri,
           {
             description: res.description,
-            _meta: res._meta,
+            _meta: finalMeta,
           },
-          async () => {
-            const resolved = injectResolvedDomain(res._meta, clientName) ?? res._meta;
-            const readMeta = serverUrl
-              ? injectDefaultDomain(resolved, clientName, serverUrl)
-              : resolved;
-            return {
-              contents: [
-                {
-                  uri: res.uri,
-                  mimeType: RESOURCE_MIME_TYPE,
-                  text: res.html,
-                  _meta: readMeta,
-                },
-              ],
-            };
-          }
+          async () => ({
+            contents: [
+              {
+                uri: res.uri,
+                mimeType: RESOURCE_MIME_TYPE,
+                text: res.html,
+                _meta: finalMeta,
+              },
+            ],
+          })
         );
-        resourceHandles.push(handle);
       }
 
       // Register tool with UI metadata via registerAppTool
@@ -384,6 +413,42 @@ function isJsonRpcMessage(value: unknown): value is JsonRpcMessage {
     value !== null &&
     typeof (value as JsonRpcMessage).method === 'string'
   );
+}
+
+/**
+ * Detect the MCP host from HTTP request headers.
+ *
+ * ChatGPT sends `user-agent: openai-mcp/1.0.0` on all MCP HTTP requests.
+ * Claude sends `user-agent: Claude-User` and `x-anthropic-client: ClaudeAI`.
+ *
+ * Returns the `clientInfo.name` equivalent: `'openai-mcp'` or `'claude'`.
+ * Returns undefined if the host can't be identified.
+ */
+export function detectClientFromHeaders(headers: Headers): string | undefined;
+export function detectClientFromHeaders(
+  headers: Record<string, string | string[] | undefined>
+): string | undefined;
+export function detectClientFromHeaders(
+  headers: Headers | Record<string, string | string[] | undefined>
+): string | undefined {
+  const get = (name: string): string | undefined => {
+    if (headers instanceof Headers) return headers.get(name) ?? undefined;
+    const raw = headers[name];
+    return typeof raw === 'string' ? raw : Array.isArray(raw) ? raw[0] : undefined;
+  };
+
+  const ua = get('user-agent');
+  if (ua) {
+    if (/claude/i.test(ua)) return 'claude';
+    if (/openai/i.test(ua)) return 'openai-mcp';
+  }
+
+  // Fallback: Claude also sends x-anthropic-client header
+  if (get('x-anthropic-client')) return 'claude';
+  // Fallback: ChatGPT sends x-openai-session header on tool calls
+  if (get('x-openai-session')) return 'openai-mcp';
+
+  return undefined;
 }
 
 const CORS_HEADERS = {
@@ -473,59 +538,35 @@ async function pipeWebResponseToNode(webResponse: Response, res: ServerResponse)
 export function createMcpHandler(
   config: ProductionServerConfig
 ): (req: IncomingMessage, res: ServerResponse) => Promise<void> {
-  interface Session {
-    server: McpServer;
-    transport: WebStandardStreamableHTTPServerTransport;
-    lastActivity: number;
-  }
-
-  const sessions = new Map<string, Session>();
   const authFn = config.auth;
 
-  // Periodically clean up idle sessions.
-  // Closing the server triggers transport.onclose which handles session map cleanup.
-  const cleanupInterval = setInterval(() => {
-    const now = Date.now();
-    for (const [id, session] of sessions) {
-      if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
-        log('info', `Session expired: ${id.substring(0, 8)}...`, {
-          sessionId: id,
-          active: sessions.size - 1,
-        });
-        void session.server.close();
-      }
-    }
-  }, 60_000);
-  cleanupInterval.unref(); // Don't prevent process exit
-
-  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    if (!req.url) return;
+  // ── Shared request preamble (path check, CORS, auth, body parsing) ──
+  async function preamble(
+    req: IncomingMessage,
+    res: ServerResponse
+  ): Promise<{ authInfo?: AuthInfo; parsedBody?: unknown; webRequest: Request } | null> {
+    if (!req.url) return null;
 
     const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+    if (url.pathname !== MCP_PATH) return null;
 
-    // Only handle /mcp path
-    if (url.pathname !== MCP_PATH) return;
-
-    // CORS preflight
     if (req.method === 'OPTIONS') {
       res.writeHead(204, CORS_HEADERS);
       res.end();
-      return;
+      return null;
     }
 
-    // Auth
     let authInfo: AuthInfo | undefined;
     if (authFn) {
       const result = await authFn(req);
       if (!result) {
         res.writeHead(401, { ...CORS_HEADERS, 'WWW-Authenticate': 'Bearer' });
         res.end('Unauthorized');
-        return;
+        return null;
       }
       authInfo = result;
     }
 
-    // Parse body for POST requests (needed for logging + transport)
     let parsedBody: unknown;
     if (req.method === 'POST') {
       const chunks: Buffer[] = [];
@@ -548,13 +589,86 @@ export function createMcpHandler(
               : '';
           log('info', `← ${parsedBody.method}${extra}${sidStr}`);
         }
+        // Log request headers when SUNPEAK_LOG_HEADERS is set (for debugging host detection)
+        if (process.env.SUNPEAK_LOG_HEADERS) {
+          const headerEntries: Record<string, string> = {};
+          for (const [key, value] of Object.entries(req.headers)) {
+            if (value != null) {
+              headerEntries[key] = Array.isArray(value) ? value.join(', ') : value;
+            }
+          }
+          log('info', `Headers: ${JSON.stringify(headerEntries, null, 2)}`);
+        }
       } catch {
         res.writeHead(400).end('Invalid JSON');
-        return;
+        return null;
       }
     }
 
-    const webRequest = nodeReqToWebRequest(req);
+    return { authInfo, parsedBody, webRequest: nodeReqToWebRequest(req) };
+  }
+
+  // ── Stateless mode: fresh server + transport per request ──
+  if (config.stateless) {
+    return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+      const ctx = await preamble(req, res);
+      if (!ctx) return;
+
+      if (req.method !== 'POST') {
+        res.writeHead(405, CORS_HEADERS);
+        res.end('Method Not Allowed: stateless mode only supports POST');
+        return;
+      }
+
+      const detected = detectClientFromHeaders(req.headers);
+      const server = createProductionMcpServer(toInternalConfig(config, detected));
+      const transport = new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // stateless — no session tracking
+        enableJsonResponse: config.enableJsonResponse ?? true,
+      });
+
+      transport.onerror = (error) => {
+        log('error', 'Transport error (stateless)', { error: String(error) });
+      };
+
+      await server.connect(transport);
+      const webResponse = await transport.handleRequest(ctx.webRequest, {
+        parsedBody: ctx.parsedBody,
+        authInfo: ctx.authInfo,
+      });
+      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+    };
+  }
+
+  // ── Stateful mode: session-based routing ──
+  interface Session {
+    server: McpServer;
+    transport: WebStandardStreamableHTTPServerTransport;
+    lastActivity: number;
+  }
+
+  const sessions = new Map<string, Session>();
+
+  // Periodically clean up idle sessions.
+  // Closing the server triggers transport.onclose which handles session map cleanup.
+  const cleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [id, session] of sessions) {
+      if (now - session.lastActivity > SESSION_IDLE_TIMEOUT_MS) {
+        log('info', `Session expired: ${id.substring(0, 8)}...`, {
+          sessionId: id,
+          active: sessions.size - 1,
+        });
+        void session.server.close();
+      }
+    }
+  }, 60_000);
+  cleanupInterval.unref(); // Don't prevent process exit
+
+  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
+    const ctx = await preamble(req, res);
+    if (!ctx) return;
+
     const sessionId = req.headers['mcp-session-id'] as string | undefined;
 
     // Route to existing session
@@ -565,9 +679,9 @@ export function createMcpHandler(
         return;
       }
       session.lastActivity = Date.now();
-      const webResponse = await session.transport.handleRequest(webRequest, {
-        parsedBody,
-        authInfo,
+      const webResponse = await session.transport.handleRequest(ctx.webRequest, {
+        parsedBody: ctx.parsedBody,
+        authInfo: ctx.authInfo,
       });
       await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
       return;
@@ -575,7 +689,8 @@ export function createMcpHandler(
 
     // New session (POST without session ID = initialization)
     if (req.method === 'POST') {
-      const server = createProductionMcpServer(config);
+      const detected = detectClientFromHeaders(req.headers);
+      const server = createProductionMcpServer(toInternalConfig(config, detected));
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: config.enableJsonResponse ?? true,
@@ -617,7 +732,10 @@ export function createMcpHandler(
       };
 
       await server.connect(transport);
-      const webResponse = await transport.handleRequest(webRequest, { parsedBody, authInfo });
+      const webResponse = await transport.handleRequest(ctx.webRequest, {
+        parsedBody: ctx.parsedBody,
+        authInfo: ctx.authInfo,
+      });
       await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
       return;
     }
@@ -662,6 +780,93 @@ export function createMcpHandler(
  * ```
  */
 export function createHandler(config: WebHandlerConfig): (req: Request) => Promise<Response> {
+  const authFn = config.auth;
+
+  // ── Shared request preamble (CORS, auth, body parsing) ──
+  async function webPreamble(
+    req: Request
+  ): Promise<{ authInfo?: AuthInfo; parsedBody?: unknown } | Response> {
+    if (req.method === 'OPTIONS') {
+      return new Response(null, { status: 204, headers: CORS_HEADERS });
+    }
+
+    let authInfo: AuthInfo | undefined;
+    if (authFn) {
+      const result = await authFn(req);
+      if (!result) {
+        return new Response('Unauthorized', {
+          status: 401,
+          headers: { 'WWW-Authenticate': 'Bearer', 'Access-Control-Allow-Origin': '*' },
+        });
+      }
+      authInfo = result;
+    }
+
+    let parsedBody: unknown;
+    if (req.method === 'POST') {
+      try {
+        parsedBody = await req.json();
+      } catch {
+        return new Response('Invalid JSON', { status: 400 });
+      }
+      if (isJsonRpcMessage(parsedBody)) {
+        const sid = req.headers.get('mcp-session-id');
+        const sidStr = sid ? ` (${sid.substring(0, 8)}...)` : '';
+        const extra =
+          parsedBody.method === 'resources/read'
+            ? ` uri=${JSON.stringify(parsedBody.params?.uri)}`
+            : '';
+        log('info', `← ${parsedBody.method}${extra}${sidStr}`);
+      }
+      // Log request headers when SUNPEAK_LOG_HEADERS is set (for debugging host detection)
+      if (
+        typeof globalThis.process !== 'undefined' &&
+        globalThis.process.env?.SUNPEAK_LOG_HEADERS
+      ) {
+        const headerEntries: Record<string, string> = {};
+        req.headers.forEach((value, key) => {
+          headerEntries[key] = value;
+        });
+        log('info', `Headers: ${JSON.stringify(headerEntries, null, 2)}`);
+      }
+    }
+
+    return { authInfo, parsedBody };
+  }
+
+  // ── Stateless mode: fresh server + transport per request ──
+  if (config.stateless) {
+    return async (req: Request): Promise<Response> => {
+      const ctx = await webPreamble(req);
+      if (ctx instanceof Response) return ctx;
+
+      if (req.method !== 'POST') {
+        return addCorsHeaders(
+          new Response('Method Not Allowed: stateless mode only supports POST', { status: 405 })
+        );
+      }
+
+      const detected = detectClientFromHeaders(req.headers);
+      const server = createProductionMcpServer(toInternalConfig(config, detected));
+      const transport = new WebStandardStreamableHTTPServerTransport({
+        sessionIdGenerator: undefined, // stateless — no session tracking
+        enableJsonResponse: config.enableJsonResponse ?? true,
+      });
+
+      transport.onerror = (error) => {
+        log('error', 'Transport error (stateless)', { error: String(error) });
+      };
+
+      await server.connect(transport);
+      const response = await transport.handleRequest(req, {
+        parsedBody: ctx.parsedBody,
+        authInfo: ctx.authInfo,
+      });
+      return addCorsHeaders(response);
+    };
+  }
+
+  // ── Stateful mode: session-based routing ──
   interface WebSession {
     server: McpServer;
     transport: WebStandardStreamableHTTPServerTransport;
@@ -669,7 +874,6 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
   }
 
   const sessions = new Map<string, WebSession>();
-  const authFn = config.auth;
 
   // Periodically clean up idle sessions.
   // Closing the server triggers transport.onclose which handles session map cleanup.
@@ -688,33 +892,8 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
   cleanupInterval.unref();
 
   return async (req: Request): Promise<Response> => {
-    // CORS preflight
-    if (req.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: CORS_HEADERS });
-    }
-
-    // Auth
-    let authInfo: AuthInfo | undefined;
-    if (authFn) {
-      const result = await authFn(req);
-      if (!result) {
-        return new Response('Unauthorized', {
-          status: 401,
-          headers: { 'WWW-Authenticate': 'Bearer', 'Access-Control-Allow-Origin': '*' },
-        });
-      }
-      authInfo = result;
-    }
-
-    // Parse body for POST
-    let parsedBody: unknown;
-    if (req.method === 'POST') {
-      try {
-        parsedBody = await req.json();
-      } catch {
-        return new Response('Invalid JSON', { status: 400 });
-      }
-    }
+    const ctx = await webPreamble(req);
+    if (ctx instanceof Response) return ctx;
 
     const sessionId = req.headers.get('mcp-session-id');
 
@@ -725,21 +904,17 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
         return new Response('Unknown session', { status: 404 });
       }
       session.lastActivity = Date.now();
-      const response = await session.transport.handleRequest(req, { parsedBody, authInfo });
+      const response = await session.transport.handleRequest(req, {
+        parsedBody: ctx.parsedBody,
+        authInfo: ctx.authInfo,
+      });
       return addCorsHeaders(response);
     }
 
     // New session (POST without session ID = initialization)
     if (req.method === 'POST') {
-      const { name, version, serverInfo, tools, resources, serverUrl } = config;
-      const server = createProductionMcpServer({
-        name,
-        version,
-        serverInfo,
-        tools,
-        resources,
-        serverUrl,
-      });
+      const detected = detectClientFromHeaders(req.headers);
+      const server = createProductionMcpServer(toInternalConfig(config, detected));
       const transport = new WebStandardStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         enableJsonResponse: config.enableJsonResponse ?? true,
@@ -760,18 +935,29 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
       });
 
       transport.onerror = (error) => {
-        log('error', 'Transport error', { error: String(error) });
+        const id = transport.sessionId;
+        log('error', `Transport error${id ? ` (${id.substring(0, 8)}...)` : ''}`, {
+          sessionId: id,
+          error: String(error),
+        });
       };
 
       transport.onclose = () => {
         const id = transport.sessionId;
         if (id && sessions.has(id)) {
           sessions.delete(id);
+          log('info', `Session closed: ${id.substring(0, 8)}...`, {
+            sessionId: id,
+            active: sessions.size,
+          });
         }
       };
 
       await server.connect(transport);
-      const response = await transport.handleRequest(req, { parsedBody, authInfo });
+      const response = await transport.handleRequest(req, {
+        parsedBody: ctx.parsedBody,
+        authInfo: ctx.authInfo,
+      });
       return addCorsHeaders(response);
     }
 
