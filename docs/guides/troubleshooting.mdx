@@ -67,7 +67,7 @@ If a port is taken, sunpeak automatically finds a free one and prints the actual
 
 ## HTTPS / ngrok issues
 
-If you see `Received HTTPS request on sandbox server`, your tunnel is sending HTTPS traffic to an HTTP upstream. Fix:
+If you see `Received HTTPS request on HTTP server`, your tunnel is sending HTTPS traffic to an HTTP upstream. Fix:
 
 ```bash
 # Wrong:
@@ -76,6 +76,12 @@ ngrok http https://localhost:8000
 # Correct:
 ngrok http 8000
 ```
+
+### Safari is not compatible with `sunpeak dev`
+
+Safari automatically upgrades cross-origin HTTP requests to HTTPS. The dev server uses multiple localhost ports (inspector, MCP server, sandbox proxy) to replicate production CSP isolation, and Safari's HTTPS upgrade breaks these cross-origin connections.
+
+**Use Chrome (or any Chromium-based browser) for `sunpeak dev`.** Production deploys via `sunpeak start` work in all browsers, including Safari, because the app is served as a single bundled page without cross-origin localhost dependencies.
 
 ## Build errors with `sunpeak dev --prod-resources`
 

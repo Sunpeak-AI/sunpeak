@@ -46,6 +46,10 @@ Switching hosts in the sidebar changes the conversation chrome, theming, and rep
 3. `McpAppHost` wraps the SDK's `AppBridge` for host-side communication. Messages flow: host ↔ outer iframe (proxy) ↔ inner iframe (app), all via PostMessage relay.
 4. Inside the inner iframe, the resource component uses `useApp()` which connects via `PostMessageTransport` to `window.parent` (the proxy), which relays to the host.
 
+**The cross-origin relationship between iframes is intentional and must be preserved.** The outer iframe (sandbox proxy, port 24680), inner iframe (resource HTML, proxied through the inspector on port 3000), and the Vite dev server (port 8000) are deliberately on different origins. This replicates production CSP behavior where the host, sandbox, and app content live on separate origins. Do not "fix" cross-origin issues by collapsing these onto the same origin — that would make the inspector less representative of production and mask real CSP bugs.
+
+**Safari is incompatible with `sunpeak dev`.** Safari upgrades cross-origin HTTP requests to HTTPS, which breaks the multi-port localhost architecture. This is a known limitation with no workaround. Use Chrome for development. Production deploys (`sunpeak start`) work in all browsers because the app is a single bundled page without cross-origin localhost dependencies.
+
 ### E2E Tests
 Tests use `page.frameLocator('iframe').frameLocator('iframe')` to access resource content inside the double-iframe. Elements on the inspector chrome (header, `#root`) use `page.locator()` directly. Console error tests filter expected MCP handshake errors.
 

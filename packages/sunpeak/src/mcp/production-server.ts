@@ -1091,11 +1091,14 @@ export function startProductionHttpServer(
   });
 
   httpServer.on('clientError', (err: NodeJS.ErrnoException, socket) => {
-    if (
+    if (err.code === 'ECONNRESET') {
+      // Normal when clients close connections abruptly
+    } else if (
       err.code === 'HPE_INVALID_METHOD' &&
       'rawPacket' in err &&
       Buffer.isBuffer((err as Record<string, unknown>).rawPacket) &&
-      ((err as Record<string, unknown>).rawPacket as Buffer)[0] === 0x16
+      ((err as Record<string, unknown>).rawPacket as Buffer)[0] >= 0x14 &&
+      ((err as Record<string, unknown>).rawPacket as Buffer)[0] <= 0x18
     ) {
       log(
         'error',

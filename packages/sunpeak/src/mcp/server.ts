@@ -845,15 +845,20 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       err.code === 'HPE_INVALID_METHOD' &&
       'rawPacket' in err &&
       Buffer.isBuffer((err as Record<string, unknown>).rawPacket) &&
-      ((err as Record<string, unknown>).rawPacket as Buffer)[0] === 0x16
+      ((err as Record<string, unknown>).rawPacket as Buffer)[0] >= 0x14 &&
+      ((err as Record<string, unknown>).rawPacket as Buffer)[0] <= 0x18
     ) {
-      // 0x16 = TLS handshake record. The client is sending HTTPS to our
+      // 0x14–0x18 are TLS record types (ChangeCipherSpec, Alert, Handshake,
+      // ApplicationData, Heartbeat). The client is sending HTTPS to our
       // plain HTTP server — typically an ngrok tunnel misconfigured with
-      // https:// upstream instead of http://.
+      // https:// upstream instead of http://, or Safari upgrading cross-origin
+      // HTTP requests to HTTPS (breaks the dev server's multi-port architecture).
       console.error(
         'Received HTTPS request on HTTP server. ' +
           "If you're using ngrok, make sure the upstream is http:// (not https://). " +
-          'Example: ngrok http 8000'
+          'Example: ngrok http 8000\n' +
+          'If this only happens in Safari, use Chrome for `sunpeak dev` instead. ' +
+          'Safari is not compatible with the dev server. Production deploys (`sunpeak start`) work in all browsers.'
       );
     } else {
       console.error('HTTP client error', err);
