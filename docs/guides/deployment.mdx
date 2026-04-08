@@ -41,6 +41,7 @@ sunpeak start --port 3000          # Custom port
 sunpeak start --host 127.0.0.1     # Bind to localhost only
 sunpeak start --json-logs           # Structured JSON logging
 sunpeak start --sse                 # Use SSE streaming instead of JSON responses
+sunpeak start --stateless           # Stateless mode (no session tracking)
 PORT=3000 HOST=127.0.0.1 sunpeak start  # Or via environment variables
 ```
 
@@ -243,7 +244,13 @@ For multi-instance deployments behind a load balancer, you have two options:
 - **Cloudflare**: Enable session affinity
 - **Kubernetes**: Set session affinity annotations on your Ingress
 
-**Stateless mode (recommended for serverless)** — Set `stateless: true` to disable session tracking entirely. Each request creates a fresh server instance, so any backend can handle any request:
+**Stateless mode (recommended for serverless)** — Disable session tracking entirely. Each request creates a fresh server instance, so any backend can handle any request:
+
+```bash
+sunpeak start --stateless
+```
+
+Or with a custom server:
 
 ```typescript
 const handler = createMcpHandler({

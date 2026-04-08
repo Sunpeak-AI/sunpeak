@@ -45,6 +45,7 @@ export async function start(projectRoot = process.cwd(), args = []) {
 
   const jsonLogs = args.includes('--json-logs');
   const sse = args.includes('--sse');
+  const stateless = args.includes('--stateless');
 
   // Import production server from sunpeak
   const isTemplate = projectRoot.endsWith('/template') || projectRoot.endsWith('\\template');
@@ -190,9 +191,10 @@ export async function start(projectRoot = process.cwd(), args = []) {
   port = await getPort(port);
 
   console.log(`\nStarting ${name} v${version} on ${host}:${port}...`);
+  if (stateless) console.log('Stateless mode enabled (no session tracking)');
 
   startProductionHttpServer(
-    { name, version, serverInfo: serverConfig, tools, resources, auth, ...(sse ? { enableJsonResponse: false } : {}) },
+    { name, version, serverInfo: serverConfig, tools, resources, auth, stateless, ...(sse ? { enableJsonResponse: false } : {}) },
     { port, host }
   );
 }
