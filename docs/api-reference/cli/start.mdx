@@ -30,6 +30,7 @@ Tools are registered with the MCP protocol using `registerAppTool` from the MCP 
 | `--host <address>` | | Bind address (default: `0.0.0.0`, also respects `HOST` env var) |
 | `--json-logs` | | Output structured JSON lines to stdout/stderr |
 | `--sse` | | Use SSE streaming instead of JSON responses (default: JSON) |
+| `--stateless` | | Stateless mode — no session tracking, fresh server per request. For serverless and horizontally-scaled deployments. See [Deployment Guide](/guides/deployment#serverless--edge-deployment). |
 
 ## Usage
 
@@ -59,7 +60,7 @@ PORT=3000 HOST=127.0.0.1 sunpeak start
 
 The `/health` endpoint is for load balancer probes, Kubernetes liveness/readiness checks, and uptime monitoring. It is always unauthenticated.
 
-The production server uses the MCP Streamable HTTP transport. Session IDs are managed via the `mcp-session-id` header.
+The production server uses the MCP Streamable HTTP transport. In the default stateful mode, session IDs are managed via the `mcp-session-id` header. In `--stateless` mode, only `POST /mcp` is available (no SSE streaming or session deletion).
 
 ## Authentication
 
