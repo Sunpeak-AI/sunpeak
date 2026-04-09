@@ -214,6 +214,10 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
         if (src.includes('/tests/live/') && name === `${resource}.spec.ts`) {
           return false;
         }
+        // Skip eval files for excluded resources
+        if (src.includes('/tests/evals/') && name === `${resource}.eval.ts`) {
+          return false;
+        }
       }
 
       return true;

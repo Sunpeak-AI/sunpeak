@@ -35,6 +35,10 @@ sunpeak-app/
 │   │   └── *.json                    # Simulation fixture files (flat directory)
 │   ├── e2e/
 │   │   └── {name}.spec.ts            # Playwright inspector tests
+│   ├── evals/
+│   │   ├── eval.config.ts            # Eval config (models, runs, defaults)
+│   │   ├── .env                      # API keys (gitignored)
+│   │   └── {name}.eval.ts            # Eval specs (one per resource or tool)
 │   └── live/
 │       ├── playwright.config.ts      # Live test config (long timeouts, single worker)
 │       └── {name}.spec.ts            # Live tests against real ChatGPT (one per resource)
@@ -423,6 +427,7 @@ sunpeak test --visual        # Run e2e tests with visual regression comparison
 sunpeak test --visual --update  # Update visual regression baselines
 sunpeak test init            # Scaffold test infrastructure into a project
 sunpeak test --live          # Run live tests against real ChatGPT (requires tunnel + browser session)
+sunpeak test --eval          # Run evals against multiple LLM models (requires API keys)
 ```
 
 App framework (for sunpeak projects):
@@ -767,6 +772,87 @@ The live test runner imports your browser session, starts `sunpeak dev --prod-re
 
 **If auth fails:** If tests report "Not logged into ChatGPT", delete `.auth/` and re-run `pnpm test:live` — a browser window will open for you to log in again.
 
+## Evals (Multi-Model Tool Calling)
+
+Evals test whether different LLMs call your tools correctly. They connect to your MCP server, discover tools via MCP protocol, and send prompts to multiple models to check tool calling behavior. Each case runs N times per model to measure reliability.
+
+### Setup
+
+```bash
+pnpm add ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google
+```
+
+Copy `tests/evals/.env.example` to `tests/evals/.env` and add your API keys. The `.env` file is gitignored and loaded automatically when running evals. For sunpeak projects, the dev server starts automatically.
+
+### Configuration (`tests/evals/eval.config.ts`)
+
+```typescript
+import { defineEvalConfig } from 'sunpeak/eval';
+
+// API keys are loaded automatically from tests/evals/.env (gitignored).
+
+export default defineEvalConfig({
+  // Server is auto-detected for sunpeak projects.
+  // For non-sunpeak projects: server: 'http://localhost:8000/mcp',
+
+  models: ['gpt-4o', 'gpt-4o-mini', 'o4-mini', 'claude-sonnet-4-20250514', 'gemini-2.0-flash'],
+  defaults: {
+    runs: 10,
+    maxSteps: 1,
+    temperature: 0,
+    timeout: 30_000,
+  },
+});
+```
+
+### Writing Evals (`tests/evals/*.eval.ts`)
+
+```typescript
+import { expect } from 'vitest';
+import { defineEval } from 'sunpeak/eval';
+
+export default defineEval({
+  cases: [
+    {
+      name: 'food category request',
+      prompt: 'Show me photos from my Austin pizza tour',
+      expect: {
+        tool: 'show-albums',
+        args: { search: expect.stringMatching(/pizza|austin/i) },
+      },
+    },
+    {
+      name: 'multi-step flow',
+      prompt: 'Write a post for X and LinkedIn',
+      maxSteps: 3,
+      expect: [
+        { tool: 'review-post' },
+        { tool: 'publish-post' },
+      ],
+    },
+    {
+      name: 'custom assertion',
+      prompt: 'Show me vacation photos',
+      assert: (result) => {
+        expect(result.toolCalls).toHaveLength(1);
+        expect(result.toolCalls[0].name).toBe('show-albums');
+      },
+    },
+  ],
+});
+```
+
+Three assertion levels: single tool (`expect: { tool, args }`), ordered sequence (`expect: [...]`), or custom function (`assert: (result) => { ... }`). Args use partial matching — extra keys in the actual call are allowed.
+
+### Running
+
+```bash
+sunpeak test --eval                          # All evals
+sunpeak test --eval tests/evals/albums.eval.ts  # Single file
+```
+
+Not included in the default `sunpeak test` run (costs money, like `--live`).
+
 ## Common Mistakes
 
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.
@@ -801,10 +887,14 @@ Full troubleshooting guide: https://sunpeak.ai/docs/guides/troubleshooting
 | `sunpeak/claude` | Claude host shell + Inspector re-export |
 | `sunpeak/host` | Host detection (`isChatGPT`, `isClaude`, `detectHost`) |
 | `sunpeak/host/chatgpt` | ChatGPT-specific hooks (`useUploadFile`, `useRequestModal`, `useRequestCheckout`) |
-| `sunpeak/test` | Host-agnostic Playwright fixtures (`test` with `live` fixture, `expect`, `setColorScheme`) |
-| `sunpeak/test/config` | Playwright config factory (`defineLiveConfig` with `hosts` array) |
-| `sunpeak/test/chatgpt` | ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture) |
-| `sunpeak/test/chatgpt/config` | ChatGPT-specific Playwright config factory |
+| `sunpeak/test` | MCP-first Playwright fixtures (`test` with `mcp` fixture, `expect` with MCP-native matchers) |
+| `sunpeak/test/config` | Playwright config factory (`defineConfig` for e2e tests) |
+| `sunpeak/test/live` | Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`) |
+| `sunpeak/test/live/config` | Live test config factory (`defineLiveConfig` with `hosts` array) |
+| `sunpeak/test/live/chatgpt` | ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture) |
+| `sunpeak/test/live/chatgpt/config` | ChatGPT-specific Playwright config factory |
+| `sunpeak/test/inspect/config` | Inspect config factory for external MCP servers (`defineInspectConfig`) |
+| `sunpeak/eval` | Eval framework (`defineEval`, `defineEvalConfig`) for multi-model tool calling evals |
 | `sunpeak/style.css` | Main stylesheet |
 
 ## References

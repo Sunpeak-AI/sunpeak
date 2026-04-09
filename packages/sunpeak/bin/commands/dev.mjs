@@ -363,7 +363,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const sandbox = await startSandboxServer({ preferredPort: sandboxPort });
 
   // Find available ports for the MCP server and HMR WebSocket
-  const mcpPort = await getPort(8000);
+  const mcpPort = await getPort(Number(process.env.SUNPEAK_MCP_PORT || 8000));
   const hmrPort = await getPort(Number(process.env.SUNPEAK_HMR_PORT || 24679));
 
   console.log(`\nStarting MCP server with ${simulations.length} simulation(s) (Vite HMR)...`);

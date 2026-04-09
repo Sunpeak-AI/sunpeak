@@ -11,6 +11,8 @@ build
 # Testing
 coverage
 tests/live/.auth/
+tests/evals/.env
+.eval-vitest.config.ts
 
 # Environment variables
 .env
