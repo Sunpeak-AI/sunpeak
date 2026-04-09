@@ -115,6 +115,7 @@ Testing (works with any MCP server):
     init                   Scaffold test infrastructure into a project
     --unit                 Run unit tests (vitest)
     --live                 Run live tests against real hosts
+    --eval                 Run evals against LLM models
 
 App framework (for sunpeak projects):
   sunpeak new [name] [resources]  Create a new project

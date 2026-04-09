@@ -64,6 +64,7 @@ test('review tool renders title', async ({ mcp }) => {
 - **MCP-native assertions**: `toBeError()`, `toHaveTextContent()`, `toHaveStructuredContent()`
 - **Multi-host**: Tests run against ChatGPT and Claude hosts automatically
 - **Live tests**: Automated browser tests against real ChatGPT via `sunpeak/test/live`
+- **Evals**: Test your tool interface design against multiple LLMs (GPT-4o, Claude, Gemini, etc.) via `sunpeak/eval`
 
 ### 3. App Framework
 
@@ -113,6 +114,7 @@ sunpeak new
 | `sunpeak test --visual`               | Run e2e tests with visual regression        |
 | `sunpeak test --visual --update`      | Update visual regression baselines          |
 | `sunpeak test --live`                 | Run live tests against real hosts           |
+| `sunpeak test --eval`                 | Run evals against multiple LLM models       |
 | `sunpeak test init`                   | Scaffold test infrastructure into a project |
 
 **App framework** (for sunpeak projects):

@@ -96,6 +96,12 @@
         "default": "./bin/lib/inspect/inspect-config.mjs"
       }
     },
+    "./eval": {
+      "import": {
+        "types": "./bin/lib/eval/eval-types.d.mts",
+        "default": "./bin/lib/eval/eval-runner.mjs"
+      }
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -143,7 +149,25 @@
   "license": "MIT",
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
-    "react-dom": "^18.0.0 || ^19.0.0"
+    "react-dom": "^18.0.0 || ^19.0.0",
+    "ai": "^4.0.0",
+    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/anthropic": "^1.0.0",
+    "@ai-sdk/google": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "ai": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "@ai-sdk/anthropic": {
+      "optional": true
+    },
+    "@ai-sdk/google": {
+      "optional": true
+    }
   },
   "dependencies": {
     "@clack/prompts": "^1.2.0",

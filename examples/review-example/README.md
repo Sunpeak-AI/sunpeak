@@ -23,6 +23,7 @@ sunpeak test --e2e                # Run e2e tests only (Playwright).
 sunpeak test --visual             # Run e2e tests with visual regression.
 sunpeak test --visual --update    # Update visual regression baselines.
 sunpeak test --live               # Run live tests against real ChatGPT.
+sunpeak test --eval               # Run evals against multiple LLM models.
 ```
 
 **Development and production:**
@@ -34,7 +35,16 @@ sunpeak start             # Start the production MCP server.
 sunpeak upgrade           # Upgrade sunpeak to latest version.
 ```
 
-E2e tests use the `mcp` fixture from `sunpeak/test` to call tools and assert against rendered UI across ChatGPT and Claude hosts. Unit tests use Vitest with happy-dom. You can add additional tooling (linting, formatting, type-checking) as needed for your project.
+E2e tests use the `mcp` fixture from `sunpeak/test` to call tools and assert against rendered UI across ChatGPT and Claude hosts. Unit tests use Vitest with happy-dom.
+
+**Evals** test whether LLMs (GPT-4o, Claude, Gemini, etc.) call your tools correctly. To set up evals:
+
+1. Install the AI SDK and provider packages: `pnpm add ai @ai-sdk/openai`
+2. Copy `tests/evals/.env.example` to `tests/evals/.env` and add your API keys
+3. Uncomment models in `tests/evals/eval.config.ts`
+4. Run: `sunpeak test --eval`
+
+The dev server starts automatically for evals. Each case runs multiple times per model to measure reliability. See the [Evals documentation](https://sunpeak.ai/docs/testing/testing#evals-multi-model-tool-calling) for details.
 
 ## Project Structure
 

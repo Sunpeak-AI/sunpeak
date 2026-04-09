@@ -81,6 +81,7 @@ packages/sunpeak/
 │   ├── mcp/                  # MCP server (runMCPServer, production-server, resource registration)
 │   ├── host/                 # Host detection (detectHost, isChatGPT, isClaude)
 │   │   └── chatgpt/          # ChatGPT-specific: useUploadFile, useRequestModal, useRequestCheckout
+│   ├── eval/                 # Eval framework tests (implementation in bin/lib/eval/)
 │   ├── lib/                  # Utilities (discovery, cn(), media queries)
 │   ├── types/                # Type definitions (Simulation, runtime types)
 │   └── cli/                  # CLI commands
@@ -88,7 +89,7 @@ packages/sunpeak/
 │   ├── src/resources/        # Example resource components (albums, carousel, map, review)
 │   ├── src/tools/            # Tool files with handlers and metadata
 │   ├── src/server.ts         # Optional server entry (auth, config)
-│   └── tests/                # Unit tests, E2E tests, simulations, live tests
+│   └── tests/                # Unit tests, E2E tests, simulations, live tests, evals
 └── scripts/
     ├── validate.mjs           # Full validation pipeline
     └── generate-examples.mjs  # Generate examples/ from template resources
@@ -107,6 +108,7 @@ packages/sunpeak/
 - `sunpeak/test/live` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
 - `sunpeak/test/live/config` — Live test config factory (`defineLiveConfig` with `hosts` array)
 - `sunpeak/test/live/chatgpt` — ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture)
+- `sunpeak/eval` — Eval framework (`defineEval`, `defineEvalConfig`, `checkExpectations`, `createMcpConnection`, `discoverAndConvertTools`, `runEvalCaseAggregate`)
 - `sunpeak/test/live/chatgpt/config` — ChatGPT-specific Playwright config factory
 - `sunpeak/test/inspect/config` — Inspect config factory for external MCP servers (`defineInspectConfig`; supports `visual` option for visual regression config)
 - `sunpeak/style.css` — Main stylesheet
@@ -165,7 +167,7 @@ Architecture:
 2. **Inspector** — `inspectServer()` from `inspect.mjs` connects to the MCP server URL, discovers tools/resources via MCP protocol, and serves the inspector UI with HMR.
 3. **sandboxServer** — A minimal HTTP server on a separate port (default 24680) for cross-origin iframe isolation.
 
-Port management: The MCP server prefers port 8000 (users typically have an ngrok tunnel on this port). The inspector's Vite dev server uses port 24679 for its HMR WebSocket. The sandboxServer uses port 24680 (configurable via `SUNPEAK_SANDBOX_PORT`). The main dev server listens on the user-facing port (default 3000). All ports use `getPort()` to find free alternatives if the preferred port is taken.
+Port management: The MCP server prefers port 8000 (configurable via `SUNPEAK_MCP_PORT`, users typically have an ngrok tunnel on this port). The inspector's Vite dev server uses port 24679 for its HMR WebSocket. The sandboxServer uses port 24680 (configurable via `SUNPEAK_SANDBOX_PORT`). The main dev server listens on the user-facing port (default 3000). All ports use `getPort()` to find free alternatives if the preferred port is taken.
 
 ### `--prod-tools` and `--prod-resources` flags
 
@@ -206,10 +208,13 @@ Template e2e tests use the `mcp` fixture from `sunpeak/test`, which sets `devOve
 The testing framework has three composable layers, each usable in isolation:
 
 1. **Inspector** (Layer 1) — `sunpeak inspect --server <url>` starts the inspector against any MCP server. Hidden plumbing for the testing framework.
-2. **Testing Framework** (Layer 2) — `sunpeak/test` exports an `mcp` Playwright fixture with `callTool()`, MCP-native matchers (`toBeError`, `toHaveTextContent`), and `defineConfig()`. Works for any MCP server. `sunpeak test init` scaffolds test infrastructure.
-3. **sunpeak Framework** (Layer 3) — Template e2e tests use Layer 2's fixture and config. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend.
+2. **Testing Framework** (Layer 2) — Works with any MCP server. `sunpeak test init` scaffolds test infrastructure. Includes:
+   - **E2E tests** — `sunpeak/test` exports an `mcp` Playwright fixture with `callTool()`, MCP-native matchers (`toBeError`, `toHaveTextContent`), and `defineConfig()`.
+   - **Live tests** — `sunpeak/test/live` exports Playwright fixtures for testing against real hosts (ChatGPT, Claude).
+   - **Evals** — `sunpeak/eval` exports `defineEval` and `defineEvalConfig` for multi-model tool calling evals. Connects to any MCP server via MCP protocol, discovers tools, sends prompts to multiple LLM models (via Vercel AI SDK), and asserts that models call the right tools with the right arguments. Each eval case runs N times per model and reports statistical pass/fail counts. Eval specs live in `tests/evals/*.eval.ts`. Configuration (models, runs, temperature) is in `tests/evals/eval.config.ts`. Requires optional peer deps: `ai` + provider packages (`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`).
+3. **sunpeak Framework** (Layer 3) — Template tests use Layer 2's fixtures and configs. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend. For evals, the dev server auto-starts with `--prod-tools`.
 
-**CLI**: `sunpeak test` runs unit + e2e tests, `sunpeak test --unit` runs only vitest, `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test init` scaffolds test infrastructure. Flags are additive: `--unit --e2e --live` runs all three. `--update` implies `--visual`.
+**CLI**: `sunpeak test` runs unit + e2e tests, `sunpeak test --unit` runs only vitest, `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test --eval` runs multi-model evals, `sunpeak test init` scaffolds test infrastructure (including eval boilerplate). Flags are additive: `--unit --e2e --live --eval` runs all four. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
 
 ## Documentation (`docs/`)
 

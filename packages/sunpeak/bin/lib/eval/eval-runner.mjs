@@ -1,0 +1,310 @@
+/**
+ * Core eval runner — connects to MCP server, converts tools to AI SDK format,
+ * runs eval cases against models, and collects results.
+ */
+
+import { resolveModel, checkAiSdkInstalled } from './model-registry.mjs';
+
+// Re-export for use in generated test code
+export { checkAiSdkInstalled };
+
+/**
+ * Define an eval spec. Identity function for type safety.
+ * @param {import('./eval-types.d.mts').EvalSpec} spec
+ * @returns {import('./eval-types.d.mts').EvalSpec}
+ */
+export function defineEval(spec) {
+  return spec;
+}
+
+/**
+ * Define eval configuration. Identity function for type safety.
+ * @param {import('./eval-types.d.mts').EvalConfig} config
+ * @returns {import('./eval-types.d.mts').EvalConfig}
+ */
+export function defineEvalConfig(config) {
+  return config;
+}
+
+/**
+ * Create an MCP client connection.
+ * Reuses the same pattern as inspect.mjs createMcpConnection.
+ * @param {string} serverArg - URL or stdio command string
+ * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport }>}
+ */
+export async function createMcpConnection(serverArg) {
+  const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+  const client = new Client({ name: 'sunpeak-eval', version: '1.0.0' });
+
+  if (serverArg.startsWith('http://') || serverArg.startsWith('https://')) {
+    const { StreamableHTTPClientTransport } = await import(
+      '@modelcontextprotocol/sdk/client/streamableHttp.js'
+    );
+    const transport = new StreamableHTTPClientTransport(new URL(serverArg));
+    await client.connect(transport);
+    return { client, transport };
+  } else {
+    const parts = serverArg.split(/\s+/);
+    const command = parts[0];
+    const cmdArgs = parts.slice(1);
+    const { StdioClientTransport } = await import(
+      '@modelcontextprotocol/sdk/client/stdio.js'
+    );
+    const transport = new StdioClientTransport({ command, args: cmdArgs });
+    await client.connect(transport);
+    return { client, transport };
+  }
+}
+
+/**
+ * Discover tools from an MCP server and convert them to AI SDK format.
+ * @param {import('@modelcontextprotocol/sdk/client/index.js').Client} client
+ * @returns {Promise<Record<string, import('ai').CoreTool>>}
+ */
+export async function discoverAndConvertTools(client) {
+  const { tool: aiTool } = await import('ai');
+  const { jsonSchema } = await import('ai');
+
+  const { tools: mcpTools } = await client.listTools();
+  const tools = {};
+
+  for (const t of mcpTools) {
+    tools[t.name] = aiTool({
+      description: t.description || '',
+      parameters: jsonSchema(t.inputSchema || { type: 'object', properties: {} }),
+      execute: async (args) => {
+        const result = await client.callTool({ name: t.name, arguments: args });
+        // Return a simplified version for the model to consume
+        if (result.structuredContent) {
+          return result.structuredContent;
+        }
+        if (result.content && result.content.length > 0) {
+          const textParts = result.content
+            .filter((c) => c.type === 'text')
+            .map((c) => c.text);
+          return textParts.join('\n') || JSON.stringify(result.content);
+        }
+        return 'Tool executed successfully.';
+      },
+    });
+  }
+
+  return tools;
+}
+
+/**
+ * Run a single eval case once against a model.
+ * @param {object} params
+ * @param {string} params.prompt
+ * @param {import('ai').LanguageModel} params.model
+ * @param {Record<string, import('ai').CoreTool>} params.tools
+ * @param {number} params.maxSteps
+ * @param {number} params.temperature
+ * @param {number} params.timeout
+ * @returns {Promise<import('./eval-types.d.mts').EvalRunResult>}
+ */
+export async function runSingleEval({ prompt, model, tools, maxSteps, temperature, timeout }) {
+  const { generateText } = await import('ai');
+
+  const result = await generateText({
+    model,
+    tools,
+    prompt,
+    maxSteps,
+    temperature,
+    abortSignal: AbortSignal.timeout(timeout),
+  });
+
+  // Normalize the result into our EvalRunResult shape
+  const allToolCalls = [];
+  const allToolResults = [];
+  const steps = [];
+
+  for (const step of result.steps || []) {
+    const stepToolCalls = (step.toolCalls || []).map((tc) => ({
+      name: tc.toolName,
+      args: tc.args,
+    }));
+    const stepToolResults = (step.toolResults || []).map((tr) => tr.result);
+
+    allToolCalls.push(...stepToolCalls);
+    allToolResults.push(...stepToolResults);
+    steps.push({
+      toolCalls: stepToolCalls,
+      toolResults: stepToolResults,
+      text: step.text || '',
+    });
+  }
+
+  return {
+    toolCalls: allToolCalls,
+    toolResults: allToolResults,
+    text: result.text || '',
+    steps,
+    usage: {
+      promptTokens: result.usage?.promptTokens || 0,
+      completionTokens: result.usage?.completionTokens || 0,
+      totalTokens: result.usage?.totalTokens || 0,
+    },
+    finishReason: result.finishReason || 'unknown',
+  };
+}
+
+/**
+ * Check a single eval result against expectations.
+ * @param {import('./eval-types.d.mts').EvalRunResult} result
+ * @param {import('./eval-types.d.mts').EvalCase} evalCase
+ * @throws {Error} if the assertion fails
+ */
+export function checkExpectations(result, evalCase) {
+  if (evalCase.assert) {
+    evalCase.assert(result);
+    return;
+  }
+
+  if (!evalCase.expect) return;
+
+  const expectations = Array.isArray(evalCase.expect) ? evalCase.expect : [evalCase.expect];
+
+  if (result.toolCalls.length < expectations.length) {
+    let msg = `Expected ${expectations.length} tool call(s), but got ${result.toolCalls.length}`;
+    if (result.toolCalls.length === 0 && result.text) {
+      const truncated = result.text.length > 200 ? result.text.slice(0, 200) + '...' : result.text;
+      msg += `. Model responded with text: "${truncated}"`;
+    }
+    throw new Error(msg);
+  }
+
+  for (let i = 0; i < expectations.length; i++) {
+    const expected = expectations[i];
+    const actual = result.toolCalls[i];
+
+    if (expected.tool !== actual.name) {
+      throw new Error(
+        `Step ${i + 1}: expected tool "${expected.tool}", got "${actual.name}"`
+      );
+    }
+
+    if (expected.args) {
+      checkPartialMatch(expected.args, actual.args, `Step ${i + 1} args`);
+    }
+  }
+}
+
+/**
+ * Deep partial match — checks that all keys in `expected` exist in `actual`
+ * with matching values. Extra keys in `actual` are allowed.
+ * Supports vitest asymmetric matchers (expect.stringContaining, etc.).
+ * @param {Record<string, unknown>} expected
+ * @param {Record<string, unknown>} actual
+ * @param {string} path
+ */
+function checkPartialMatch(expected, actual, path) {
+  for (const [key, expectedValue] of Object.entries(expected)) {
+    const actualValue = actual?.[key];
+
+    // Support vitest asymmetric matchers
+    if (expectedValue && typeof expectedValue === 'object' && typeof expectedValue.asymmetricMatch === 'function') {
+      if (!expectedValue.asymmetricMatch(actualValue)) {
+        throw new Error(
+          `${path}.${key}: expected ${expectedValue.toString()}, got ${JSON.stringify(actualValue)}`
+        );
+      }
+      continue;
+    }
+
+    if (typeof expectedValue === 'object' && expectedValue !== null && !Array.isArray(expectedValue)) {
+      checkPartialMatch(expectedValue, actualValue, `${path}.${key}`);
+    } else if (Array.isArray(expectedValue)) {
+      if (!Array.isArray(actualValue)) {
+        throw new Error(
+          `${path}.${key}: expected array, got ${JSON.stringify(actualValue)}`
+        );
+      }
+      // For arrays, check that each expected element exists in actual
+      for (let i = 0; i < expectedValue.length; i++) {
+        if (i >= actualValue.length) {
+          throw new Error(
+            `${path}.${key}[${i}]: expected ${JSON.stringify(expectedValue[i])}, but array only has ${actualValue.length} elements`
+          );
+        }
+        if (typeof expectedValue[i] === 'object' && expectedValue[i] !== null) {
+          checkPartialMatch(expectedValue[i], actualValue[i], `${path}.${key}[${i}]`);
+        } else if (expectedValue[i] !== actualValue[i]) {
+          throw new Error(
+            `${path}.${key}[${i}]: expected ${JSON.stringify(expectedValue[i])}, got ${JSON.stringify(actualValue[i])}`
+          );
+        }
+      }
+    } else if (expectedValue !== actualValue) {
+      throw new Error(
+        `${path}.${key}: expected ${JSON.stringify(expectedValue)}, got ${JSON.stringify(actualValue)}`
+      );
+    }
+  }
+}
+
+/**
+ * Run an eval case N times against a model and collect aggregate results.
+ * @param {object} params
+ * @param {import('./eval-types.d.mts').EvalCase} params.evalCase
+ * @param {string} params.modelId
+ * @param {Record<string, import('ai').CoreTool>} params.tools
+ * @param {number} params.runs
+ * @param {number} params.maxSteps
+ * @param {number} params.temperature
+ * @param {number} params.timeout
+ * @returns {Promise<import('./eval-types.d.mts').EvalCaseResult>}
+ */
+export async function runEvalCaseAggregate({
+  evalCase,
+  modelId,
+  tools,
+  runs,
+  maxSteps,
+  temperature,
+  timeout,
+}) {
+  const model = await resolveModel(modelId);
+  let passed = 0;
+  let failed = 0;
+  let totalDurationMs = 0;
+  const failureMap = new Map();
+
+  for (let i = 0; i < runs; i++) {
+    const start = performance.now();
+    try {
+      const result = await runSingleEval({
+        prompt: evalCase.prompt,
+        model,
+        tools,
+        maxSteps: evalCase.maxSteps ?? maxSteps,
+        temperature,
+        timeout,
+      });
+      checkExpectations(result, evalCase);
+      passed++;
+    } catch (err) {
+      failed++;
+      const msg = err.message || String(err);
+      failureMap.set(msg, (failureMap.get(msg) || 0) + 1);
+    }
+    totalDurationMs += performance.now() - start;
+  }
+
+  const failures = Array.from(failureMap.entries()).map(([error, count]) => ({
+    error,
+    count,
+  }));
+
+  return {
+    caseName: evalCase.name,
+    modelId,
+    runs,
+    passed,
+    failed,
+    passRate: runs > 0 ? passed / runs : 0,
+    avgDurationMs: runs > 0 ? totalDurationMs / runs : 0,
+    failures,
+  };
+}

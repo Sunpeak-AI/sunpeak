@@ -122,6 +122,113 @@ function generateServerConfigBlock(server, relativeTo = '.') {
   },`;
 }
 
+/**
+ * Scaffold eval boilerplate into a directory.
+ * @param {string} evalsDir - Directory to create eval files in
+ * @param {{ server?: object, isSunpeak?: boolean }} options
+ */
+function scaffoldEvals(evalsDir, { server, isSunpeak } = {}) {
+  if (existsSync(join(evalsDir, 'eval.config.ts'))) {
+    p.log.info('Eval config already exists. Skipping eval scaffold.');
+    return;
+  }
+
+  mkdirSync(evalsDir, { recursive: true });
+
+  // Generate server line for eval config
+  let serverLine = '  // server: \'http://localhost:8000/mcp\',';
+  if (isSunpeak) {
+    serverLine = '  // Omit server for sunpeak projects (auto-detected).\n  // server: \'http://localhost:8000/mcp\',';
+  } else if (server?.type === 'url') {
+    serverLine = `  server: '${server.value}',`;
+  } else if (server?.type === 'command') {
+    serverLine = `  server: '${server.value}',`;
+  }
+
+  // Build the eval config content
+  const configLines = [
+    "import { defineEvalConfig } from 'sunpeak/eval';",
+    "",
+    "// API keys are loaded automatically from .env in this directory (gitignored).",
+    "// See .env.example for the format.",
+    "",
+    "export default defineEvalConfig({",
+    "  // MCP server to test.",
+    serverLine,
+    "",
+    "  models: [",
+    "    // Uncomment models and install their provider packages:",
+    "    // 'gpt-4o',                      // OPENAI_API_KEY",
+    "    // 'gpt-4o-mini',                 // OPENAI_API_KEY",
+    "    // 'o4-mini',                     // OPENAI_API_KEY",
+    "    // 'claude-sonnet-4-20250514',    // ANTHROPIC_API_KEY",
+    "    // 'gemini-2.0-flash',            // GOOGLE_GENERATIVE_AI_API_KEY",
+    "  ],",
+    "",
+    "  defaults: {",
+    "    runs: 10,          // Number of times to run each case per model",
+    "    maxSteps: 1,       // Max tool call steps per run",
+    "    temperature: 0,    // 0 for most deterministic results",
+    "    timeout: 30_000,   // Timeout per run in ms",
+    "  },",
+    "});",
+    "",
+  ];
+
+  writeFileSync(join(evalsDir, 'eval.config.ts'), configLines.join('\n'));
+
+  // Scaffold .env template
+  writeFileSync(
+    join(evalsDir, '.env.example'),
+    `# Copy this file to .env and fill in your API keys.
+# .env is gitignored — never commit API keys.
+# OPENAI_API_KEY=sk-...
+# ANTHROPIC_API_KEY=sk-ant-...
+# GOOGLE_GENERATIVE_AI_API_KEY=...
+`
+  );
+
+  writeFileSync(
+    join(evalsDir, 'example.eval.ts'),
+    `import { expect } from 'vitest';
+import { defineEval } from 'sunpeak/eval';
+
+/**
+ * Example eval — tests whether LLMs call your tools correctly.
+ *
+ * To get started:
+ * 1. Configure models in eval.config.ts (uncomment the ones you want)
+ * 2. Install the AI SDK and provider packages: pnpm add ai @ai-sdk/openai
+ * 3. Copy .env.example to .env and add your API keys
+ * 4. Replace this file with evals for your own tools
+ * 5. Run: sunpeak test --eval
+ *
+ * Each case sends a prompt to every configured model and checks
+ * that the model calls the expected tool with the expected arguments.
+ * Cases run multiple times (configured via \`runs\` in eval.config.ts)
+ * to measure reliability across non-deterministic LLM responses.
+ */
+export default defineEval({
+  // This eval is skipped when no models are configured.
+  // Delete this file and create your own evals to get started.
+  cases: [
+    {
+      name: 'example (replace me)',
+      prompt: 'Show me a demo',
+      // expect which tool gets called and (optionally) its arguments:
+      expect: {
+        tool: 'your-tool-name',
+        // args: { key: 'value' },
+      },
+    },
+  ],
+});
+`
+  );
+
+  p.log.success(`Created ${evalsDir}/ with eval config and example.`);
+}
+
 async function initExternalProject(cliServer) {
   p.log.info('Detected non-JS project. Creating self-contained test directory.');
 
@@ -207,12 +314,16 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
 `
   );
 
+  // Scaffold eval boilerplate
+  scaffoldEvals(join(testDir, 'evals'), { server });
+
   p.log.success('Created tests/sunpeak/ with config and starter test.');
   p.log.step('Next steps:');
   p.log.message('  cd tests/sunpeak');
   p.log.message('  npm install');
   p.log.message('  npx playwright install chromium');
   p.log.message('  npx sunpeak test');
+  p.log.message('  npx sunpeak test --eval  (after configuring models in evals/eval.config.ts)');
 }
 
 async function initJsProject(cliServer) {
@@ -267,10 +378,15 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
     p.log.success('Created tests/e2e/smoke.test.ts');
   }
 
+  // Scaffold eval boilerplate
+  const evalsDir = join(cwd, 'tests', 'evals');
+  scaffoldEvals(evalsDir, { server });
+
   p.log.step('Next steps:');
   p.log.message('  npm install -D sunpeak @playwright/test');
   p.log.message('  npx playwright install chromium');
   p.log.message('  npx sunpeak test');
+  p.log.message('  npx sunpeak test --eval  (after configuring models in tests/evals/eval.config.ts)');
 }
 
 async function initSunpeakProject() {
@@ -283,23 +399,27 @@ async function initSunpeakProject() {
     const content = readFileSync(configPath, 'utf-8');
     if (content.includes('sunpeak/test/config')) {
       p.log.info('Config already uses sunpeak/test/config. Nothing to do.');
-      return;
     }
-  }
-
-  writeFileSync(
-    configPath,
-    `import { defineConfig } from 'sunpeak/test/config';
+  } else {
+    writeFileSync(
+      configPath,
+      `import { defineConfig } from 'sunpeak/test/config';
 
 export default defineConfig();
 `
-  );
+    );
+    p.log.success('Updated playwright.config.ts to use defineConfig()');
+  }
 
-  p.log.success('Updated playwright.config.ts to use defineConfig()');
+  // Scaffold eval boilerplate
+  const evalsDir = join(cwd, 'tests', 'evals');
+  scaffoldEvals(evalsDir, { isSunpeak: true });
+
   p.log.step('Migrate test files:');
   p.log.message('  Replace: import { test, expect } from "@playwright/test"');
   p.log.message('  With:    import { test, expect } from "sunpeak/test"');
   p.log.message('');
   p.log.message('  Use the `mcp` fixture instead of raw page navigation.');
   p.log.message('  See sunpeak docs for migration examples.');
+  p.log.message('  Run: sunpeak test --eval  (after configuring models in tests/evals/eval.config.ts)');
 }
