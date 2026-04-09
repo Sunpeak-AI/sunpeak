@@ -150,12 +150,12 @@ Only the resource file (`.tsx`) is required to generate a production build and s
 
 Then create a tool file in `src/tools/` and simulation file(s) in `tests/simulations/` to preview your resource in `sunpeak dev`.
 
-## Coding Agent Skill
+## Coding Agent Skills
 
-Install the `create-sunpeak-app` skill to give your coding agent built-in knowledge of sunpeak patterns, hooks, simulation files, and testing conventions:
+Install the sunpeak skills to give your coding agent built-in knowledge of sunpeak patterns, hooks, and testing:
 
 ```bash
-npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
+npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server
 ```
 
 ## Troubleshooting

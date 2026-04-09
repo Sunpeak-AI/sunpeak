@@ -127,12 +127,12 @@ sunpeak new
 | `sunpeak start`                  | Start production MCP server                 |
 | `sunpeak upgrade`                | Upgrade sunpeak to latest version           |
 
-## Coding Agent Skill
+## Coding Agent Skills
 
-Install the `create-sunpeak-app` skill to give your coding agent (Claude Code, Cursor, etc.) built-in knowledge of sunpeak patterns, hooks, simulation files, and testing conventions:
+Install the sunpeak skills to give your coding agent (Claude Code, Cursor, etc.) built-in knowledge of sunpeak patterns, hooks, and testing:
 
 ```bash
-npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app
+npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server
 ```
 
 ## Troubleshooting

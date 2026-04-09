@@ -1,6 +1,27 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
+import { execSync } from 'child_process';
 import { join } from 'path';
 import * as p from '@clack/prompts';
+
+/**
+ * Default dependencies (real implementations).
+ * Override in tests via the `deps` parameter.
+ */
+export const defaultDeps = {
+  existsSync,
+  readFileSync,
+  writeFileSync,
+  mkdirSync,
+  execSync,
+  cwd: () => process.cwd(),
+  intro: p.intro,
+  outro: p.outro,
+  confirm: p.confirm,
+  isCancel: p.isCancel,
+  select: p.select,
+  text: p.text,
+  log: p.log,
+};
 
 /**
  * sunpeak test init — Scaffold test infrastructure for MCP servers.
@@ -10,8 +31,10 @@ import * as p from '@clack/prompts';
  * - JS/TS projects: root-level config + test files
  * - sunpeak projects: migrate to defineConfig()
  */
-export async function testInit(args = []) {
-  p.intro('Setting up sunpeak tests');
+export async function testInit(args = [], deps = defaultDeps) {
+  const d = { ...defaultDeps, ...deps };
+
+  d.intro('Setting up sunpeak tests');
 
   // Parse --server flag from CLI args
   const serverIdx = args.indexOf('--server');
@@ -20,26 +43,42 @@ export async function testInit(args = []) {
       ? args[serverIdx + 1]
       : undefined;
 
-  const projectType = detectProjectType();
+  const projectType = detectProjectType(d);
 
   if (projectType === 'sunpeak') {
-    await initSunpeakProject();
+    await initSunpeakProject(d);
   } else if (projectType === 'js') {
-    await initJsProject(cliServer);
+    await initJsProject(cliServer, d);
   } else {
-    await initExternalProject(cliServer);
+    await initExternalProject(cliServer, d);
   }
 
-  p.outro('Done!');
+  // Offer to install the testing skill
+  const installSkill = await d.confirm({
+    message: 'Install the test-mcp-server skill? (helps your coding agent write tests)',
+    initialValue: true,
+  });
+  if (!d.isCancel(installSkill) && installSkill) {
+    try {
+      d.execSync('npx skills add Sunpeak-AI/sunpeak@test-mcp-server', {
+        cwd: d.cwd(),
+        stdio: 'inherit',
+      });
+    } catch {
+      d.log.info('Skill install skipped. Install later: npx skills add Sunpeak-AI/sunpeak@test-mcp-server');
+    }
+  }
+
+  d.outro('Done!');
 }
 
-function detectProjectType() {
-  const cwd = process.cwd();
+function detectProjectType(d) {
+  const cwd = d.cwd();
   const pkgPath = join(cwd, 'package.json');
 
-  if (existsSync(pkgPath)) {
+  if (d.existsSync(pkgPath)) {
     try {
-      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      const pkg = JSON.parse(d.readFileSync(pkgPath, 'utf-8'));
       const deps = { ...pkg.dependencies, ...pkg.devDependencies };
       if ('sunpeak' in deps) return 'sunpeak';
       return 'js';
@@ -52,7 +91,7 @@ function detectProjectType() {
   return 'external';
 }
 
-async function getServerConfig(cliServer) {
+async function getServerConfig(cliServer, d) {
   // If provided via --server flag, detect type automatically
   if (cliServer) {
     if (cliServer.startsWith('http://') || cliServer.startsWith('https://')) {
@@ -61,7 +100,7 @@ async function getServerConfig(cliServer) {
     return { type: 'command', value: cliServer };
   }
 
-  const serverType = await p.select({
+  const serverType = await d.select({
     message: 'How does your MCP server start?',
     options: [
       { value: 'command', label: 'Command (e.g., python server.py)' },
@@ -70,23 +109,23 @@ async function getServerConfig(cliServer) {
     ],
   });
 
-  if (p.isCancel(serverType)) process.exit(0);
+  if (d.isCancel(serverType)) process.exit(0);
 
   if (serverType === 'command') {
-    const command = await p.text({
+    const command = await d.text({
       message: 'Server start command:',
       placeholder: 'python src/server.py',
     });
-    if (p.isCancel(command)) process.exit(0);
+    if (d.isCancel(command)) process.exit(0);
     return { type: 'command', value: command };
   }
 
   if (serverType === 'url') {
-    const url = await p.text({
+    const url = await d.text({
       message: 'Server URL:',
       placeholder: 'http://localhost:8000/mcp',
     });
-    if (p.isCancel(url)) process.exit(0);
+    if (d.isCancel(url)) process.exit(0);
     return { type: 'url', value: url };
   }
 
@@ -125,15 +164,16 @@ function generateServerConfigBlock(server, relativeTo = '.') {
 /**
  * Scaffold eval boilerplate into a directory.
  * @param {string} evalsDir - Directory to create eval files in
- * @param {{ server?: object, isSunpeak?: boolean }} options
+ * @param {{ server?: object, isSunpeak?: boolean, d?: object }} options
  */
-function scaffoldEvals(evalsDir, { server, isSunpeak } = {}) {
-  if (existsSync(join(evalsDir, 'eval.config.ts'))) {
-    p.log.info('Eval config already exists. Skipping eval scaffold.');
+function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
+  const d = deps || defaultDeps;
+  if (d.existsSync(join(evalsDir, 'eval.config.ts'))) {
+    d.log.info('Eval config already exists. Skipping eval scaffold.');
     return;
   }
 
-  mkdirSync(evalsDir, { recursive: true });
+  d.mkdirSync(evalsDir, { recursive: true });
 
   // Generate server line for eval config
   let serverLine = '  // server: \'http://localhost:8000/mcp\',';
@@ -175,10 +215,10 @@ function scaffoldEvals(evalsDir, { server, isSunpeak } = {}) {
     "",
   ];
 
-  writeFileSync(join(evalsDir, 'eval.config.ts'), configLines.join('\n'));
+  d.writeFileSync(join(evalsDir, 'eval.config.ts'), configLines.join('\n'));
 
   // Scaffold .env template
-  writeFileSync(
+  d.writeFileSync(
     join(evalsDir, '.env.example'),
     `# Copy this file to .env and fill in your API keys.
 # .env is gitignored — never commit API keys.
@@ -188,7 +228,7 @@ function scaffoldEvals(evalsDir, { server, isSunpeak } = {}) {
 `
   );
 
-  writeFileSync(
+  d.writeFileSync(
     join(evalsDir, 'example.eval.ts'),
     `import { expect } from 'vitest';
 import { defineEval } from 'sunpeak/eval';
@@ -226,24 +266,24 @@ export default defineEval({
 `
   );
 
-  p.log.success(`Created ${evalsDir}/ with eval config and example.`);
+  d.log.success(`Created ${evalsDir}/ with eval config and example.`);
 }
 
-async function initExternalProject(cliServer) {
-  p.log.info('Detected non-JS project. Creating self-contained test directory.');
+async function initExternalProject(cliServer, d) {
+  d.log.info('Detected non-JS project. Creating self-contained test directory.');
 
-  const server = await getServerConfig(cliServer);
-  const testDir = join(process.cwd(), 'tests', 'sunpeak');
+  const server = await getServerConfig(cliServer, d);
+  const testDir = join(d.cwd(), 'tests', 'sunpeak');
 
-  if (existsSync(testDir)) {
-    p.log.warn('tests/sunpeak/ already exists. Skipping scaffold.');
+  if (d.existsSync(testDir)) {
+    d.log.warn('tests/sunpeak/ already exists. Skipping scaffold.');
     return;
   }
 
-  mkdirSync(testDir, { recursive: true });
+  d.mkdirSync(testDir, { recursive: true });
 
   // package.json
-  writeFileSync(
+  d.writeFileSync(
     join(testDir, 'package.json'),
     JSON.stringify(
       {
@@ -264,7 +304,7 @@ async function initExternalProject(cliServer) {
 
   // sunpeak.config.ts (used as playwright config)
   const serverBlock = generateServerConfigBlock(server, '../..');
-  writeFileSync(
+  d.writeFileSync(
     join(testDir, 'playwright.config.ts'),
     `import { defineConfig } from 'sunpeak/test/config';
 
@@ -275,7 +315,7 @@ ${serverBlock}
   );
 
   // tsconfig.json
-  writeFileSync(
+  d.writeFileSync(
     join(testDir, 'tsconfig.json'),
     JSON.stringify(
       {
@@ -293,7 +333,7 @@ ${serverBlock}
   );
 
   // smoke test — runnable out of the box, verifies the server is reachable
-  writeFileSync(
+  d.writeFileSync(
     join(testDir, 'smoke.test.ts'),
     `import { test, expect } from 'sunpeak/test';
 
@@ -315,30 +355,30 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
   );
 
   // Scaffold eval boilerplate
-  scaffoldEvals(join(testDir, 'evals'), { server });
+  scaffoldEvals(join(testDir, 'evals'), { server, d });
 
-  p.log.success('Created tests/sunpeak/ with config and starter test.');
-  p.log.step('Next steps:');
-  p.log.message('  cd tests/sunpeak');
-  p.log.message('  npm install');
-  p.log.message('  npx playwright install chromium');
-  p.log.message('  npx sunpeak test');
-  p.log.message('  npx sunpeak test --eval  (after configuring models in evals/eval.config.ts)');
+  d.log.success('Created tests/sunpeak/ with config and starter test.');
+  d.log.step('Next steps:');
+  d.log.message('  cd tests/sunpeak');
+  d.log.message('  npm install');
+  d.log.message('  npx playwright install chromium');
+  d.log.message('  npx sunpeak test');
+  d.log.message('  npx sunpeak test --eval  (after configuring models in evals/eval.config.ts)');
 }
 
-async function initJsProject(cliServer) {
-  p.log.info('Detected JS/TS project. Adding test config at project root.');
+async function initJsProject(cliServer, d) {
+  d.log.info('Detected JS/TS project. Adding test config at project root.');
 
-  const server = await getServerConfig(cliServer);
-  const cwd = process.cwd();
+  const server = await getServerConfig(cliServer, d);
+  const cwd = d.cwd();
 
   // Create playwright.config.ts
   const configPath = join(cwd, 'playwright.config.ts');
-  if (existsSync(configPath)) {
-    p.log.warn('playwright.config.ts already exists. Skipping config creation.');
+  if (d.existsSync(configPath)) {
+    d.log.warn('playwright.config.ts already exists. Skipping config creation.');
   } else {
     const serverBlock = generateServerConfigBlock(server);
-    writeFileSync(
+    d.writeFileSync(
       configPath,
       `import { defineConfig } from 'sunpeak/test/config';
 
@@ -347,16 +387,16 @@ ${serverBlock}
 });
 `
     );
-    p.log.success('Created playwright.config.ts');
+    d.log.success('Created playwright.config.ts');
   }
 
   // Create test directory and smoke test
   const testDir = join(cwd, 'tests', 'e2e');
-  mkdirSync(testDir, { recursive: true });
+  d.mkdirSync(testDir, { recursive: true });
 
   const testPath = join(testDir, 'smoke.test.ts');
-  if (!existsSync(testPath)) {
-    writeFileSync(
+  if (!d.existsSync(testPath)) {
+    d.writeFileSync(
       testPath,
       `import { test, expect } from 'sunpeak/test';
 
@@ -375,51 +415,51 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
 // });
 `
     );
-    p.log.success('Created tests/e2e/smoke.test.ts');
+    d.log.success('Created tests/e2e/smoke.test.ts');
   }
 
   // Scaffold eval boilerplate
   const evalsDir = join(cwd, 'tests', 'evals');
-  scaffoldEvals(evalsDir, { server });
+  scaffoldEvals(evalsDir, { server, d });
 
-  p.log.step('Next steps:');
-  p.log.message('  npm install -D sunpeak @playwright/test');
-  p.log.message('  npx playwright install chromium');
-  p.log.message('  npx sunpeak test');
-  p.log.message('  npx sunpeak test --eval  (after configuring models in tests/evals/eval.config.ts)');
+  d.log.step('Next steps:');
+  d.log.message('  npm install -D sunpeak @playwright/test');
+  d.log.message('  npx playwright install chromium');
+  d.log.message('  npx sunpeak test');
+  d.log.message('  npx sunpeak test --eval  (after configuring models in tests/evals/eval.config.ts)');
 }
 
-async function initSunpeakProject() {
-  p.log.info('Detected sunpeak project. Updating config to use defineConfig().');
+async function initSunpeakProject(d) {
+  d.log.info('Detected sunpeak project. Updating config to use defineConfig().');
 
-  const cwd = process.cwd();
+  const cwd = d.cwd();
   const configPath = join(cwd, 'playwright.config.ts');
 
-  if (existsSync(configPath)) {
-    const content = readFileSync(configPath, 'utf-8');
+  if (d.existsSync(configPath)) {
+    const content = d.readFileSync(configPath, 'utf-8');
     if (content.includes('sunpeak/test/config')) {
-      p.log.info('Config already uses sunpeak/test/config. Nothing to do.');
+      d.log.info('Config already uses sunpeak/test/config. Nothing to do.');
     }
   } else {
-    writeFileSync(
+    d.writeFileSync(
       configPath,
       `import { defineConfig } from 'sunpeak/test/config';
 
 export default defineConfig();
 `
     );
-    p.log.success('Updated playwright.config.ts to use defineConfig()');
+    d.log.success('Updated playwright.config.ts to use defineConfig()');
   }
 
   // Scaffold eval boilerplate
   const evalsDir = join(cwd, 'tests', 'evals');
-  scaffoldEvals(evalsDir, { isSunpeak: true });
+  scaffoldEvals(evalsDir, { isSunpeak: true, d });
 
-  p.log.step('Migrate test files:');
-  p.log.message('  Replace: import { test, expect } from "@playwright/test"');
-  p.log.message('  With:    import { test, expect } from "sunpeak/test"');
-  p.log.message('');
-  p.log.message('  Use the `mcp` fixture instead of raw page navigation.');
-  p.log.message('  See sunpeak docs for migration examples.');
-  p.log.message('  Run: sunpeak test --eval  (after configuring models in tests/evals/eval.config.ts)');
+  d.log.step('Migrate test files:');
+  d.log.message('  Replace: import { test, expect } from "@playwright/test"');
+  d.log.message('  With:    import { test, expect } from "sunpeak/test"');
+  d.log.message('');
+  d.log.message('  Use the `mcp` fixture instead of raw page navigation.');
+  d.log.message('  See sunpeak docs for migration examples.');
+  d.log.message('  Run: sunpeak test --eval  (after configuring models in tests/evals/eval.config.ts)');
 }

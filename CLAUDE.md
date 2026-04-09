@@ -235,8 +235,9 @@ When sunpeak package APIs change (new hooks, new features, deprecations, etc.), 
 
 1. **`docs/`** — Mintlify docs pages (hook docs, MCP Apps SDK docs, cross-references)
 2. **READMEs** — `README.md` files throughout the monorepo (`packages/sunpeak/README.md`, root `README.md`, template `README.md`)
-3. **`skills/create-sunpeak-app/SKILL.md`** — Agent skill reference with hook tables, code examples, and usage patterns
-4. **This file**
+3. **`skills/create-sunpeak-app/SKILL.md`** — Agent skill for building MCP Apps (hooks, patterns, simulations)
+4. **`skills/test-mcp-server/SKILL.md`** — Agent skill for testing MCP servers (e2e, visual, live, evals)
+5. **This file**
 
 ## Upgrading Dependencies
 
