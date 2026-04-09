@@ -6,12 +6,6 @@ settings:
 
 importers:
 
-  .:
-    dependencies:
-      sunpeak:
-        specifier: file:/Users/abe/conductor/workspaces/sunpeak/karachi-v1/packages/sunpeak
-        version: link:packages/sunpeak
-
   packages/sunpeak:
     dependencies:
       '@ai-sdk/anthropic':

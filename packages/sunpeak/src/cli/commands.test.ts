@@ -5,6 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 // Helper functions to import CLI modules dynamically
 const importUpgrade = () => import('../../bin/commands/upgrade.mjs');
 const importNew = () => import('../../bin/commands/new.mjs');
+const importTestInit = () => import('../../bin/commands/test-init.mjs');
 
 // Mock console for all tests
 const createMockConsole = () => ({
@@ -123,6 +124,41 @@ describe('CLI Commands', () => {
       // Should have prompted and then failed on existing directory
       expect(mockConsole.error).toHaveBeenCalledWith(
         'Error: Directory "prompted-name" already exists'
+      );
+    });
+
+    it('should install both skills when user confirms in interactive mode', async () => {
+      const { init } = await importNew();
+      const mockConsole = createMockConsole();
+      const mockProcess = createMockProcess();
+      const execSyncMock = vi.fn();
+
+      await init('my-project', undefined, {
+        discoverResources: () => ['carousel'],
+        detectPackageManager: () => 'npm',
+        selectResources: vi.fn().mockResolvedValue(['carousel']),
+        existsSync: () => false,
+        mkdirSync: vi.fn(),
+        cpSync: vi.fn(),
+        readFileSync: () => JSON.stringify({ version: '1.0.0', name: 'test' }),
+        writeFileSync: vi.fn(),
+        renameSync: vi.fn(),
+        execSync: execSyncMock,
+        execAsync: noopExecAsync,
+        confirm: vi.fn().mockResolvedValue(true),
+        cwd: () => '/test',
+        templateDir: '/template',
+        rootPkgPath: '/root/package.json',
+        console: mockConsole,
+        process: mockProcess,
+        intro: noopIntro,
+        outro: noopOutro,
+        spinner: noopSpinner,
+      });
+
+      expect(execSyncMock).toHaveBeenCalledWith(
+        'npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server',
+        expect.objectContaining({ cwd: '/test/my-project', stdio: 'inherit' })
       );
     });
 
@@ -484,6 +520,149 @@ describe('CLI Commands', () => {
       expect(compareVersions('1.0.0', '1.0.1')).toBe(-1);
       expect(compareVersions('1.2.3', '1.2.4')).toBe(-1);
       expect(compareVersions('2.0.0', '1.9.9')).toBe(1);
+    });
+  });
+
+  describe('test init command', () => {
+    const noopLog = {
+      info: vi.fn(),
+      success: vi.fn(),
+      step: vi.fn(),
+      message: vi.fn(),
+      warn: vi.fn(),
+    };
+
+    const createTestInitDeps = (overrides = {}) => ({
+      existsSync: () => false,
+      readFileSync: () => '{}',
+      writeFileSync: vi.fn(),
+      mkdirSync: vi.fn(),
+      execSync: vi.fn(),
+      cwd: () => '/test/project',
+      intro: vi.fn(),
+      outro: vi.fn(),
+      confirm: vi.fn().mockResolvedValue(false),
+      isCancel: () => false,
+      select: vi.fn().mockResolvedValue('later'),
+      text: vi.fn().mockResolvedValue(''),
+      log: noopLog,
+      ...overrides,
+    });
+
+    it('should prompt to install test-mcp-server skill', async () => {
+      const { testInit } = await importTestInit();
+      const confirmMock = vi.fn().mockResolvedValue(false);
+
+      await testInit([], createTestInitDeps({ confirm: confirmMock }));
+
+      // The skill install confirm should be called (it's the only confirm in the flow for external projects)
+      expect(confirmMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Install the test-mcp-server skill? (helps your coding agent write tests)',
+        })
+      );
+    });
+
+    it('should run npx skills add when user confirms skill install', async () => {
+      const { testInit } = await importTestInit();
+      const execSyncMock = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          confirm: vi.fn().mockResolvedValue(true),
+          execSync: execSyncMock,
+        })
+      );
+
+      expect(execSyncMock).toHaveBeenCalledWith(
+        'npx skills add Sunpeak-AI/sunpeak@test-mcp-server',
+        expect.objectContaining({ cwd: '/test/project', stdio: 'inherit' })
+      );
+    });
+
+    it('should not run npx skills add when user declines', async () => {
+      const { testInit } = await importTestInit();
+      const execSyncMock = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          confirm: vi.fn().mockResolvedValue(false),
+          execSync: execSyncMock,
+        })
+      );
+
+      expect(execSyncMock).not.toHaveBeenCalledWith(
+        'npx skills add Sunpeak-AI/sunpeak@test-mcp-server',
+        expect.anything()
+      );
+    });
+
+    it('should handle skill install failure gracefully', async () => {
+      const { testInit } = await importTestInit();
+      const logInfoMock = vi.fn();
+      const execSyncMock = vi.fn().mockImplementation(() => {
+        throw new Error('npx not found');
+      });
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          confirm: vi.fn().mockResolvedValue(true),
+          execSync: execSyncMock,
+          log: { ...noopLog, info: logInfoMock },
+        })
+      );
+
+      expect(logInfoMock).toHaveBeenCalledWith(
+        'Skill install skipped. Install later: npx skills add Sunpeak-AI/sunpeak@test-mcp-server'
+      );
+    });
+
+    it('should detect sunpeak project type', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          existsSync: (path: string) => path.includes('package.json') || false,
+          readFileSync: (path: string) => {
+            if (path.includes('package.json')) {
+              return JSON.stringify({ dependencies: { sunpeak: '*' } });
+            }
+            return '{}';
+          },
+          writeFileSync,
+        })
+      );
+
+      // For sunpeak projects, it writes playwright.config.ts with defineConfig()
+      expect(writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('playwright.config.ts'),
+        expect.stringContaining('defineConfig()')
+      );
+    });
+
+    it('should detect JS project type and use CLI server arg', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        ['--server', 'http://localhost:9000/mcp'],
+        createTestInitDeps({
+          existsSync: (path: string) => path.includes('package.json') || false,
+          readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
+          writeFileSync,
+        })
+      );
+
+      // For JS projects with URL server, writes config with server URL
+      expect(writeFileSync).toHaveBeenCalledWith(
+        expect.stringContaining('playwright.config.ts'),
+        expect.stringContaining('http://localhost:9000/mcp')
+      );
     });
   });
 

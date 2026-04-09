@@ -1,6 +1,6 @@
 ---
 name: create-sunpeak-app
-description: Use when working with sunpeak, or when the user asks to "build an MCP App", "build a ChatGPT App", "add a UI to an MCP tool", "create an interactive resource for Claude Connector or ChatGPT", "build a React UI for an MCP server", or needs guidance on MCP App resources, tool-to-UI data flow, simulation files, host context, platform-specific ChatGPT/Claude features, or end-to-end testing of MCP App UIs.
+description: Use when working with sunpeak, or when the user asks to "build an MCP App", "build a ChatGPT App", "add a UI to an MCP tool", "create an interactive resource for Claude Connector or ChatGPT", "build a React UI for an MCP server", or needs guidance on MCP App resources, tool-to-UI data flow, simulation files, host context, platform-specific ChatGPT/Claude features, or production builds. For testing (e2e, visual regression, live tests, evals), see the test-mcp-server skill.
 ---
 
 # Create Sunpeak App
@@ -417,20 +417,6 @@ function MyResource() {
 
 ## Commands
 
-Testing (works with any MCP server):
-```bash
-sunpeak inspect              # Inspect any MCP server in the inspector (standalone)
-sunpeak test                 # Run unit + e2e tests
-sunpeak test --unit          # Run unit tests only (vitest)
-sunpeak test --e2e           # Run e2e tests only (Playwright)
-sunpeak test --visual        # Run e2e tests with visual regression comparison
-sunpeak test --visual --update  # Update visual regression baselines
-sunpeak test init            # Scaffold test infrastructure into a project
-sunpeak test --live          # Run live tests against real ChatGPT (requires tunnel + browser session)
-sunpeak test --eval          # Run evals against multiple LLM models (requires API keys)
-```
-
-App framework (for sunpeak projects):
 ```bash
 sunpeak new         # Scaffold a new sunpeak app project
 sunpeak dev         # Start dev server (Vite + MCP server, port 3000 web / 8000 MCP)
@@ -556,144 +542,17 @@ Use MCP standard CSS variables via Tailwind arbitrary values instead of raw colo
 
 These variables use CSS `light-dark()` so they respond to theme changes automatically. The `dark:` Tailwind variant also works via `[data-theme="dark"]`.
 
-## E2E Tests with the `mcp` Fixture
+## Testing
 
-Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture handles inspector navigation, double-iframe traversal, URL construction, and host selection. Tests run automatically across ChatGPT and Claude hosts via Playwright projects.
+For all testing capabilities (e2e tests, visual regression, live tests against real ChatGPT, multi-model evals, Playwright config), install the `test-mcp-server` skill:
 
-```typescript
-import { test, expect } from 'sunpeak/test';
-
-test('renders weather card', async ({ mcp }) => {
-  const result = await mcp.callTool('show-weather');
-  const app = result.app();
-  await expect(app.locator('h1')).toHaveText('Austin');
-});
-
-test('renders in dark mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-weather', {}, { theme: 'dark' });
-  const app = result.app();
-  await expect(app.locator('h1')).toBeVisible();
-});
-
-test('loads without console errors', async ({ mcp }) => {
-  const errors: string[] = [];
-  mcp.page.on('console', (msg) => {
-    if (msg.type() === 'error') errors.push(msg.text());
-  });
-
-  const result = await mcp.callTool('show-weather', {}, { theme: 'dark' });
-  const app = result.app();
-  await expect(app.locator('h1')).toBeVisible();
-
-  const unexpectedErrors = errors.filter(
-    (e) =>
-      !e.includes('[IframeResource]') &&
-      !e.includes('mcp') &&
-      !e.includes('PostMessage') &&
-      !e.includes('connect')
-  );
-  expect(unexpectedErrors).toHaveLength(0);
-});
-
-test('prod tools empty state', async ({ mcp }) => {
-  await mcp.openTool('show-weather');
-  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
-});
-
-test('pip mode (skip on Claude)', async ({ mcp }) => {
-  test.skip(mcp.host === 'claude', 'Claude does not support PiP');
-  const result = await mcp.callTool('show-weather');
-  await mcp.setDisplayMode('pip');
-  await expect(result.app().locator('h1')).toBeVisible({ timeout: 5000 });
-});
+```bash
+npx skills add Sunpeak-AI/sunpeak@test-mcp-server
 ```
 
-### `mcp` Fixture API
+The testing skill works with any MCP server (not just sunpeak projects). Simulations (above) are part of the dev workflow and defined here. Tests consume them via the `mcp` fixture.
 
-| Method | Description |
-|--------|-------------|
-| `callTool(name, input?, options?)` | Navigate to simulation, wait for render, return `ToolResult` |
-| `openTool(name, options?)` | Navigate to tool with no mock data ("Press Run" state) |
-| `runTool()` | Click Run button, wait for resource, return `ToolResult` |
-| `setTheme(theme)` | Switch to `'light'` or `'dark'` via sidebar |
-| `setDisplayMode(mode)` | Switch to `'inline'`, `'pip'`, or `'fullscreen'` via sidebar |
-| `screenshot(name?, options?)` | Take a screenshot and compare against a baseline (only runs with `--visual`) |
-| `page` | Raw Playwright `Page` for chrome-level assertions |
-| `host` | Current host ID (`'chatgpt'` or `'claude'`) from Playwright project |
-
-### `ToolResult` API
-
-| Property/Method | Description |
-|--------|-------------|
-| `app()` | Get FrameLocator for rendered resource UI (handles double-iframe) |
-| `content` | Raw MCP content items |
-| `structuredContent` | Structured content from tool response |
-| `isError` | Whether the tool returned an error |
-
-### MCP-Native Matchers
-
-| Matcher | Description |
-|---------|-------------|
-| `expect(result).toBeError()` | Assert tool result is an error |
-| `expect(result).toHaveTextContent(str)` | Assert any content text contains string |
-| `expect(result).toHaveStructuredContent(shape)` | Assert structuredContent matches shape |
-| `expect(result).toHaveContentType(type)` | Assert content includes item of given type |
-
-### `callTool` Options
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `theme` | `'light' \| 'dark'` | Color theme (default: inspector default) |
-| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode |
-| `prodResources` | `boolean` | Use production-built resource bundles |
-
-### Visual Regression Testing
-
-Use `mcp.screenshot()` to capture and compare screenshots against saved baselines. Comparisons only run with `sunpeak test --visual`. Without it, `screenshot()` silently skips, so you can include it in regular e2e tests.
-
-```typescript
-import { test, expect } from 'sunpeak/test';
-
-test('albums renders correctly', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
-  const app = result.app();
-  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
-
-  await mcp.screenshot('albums-light');
-});
-```
-
-`screenshot()` options:
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `target` | `'app' \| 'page'` | What to capture: `'app'` (inner iframe, default) or `'page'` (full inspector) |
-| `element` | `Locator` | Specific locator to screenshot instead of the default target |
-| `threshold` | `number` | Pixel comparison threshold (0-1) |
-| `maxDiffPixelRatio` | `number` | Maximum allowed ratio of differing pixels (0-1) |
-
-All Playwright `toHaveScreenshot` options are passed through.
-
-Configure project-wide visual defaults:
-
-```typescript
-import { defineConfig } from 'sunpeak/test/config';
-export default defineConfig({
-  visual: {
-    threshold: 0.2,
-    maxDiffPixelRatio: 0.05,
-  },
-});
-```
-
-### Playwright Config
-
-```typescript
-// playwright.config.ts
-import { defineConfig } from 'sunpeak/test/config';
-export default defineConfig();
-// Creates per-host projects (chatgpt, claude). Tests run once per host automatically.
-```
+For testing commands, see the `test-mcp-server` skill. Quick reference: `sunpeak test` (unit + e2e), `sunpeak test --visual` (visual regression), `sunpeak test --live` (real ChatGPT), `sunpeak test --eval` (multi-model evals).
 
 ## ResourceConfig Fields
 
@@ -716,152 +575,14 @@ export const resource: ResourceConfig = {
 };
 ```
 
-## Live Testing (against real ChatGPT)
-
-Live tests validate MCP Apps inside real ChatGPT. They use Playwright to open the user's browser, send messages that trigger tool calls, and assert on the rendered app iframe.
-
-### Live Test Pattern
-
-One spec file per resource. Import `test` and `expect` from `sunpeak/test/live` — the `live` fixture handles login, MCP refresh, and host-specific message formatting.
-
-```typescript
-// tests/live/weather.spec.ts
-import { test, expect } from 'sunpeak/test/live';
-
-test('weather tool renders forecast', async ({ live }) => {
-  const app = await live.invoke('show me the weather in Austin');
-  await expect(app.locator('h1')).toBeVisible();
-});
-```
-
-Config is a one-liner:
-```typescript
-// tests/live/playwright.config.ts
-import { defineLiveConfig } from 'sunpeak/test/live/config';
-export default defineLiveConfig();
-// Add hosts: defineLiveConfig({ hosts: ['chatgpt', 'claude'] })
-// Generates one Playwright project per host. Tests switch themes internally via live.setColorScheme().
-```
-
-### live Fixture API
-
-| Method | Description |
-|--------|-------------|
-| `invoke(prompt)` | Start new chat, send prompt, return app FrameLocator (one-liner) |
-| `startNewChat()` | Start a new conversation (for multi-step flows) |
-| `sendMessage(text)` | Send a message with host-appropriate formatting |
-| `sendRawMessage(text)` | Send a message without prefix |
-| `waitForAppIframe({ timeout })` | Wait for MCP app iframe to render (default 90s) |
-| `getAppIframe()` | Get FrameLocator for the app iframe |
-| `setColorScheme(scheme, appFrame?)` | Switch the host to `'light'` or `'dark'` theme. Optionally pass an app FrameLocator to wait for it to update. |
-| `page` | Raw Playwright `Page` object for advanced assertions |
-
-### Running
-
-```bash
-# Requires: tunnel running (ngrok http 8000) + logged into ChatGPT in your browser
-pnpm test:live
-
-# Or via validate pipeline
-sunpeak validate --live
-```
-
-The browser opens visibly — headless mode is blocked by chatgpt.com's bot detection.
-
-The live test runner imports your browser session, starts `sunpeak dev --prod-resources`, and refreshes the MCP server connection in ChatGPT once in globalSetup before all workers. Tests run in parallel — each test gets its own chat window.
-
-**If auth fails:** If tests report "Not logged into ChatGPT", delete `.auth/` and re-run `pnpm test:live` — a browser window will open for you to log in again.
-
-## Evals (Multi-Model Tool Calling)
-
-Evals test whether different LLMs call your tools correctly. They connect to your MCP server, discover tools via MCP protocol, and send prompts to multiple models to check tool calling behavior. Each case runs N times per model to measure reliability.
-
-### Setup
-
-```bash
-pnpm add ai @ai-sdk/openai @ai-sdk/anthropic @ai-sdk/google
-```
-
-Copy `tests/evals/.env.example` to `tests/evals/.env` and add your API keys. The `.env` file is gitignored and loaded automatically when running evals. For sunpeak projects, the dev server starts automatically.
-
-### Configuration (`tests/evals/eval.config.ts`)
-
-```typescript
-import { defineEvalConfig } from 'sunpeak/eval';
-
-// API keys are loaded automatically from tests/evals/.env (gitignored).
-
-export default defineEvalConfig({
-  // Server is auto-detected for sunpeak projects.
-  // For non-sunpeak projects: server: 'http://localhost:8000/mcp',
-
-  models: ['gpt-4o', 'gpt-4o-mini', 'o4-mini', 'claude-sonnet-4-20250514', 'gemini-2.0-flash'],
-  defaults: {
-    runs: 10,
-    maxSteps: 1,
-    temperature: 0,
-    timeout: 30_000,
-  },
-});
-```
-
-### Writing Evals (`tests/evals/*.eval.ts`)
-
-```typescript
-import { expect } from 'vitest';
-import { defineEval } from 'sunpeak/eval';
-
-export default defineEval({
-  cases: [
-    {
-      name: 'food category request',
-      prompt: 'Show me photos from my Austin pizza tour',
-      expect: {
-        tool: 'show-albums',
-        args: { search: expect.stringMatching(/pizza|austin/i) },
-      },
-    },
-    {
-      name: 'multi-step flow',
-      prompt: 'Write a post for X and LinkedIn',
-      maxSteps: 3,
-      expect: [
-        { tool: 'review-post' },
-        { tool: 'publish-post' },
-      ],
-    },
-    {
-      name: 'custom assertion',
-      prompt: 'Show me vacation photos',
-      assert: (result) => {
-        expect(result.toolCalls).toHaveLength(1);
-        expect(result.toolCalls[0].name).toBe('show-albums');
-      },
-    },
-  ],
-});
-```
-
-Three assertion levels: single tool (`expect: { tool, args }`), ordered sequence (`expect: [...]`), or custom function (`assert: (result) => { ... }`). Args use partial matching — extra keys in the actual call are allowed.
-
-### Running
-
-```bash
-sunpeak test --eval                          # All evals
-sunpeak test --eval tests/evals/albums.eval.ts  # Single file
-```
-
-Not included in the default `sunpeak test` run (costs money, like `--live`).
-
 ## Common Mistakes
 
 1. **Hooks before early returns** — All hooks must run unconditionally. Move `useMemo`/`useEffect` above any `if (...) return` blocks.
 2. **Missing `<SafeArea>`** — Always wrap content in `<SafeArea>` to respect host safe area insets.
-3. **Wrong Playwright locator** — Use `result.app().locator(...)` (from `mcp.callTool()`) for resource content. This handles the double-iframe sandbox architecture. Use `mcp.page.locator(...)` only for inspector chrome elements.
-4. **Hardcoded colors** — Use MCP standard CSS variables via Tailwind arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`) not raw colors.
-5. **Simulation tool mismatch** — The `"tool"` field in simulation JSON must match a tool filename in `src/tools/` (e.g. `"tool": "show-weather"` matches `src/tools/show-weather.ts`).
-6. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).
-7. **Forgetting text fallback** — Include `toolResult.content[]` in simulations for non-UI hosts.
+3. **Hardcoded colors** — Use MCP standard CSS variables via Tailwind arbitrary values (`text-[var(--color-text-primary)]`, `bg-[var(--color-background-primary)]`) not raw colors.
+4. **Simulation tool mismatch** — The `"tool"` field in simulation JSON must match a tool filename in `src/tools/` (e.g. `"tool": "show-weather"` matches `src/tools/show-weather.ts`).
+5. **Mutating hook params** — Use `eslint-disable-next-line react-hooks/immutability` for `app.onteardown = ...` (class setter, not a mutation).
+6. **Forgetting text fallback** — Include `toolResult.content[]` in simulations for non-UI hosts.
 
 ## Troubleshooting: App Not Rendering in ChatGPT/Claude
 
@@ -887,15 +608,9 @@ Full troubleshooting guide: https://sunpeak.ai/docs/guides/troubleshooting
 | `sunpeak/claude` | Claude host shell + Inspector re-export |
 | `sunpeak/host` | Host detection (`isChatGPT`, `isClaude`, `detectHost`) |
 | `sunpeak/host/chatgpt` | ChatGPT-specific hooks (`useUploadFile`, `useRequestModal`, `useRequestCheckout`) |
-| `sunpeak/test` | MCP-first Playwright fixtures (`test` with `mcp` fixture, `expect` with MCP-native matchers) |
-| `sunpeak/test/config` | Playwright config factory (`defineConfig` for e2e tests) |
-| `sunpeak/test/live` | Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`) |
-| `sunpeak/test/live/config` | Live test config factory (`defineLiveConfig` with `hosts` array) |
-| `sunpeak/test/live/chatgpt` | ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture) |
-| `sunpeak/test/live/chatgpt/config` | ChatGPT-specific Playwright config factory |
-| `sunpeak/test/inspect/config` | Inspect config factory for external MCP servers (`defineInspectConfig`) |
-| `sunpeak/eval` | Eval framework (`defineEval`, `defineEvalConfig`) for multi-model tool calling evals |
 | `sunpeak/style.css` | Main stylesheet |
+
+For testing export paths (`sunpeak/test`, `sunpeak/eval`, etc.), see the `test-mcp-server` skill.
 
 ## References
 
