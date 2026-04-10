@@ -10,13 +10,17 @@ sunpeak-app/
 │   │   └── review.ts                        # Backend-only tool (no resource, no UI).
 │   └── server.ts                            # Optional: auth, server config.
 ├── tests/
+│   ├── unit/
+│   │   └── review.test.ts                   # Unit tests for component and hook logic.
 │   ├── simulations/
 │   │   ├── review-diff.json                 # Mock state for testing (includes serverTools).
 │   │   ├── review-post.json                 # Mock state for testing (includes serverTools).
 │   │   └── review-purchase.json             # Mock state for testing (includes serverTools).
 │   ├── e2e/
 │   │   └── review.spec.ts                   # Playwright tests against the inspector.
-│   └── live/
-│       └── review.spec.ts                   # Live tests against real ChatGPT (one per resource).
+│   ├── live/
+│   │   └── review.spec.ts                   # Live tests against real ChatGPT (one per resource).
+│   └── evals/
+│       └── review.eval.ts                   # Multi-model tool calling evals.
 └── package.json
 ```

@@ -1,0 +1,56 @@
+---
+title: "useApp"
+description: "Access the App instance from context."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "useApp", "AppProvider"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useApp` hook returns the `App` instance from the nearest [`AppProvider`](/app-framework/components/app-provider). Use this when you need direct access to the `App` for SDK method calls like `app.requestDisplayMode()`. Most hooks read from context internally, so you typically only need `useApp()` for direct SDK calls.
+
+The [`AppProvider`](/app-framework/components/app-provider) handles connecting to the MCP Apps host, HMR persistence during development, and React StrictMode compatibility. It is set up automatically by the sunpeak framework — you never need to write it yourself.
+
+<Card horizontal title="Wraps App class" icon="cube" href="/mcp-apps/app/app-class">
+  MCP Apps SDK reference
+</Card>
+
+## Import
+
+```tsx
+import { useApp } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useApp(): App | null
+```
+
+## Returns
+
+<ResponseField name="return" type="App | null">
+  The connected App instance, or `null` while connecting.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useApp } from 'sunpeak';
+
+function MyResource() {
+  const app = useApp();
+
+  const handleFullscreen = () => {
+    app?.requestDisplayMode({ mode: 'fullscreen' });
+  };
+
+  return <button onClick={handleFullscreen}>Go Fullscreen</button>;
+}
+```
+
+## AppProvider
+
+The [`AppProvider`](/app-framework/components/app-provider) component wraps your resource component tree and establishes the connection to the MCP Apps host. It is added automatically by the sunpeak framework in both `sunpeak dev` and `sunpeak build`. See the [full AppProvider reference](/app-framework/components/app-provider) for props, behavior, and HMR details.
+

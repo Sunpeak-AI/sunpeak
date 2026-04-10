@@ -1,0 +1,387 @@
+---
+title: "Patterns"
+description: "Common patterns and recipes for building MCP Apps with sunpeak — polling, chunked data, binary resources, fullscreen, model context, state persistence, and more."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "patterns", "recipes", "polling", "fullscreen", "model context"]
+---
+
+## Overview
+
+This guide covers common patterns for building MCP Apps with sunpeak. Each recipe shows both the tool file (server-side) and resource component (client-side) where applicable.
+
+## App-only tools
+
+Set `visibility: ["app"]` in a tool's `_meta.ui` to make it callable only from the UI — hidden from the LLM. Use this for polling, pagination, form submissions, and other UI-driven server actions.
+
+```ts
+// src/tools/refresh-data.ts
+import { z } from 'zod';
+import type { AppToolConfig } from 'sunpeak/mcp';
+
+export const tool: AppToolConfig = {
+  resource: 'dashboard',
+  title: 'Refresh Data',
+  description: 'Refresh dashboard data',
+  _meta: { ui: { visibility: ['app'] } },
+};
+
+export const schema = {};
+
+export default async function () {
+  const data = await fetchLatestMetrics();
+  return { structuredContent: data };
+}
+```
+
+The model never sees this tool. The resource component calls it directly with [`useCallServerTool`](/app-framework/hooks/use-call-server-tool).
+
+## Polling for live data
+
+For real-time dashboards or monitoring, poll an app-only tool at regular intervals.
+
+```tsx
+// In your resource component
+import { useCallServerTool, useTeardown } from 'sunpeak';
+
+function DashboardResource() {
+  const callTool = useCallServerTool();
+  const [data, setData] = useState(null);
+
+  useEffect(() => {
+    if (!callTool) return;
+    let cancelled = false;
+
+    async function poll() {
+      const result = await callTool({ name: 'refresh-data', arguments: {} });
+      if (!cancelled) setData(result.structuredContent);
+    }
+
+    poll();
+    const id = setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [callTool]);
+
+  useTeardown(() => {
+    // Clean up when host tears down the view
+  });
+
+  return <div>{/* render data */}</div>;
+}
+```
+
+<Info>
+See the [system-monitor example](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/system-monitor-server) in the MCP Apps SDK for a full implementation.
+</Info>
+
+## Chunked data loading
+
+Some hosts have size limits on tool call responses. Use an app-only tool with chunked responses to load large files (PDFs, images) without hitting limits.
+
+**Server-side** — return data in chunks with pagination:
+
+```ts
+// src/tools/read-data-bytes.ts
+export const tool: AppToolConfig = {
+  resource: 'viewer',
+  title: 'Read Data Bytes',
+  description: 'Load binary data in chunks',
+  _meta: { ui: { visibility: ['app'] } },
+};
+
+export const schema = {
+  id: z.string().describe('Resource identifier'),
+  offset: z.number().min(0).default(0),
+  byteCount: z.number().default(500 * 1024),
+};
+
+export default async function (args: { id: string; offset: number; byteCount: number }) {
+  const data = await loadData(args.id);
+  const chunk = data.slice(args.offset, args.offset + args.byteCount);
+
+  return {
+    structuredContent: {
+      bytes: Buffer.from(chunk).toString('base64'),
+      offset: args.offset,
+      byteCount: chunk.length,
+      totalBytes: data.length,
+      hasMore: args.offset + chunk.length < data.length,
+    },
+  };
+}
+```
+
+**Client-side** — loop until all chunks are received:
+
+```tsx
+const callTool = useCallServerTool();
+
+async function loadInChunks(id: string, onProgress?: (pct: number) => void) {
+  const chunks: Uint8Array[] = [];
+  let offset = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    const result = await callTool({ name: 'read-data-bytes', arguments: { id, offset } });
+    const chunk = result.structuredContent as { bytes: string; byteCount: number; totalBytes: number; hasMore: boolean };
+
+    const binary = atob(chunk.bytes);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    chunks.push(bytes);
+
+    offset += chunk.byteCount;
+    hasMore = chunk.hasMore;
+    onProgress?.(Math.round((offset / chunk.totalBytes) * 100));
+  }
+
+  const full = new Uint8Array(offset);
+  let pos = 0;
+  for (const c of chunks) { full.set(c, pos); pos += c.length; }
+  return full;
+}
+```
+
+<Info>
+See the [pdf-server example](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/pdf-server) for a full implementation of chunked loading.
+</Info>
+
+## Binary resources
+
+Serve binary content (video, PDF) via MCP resources and fetch it with [`useReadServerResource`](/app-framework/hooks/use-read-server-resource).
+
+```tsx
+const readResource = useReadServerResource();
+
+// Fetch a video resource as base64
+const result = await readResource({ uri: `video://${videoId}` });
+const content = result?.contents?.[0];
+
+if (content && 'blob' in content) {
+  videoEl.src = `data:${content.mimeType};base64,${content.blob}`;
+}
+```
+
+<Info>
+See the [video-resource example](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/video-resource-server) for a full implementation.
+</Info>
+
+## Progressive rendering
+
+Use [`useToolData`](/app-framework/hooks/use-tool-data)'s `inputPartial` to show a preview while the LLM is still generating tool arguments. This lowers perceived latency for tools with large inputs like code or structured data.
+
+```tsx
+const { input, inputPartial, output, isLoading } = useToolData<CodeInput, CodeOutput>();
+
+// Show streaming code preview while LLM generates
+if (!input && inputPartial?.code) {
+  return <pre className="text-[var(--color-text-secondary)]">{inputPartial.code}</pre>;
+}
+
+// Render final result
+return <CodeEditor code={input?.code} result={output} />;
+```
+
+<Warning>
+Partial arguments are "healed" JSON — the host closes unclosed brackets to produce valid JSON. Objects may be incomplete (e.g., the last array item may be truncated). Use `inputPartial` only for preview UI, never for critical operations.
+</Warning>
+
+## Giving errors to the model
+
+When a runtime error occurs in your resource (API failure, permission denied, resource unavailable), use [`useUpdateModelContext`](/app-framework/hooks/use-update-model-context) to inform the model:
+
+```tsx
+const updateContext = useUpdateModelContext();
+
+try {
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // ... use stream
+} catch (err) {
+  await updateContext({
+    content: [{ type: 'text', text: 'Error: microphone access denied. Transcription unavailable.' }],
+  });
+}
+```
+
+The model sees this in its context and can respond helpfully to the user.
+
+## Entering and exiting fullscreen
+
+Use [`useRequestDisplayMode`](/app-framework/hooks/use-request-display-mode) to toggle fullscreen. Always check `availableModes` first — not all hosts support all modes.
+
+```tsx
+const { requestDisplayMode, availableModes } = useRequestDisplayMode();
+const displayMode = useDisplayMode();
+
+const canFullscreen = availableModes?.includes('fullscreen');
+const isFullscreen = displayMode === 'fullscreen';
+
+const toggle = async () => {
+  await requestDisplayMode(isFullscreen ? 'inline' : 'fullscreen');
+};
+
+return (
+  <div className={isFullscreen ? 'rounded-none' : 'rounded-[var(--border-radius-lg)]'}>
+    {canFullscreen && <button onClick={toggle}>{isFullscreen ? 'Exit' : 'Fullscreen'}</button>}
+  </div>
+);
+```
+
+<Tip>
+In fullscreen mode, remove border radius so content extends to the viewport edges. Use `rounded-none` or `border-radius: 0`.
+</Tip>
+
+## Passing state to the model
+
+Two approaches depending on your needs:
+
+### Automatic with `useAppState`
+
+[`useAppState`](/app-framework/hooks/use-app-state) syncs React state to the model context automatically after each update. Best for simple state that the model should always see.
+
+```tsx
+const [state, setState] = useAppState({ selectedItems: [], total: 0 });
+
+// Every setState call re-renders AND pushes to model context
+setState({ selectedItems: ['item-1'], total: 29.99 });
+```
+
+### Manual with `useUpdateModelContext`
+
+[`useUpdateModelContext`](/app-framework/hooks/use-update-model-context) gives you full control over what and when to send. Best for large or structured context, or when you want to batch updates.
+
+```tsx
+const updateContext = useUpdateModelContext();
+
+// Use YAML frontmatter for structured data the model can parse
+await updateContext({
+  content: [{
+    type: 'text',
+    text: `---
+item-count: ${items.length}
+total-cost: ${total}
+currency: USD
+---
+
+User is viewing their shopping cart with ${items.length} items:
+
+${items.map(i => `- ${i.name}`).join('\n')}`,
+  }],
+});
+```
+
+<Info>
+`updateModelContext` is deferred — the model sees the updated context on its next turn, not immediately. It does not trigger a model response. Use [`useSendMessage`](/app-framework/hooks/use-send-message) to trigger a response.
+</Info>
+
+## Large follow-up messages
+
+When you need to send more data than fits in a message, set the context first, then trigger with a brief message:
+
+```tsx
+const updateContext = useUpdateModelContext();
+const sendMessage = useSendMessage();
+
+// 1. Push large content to model context (deferred)
+await updateContext({
+  content: [{ type: 'text', text: fullTranscript }],
+});
+
+// 2. Send brief trigger message (immediate)
+await sendMessage({
+  role: 'user',
+  content: [{ type: 'text', text: 'Summarize the key points from the transcript.' }],
+});
+```
+
+## Persisting view state
+
+For recoverable state (current page, camera position, scroll position), use `localStorage` with a server-provided `viewUUID`.
+
+**Server-side** — include a `viewUUID` in the tool result `_meta`:
+
+```ts
+export default async function (args: { documentId: string }) {
+  return {
+    structuredContent: { url: args.documentId, pageCount: 42 },
+    _meta: { viewUUID: crypto.randomUUID() },
+  };
+}
+```
+
+**Client-side** — save and restore state using the UUID as a storage key:
+
+```tsx
+const { output } = useToolData<Input, Output>();
+const [viewUUID, setViewUUID] = useState<string>();
+
+// Capture viewUUID from tool result _meta
+// (access via useApp() + app.ontoolresult for _meta access)
+const app = useApp();
+useEffect(() => {
+  if (!app) return;
+  const prev = app.ontoolresult;
+  app.ontoolresult = (result) => {
+    prev?.(result);
+    if (result._meta?.viewUUID) setViewUUID(String(result._meta.viewUUID));
+  };
+}, [app]);
+
+// Save/restore with localStorage
+useEffect(() => {
+  if (!viewUUID) return;
+  const saved = localStorage.getItem(viewUUID);
+  if (saved) setCurrentPage(JSON.parse(saved).page);
+}, [viewUUID]);
+
+const savePage = (page: number) => {
+  setCurrentPage(page);
+  if (viewUUID) localStorage.setItem(viewUUID, JSON.stringify({ page }));
+};
+```
+
+## Pausing offscreen views
+
+Views with animations, WebGL, or polling consume resources even when scrolled out of view. Use `IntersectionObserver` to pause when offscreen.
+
+```tsx
+const containerRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  const el = containerRef.current;
+  if (!el) return;
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        startAnimation(); // or startPolling()
+      } else {
+        pauseAnimation(); // or stopPolling()
+      }
+    });
+  });
+
+  observer.observe(el);
+  return () => observer.disconnect();
+}, []);
+
+useTeardown(() => {
+  pauseAnimation();
+});
+
+return <div ref={containerRef}>{/* animated content */}</div>;
+```
+
+<Info>
+See the [shadertoy](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/shadertoy-server) and [threejs](https://github.com/modelcontextprotocol/ext-apps/tree/main/examples/threejs-server) examples for full implementations of visibility-based pausing.
+</Info>
+
+## See also
+
+<Card horizontal title="MCP Apps SDK Examples" icon="github" href="https://github.com/modelcontextprotocol/ext-apps/tree/main/examples">
+  20+ example apps demonstrating these patterns (maps, video, PDF, 3D, monitoring, and more).
+</Card>
+<Card horizontal title="MCP Apps SDK Patterns" icon="link" href="https://apps.extensions.modelcontextprotocol.io/api/documents/Patterns.html">
+  Framework-agnostic version of these patterns in the SDK documentation.
+</Card>

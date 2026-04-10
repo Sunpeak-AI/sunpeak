@@ -1,0 +1,130 @@
+---
+title: "Server Entry"
+description: "Optional auth and server configuration."
+keywords: ["MCP Apps", "ChatGPT Apps", "MCP server", "authentication", "server config"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The optional `src/server.ts` file configures authentication and server metadata. When present, the framework calls `auth()` on every MCP request and populates `extra.authInfo` in tool handlers.
+
+Under the hood, the returned `AuthInfo` is set as `req.auth` on the HTTP request — the same mechanism the MCP SDK uses. This gives you the same flexibility as using the SDK directly.
+
+## File Convention
+
+```
+src/server.ts
+```
+
+## Example
+
+```ts
+// src/server.ts
+
+import type { IncomingMessage } from 'node:http';
+import type { AuthInfo } from 'sunpeak/mcp';
+
+export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return null; // Reject → 401 Unauthorized
+  return { token, clientId: 'sunpeak-app', scopes: [] };
+}
+
+export const server = { name: 'My App', version: '1.0.0' };
+```
+
+## Exports
+
+### `auth` (function, optional)
+
+Called on every MCP request. Return `AuthInfo` to authenticate, or `null` to reject the request with 401.
+
+```ts
+export async function auth(req: IncomingMessage): Promise<AuthInfo | null> {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return null;
+  // Verify however you want — JWT, database, external API
+  const user = await verifyToken(token);
+  return { token, clientId: user.id, scopes: user.scopes };
+}
+```
+
+<ResponseField name="req" type="IncomingMessage" required>
+  The incoming HTTP request from Node's `http` module. Access headers, cookies, query params, etc.
+</ResponseField>
+
+**Returns** `AuthInfo | null` (sync or async):
+
+```typescript
+interface AuthInfo {
+  token: string;
+  clientId: string;
+  scopes: string[];
+  expiresAt?: number;           // Unix timestamp
+  resource?: URL;               // RFC 8707 resource identifier
+  extra?: Record<string, unknown>; // Custom data
+}
+```
+
+Return `null` to reject the request — Sunpeak responds with `401 Unauthorized` and a `WWW-Authenticate: Bearer` header.
+
+### `server` (object, optional)
+
+Server metadata reported to hosts during the [MCP handshake](/mcp-apps/mcp/overview#connection-lifecycle).
+
+```ts
+export const server = { name: 'My App', version: '1.0.0' };
+```
+
+<ResponseField name="name" type="string">
+  Server name displayed in the host.
+</ResponseField>
+
+<ResponseField name="version" type="string">
+  Server version.
+</ResponseField>
+
+## Using Auth in Tool Handlers
+
+The `authInfo` from the server entry is available in every tool handler:
+
+```ts
+// src/tools/show-albums.ts
+
+export default async function (args: Record<string, unknown>, extra: ToolHandlerExtra) {
+  const token = extra.authInfo?.token;
+  const data = await fetchAlbums(token, args.category);
+  return { structuredContent: data };
+}
+```
+
+## Custom Server
+
+If you need middleware, custom routes, or full control over the HTTP server, use `createMcpHandler` (Node.js) or `createHandler` (Web Standard) to mount the MCP protocol on your own server:
+
+```ts
+import { createMcpHandler } from 'sunpeak/mcp';
+
+// Node.js — mount on Express, Fastify, vanilla http.createServer
+const mcpHandler = createMcpHandler({ tools, resources, auth });
+```
+
+```ts
+import { createHandler } from 'sunpeak/mcp';
+
+// Web Standard — Cloudflare Workers, Deno, Bun, Vercel Edge
+const handler = createHandler({ tools, resources, auth });
+```
+
+These handlers accept pre-loaded tool and resource objects — they don't auto-discover from `dist/`. See the [Production Server API](/app-framework/tools/production-server) for config types and the [Deployment Guide](/app-framework/guides/deployment#custom-server-setup) for complete examples.
+
+## See Also
+
+<Card horizontal title="Tool File" icon="code" href="/app-framework/tools/tool-file">
+  Define tool metadata, schemas, and handlers.
+</Card>
+<Card horizontal title="Deployment Guide" icon="rocket" href="/app-framework/guides/deployment">
+  Production server setup and custom server integration.
+</Card>

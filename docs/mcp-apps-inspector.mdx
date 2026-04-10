@@ -24,7 +24,7 @@ The sunpeak inspector replicates MCP App host runtimes (ChatGPT, Claude) for loc
     sunpeak inspect --server "python my_server.py"
     ```
 
-    See [sunpeak inspect CLI Reference](/api-reference/cli/inspect) for all options.
+    See [sunpeak inspect CLI Reference](/testing/cli/inspect) for all options.
   </Tab>
   <Tab title="Built into sunpeak dev">
     In sunpeak projects, the inspector is built into the dev server:
@@ -39,7 +39,7 @@ The sunpeak inspector replicates MCP App host runtimes (ChatGPT, Claude) for loc
 
 - **Instant feedback** — HMR means changes appear immediately. No cache issues, no reloading the host.
 - **Every host, theme, and device** — toggle ChatGPT/Claude, light/dark, mobile/tablet/desktop, inline/PiP/fullscreen from the sidebar or URL params.
-- **Automated testing** — the inspector is the test runtime for [E2E tests](/mcp-apps-testing). Load simulations via URL, assert with Playwright.
+- **Automated testing** — the inspector is the test runtime for [E2E tests](/testing/e2e). Load simulations via URL, assert with Playwright.
 - **No deployment needed** — develop and test locally without tunnels or host accounts.
 
 ## Simulations
@@ -60,7 +60,7 @@ Simulations are JSON fixtures that define reproducible tool states for the inspe
 
 The inspector loads simulations from `tests/simulations/` automatically. Select a simulation from the sidebar dropdown to render your resource with that mock data. Select "None (call server)" to call the real tool handler instead.
 
-See [Simulations API Reference](/api-reference/simulations/simulation) for the complete JSON schema and conventions.
+See [Simulations API Reference](/testing/simulations) for the complete JSON schema and conventions.
 
 ## Sidebar Controls
 
@@ -71,15 +71,15 @@ The inspector sidebar lets you configure:
 - **Simulation** — which fixture to load (or "None" for real server calls)
 - **Host** — ChatGPT or Claude runtime
 - **Width** — mobile, tablet, or full-width viewport
-- **Host Context** — [theme](/api-reference/hooks/use-theme), [locale](/api-reference/hooks/use-locale), [display mode](/api-reference/hooks/use-display-mode), [platform](/api-reference/hooks/use-platform), [device capabilities](/api-reference/hooks/use-device-capabilities), [time zone](/api-reference/hooks/use-time-zone), [container dimensions](/api-reference/hooks/use-viewport), [safe area insets](/api-reference/hooks/use-safe-area)
-- **App Context** — model context JSON shared with the model via [`useUpdateModelContext()`](/api-reference/hooks/use-update-model-context)
-- **Tool Input/Result** — editable JSON for the [tool arguments and structured content](/api-reference/hooks/use-tool-data)
+- **Host Context** — [theme](/app-framework/hooks/use-theme), [locale](/app-framework/hooks/use-locale), [display mode](/app-framework/hooks/use-display-mode), [platform](/app-framework/hooks/use-platform), [device capabilities](/app-framework/hooks/use-device-capabilities), [time zone](/app-framework/hooks/use-time-zone), [container dimensions](/app-framework/hooks/use-viewport), [safe area insets](/app-framework/hooks/use-safe-area)
+- **App Context** — model context JSON shared with the model via [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context)
+- **Tool Input/Result** — editable JSON for the [tool arguments and structured content](/app-framework/hooks/use-tool-data)
 
-All sidebar settings are reflected in the URL, making them shareable and usable in automated tests via [`createInspectorUrl`](/api-reference/simulations/inspector#createinspectorurl).
+All sidebar settings are reflected in the URL, making them shareable and usable in automated tests via [`createInspectorUrl`](/testing/inspector#createinspectorurl).
 
 ## Using the Inspector in Tests
 
-The inspector doubles as the test runtime for automated E2E tests. See [MCP App Testing Framework](/mcp-apps-testing) for the full testing story.
+The inspector doubles as the test runtime for automated E2E tests. See [MCP Testing Framework](/testing/overview) for the full testing story.
 
 ```typescript
 import { createInspectorUrl } from 'sunpeak/inspector';
@@ -96,12 +96,12 @@ test('renders in dark mode on Claude', async ({ page }) => {
 
 ## Dive Deeper
 
-<Card horizontal title="sunpeak inspect" icon="terminal" href="/api-reference/cli/inspect">
+<Card horizontal title="sunpeak inspect" icon="terminal" href="/testing/cli/inspect">
   Inspect any MCP server (standalone, no project needed).
 </Card>
-<Card horizontal title="Simulations API Reference" icon="folder" href="/api-reference/simulations/simulation">
+<Card horizontal title="Simulations API Reference" icon="folder" href="/testing/simulations">
   JSON schema, conventions, and auto-discovery.
 </Card>
-<Card horizontal title="Inspector API Reference" icon="desktop" href="/api-reference/simulations/inspector">
+<Card horizontal title="Inspector API Reference" icon="desktop" href="/testing/inspector">
   Full component documentation and configuration options.
 </Card>

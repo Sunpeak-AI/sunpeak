@@ -1,0 +1,127 @@
+---
+title: "Unit Testing"
+description: "Unit testing MCP App components and hooks with Vitest and happy-dom."
+keywords: ["MCP app testing", "unit testing", "Vitest", "happy-dom", "React testing"]
+---
+
+## Overview
+
+Unit tests run your component and hook logic in isolation using Vitest with happy-dom. They're fast, don't require the inspector or a browser, and are included in the default `sunpeak test` run.
+
+```bash
+sunpeak test                    # Run unit + e2e tests
+sunpeak test --unit             # Unit tests only
+```
+
+## Setup
+
+Unit tests live in `tests/unit/` (or any `*.test.ts` / `*.spec.ts` file matched by your Vitest config). For sunpeak framework projects, Vitest is pre-configured with happy-dom.
+
+For standalone usage, add Vitest to your project:
+
+```bash
+pnpm add -D vitest @vitest/coverage-v8
+```
+
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+
+export default defineConfig({
+  test: {
+    environment: 'happy-dom',
+    include: ['tests/unit/**/*.{test,spec}.{ts,tsx}'],
+  },
+});
+```
+
+## Writing Unit Tests
+
+Test component rendering, hook logic, and data transformations without the full inspector stack.
+
+### Testing Components
+
+```typescript
+import { render, screen } from '@testing-library/react';
+import { test, expect } from 'vitest';
+import { ReviewResource } from '../../src/resources/review/review';
+
+test('renders review title', () => {
+  // Mock the useToolData hook at the module level or via a provider
+  render(<ReviewResource />);
+  expect(screen.getByRole('heading')).toBeDefined();
+});
+```
+
+### Testing Data Transformations
+
+```typescript
+import { test, expect } from 'vitest';
+import { formatAlbumData } from '../../src/resources/albums/utils';
+
+test('formats album data correctly', () => {
+  const raw = { title: 'Summer Slice', count: 12 };
+  const result = formatAlbumData(raw);
+  expect(result.displayTitle).toBe('Summer Slice (12 photos)');
+});
+```
+
+### Testing Tool Handlers
+
+Tool handlers are plain async functions, so you can test them directly:
+
+```typescript
+import { test, expect } from 'vitest';
+import handler from '../../src/tools/show-albums';
+
+test('returns album data', async () => {
+  const result = await handler({ category: 'travel' }, {} as any);
+  expect(result.structuredContent).toBeDefined();
+  expect(result.structuredContent.albums).toBeInstanceOf(Array);
+});
+```
+
+## When to Use Unit Tests vs E2E Tests
+
+| Use unit tests for | Use E2E tests for |
+|---|---|
+| Data transformations and utilities | Visual rendering across hosts and themes |
+| Tool handler logic | Iframe communication and sandbox behavior |
+| Component logic in isolation | Full tool call flow (call → render → assert) |
+| Fast feedback during development | Cross-host compatibility (ChatGPT vs Claude) |
+
+Unit tests and E2E tests are complementary. Unit tests catch logic bugs fast. [E2E tests](/testing/e2e) catch rendering and integration issues across the full inspector stack.
+
+## Additional Quality Tools
+
+<AccordionGroup>
+  <Accordion title="Linting (ESLint)">
+    ```bash
+    pnpm add -D eslint @typescript-eslint/eslint-plugin
+    ```
+    Add `"lint": "eslint . --ext .ts,.tsx"` to package.json scripts.
+  </Accordion>
+
+  <Accordion title="Type Checking">
+    TypeScript is already installed. Add to package.json scripts:
+    ```json
+    "typecheck": "tsc --noEmit"
+    ```
+  </Accordion>
+
+  <Accordion title="Formatting (Prettier)">
+    ```bash
+    pnpm add -D prettier
+    ```
+    Add `"format": "prettier --write ."` to package.json scripts.
+  </Accordion>
+</AccordionGroup>
+
+## Learn More
+
+<Card horizontal title="Vitest Docs" icon="link" href="https://vitest.dev/">
+  Learn more about Vitest for unit testing.
+</Card>
+<Card horizontal title="E2E Testing" icon="flask" href="/testing/e2e">
+  Full-stack testing with the inspector and Playwright.
+</Card>

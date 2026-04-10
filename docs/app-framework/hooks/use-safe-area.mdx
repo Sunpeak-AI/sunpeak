@@ -1,0 +1,58 @@
+---
+title: "useSafeArea"
+description: "Get safe area insets."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "safe area", "insets"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useSafeArea` hook returns the safe area insets for handling device notches, status bars, and other system UI. It is a convenience wrapper around `useHostContext`.
+
+<Tip>For most resources, use the [`<SafeArea>`](/app-framework/components/safe-area) component instead — it applies both safe area padding and viewport height constraints automatically.</Tip>
+
+## Import
+
+```tsx
+import { useSafeArea } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useSafeArea(): SafeAreaInsets
+```
+
+## Returns
+
+<ResponseField name="return" type="SafeAreaInsets">
+  Safe area insets object. Defaults to all zeros when unavailable.
+
+  ```typescript
+  {
+    top: number;    // pixels
+    bottom: number; // pixels
+    left: number;   // pixels
+    right: number;  // pixels
+  }
+  ```
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useSafeArea } from 'sunpeak';
+
+function MyResource() {
+  const safeArea = useSafeArea();
+
+  return (
+    <div style={{ paddingTop: safeArea.top, paddingBottom: safeArea.bottom }}>
+      Content with safe area padding.
+    </div>
+  );
+}
+```
+
+Safe area insets come from [`McpUiHostContext.safeAreaInsets`](/mcp-apps/types/core-types#mcpuihostcontext).

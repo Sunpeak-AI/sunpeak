@@ -14,11 +14,10 @@
     { "source": "/library/mcp-server", "destination": "/mcp-apps-framework" },
     { "source": "/inspector/inspector", "destination": "/mcp-apps-inspector" },
     { "source": "/inspector/mcp-server", "destination": "/mcp-apps-framework" },
-    { "source": "/testing/testing", "destination": "/mcp-apps-testing" },
-    { "source": "/template/project-scaffold", "destination": "/framework/project-scaffold" },
-    { "source": "/template/ui-components", "destination": "/framework/ui-components" },
-    { "source": "/guides/testing", "destination": "/mcp-apps-testing" },
-    { "source": "/api-reference/simulations/simulator", "destination": "/api-reference/simulations/inspector" },
+    { "source": "/testing/testing", "destination": "/testing/overview" },
+    { "source": "/template/project-scaffold", "destination": "/app-framework/project-scaffold" },
+    { "source": "/template/ui-components", "destination": "/app-framework/ui-components" },
+    { "source": "/guides/testing", "destination": "/testing/overview" },
     { "source": "/mcp-apps/security/csp-cors", "destination": "/mcp-apps/server/csp-cors" },
     { "source": "/mcp-apps/app/events/oncalltool", "destination": "/mcp-apps/app/event-handlers/oncalltool" },
     { "source": "/mcp-apps/app/events/onhostcontextchanged", "destination": "/mcp-apps/app/event-handlers/onhostcontextchanged" },
@@ -28,14 +27,78 @@
     { "source": "/mcp-apps/app/events/ontoolinput", "destination": "/mcp-apps/app/event-handlers/ontoolinput" },
     { "source": "/mcp-apps/app/events/ontoolinputpartial", "destination": "/mcp-apps/app/event-handlers/ontoolinputpartial" },
     { "source": "/mcp-apps/app/events/ontoolresult", "destination": "/mcp-apps/app/event-handlers/ontoolresult" },
-    { "source": "/api-reference/hooks/safe-area", "destination": "/api-reference/components/safe-area" },
-    { "source": "/api-reference/hooks/platform-detection", "destination": "/api-reference/functions/host-detection" },
-    { "source": "/api-reference/hooks/host-detection", "destination": "/api-reference/functions/host-detection" }
+    { "source": "/api-reference/hooks/safe-area", "destination": "/app-framework/components/safe-area" },
+    { "source": "/api-reference/hooks/platform-detection", "destination": "/app-framework/functions/host-detection" },
+    { "source": "/api-reference/hooks/host-detection", "destination": "/app-framework/functions/host-detection" },
+    { "source": "/api-reference/simulations/simulator", "destination": "/testing/inspector" },
+    { "source": "/api-reference/simulations/inspector", "destination": "/testing/inspector" },
+    { "source": "/api-reference/simulations/simulation", "destination": "/testing/simulations" },
+    { "source": "/api-reference/simulations/run-mcp-server", "destination": "/app-framework/run-mcp-server" },
+    { "source": "/api-reference/cli/build", "destination": "/app-framework/cli/build" },
+    { "source": "/api-reference/cli/dev", "destination": "/app-framework/cli/dev" },
+    { "source": "/api-reference/cli/inspect", "destination": "/testing/cli/inspect" },
+    { "source": "/api-reference/cli/new", "destination": "/app-framework/cli/new" },
+    { "source": "/api-reference/cli/start", "destination": "/app-framework/cli/start" },
+    { "source": "/api-reference/cli/upgrade", "destination": "/testing/cli/upgrade" },
+    { "source": "/api-reference/components/app-provider", "destination": "/app-framework/components/app-provider" },
+    { "source": "/api-reference/components/safe-area", "destination": "/app-framework/components/safe-area" },
+    { "source": "/api-reference/functions/host-detection", "destination": "/app-framework/functions/host-detection" },
+    { "source": "/api-reference/functions/utilities", "destination": "/app-framework/functions/utilities" },
+    { "source": "/api-reference/hooks/chatgpt-hooks", "destination": "/app-framework/hooks/chatgpt-hooks" },
+    { "source": "/api-reference/hooks/use-app", "destination": "/app-framework/hooks/use-app" },
+    { "source": "/api-reference/hooks/use-app-state", "destination": "/app-framework/hooks/use-app-state" },
+    { "source": "/api-reference/hooks/use-app-tools", "destination": "/app-framework/hooks/use-app-tools" },
+    { "source": "/api-reference/hooks/use-call-server-tool", "destination": "/app-framework/hooks/use-call-server-tool" },
+    { "source": "/api-reference/hooks/use-device-capabilities", "destination": "/app-framework/hooks/use-device-capabilities" },
+    { "source": "/api-reference/hooks/use-display-mode", "destination": "/app-framework/hooks/use-display-mode" },
+    { "source": "/api-reference/hooks/use-download-file", "destination": "/app-framework/hooks/use-download-file" },
+    { "source": "/api-reference/hooks/use-host-context", "destination": "/app-framework/hooks/use-host-context" },
+    { "source": "/api-reference/hooks/use-host-info", "destination": "/app-framework/hooks/use-host-info" },
+    { "source": "/api-reference/hooks/use-is-mobile", "destination": "/app-framework/hooks/use-is-mobile" },
+    { "source": "/api-reference/hooks/use-list-server-resources", "destination": "/app-framework/hooks/use-list-server-resources" },
+    { "source": "/api-reference/hooks/use-locale", "destination": "/app-framework/hooks/use-locale" },
+    { "source": "/api-reference/hooks/use-open-link", "destination": "/app-framework/hooks/use-open-link" },
+    { "source": "/api-reference/hooks/use-platform", "destination": "/app-framework/hooks/use-platform" },
+    { "source": "/api-reference/hooks/use-read-server-resource", "destination": "/app-framework/hooks/use-read-server-resource" },
+    { "source": "/api-reference/hooks/use-request-display-mode", "destination": "/app-framework/hooks/use-request-display-mode" },
+    { "source": "/api-reference/hooks/use-request-teardown", "destination": "/app-framework/hooks/use-request-teardown" },
+    { "source": "/api-reference/hooks/use-safe-area", "destination": "/app-framework/hooks/use-safe-area" },
+    { "source": "/api-reference/hooks/use-send-log", "destination": "/app-framework/hooks/use-send-log" },
+    { "source": "/api-reference/hooks/use-send-message", "destination": "/app-framework/hooks/use-send-message" },
+    { "source": "/api-reference/hooks/use-styles", "destination": "/app-framework/hooks/use-styles" },
+    { "source": "/api-reference/hooks/use-teardown", "destination": "/app-framework/hooks/use-teardown" },
+    { "source": "/api-reference/hooks/use-theme", "destination": "/app-framework/hooks/use-theme" },
+    { "source": "/api-reference/hooks/use-time-zone", "destination": "/app-framework/hooks/use-time-zone" },
+    { "source": "/api-reference/hooks/use-tool-data", "destination": "/app-framework/hooks/use-tool-data" },
+    { "source": "/api-reference/hooks/use-tool-info", "destination": "/app-framework/hooks/use-tool-info" },
+    { "source": "/api-reference/hooks/use-update-model-context", "destination": "/app-framework/hooks/use-update-model-context" },
+    { "source": "/api-reference/hooks/use-user-agent", "destination": "/app-framework/hooks/use-user-agent" },
+    { "source": "/api-reference/hooks/use-viewport", "destination": "/app-framework/hooks/use-viewport" },
+    { "source": "/api-reference/resources/albums", "destination": "/app-framework/resources/albums" },
+    { "source": "/api-reference/resources/carousel", "destination": "/app-framework/resources/carousel" },
+    { "source": "/api-reference/resources/map", "destination": "/app-framework/resources/map" },
+    { "source": "/api-reference/resources/review", "destination": "/app-framework/resources/review" },
+    { "source": "/api-reference/tools/production-server", "destination": "/app-framework/tools/production-server" },
+    { "source": "/api-reference/tools/server-entry", "destination": "/app-framework/tools/server-entry" },
+    { "source": "/api-reference/tools/tool-file", "destination": "/app-framework/tools/tool-file" },
+    { "source": "/guides/authorization", "destination": "/app-framework/guides/authorization" },
+    { "source": "/guides/deployment", "destination": "/app-framework/guides/deployment" },
+    { "source": "/guides/patterns", "destination": "/app-framework/guides/patterns" },
+    { "source": "/guides/troubleshooting", "destination": "/app-framework/guides/troubleshooting" },
+    { "source": "/framework/project-scaffold", "destination": "/app-framework/project-scaffold" },
+    { "source": "/framework/ui-components", "destination": "/app-framework/ui-components" },
+    { "source": "/framework/runtime-apis", "destination": "/app-framework/runtime-apis" },
+    { "source": "/framework/mcp-server", "destination": "/app-framework/mcp-server" },
+    { "source": "/cli/cli-overview", "destination": "/app-framework/cli/new" },
+    { "source": "/cli/lifecycle", "destination": "/app-framework/lifecycle" },
+    { "source": "/app-framework/cli/inspect", "destination": "/testing/cli/inspect" },
+    { "source": "/app-framework/cli/upgrade", "destination": "/testing/cli/upgrade" },
+    { "source": "/testing/run-mcp-server", "destination": "/app-framework/run-mcp-server" }
   ],
   "navigation": {
     "tabs": [
       {
-        "tab": "Documentation",
+        "tab": "Overview",
         "groups": [
           {
             "group": "Getting Started",
@@ -53,31 +116,6 @@
             ]
           },
           {
-            "group": "Framework Details",
-            "pages": [
-              "framework/project-scaffold",
-              "framework/ui-components",
-              "framework/runtime-apis",
-              "framework/mcp-server"
-            ]
-          },
-          {
-            "group": "sunpeak CLI",
-            "pages": [
-              "cli/cli-overview",
-              "cli/lifecycle"
-            ]
-          },
-          {
-            "group": "Guides",
-            "pages": [
-              "guides/authorization",
-              "guides/deployment",
-              "guides/patterns",
-              "guides/troubleshooting"
-            ]
-          },
-          {
             "group": "Resources",
             "pages": [
               "links"
@@ -86,91 +124,143 @@
         ]
       },
       {
-        "tab": "API Reference",
+        "tab": "MCP Testing Framework",
         "groups": [
           {
-            "group": "CLI",
+            "group": "Overview",
             "pages": [
-              "api-reference/cli/build",
-              "api-reference/cli/dev",
-              "api-reference/cli/inspect",
-              "api-reference/cli/new",
-              "api-reference/cli/start",
-              "api-reference/cli/upgrade"
+              "testing/overview"
             ]
           },
           {
-            "group": "Components",
+            "group": "Testing",
             "pages": [
-              "api-reference/components/app-provider",
-              "api-reference/components/safe-area"
-            ]
-          },
-          {
-            "group": "Functions",
-            "pages": [
-              "api-reference/functions/host-detection",
-              "api-reference/functions/utilities"
-            ]
-          },
-          {
-            "group": "Hooks",
-            "pages": [
-              "api-reference/hooks/chatgpt-hooks",
-              "api-reference/hooks/use-app",
-              "api-reference/hooks/use-app-state",
-              "api-reference/hooks/use-app-tools",
-              "api-reference/hooks/use-call-server-tool",
-              "api-reference/hooks/use-device-capabilities",
-              "api-reference/hooks/use-display-mode",
-              "api-reference/hooks/use-download-file",
-              "api-reference/hooks/use-host-context",
-              "api-reference/hooks/use-host-info",
-              "api-reference/hooks/use-is-mobile",
-              "api-reference/hooks/use-list-server-resources",
-              "api-reference/hooks/use-locale",
-              "api-reference/hooks/use-open-link",
-              "api-reference/hooks/use-platform",
-              "api-reference/hooks/use-read-server-resource",
-              "api-reference/hooks/use-request-display-mode",
-              "api-reference/hooks/use-request-teardown",
-              "api-reference/hooks/use-safe-area",
-              "api-reference/hooks/use-send-log",
-              "api-reference/hooks/use-send-message",
-              "api-reference/hooks/use-styles",
-              "api-reference/hooks/use-teardown",
-              "api-reference/hooks/use-theme",
-              "api-reference/hooks/use-time-zone",
-              "api-reference/hooks/use-tool-data",
-              "api-reference/hooks/use-tool-info",
-              "api-reference/hooks/use-update-model-context",
-              "api-reference/hooks/use-user-agent",
-              "api-reference/hooks/use-viewport"
-            ]
-          },
-          {
-            "group": "Resources",
-            "pages": [
-              "api-reference/resources/albums",
-              "api-reference/resources/carousel",
-              "api-reference/resources/map",
-              "api-reference/resources/review"
+              "testing/unit",
+              "testing/e2e",
+              "testing/visual",
+              "testing/live",
+              "testing/evals"
             ]
           },
           {
             "group": "Inspector & Simulations",
             "pages": [
-              "api-reference/simulations/inspector",
-              "api-reference/simulations/run-mcp-server",
-              "api-reference/simulations/simulation"
+              "testing/inspector",
+              "testing/simulations"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "testing/cli/test",
+              "testing/cli/inspect",
+              "testing/cli/upgrade"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "testing/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "MCP App Framework",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "app-framework/project-scaffold",
+              "app-framework/ui-components",
+              "app-framework/runtime-apis",
+              "app-framework/mcp-server",
+              "app-framework/run-mcp-server",
+              "app-framework/lifecycle"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "app-framework/cli/build",
+              "app-framework/cli/dev",
+              "app-framework/cli/new",
+              "app-framework/cli/start"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "app-framework/components/app-provider",
+              "app-framework/components/safe-area"
+            ]
+          },
+          {
+            "group": "Functions",
+            "pages": [
+              "app-framework/functions/host-detection",
+              "app-framework/functions/utilities"
+            ]
+          },
+          {
+            "group": "Hooks",
+            "pages": [
+              "app-framework/hooks/chatgpt-hooks",
+              "app-framework/hooks/use-app",
+              "app-framework/hooks/use-app-state",
+              "app-framework/hooks/use-app-tools",
+              "app-framework/hooks/use-call-server-tool",
+              "app-framework/hooks/use-device-capabilities",
+              "app-framework/hooks/use-display-mode",
+              "app-framework/hooks/use-download-file",
+              "app-framework/hooks/use-host-context",
+              "app-framework/hooks/use-host-info",
+              "app-framework/hooks/use-is-mobile",
+              "app-framework/hooks/use-list-server-resources",
+              "app-framework/hooks/use-locale",
+              "app-framework/hooks/use-open-link",
+              "app-framework/hooks/use-platform",
+              "app-framework/hooks/use-read-server-resource",
+              "app-framework/hooks/use-request-display-mode",
+              "app-framework/hooks/use-request-teardown",
+              "app-framework/hooks/use-safe-area",
+              "app-framework/hooks/use-send-log",
+              "app-framework/hooks/use-send-message",
+              "app-framework/hooks/use-styles",
+              "app-framework/hooks/use-teardown",
+              "app-framework/hooks/use-theme",
+              "app-framework/hooks/use-time-zone",
+              "app-framework/hooks/use-tool-data",
+              "app-framework/hooks/use-tool-info",
+              "app-framework/hooks/use-update-model-context",
+              "app-framework/hooks/use-user-agent",
+              "app-framework/hooks/use-viewport"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "app-framework/resources/albums",
+              "app-framework/resources/carousel",
+              "app-framework/resources/map",
+              "app-framework/resources/review"
             ]
           },
           {
             "group": "Tools",
             "pages": [
-              "api-reference/tools/production-server",
-              "api-reference/tools/server-entry",
-              "api-reference/tools/tool-file"
+              "app-framework/tools/production-server",
+              "app-framework/tools/server-entry",
+              "app-framework/tools/tool-file"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "app-framework/guides/authorization",
+              "app-framework/guides/deployment",
+              "app-framework/guides/patterns",
+              "app-framework/guides/troubleshooting"
             ]
           }
         ]

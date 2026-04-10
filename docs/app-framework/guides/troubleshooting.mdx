@@ -1,0 +1,100 @@
+---
+title: "Troubleshooting"
+description: "Common issues and how to fix them when developing MCP Apps."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "troubleshooting", "debugging", "common issues"]
+---
+
+## App not rendering in ChatGPT or Claude
+
+If your app shows a blank, stuck, or stale iframe after calling a tool, try these steps in order:
+
+### 1. Check your tunnel
+
+If you're using ngrok or a similar tunnel to expose your local server:
+
+- Verify the tunnel is running and pointing to the correct port
+- Make sure the tunnel protocol matches: use `ngrok http 8000`, not `ngrok http https://localhost:8000`
+- Check the tunnel URL in your host's MCP server settings matches the active tunnel
+
+### 2. Check your dev server is running
+
+Make sure `sunpeak dev` is running and the MCP server started successfully. You should see:
+
+```
+Sunpeak MCP server listening on http://localhost:8000
+  MCP endpoint: http://localhost:8000/mcp
+```
+
+If the port changed (e.g. `port 8000 was in use`), update your tunnel and host configuration to match.
+
+### 3. Restart the dev server
+
+```bash
+# Stop sunpeak dev (Ctrl+C), then restart
+sunpeak dev
+```
+
+This clears any stale connections and re-registers all tools and resources.
+
+### 4. Refresh or re-add the MCP server in the host
+
+Most issues are resolved by refreshing the MCP server connection. In the host's settings, click refresh on the MCP server entry, or remove and re-add it:
+
+**ChatGPT:** Settings > MCP Servers > Refresh (or Remove > Add again with your tunnel URL)
+
+**Claude:** Settings > MCP Servers > Refresh (or Remove > Add again with your tunnel URL)
+
+### 5. Hard refresh the host and open a new chat
+
+Both ChatGPT and Claude cache MCP server connections and resource content aggressively.
+
+1. Hard refresh the page (`Cmd+Shift+R` / `Ctrl+Shift+R`)
+2. Open a **new chat** (cached iframes persist within the same conversation)
+3. Re-trigger the tool call
+
+## Port conflicts
+
+sunpeak uses several ports during development:
+
+| Port | Purpose | Override |
+|------|---------|----------|
+| 3000 | Inspector UI | `sunpeak dev --port 3001` |
+| 8000 | MCP server (tunnel target) | Automatic fallback |
+| 24679 | Vite HMR WebSocket | `SUNPEAK_HMR_PORT` env var |
+| 24680 | Sandbox iframe server | `SUNPEAK_SANDBOX_PORT` env var |
+
+If a port is taken, sunpeak automatically finds a free one and prints the actual port used. Watch the console output for messages like `port 8000 was in use`.
+
+## HTTPS / ngrok issues
+
+If you see `Received HTTPS request on HTTP server`, your tunnel is sending HTTPS traffic to an HTTP upstream. Fix:
+
+```bash
+# Wrong:
+ngrok http https://localhost:8000
+
+# Correct:
+ngrok http 8000
+```
+
+### Safari is not compatible with `sunpeak dev`
+
+Safari automatically upgrades cross-origin HTTP requests to HTTPS. The dev server uses multiple localhost ports (inspector, MCP server, sandbox proxy) to replicate production CSP isolation, and Safari's HTTPS upgrade breaks these cross-origin connections.
+
+**Use Chrome (or any Chromium-based browser) for `sunpeak dev`.** Production deploys via `sunpeak start` work in all browsers, including Safari, because the app is served as a single bundled page without cross-origin localhost dependencies.
+
+## Build errors with `sunpeak dev --prod-resources`
+
+If `--prod-resources` mode fails, the built HTML may be stale or missing:
+
+```bash
+# Rebuild manually
+sunpeak build
+
+# Then retry
+sunpeak dev --prod-resources
+```
+
+<Note>
+For inspector and test-related troubleshooting (blank inspector page, iframe test errors, live test auth), see [Testing Troubleshooting](/testing/troubleshooting).
+</Note>

@@ -1,0 +1,70 @@
+---
+title: "Troubleshooting"
+description: "Common issues when testing MCP Apps with the inspector, E2E tests, and live tests."
+keywords: ["MCP app testing", "troubleshooting", "inspector", "Playwright", "e2e testing", "live testing"]
+---
+
+## Blank page in the inspector
+
+If the inspector loads but the resource iframe is blank:
+
+1. Check the browser console for errors (especially CSP or CORS issues)
+2. Make sure your resource component is the default export from `src/resources/{name}/{name}.tsx`
+3. Verify you have at least one simulation in `tests/simulations/` that references your tool
+
+For standalone usage (`sunpeak inspect --server`), verify your MCP server is running and reachable at the URL you provided.
+
+## Tests failing with iframe errors
+
+E2E tests must use the double-iframe locator pattern because resource content renders inside a nested sandbox:
+
+```typescript
+// Wrong - this looks at the inspector chrome, not the app
+page.locator('.my-element')
+
+// Correct - drill through both iframe layers
+page.frameLocator('iframe').frameLocator('iframe').locator('.my-element')
+```
+
+When using the `mcp` fixture from `sunpeak/test`, `result.app()` returns a locator already scoped to the inner iframe, so you don't need to chain `frameLocator` manually:
+
+```typescript
+const result = await mcp.callTool('show-albums');
+const app = result.app();
+await expect(app.locator('.my-element')).toBeVisible();
+```
+
+See the [Inspector architecture](/testing/inspector) for details on the double-iframe sandbox.
+
+## Flaky E2E tests
+
+The double-iframe sandbox proxy can be overwhelmed by too many concurrent Playwright workers. If you see PostMessage relay timeouts or intermittent failures:
+
+- Limit workers to 2 locally (`workers: 2` in your Playwright config)
+- In CI, use 1 worker (`workers: process.env.CI ? 1 : 2`)
+
+The `defineConfig()` from `sunpeak/test/config` sets these defaults automatically.
+
+## Live test authentication
+
+<AccordionGroup>
+  <Accordion title="'Not logged into ChatGPT' error">
+    On first run, a browser window opens for you to log in to ChatGPT. The session is saved to `.auth/chatgpt.json` but typically only lasts a few hours because Cloudflare's `cf_clearance` cookie is HttpOnly and cannot be persisted across runs. When you see this error, just re-authenticate in the browser window that opens. If it keeps failing, delete the `.auth/` directory and run `pnpm test:live` again.
+  </Accordion>
+
+  <Accordion title="Tunnel not reachable">
+    Verify your tunnel is running and the URL is correct. The test checks the tunnel's `/health` endpoint before proceeding.
+  </Accordion>
+
+  <Accordion title="'ChatGPT DOM may have changed' warning">
+    ChatGPT occasionally updates their UI. The `ChatGPTPage` class checks selector health at startup. If selectors are stale, update the `SELECTORS` constant in `chatgpt-page.mjs`.
+  </Accordion>
+
+  <Accordion title="Tool not called by ChatGPT">
+    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected — check ChatGPT settings.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+For dev server, tunnel, and build-related troubleshooting, see [App Framework Troubleshooting](/app-framework/guides/troubleshooting).
+</Note>

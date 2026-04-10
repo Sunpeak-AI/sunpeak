@@ -1,0 +1,167 @@
+---
+title: "Evals"
+description: "Multi-model tool calling evals for MCP servers. Test whether LLMs call your tools correctly across GPT-4o, Claude, Gemini, and more."
+keywords: ["MCP testing", "evals", "LLM testing", "tool calling", "multi-model", "GPT-4o", "Claude", "Gemini"]
+---
+
+## Overview
+
+Evals test whether different LLMs call your tools correctly. They connect to your MCP server via MCP protocol, discover tools, send prompts to multiple models (GPT-4o, Claude, Gemini, etc.), and assert that each model calls the right tools with the right arguments. Each eval case runs multiple times per model to measure reliability across non-deterministic LLM responses.
+
+Evals work with any MCP server. For sunpeak framework projects, the dev server starts automatically. For standalone use, point to your running server.
+
+Evals are not included in the default `sunpeak test` run because they cost money (API credits). Run them explicitly with `--eval`.
+
+## Prerequisites
+
+- **Vercel AI SDK**: `pnpm add ai`
+- **Provider packages**: Install only the ones you need:
+  - `pnpm add @ai-sdk/openai` for GPT-4o, GPT-4o-mini, o4-mini
+  - `pnpm add @ai-sdk/anthropic` for Claude Sonnet, Claude Haiku
+  - `pnpm add @ai-sdk/google` for Gemini 2.0 Flash
+- **API keys**: Set in `tests/evals/.env` (gitignored) or as environment variables
+
+## Setup
+
+Evals are scaffolded automatically by `sunpeak new` and `sunpeak test init`. The directory structure:
+
+```
+tests/evals/
+├── eval.config.ts      # Model list, run count, defaults
+├── .env                # API keys (gitignored)
+├── .env.example        # Template showing required keys
+└── *.eval.ts           # Eval spec files
+```
+
+## Configuration
+
+```typescript
+// tests/evals/eval.config.ts
+import { defineEvalConfig } from 'sunpeak/eval';
+
+export default defineEvalConfig({
+  // Omit server for sunpeak projects (auto-detected and auto-started).
+  // For non-sunpeak projects:
+  // server: 'http://localhost:8000/mcp',
+
+  models: [
+    'gpt-4o',                      // OPENAI_API_KEY
+    'claude-sonnet-4-20250514',    // ANTHROPIC_API_KEY
+    'gemini-2.0-flash',            // GOOGLE_GENERATIVE_AI_API_KEY
+  ],
+
+  defaults: {
+    runs: 10,          // Number of times to run each case per model
+    maxSteps: 1,       // Max tool call steps per run
+    temperature: 0,    // 0 for most deterministic results
+    timeout: 30_000,   // Timeout per run in ms
+  },
+});
+```
+
+API keys are loaded automatically from `tests/evals/.env`. Copy `.env.example` to `.env` and fill in your keys:
+
+```bash
+# tests/evals/.env
+OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_GENERATIVE_AI_API_KEY=...
+```
+
+## Writing Evals
+
+Each eval file exports a `defineEval` with an array of cases. Each case has a prompt and an expectation for which tool gets called:
+
+```typescript
+// tests/evals/albums.eval.ts
+import { expect } from 'vitest';
+import { defineEval } from 'sunpeak/eval';
+
+export default defineEval({
+  cases: [
+    {
+      name: 'asks for photo albums',
+      prompt: 'Show me my photo albums',
+      expect: { tool: 'show-albums' },
+    },
+    {
+      name: 'asks for food photos',
+      prompt: 'Show me photos from my Austin pizza tour',
+      expect: {
+        tool: 'show-albums',
+        args: { search: expect.stringMatching(/pizza|austin/i) },
+      },
+    },
+  ],
+});
+```
+
+## Assertion Levels
+
+There are three ways to check results:
+
+**Single tool** checks that the first tool call matches:
+
+```typescript
+expect: {
+  tool: 'show-albums',
+  args: { category: expect.stringMatching(/travel/i) },
+}
+```
+
+**Ordered sequence** checks multi-step tool call order:
+
+```typescript
+maxSteps: 3,
+expect: [
+  { tool: 'review-post' },
+  { tool: 'publish-post' },
+],
+```
+
+**Custom function** gives you full access to the result:
+
+```typescript
+assert: (result) => {
+  expect(result.toolCalls).toHaveLength(1);
+  expect(result.toolCalls[0].name).toBe('show-albums');
+},
+```
+
+Args use partial matching. Extra keys in the actual tool call are allowed. Vitest asymmetric matchers (`expect.stringMatching`, `expect.arrayContaining`, etc.) work in `args` expectations.
+
+## Running Evals
+
+```bash
+sunpeak test --eval                    # Run all evals
+sunpeak test --eval albums             # Filter by name
+sunpeak test --eval --unit             # Run evals + unit tests
+```
+
+## Output
+
+Each case runs N times per model. The reporter shows pass/fail counts:
+
+```
+tests/evals/albums.eval.ts
+  asks for photo albums
+    gpt-4o           10/10 passed (100%)  avg 1.2s
+    claude-sonnet    9/10 passed  (90%)   avg 0.8s
+    gemini-flash     6/10 passed  (60%)   avg 0.9s
+      └ failures: called 'get-photos' instead of 'show-albums' (4x)
+
+Summary: 25/30 passed (83%) across 3 models
+```
+
+## Per-Eval Overrides
+
+Individual eval files can override the global model list, run count, or pass threshold:
+
+```typescript
+export default defineEval({
+  models: ['gpt-4o'],       // Only test this model
+  runs: 5,                  // Override default run count
+  threshold: 0.8,           // Pass at 80% instead of 100%
+  cases: [/* ... */],
+});
+```

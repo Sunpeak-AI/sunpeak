@@ -1,0 +1,85 @@
+---
+title: "Visual Regression Testing"
+description: "Screenshot comparison testing for MCP Apps across themes, display modes, and hosts."
+keywords: ["MCP app testing", "visual regression", "screenshot testing", "Playwright"]
+---
+
+## Overview
+
+Visual regression tests capture screenshots of your resources and compare them against saved baselines. This catches unintended visual changes across themes, display modes, and hosts.
+
+Screenshot comparisons only run when you pass `--visual`. Without it, `mcp.screenshot()` calls are silently skipped, so you can include them in your regular e2e tests without affecting normal runs.
+
+## Running Visual Tests
+
+```bash
+sunpeak test --visual                  # Compare against baselines
+sunpeak test --visual --update         # Update baselines
+```
+
+## Writing Visual Tests
+
+Use `mcp.screenshot()` in any e2e test. It accepts an optional name and Playwright `toHaveScreenshot` options:
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('albums renders correctly in light mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+  await mcp.screenshot('albums-light');
+});
+
+test('albums renders correctly in dark mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'dark' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+  await mcp.screenshot('albums-dark');
+});
+```
+
+## Screenshot Targets
+
+By default, `screenshot()` captures the app content inside the double-iframe. Use the `target` option to capture the full inspector page, or pass a specific `element` locator:
+
+```typescript
+// Screenshot just the app (default)
+await mcp.screenshot('app-view');
+
+// Screenshot the full inspector page (host chrome + app)
+await mcp.screenshot('full-page', { target: 'page' });
+
+// Screenshot a specific element
+await mcp.screenshot('album-card', {
+  element: result.app().locator('button:has-text("Summer Slice")'),
+});
+```
+
+## Configuring Visual Defaults
+
+Pass a `visual` option to `defineConfig()` to set project-wide defaults for screenshot comparison:
+
+```typescript
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig({
+  visual: {
+    threshold: 0.2,
+    maxDiffPixelRatio: 0.05,
+    snapshotPathTemplate: '{testDir}/__screenshots__/{projectName}/{testFilePath}/{arg}{ext}',
+  },
+});
+```
+
+All Playwright `toHaveScreenshot` options (threshold, maxDiffPixelRatio, maxDiffPixels, animations, etc.) are supported. The `snapshotPathTemplate` controls where baseline images are stored.
+
+## See Also
+
+<Card horizontal title="E2E Testing" icon="flask" href="/testing/e2e">
+  Full E2E testing guide with the mcp fixture.
+</Card>
+<Card horizontal title="Inspector" icon="desktop" href="/testing/inspector">
+  The runtime that powers visual tests.
+</Card>

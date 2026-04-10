@@ -2,7 +2,7 @@
 
 An MCP App built with [sunpeak](https://github.com/Sunpeak-AI/sunpeak).
 
-For an initial overview of your new app and a detailed API reference, refer to the [documentation](https://sunpeak.ai/docs/template/project-scaffold).
+For an initial overview of your new app and a detailed API reference, refer to the [documentation](https://sunpeak.ai/docs/app-framework/project-scaffold).
 
 ## Quickstart
 
@@ -44,7 +44,7 @@ E2e tests use the `mcp` fixture from `sunpeak/test` to call tools and assert aga
 3. Uncomment models in `tests/evals/eval.config.ts`
 4. Run: `sunpeak test --eval`
 
-The dev server starts automatically for evals. Each case runs multiple times per model to measure reliability. See the [Evals documentation](https://sunpeak.ai/docs/testing/testing#evals-multi-model-tool-calling) for details.
+The dev server starts automatically for evals. Each case runs multiple times per model to measure reliability. See the [Evals documentation](https://sunpeak.ai/docs/testing/evals) for details.
 
 ## Project Structure
 
@@ -133,7 +133,7 @@ sunpeak start --host 127.0.0.1         # Bind to localhost only
 sunpeak start --json-logs              # Structured JSON logging for production
 ```
 
-The server includes a `/health` endpoint for load balancer probes and monitoring. See the [Deployment Guide](https://sunpeak.ai/docs/guides/deployment) for production operations details (reverse proxy, process management, Docker).
+The server includes a `/health` endpoint for load balancer probes and monitoring. See the [Deployment Guide](https://sunpeak.ai/docs/app-framework/guides/deployment) for production operations details (reverse proxy, process management, Docker).
 
 ## Add a new UI (Resource)
 
@@ -168,7 +168,7 @@ If your app doesn't render in ChatGPT or Claude:
 4. **Hard refresh** the host page (`Cmd+Shift+R` / `Ctrl+Shift+R`)
 5. **Open a new chat** in the host (cached iframes persist per-conversation)
 
-Full guide: [sunpeak.ai/docs/guides/troubleshooting](https://sunpeak.ai/docs/guides/troubleshooting)
+Full guide: [sunpeak.ai/docs/app-framework/guides/troubleshooting](https://sunpeak.ai/docs/app-framework/guides/troubleshooting)
 
 ## Resources
 

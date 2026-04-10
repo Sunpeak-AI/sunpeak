@@ -1018,7 +1018,7 @@ export function Inspector({
                 onChange={setProdResources}
                 label="Prod Resources"
                 tooltip="Load resources from dist/ builds instead of HMR"
-                docsPath="api-reference/cli/dev#prod-tools-and-prod-resources-flags"
+                docsPath="app-framework/cli/dev#prod-tools-and-prod-resources-flags"
               />
             )}
 
@@ -1028,7 +1028,7 @@ export function Inspector({
                 <SidebarControl
                   label="Tool"
                   tooltip="Tool to inspect"
-                  docsPath="api-reference/cli/dev"
+                  docsPath="app-framework/cli/dev"
                   data-testid="tool-selector"
                 >
                   <SidebarSelect
@@ -1049,7 +1049,7 @@ export function Inspector({
                       'Simulation'
                     ) : (
                       <a
-                        href={`${DOCS_BASE_URL}/api-reference/simulations/simulation`}
+                        href={`${DOCS_BASE_URL}/testing/simulations`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="no-underline transition-colors"
@@ -1070,7 +1070,7 @@ export function Inspector({
                       ? 'Test fixture with mock data'
                       : 'Create simulations for faster testing'
                   }
-                  docsPath="api-reference/simulations/simulation"
+                  docsPath="testing/simulations"
                   data-testid="simulation-selector"
                 >
                   <SidebarSelect
@@ -1106,7 +1106,7 @@ export function Inspector({
                 <SidebarControl
                   label="Host"
                   tooltip="Host runtime to simulate"
-                  docsPath="api-reference/functions/host-detection"
+                  docsPath="app-framework/functions/host-detection"
                 >
                   <SidebarSelect
                     value={state.activeHost}
@@ -1121,7 +1121,7 @@ export function Inspector({
               <SidebarControl
                 label="Width"
                 tooltip="Chat width"
-                docsPath="api-reference/simulations/inspector"
+                docsPath="testing/inspector"
               >
                 <SidebarSelect
                   value={state.screenWidth}
@@ -1140,14 +1140,14 @@ export function Inspector({
               label="Host Context"
               defaultCollapsed={false}
               tooltip="Host-provided environment"
-              docsPath="api-reference/hooks/use-host-context"
+              docsPath="app-framework/hooks/use-host-context"
             >
               <div className="space-y-1">
                 <div className="grid grid-cols-[2fr_1fr] gap-2">
                   <SidebarControl
                     label="Theme"
                     tooltip="Host color theme"
-                    docsPath="api-reference/hooks/use-theme"
+                    docsPath="app-framework/hooks/use-theme"
                   >
                     <SidebarToggle
                       value={state.theme}
@@ -1162,7 +1162,7 @@ export function Inspector({
                   <SidebarControl
                     label="Locale"
                     tooltip="BCP 47 language tag"
-                    docsPath="api-reference/hooks/use-locale"
+                    docsPath="app-framework/hooks/use-locale"
                   >
                     <SidebarInput
                       applyOnBlur
@@ -1176,7 +1176,7 @@ export function Inspector({
                 <SidebarControl
                   label="Display Mode"
                   tooltip="Host resource rendering paradigm"
-                  docsPath="api-reference/hooks/use-display-mode"
+                  docsPath="app-framework/hooks/use-display-mode"
                 >
                   <SidebarToggle
                     value={state.displayMode}
@@ -1198,7 +1198,7 @@ export function Inspector({
                     <SidebarControl
                       label="Platform"
                       tooltip="End user device platform"
-                      docsPath="api-reference/hooks/use-platform"
+                      docsPath="app-framework/hooks/use-platform"
                     >
                       <SidebarSelect
                         value={state.platform}
@@ -1229,7 +1229,7 @@ export function Inspector({
                     <SidebarControl
                       label="Capabilities"
                       tooltip="End user device capabilities"
-                      docsPath="api-reference/hooks/use-device-capabilities"
+                      docsPath="app-framework/hooks/use-device-capabilities"
                     >
                       <div className="flex gap-2">
                         <SidebarCheckbox
@@ -1250,7 +1250,7 @@ export function Inspector({
                 <SidebarControl
                   label="Time Zone"
                   tooltip="End user IANA time zone"
-                  docsPath="api-reference/hooks/use-time-zone"
+                  docsPath="app-framework/hooks/use-time-zone"
                 >
                   <SidebarInput
                     applyOnBlur
@@ -1263,7 +1263,7 @@ export function Inspector({
                 <SidebarControl
                   label="Container Dimensions"
                   tooltip="Host-enforced size constraints (px)"
-                  docsPath="api-reference/hooks/use-viewport"
+                  docsPath="app-framework/hooks/use-viewport"
                 >
                   <div className="grid grid-cols-4 gap-1">
                     <SidebarControl label="Height">
@@ -1324,7 +1324,7 @@ export function Inspector({
                 <SidebarControl
                   label="Safe Area Insets"
                   tooltip="Device safe area padding (px)"
-                  docsPath="api-reference/hooks/use-safe-area"
+                  docsPath="app-framework/hooks/use-safe-area"
                 >
                   <div className="grid grid-cols-4 gap-1">
                     <div className="flex items-center gap-0.5">
@@ -1412,7 +1412,7 @@ export function Inspector({
               label="App Context"
               defaultCollapsed
               tooltip="App-provided context shared with the model"
-              docsPath="api-reference/hooks/use-app-state"
+              docsPath="app-framework/hooks/use-app-state"
             >
               <SidebarTextarea
                 value={state.modelContextJson}
@@ -1434,7 +1434,7 @@ export function Inspector({
               label="Tool Input (JSON)"
               defaultCollapsed={false}
               tooltip="Arguments passed to the tool"
-              docsPath="api-reference/hooks/use-tool-data"
+              docsPath="app-framework/hooks/use-tool-data"
             >
               <SidebarTextarea
                 value={state.toolInputJson}
@@ -1456,7 +1456,7 @@ export function Inspector({
               label="Tool Result (JSON)"
               defaultCollapsed={false}
               tooltip="Structured content returned by the tool"
-              docsPath="api-reference/hooks/use-tool-data"
+              docsPath="app-framework/hooks/use-tool-data"
               data-testid="tool-result-section"
             >
               <SidebarTextarea

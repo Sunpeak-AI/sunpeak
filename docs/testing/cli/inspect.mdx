@@ -1,0 +1,69 @@
+---
+title: "sunpeak inspect"
+description: "Inspect any MCP server in the inspector."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app testing", "inspector", "MCP server testing"]
+---
+
+## Overview
+
+The `sunpeak inspect` command connects to any MCP server and launches the inspector — no sunpeak project required. Use it to test and debug MCP servers built with any language or framework.
+
+```bash
+sunpeak inspect --server <url-or-command>
+```
+
+## Options
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--server <url\|cmd>` | `-s` | MCP server URL (HTTP/SSE) or stdio command (required) |
+| `--simulations <dir>` | | Directory of simulation JSON fixtures (optional) |
+| `--port <number>` | `-p` | Inspector port (default: 3000) |
+| `--name <string>` | | App name displayed in inspector chrome |
+
+## Examples
+
+```bash
+# Connect to an HTTP MCP server
+sunpeak inspect --server http://localhost:8000/mcp
+
+# Connect to a stdio MCP server
+sunpeak inspect --server "python my_server.py"
+
+# With simulation fixtures for mock data
+sunpeak inspect --server http://localhost:8000/mcp --simulations tests/simulations
+```
+
+## How It Works
+
+1. Connects to the MCP server via HTTP/SSE or stdio transport
+2. Discovers tools and resources via MCP protocol (`tools/list`, `resources/list`)
+3. Builds simulations from discovered tools, optionally merging JSON fixtures from `--simulations`
+4. Launches the multi-host inspector UI (Vite dev server)
+5. Proxies tool calls and resource reads through to the connected server
+
+## Transport Support
+
+- **HTTP/SSE**: URLs starting with `http://` or `https://` connect via Streamable HTTP transport
+- **Stdio**: Any other string is parsed as a shell command and connects via stdio transport (e.g., `"python my_server.py"`, `"node server.js"`)
+
+## Combining with Simulations
+
+Use `--simulations` to overlay mock data on discovered tools. This lets you test specific states without modifying your server:
+
+```bash
+sunpeak inspect --server http://localhost:8000/mcp --simulations ./fixtures
+```
+
+Simulation JSON files in the directory are matched to tools by filename. See [Simulation API Reference](/testing/simulations) for the JSON schema.
+
+## Related Commands
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak dev" icon="code" href="/app-framework/cli/dev">
+    Full dev server with built-in inspector for sunpeak projects.
+  </Card>
+  <Card horizontal title="Inspector" icon="desktop" href="/mcp-apps-inspector">
+    Inspector concepts and features.
+  </Card>
+</CardGroup>

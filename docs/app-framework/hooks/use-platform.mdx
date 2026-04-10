@@ -1,0 +1,53 @@
+---
+title: "usePlatform"
+description: "Get the host-reported platform type."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "platform", "responsive", "mobile", "desktop"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `usePlatform` hook returns the platform type reported by the host. It is a convenience wrapper around `useHostContext`.
+
+<Tip>This returns the host-reported platform from [`McpUiHostContext.platform`](/mcp-apps/types/core-types#mcpuihostcontext), not a runtime detection. For runtime host detection (ChatGPT vs Claude), see [`detectHost`](/app-framework/functions/host-detection).</Tip>
+
+<Card horizontal title="Wraps onhostcontextchanged" icon="cube" href="/mcp-apps/app/event-handlers/onhostcontextchanged">
+  MCP Apps SDK reference
+</Card>
+
+## Import
+
+```tsx
+import { usePlatform } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function usePlatform(): HostPlatform | undefined
+```
+
+## Returns
+
+<ResponseField name="return" type="'web' | 'desktop' | 'mobile' | undefined">
+  The platform type reported by the host. `undefined` if the host does not report a platform.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { usePlatform } from 'sunpeak';
+
+function MyResource() {
+  const platform = usePlatform();
+
+  return (
+    <div className={platform === 'mobile' ? 'p-2 text-sm' : 'p-4'}>
+      Running on {platform ?? 'unknown platform'}
+    </div>
+  );
+}
+```
+
+The platform value comes from [`McpUiHostContext.platform`](/mcp-apps/types/core-types#mcpuihostcontext).

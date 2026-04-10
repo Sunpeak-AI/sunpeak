@@ -1,0 +1,251 @@
+---
+title: "E2E Testing"
+description: "End-to-end testing of MCP Apps using the inspector, Playwright, and simulations."
+keywords: ["MCP app testing", "e2e testing", "Playwright", "inspector", "simulations"]
+---
+
+## E2E Testing
+
+E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests. Tests run against both ChatGPT and Claude hosts via Playwright projects.
+
+```bash
+sunpeak test                               # Run unit + e2e
+sunpeak test --e2e                         # E2E only
+sunpeak test --e2e --ui                    # Playwright UI mode
+sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
+```
+
+### Writing E2E Tests
+
+Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture handles inspector navigation, double-iframe traversal, and host selection:
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('should render album cards in light mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+});
+
+test('should render in fullscreen mode', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+});
+
+test('prod tools empty state', async ({ mcp }) => {
+  await mcp.openTool('show-albums');
+  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
+});
+```
+
+The config is a one-liner:
+
+```typescript
+// playwright.config.ts
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig();
+```
+
+This auto-detects sunpeak projects and creates per-host Playwright projects (chatgpt, claude). Each test runs once per host automatically — no host loops needed.
+
+<Tabs>
+  <Tab title="Standalone (any MCP server)">
+    For non-sunpeak projects, pass a `server` option to `defineConfig`:
+
+    ```typescript
+    import { defineConfig } from 'sunpeak/test/config';
+    export default defineConfig({
+      server: 'http://localhost:8000/mcp',
+    });
+    ```
+  </Tab>
+  <Tab title="sunpeak framework">
+    For sunpeak projects, the dev server is auto-detected and started:
+
+    ```typescript
+    import { defineConfig } from 'sunpeak/test/config';
+    export default defineConfig();
+    ```
+  </Tab>
+</Tabs>
+
+### URL Parameters
+
+<img
+  src="https://cdn.sunpeak.ai/sunpeak-docs-fullscreen-dark.png"
+  alt="Inspector set to fullscreen dark mode via URL params"
+/>
+
+<img
+  src="https://cdn.sunpeak.ai/sunpeak-docs-inline-light.png"
+  alt="Inspector set to inline light mode via URL params"
+/>
+
+The `mcp.callTool()` method accepts options for `theme`, `displayMode`, and `prodResources`. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
+
+### Testing Backend-Only Tools
+
+If your resource calls backend tools via `useCallServerTool`, define mock responses using the `serverTools` field in the simulation JSON. The inspector resolves these mocks based on the tool call arguments:
+
+```json
+// tests/simulations/review-purchase.json
+{
+  "tool": "review-purchase",
+  "toolResult": { "structuredContent": { "..." } },
+  "serverTools": {
+    "review": [
+      {
+        "when": { "confirmed": true },
+        "result": {
+          "content": [{ "type": "text", "text": "Completed." }],
+          "structuredContent": { "status": "success", "message": "Completed." }
+        }
+      },
+      {
+        "when": { "confirmed": false },
+        "result": {
+          "content": [{ "type": "text", "text": "Cancelled." }],
+          "structuredContent": { "status": "cancelled", "message": "Cancelled." }
+        }
+      }
+    ]
+  }
+}
+```
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('should show success when server confirms', async ({ mcp }) => {
+  const result = await mcp.callTool('review-purchase');
+  const app = result.app();
+
+  await app.locator('button:has-text("Place Order")').evaluate((el) => (el as HTMLElement).click());
+
+  // The serverTools mock matches { confirmed: true } and returns success
+  await expect(app.locator('text=Completed.')).toBeVisible({ timeout: 10000 });
+});
+
+test('should show cancel when user rejects', async ({ mcp }) => {
+  const result = await mcp.callTool('review-purchase');
+  const app = result.app();
+
+  await app.locator('button:has-text("Cancel")').evaluate((el) => (el as HTMLElement).click());
+
+  // The serverTools mock matches { confirmed: false } and returns cancelled
+  await expect(app.locator('text=Cancelled.')).toBeVisible({ timeout: 10000 });
+});
+```
+
+The `serverTools` field supports both simple (single result) and conditional (`when`/`result` array) forms. See [Simulation API Reference](/testing/simulations#mocking-server-tool-calls) for details.
+
+### Example E2E Test Structure
+
+A typical e2e test file tests a resource across different modes. Each test runs automatically against both ChatGPT and Claude hosts:
+
+```typescript
+import { test, expect } from 'sunpeak/test';
+
+test('should render album cards with correct styles', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+  const app = result.app();
+
+  const albumCard = app.locator('button:has-text("Summer Slice")');
+  await expect(albumCard).toBeVisible();
+
+  const styles = await albumCard.evaluate((el) => {
+    const computed = window.getComputedStyle(el);
+    return { cursor: computed.cursor, borderRadius: computed.borderRadius };
+  });
+  expect(styles.cursor).toBe('pointer');
+  expect(styles.borderRadius).toBe('12px');
+});
+
+test('should render with dark theme', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { theme: 'dark' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+});
+
+test('should render in fullscreen', async ({ mcp }) => {
+  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
+});
+
+test('pip mode works (ChatGPT only)', async ({ mcp }) => {
+  test.skip(mcp.host === 'claude', 'Claude does not support PiP');
+  const result = await mcp.callTool('show-albums');
+  await mcp.setDisplayMode('pip');
+  await expect(result.app().locator('button:has-text("Summer Slice")')).toBeVisible();
+});
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Keep tests simple">
+    Test one thing per test case. Clear tests are maintainable tests.
+  </Accordion>
+
+  <Accordion title="Use meaningful test descriptions">
+    ```tsx
+    // Good
+    it('displays error message when API fails', () => {})
+
+    // Bad
+    it('test 1', () => {})
+    ```
+  </Accordion>
+
+  <Accordion title="Test user-facing behavior">
+    Test what users see and interact with, not implementation details:
+    ```tsx
+    // Good
+    expect(screen.getByText('Submit')).toBeInTheDocument();
+
+    // Bad
+    expect(component.props.buttonLabel).toBe('Submit');
+    ```
+  </Accordion>
+
+  <Accordion title="Test across hosts, themes, and display modes">
+    Use `mcp.callTool()` options to test your resources in different configurations. Tests run across ChatGPT and Claude hosts automatically via Playwright projects. Pass `theme` and `displayMode` as options:
+    ```typescript
+    await mcp.callTool('show-weather', {}, { theme: 'dark', displayMode: 'fullscreen' });
+    ```
+
+    See [MCP Apps Display Modes](/mcp-apps/introduction#what-display-modes-are-available) for how hosts handle inline, fullscreen, and PiP views.
+  </Accordion>
+
+  <Accordion title="Add visual regression tests for key states">
+    Use `mcp.screenshot()` in tests that cover important visual states (light/dark theme, fullscreen, empty states). Visual tests catch CSS regressions that functional assertions miss:
+    ```typescript
+    await mcp.screenshot('albums-dark');
+    await mcp.screenshot('albums-fullscreen', { target: 'page' });
+    ```
+  </Accordion>
+
+  <Accordion title="Clean up after tests">
+    Use `afterEach` to reset state between tests:
+    ```tsx
+    afterEach(() => {
+      // Clean up mocks, reset state, etc.
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Learn More
+
+<Card horizontal title="Visual Regression Testing" icon="image" href="/testing/visual">
+  Screenshot comparison and baseline management.
+</Card>
+<Card horizontal title="Inspector" icon="desktop" href="/testing/inspector">
+  The runtime that powers E2E tests.
+</Card>
+<Card horizontal title="Simulations" icon="folder" href="/testing/simulations">
+  JSON schema, conventions, and auto-discovery.
+</Card>

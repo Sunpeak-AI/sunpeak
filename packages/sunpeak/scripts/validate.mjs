@@ -228,7 +228,7 @@ function validateDocs() {
 
     const kebab = hookName.replace(/^use/, 'use-').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()
       .replace(/^use--/, 'use-');
-    const expectedPage = `api-reference/hooks/${kebab}`;
+    const expectedPage = `app-framework/hooks/${kebab}`;
 
     if (!referencedPages.includes(expectedPage)) {
       hooksMissingDocs.push(`  Hook "${hookName}" not in docs.json navigation (expected "${expectedPage}")`);

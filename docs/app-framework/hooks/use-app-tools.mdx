@@ -1,0 +1,114 @@
+---
+title: "useAppTools"
+description: "Register tools that the host can call on your app."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "app tools", "bidirectional tools"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+Register tools that your app provides to the host. This enables bidirectional tool calling — the host can call tools defined by the app, in addition to the app calling server tools via `useCallServerTool`.
+
+<Card horizontal title="Wraps oncalltool · onlisttools" icon="cube" href="/mcp-apps/app/event-handlers/oncalltool">
+  MCP Apps SDK reference
+</Card>
+
+## Import
+
+```tsx
+import { useAppTools } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useAppTools(config: AppToolsConfig): void
+```
+
+### AppToolsConfig
+
+<ResponseField name="tools" type="AppTool[]" required>
+  Array of tool definitions to register with the host.
+</ResponseField>
+
+<ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => CallToolResult | Promise<CallToolResult>" required>
+  Handler called when the host invokes one of this app's tools. Return a `CallToolResult` with the tool's output.
+</ResponseField>
+
+### AppTool
+
+<ResponseField name="name" type="string" required>
+  Unique tool name.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Human-readable description of what the tool does.
+</ResponseField>
+
+<ResponseField name="inputSchema" type="Record<string, unknown>">
+  JSON Schema for the tool's input parameters.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useAppTools } from 'sunpeak';
+import { useState } from 'react';
+
+function EditorResource() {
+  const [selection, setSelection] = useState('');
+
+  useAppTools({
+    tools: [
+      {
+        name: 'get-selection',
+        description: 'Get the currently selected text',
+      },
+      {
+        name: 'insert-text',
+        description: 'Insert text at the cursor position',
+        inputSchema: {
+          type: 'object',
+          properties: { text: { type: 'string' } },
+          required: ['text'],
+        },
+      },
+    ],
+    onCallTool: async ({ name, arguments: args }) => {
+      if (name === 'get-selection') {
+        return {
+          content: [{ type: 'text', text: selection }],
+        };
+      }
+      if (name === 'insert-text') {
+        // Insert text logic...
+        return {
+          content: [{ type: 'text', text: 'Inserted successfully' }],
+        };
+      }
+      return { content: [], isError: true };
+    },
+  });
+
+  return (
+    <textarea
+      value={selection}
+      onChange={(e) => setSelection(e.target.value)}
+    />
+  );
+}
+```
+
+## How It Works
+
+1. Your app registers tools via `useAppTools` when the component mounts.
+2. The host discovers tools via the MCP `listtools` protocol.
+3. When the host invokes a tool, your `onCallTool` handler is called with the tool name and arguments.
+4. Your handler returns a `CallToolResult` which the host uses in its next turn.
+
+## See Also
+
+<Card horizontal title="useCallServerTool" icon="wrench" href="/app-framework/hooks/use-call-server-tool">
+  Call MCP server tools from your app (the other direction).
+</Card>

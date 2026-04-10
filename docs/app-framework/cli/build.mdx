@@ -1,0 +1,134 @@
+---
+title: "sunpeak build"
+description: "Build optimized production bundles for deployment."
+keywords: ["MCP Apps", "ChatGPT Apps", "production build", "deployment", "bundling"]
+---
+
+## Overview
+
+The `sunpeak build` command creates optimized, production-ready bundles for your MCP Resources. Each Resource file is built as a separate, standalone HTML bundle.
+
+```bash
+sunpeak build
+```
+
+
+## Output
+
+The build process creates:
+
+- **HTML** - Optimized and compressed for minimal file size
+- **CSS extraction** - Unused Tailwind styles removed automatically
+- **Asset optimization** - Static assets with hashed filenames for caching
+- **Source maps** - For debugging production issues
+
+### Output Directory
+
+```
+dist/
+├── search/
+│   ├── search.html                      # Built resource bundle
+│   └── search.json                      # ResourceConfig (extracted from .tsx)
+├── calendar/
+│   ├── calendar.html
+│   └── calendar.json
+├── tools/
+│   ├── show-search.js                   # Compiled tool handler + schema
+│   └── show-calendar.js
+└── server.js                            # Compiled server entry (if src/server.ts exists)
+```
+
+Each resource folder from `src/resources/{name}/` is built to `dist/{name}/`, containing the HTML bundle and metadata. The `.json` file is extracted from the `resource` export in your `.tsx` file. Simulation files are not included in the build output.
+
+### Tool & Server Compilation
+
+In addition to resource HTML bundles, the build compiles server-side code:
+
+- **Tools** — Each `src/tools/*.ts` file is compiled via esbuild to `dist/tools/{name}.js`. These are ESM bundles with relative imports resolved and `node_modules` resolved at runtime.
+- **Server entry** — If `src/server.ts` exists, it's compiled to `dist/server.js`.
+
+These compiled files are loaded by `sunpeak start` to run your production MCP server.
+
+## Automatic Discovery
+
+The build automatically discovers and builds all resource folders:
+
+```
+src/resources/{name}/{name}.tsx
+```
+
+For example:
+- `src/resources/search/` → `dist/search/search.html` + `dist/search/search.json`
+- `src/resources/calendar/` → `dist/calendar/calendar.html` + `dist/calendar/calendar.json`
+
+### Metadata JSON Files
+
+The build extracts the `resource` export from each `.tsx` file and writes it to a JSON file with a generated `uri` field:
+
+```json
+{
+  "name": "search",
+  "title": "Search App",
+  "description": "A search interface",
+  "mimeType": "text/html;profile=mcp-app",
+  "uri": "ui://search-mjdoy6rs",
+  "_meta": { ... }
+}
+```
+
+The `uri` is generated using the resource name and a build timestamp for cache invalidation.
+
+## App Identity
+
+Each built resource is wrapped in an [`AppProvider`](/app-framework/components/app-provider) that identifies the app to the host during the `ui/initialize` handshake. The `name` and `version` are read from your project's `package.json`:
+
+```json
+{
+  "name": "my-weather-app",
+  "version": "1.2.0"
+}
+```
+
+All resources in the project share the same app identity. This means a project with `search`, `calendar`, and `map` resources will all report `appInfo: { name: "my-weather-app", version: "1.2.0" }` to the host.
+
+<Tip>
+The resource name is conveyed separately through the MCP resource registration, not through `appInfo`. Think of `appInfo` as the **server identity** and the resource name as the **view identity**.
+</Tip>
+
+## Build Optimizations
+
+### Tree Shaking
+
+Unused code is automatically removed from the bundle:
+
+```tsx
+// Only the imported components are included in the bundle
+import { Card, Button } from 'sunpeak';
+```
+
+### CSS Purging
+
+Tailwind CSS automatically removes unused utility classes:
+
+- Only classes actually used in your components are included
+- Significantly reduces CSS file size
+- No manual configuration required
+
+## Usage
+
+```bash
+sunpeak build
+```
+
+## Next Steps
+
+After building, start the production server or deploy:
+
+<CardGroup cols={2}>
+  <Card horizontal title="sunpeak start" icon="play" href="/app-framework/cli/start">
+    Start the production MCP server.
+  </Card>
+  <Card horizontal title="Deployment Guide" icon="rocket" href="/app-framework/guides/deployment">
+    Deploy your app to production.
+  </Card>
+</CardGroup>

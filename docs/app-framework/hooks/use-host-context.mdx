@@ -1,0 +1,70 @@
+---
+title: "useHostContext"
+description: "Reactive access to the host context."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "host context", "theme"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useHostContext` hook subscribes to the full host context object, which contains theme, display mode, locale, safe area insets, container dimensions, and more. It updates reactively whenever the host changes any value.
+
+In addition to providing reactive state, `useHostContext` automatically applies host-provided styles and fonts to the iframe document. This includes CSS style variables, document theme (`light`/`dark`), and `@font-face` rules for host-provided fonts — all applied on initial context and updated whenever the host context changes.
+
+<Card horizontal title="Wraps onhostcontextchanged" icon="cube" href="/mcp-apps/app/event-handlers/onhostcontextchanged">
+  MCP Apps SDK reference
+</Card>
+
+Most apps should use the convenience hooks instead of accessing the full context directly: [`useTheme`](/app-framework/hooks/use-theme), [`useDisplayMode`](/app-framework/hooks/use-display-mode), [`useLocale`](/app-framework/hooks/use-locale), [`useTimeZone`](/app-framework/hooks/use-time-zone), [`useUserAgent`](/app-framework/hooks/use-user-agent), [`usePlatform`](/app-framework/hooks/use-platform), [`useDeviceCapabilities`](/app-framework/hooks/use-device-capabilities), [`useSafeArea`](/app-framework/hooks/use-safe-area), [`useViewport`](/app-framework/hooks/use-viewport), [`useStyles`](/app-framework/hooks/use-styles), and [`useToolInfo`](/app-framework/hooks/use-tool-info).
+
+## Import
+
+```tsx
+import { useHostContext } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useHostContext(): McpUiHostContext | null
+```
+
+## Returns
+
+Returns the full [`McpUiHostContext`](/mcp-apps/types/core-types#mcpuihostcontext) object, or `null` before the first update.
+
+```typescript
+interface McpUiHostContext {
+  toolInfo?: { id?: RequestId; tool: Tool };
+  theme?: 'light' | 'dark';
+  styles?: McpUiHostStyles;
+  displayMode?: 'inline' | 'pip' | 'fullscreen';
+  availableDisplayModes?: ('inline' | 'pip' | 'fullscreen')[];
+  containerDimensions?: { height?: number; maxHeight?: number; width?: number; maxWidth?: number };
+  locale?: string;
+  timeZone?: string;
+  userAgent?: string;
+  platform?: 'mobile' | 'desktop' | 'web';
+  deviceCapabilities?: { hover?: boolean; touch?: boolean };
+  safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
+}
+```
+
+## Usage
+
+```tsx
+import { useHostContext } from 'sunpeak';
+
+function MyResource() {
+  const context = useHostContext();
+
+  return (
+    <div>
+      <p>Theme: {context?.theme}</p>
+      <p>Display: {context?.displayMode}</p>
+      <p>Locale: {context?.locale}</p>
+    </div>
+  );
+}
+```
