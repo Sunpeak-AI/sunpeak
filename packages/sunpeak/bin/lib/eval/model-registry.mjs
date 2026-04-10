@@ -36,7 +36,7 @@ export async function resolveModel(modelId) {
     provider = await import(pkg);
   } catch {
     throw new Error(
-      `Provider package "${pkg}" is not installed. Install it to use ${modelId}:\n\n  npm install ${pkg}  (or pnpm add / yarn add)\n`
+      `Provider package "${pkg}" is not installed. Install it to use ${modelId}:\n\n  pnpm add -D ${pkg}\n`
     );
   }
 
@@ -67,7 +67,7 @@ export async function checkAiSdkInstalled() {
     await import('ai');
   } catch {
     throw new Error(
-      'The "ai" package is not installed. Install it to use evals:\n\n  npm install ai  (or pnpm add / yarn add)\n'
+      'The "ai" package is not installed. Install it to use evals:\n\n  pnpm add -D ai\n'
     );
   }
 }

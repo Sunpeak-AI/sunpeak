@@ -237,7 +237,8 @@ When sunpeak package APIs change (new hooks, new features, deprecations, etc.), 
 2. **READMEs** — `README.md` files throughout the monorepo (`packages/sunpeak/README.md`, root `README.md`, template `README.md`)
 3. **`skills/create-sunpeak-app/SKILL.md`** — Agent skill for building MCP Apps (hooks, patterns, simulations)
 4. **`skills/test-mcp-server/SKILL.md`** — Agent skill for testing MCP servers (e2e, visual, live, evals)
-5. **This file**
+5. **`bin/lib/eval/eval-providers.mjs`** — Single source of truth for eval provider packages, model IDs, and CLI labels. Both `sunpeak new` and `sunpeak test init` import from here. When adding/removing models or providers, update this file and `template/tests/evals/eval.config.ts` (must use the same spacing format so the uncomment regex works).
+6. **This file**
 
 ## Upgrading Dependencies
 
@@ -267,6 +268,10 @@ This is the upstream SDK that sunpeak wraps. Upgrades often introduce new `App` 
 The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export all types, schemas, and constants. To discover available exports, check:
 - `node_modules/@modelcontextprotocol/ext-apps/dist/types.d.ts` — All type definitions
 - `node_modules/@modelcontextprotocol/ext-apps/dist/app.d.ts` — `App` class methods
+
+## Global CLI vs Project Resolution
+
+**Never generate code that imports from absolute paths to the CLI install.** sunpeak is installed globally but also as a project dependency. When the CLI generates config files, vitest configs, or transformed code that will run in the project's context, all imports must use package names (`sunpeak/eval`, `sunpeak/eval/plugin`) not absolute paths (`resolve(__dirname, ...)`). Otherwise `import('ai')` and other project-local deps resolve from the global pnpm store instead of the project's `node_modules`. Tests in `commands.test.ts` enforce this.
 
 ## Conventions
 - pnpm workspace with packages at `packages/*` and `packages/sunpeak/template`

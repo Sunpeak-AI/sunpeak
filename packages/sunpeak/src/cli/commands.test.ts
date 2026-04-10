@@ -137,6 +137,8 @@ describe('CLI Commands', () => {
         discoverResources: () => ['carousel'],
         detectPackageManager: () => 'npm',
         selectResources: vi.fn().mockResolvedValue(['carousel']),
+        selectProviders: vi.fn().mockResolvedValue([]),
+        password: vi.fn().mockResolvedValue(''),
         existsSync: () => false,
         mkdirSync: vi.fn(),
         cpSync: vi.fn(),
@@ -157,7 +159,7 @@ describe('CLI Commands', () => {
       });
 
       expect(execSyncMock).toHaveBeenCalledWith(
-        'npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server',
+        'pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server',
         expect.objectContaining({ cwd: '/test/my-project', stdio: 'inherit' })
       );
     });
@@ -174,6 +176,8 @@ describe('CLI Commands', () => {
         discoverResources: () => ['carousel', 'review'],
         detectPackageManager: () => 'npm',
         selectResources,
+        selectProviders: vi.fn().mockResolvedValue([]),
+        password: vi.fn().mockResolvedValue(''),
         existsSync: () => false,
         mkdirSync: vi.fn(),
         cpSync: (_src: string, _dest: string, options: { filter: (src: string) => boolean }) => {
@@ -545,6 +549,9 @@ describe('CLI Commands', () => {
       isCancel: () => false,
       select: vi.fn().mockResolvedValue('later'),
       text: vi.fn().mockResolvedValue(''),
+      selectProviders: vi.fn().mockResolvedValue([]),
+      password: vi.fn().mockResolvedValue(''),
+      detectPackageManager: () => 'pnpm',
       log: noopLog,
       ...overrides,
     });
@@ -563,7 +570,7 @@ describe('CLI Commands', () => {
       );
     });
 
-    it('should run npx skills add when user confirms skill install', async () => {
+    it('should run pnpm dlx skills add when user confirms skill install', async () => {
       const { testInit } = await importTestInit();
       const execSyncMock = vi.fn();
 
@@ -576,12 +583,12 @@ describe('CLI Commands', () => {
       );
 
       expect(execSyncMock).toHaveBeenCalledWith(
-        'npx skills add Sunpeak-AI/sunpeak@test-mcp-server',
+        'pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server',
         expect.objectContaining({ cwd: '/test/project', stdio: 'inherit' })
       );
     });
 
-    it('should not run npx skills add when user declines', async () => {
+    it('should not run pnpm dlx skills add when user declines', async () => {
       const { testInit } = await importTestInit();
       const execSyncMock = vi.fn();
 
@@ -594,7 +601,7 @@ describe('CLI Commands', () => {
       );
 
       expect(execSyncMock).not.toHaveBeenCalledWith(
-        'npx skills add Sunpeak-AI/sunpeak@test-mcp-server',
+        'pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server',
         expect.anything()
       );
     });
@@ -603,7 +610,7 @@ describe('CLI Commands', () => {
       const { testInit } = await importTestInit();
       const logInfoMock = vi.fn();
       const execSyncMock = vi.fn().mockImplementation(() => {
-        throw new Error('npx not found');
+        throw new Error('pnpm not found');
       });
 
       await testInit(
@@ -616,7 +623,7 @@ describe('CLI Commands', () => {
       );
 
       expect(logInfoMock).toHaveBeenCalledWith(
-        'Skill install skipped. Install later: npx skills add Sunpeak-AI/sunpeak@test-mcp-server'
+        'Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server'
       );
     });
 
@@ -669,9 +676,7 @@ describe('CLI Commands', () => {
       expect(logWarnMock).toHaveBeenCalledWith(
         expect.stringContaining('does not use sunpeak/test/config')
       );
-      expect(logMessageMock).toHaveBeenCalledWith(
-        expect.stringContaining('defineConfig')
-      );
+      expect(logMessageMock).toHaveBeenCalledWith(expect.stringContaining('defineConfig'));
     });
 
     it('should detect JS project type and use CLI server arg', async () => {
@@ -962,6 +967,66 @@ describe('CLI Commands', () => {
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 
       expect(output).toBe(pkg.version);
+    });
+  });
+
+  describe('eval providers sync', () => {
+    it('template eval.config.ts model lines should match eval-providers.mjs', async () => {
+      const { readFileSync } = await import('fs');
+      const { join } = await import('path');
+      const { generateModelLines } = await import('../../bin/lib/eval/eval-providers.mjs');
+
+      const templatePath = join(process.cwd(), 'template/tests/evals/eval.config.ts');
+      const templateContent = readFileSync(templatePath, 'utf-8');
+
+      // Extract model lines from template (between "// Uncomment models" and "]")
+      const modelSection = templateContent.match(/\/\/ Uncomment models.*\n([\s\S]*?)\n\s*\]/);
+      expect(modelSection).not.toBeNull();
+      const templateLines = modelSection![1].split('\n').map((l: string) => l.trimEnd());
+
+      const generatedLines = generateModelLines();
+
+      expect(templateLines).toEqual(generatedLines);
+    });
+  });
+
+  describe('eval vitest config generation', () => {
+    it('should import eval plugin and reporter from package exports, not absolute paths', async () => {
+      const { readFileSync, existsSync } = await import('fs');
+      const { join } = await import('path');
+
+      // The generated vitest config must use package imports (sunpeak/eval/plugin)
+      // not absolute paths, so vitest resolves from the project's node_modules.
+      // We can't easily run runEvals, but we can check the package exports exist.
+      const pkgPath = join(process.cwd(), 'package.json');
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+      const exports = pkg.exports;
+
+      expect(exports['./eval']).toBeDefined();
+      expect(exports['./eval/plugin']).toBeDefined();
+      expect(exports['./eval/reporter']).toBeDefined();
+
+      // Verify the exported files exist
+      const pluginPath = exports['./eval/plugin'].import;
+      const reporterPath = exports['./eval/reporter'].import;
+      expect(existsSync(join(process.cwd(), pluginPath))).toBe(true);
+      expect(existsSync(join(process.cwd(), reporterPath))).toBe(true);
+    });
+
+    it('eval vitest plugin should import from sunpeak/eval, not absolute paths', async () => {
+      const { readFileSync } = await import('fs');
+      const { join } = await import('path');
+
+      const pluginSource = readFileSync(
+        join(process.cwd(), 'bin/lib/eval/eval-vitest-plugin.mjs'),
+        'utf-8'
+      );
+
+      // The transformed code must import from 'sunpeak/eval' (package export)
+      expect(pluginSource).toContain("from 'sunpeak/eval'");
+      // Must NOT use resolveRunnerPath or absolute file paths for imports
+      expect(pluginSource).not.toContain('resolveRunnerPath');
+      expect(pluginSource).not.toContain('fileURLToPath');
     });
   });
 });

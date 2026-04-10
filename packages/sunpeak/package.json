@@ -102,6 +102,12 @@
         "default": "./bin/lib/eval/eval-runner.mjs"
       }
     },
+    "./eval/plugin": {
+      "import": "./bin/lib/eval/eval-vitest-plugin.mjs"
+    },
+    "./eval/reporter": {
+      "import": "./bin/lib/eval/eval-reporter.mjs"
+    },
     "./package.json": "./package.json"
   },
   "bin": {
@@ -150,10 +156,10 @@
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0",
-    "ai": "^4.0.0",
-    "@ai-sdk/openai": "^1.0.0",
-    "@ai-sdk/anthropic": "^1.0.0",
-    "@ai-sdk/google": "^1.0.0"
+    "ai": "^4.0.0 || ^5.0.0 || ^6.0.0",
+    "@ai-sdk/openai": "^1.0.0 || ^2.0.0 || ^3.0.0",
+    "@ai-sdk/anthropic": "^1.0.0 || ^2.0.0 || ^3.0.0",
+    "@ai-sdk/google": "^1.0.0 || ^2.0.0 || ^3.0.0"
   },
   "peerDependenciesMeta": {
     "ai": {

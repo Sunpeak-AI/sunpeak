@@ -9,6 +9,43 @@ import { resolveModel, checkAiSdkInstalled } from './model-registry.mjs';
 export { checkAiSdkInstalled };
 
 /**
+ * Strip AI SDK retry wrapper from error messages for cleaner output.
+ * "Failed after 3 attempts. Last error: <actual error>" → "<actual error>"
+ * @param {string} message
+ * @returns {string}
+ */
+export function cleanErrorMessage(message) {
+  return message.replace(/^Failed after \d+ attempts?\. Last error: /i, '');
+}
+
+/**
+ * Check if an error message indicates a fatal API error that won't resolve on retry.
+ * @param {string} message
+ * @returns {boolean}
+ */
+export function isFatalApiError(message) {
+  const lower = message.toLowerCase();
+  const patterns = [
+    'exceeded your current quota',
+    'credit balance is too low',
+    'insufficient_quota',
+    'billing_hard_limit_reached',
+    'check your plan and billing details',
+    'add a payment method',
+    'invalid api key',
+    'invalid_api_key',
+    'incorrect api key',
+    'unauthorized',
+    'permission denied',
+    'access denied',
+    'authentication failed',
+    'account deactivated',
+    'account suspended',
+  ];
+  return patterns.some((p) => lower.includes(p));
+}
+
+/**
  * Define an eval spec. Identity function for type safety.
  * @param {import('./eval-types.d.mts').EvalSpec} spec
  * @returns {import('./eval-types.d.mts').EvalSpec}
@@ -112,6 +149,7 @@ export async function runSingleEval({ prompt, model, tools, maxSteps, temperatur
     prompt,
     maxSteps,
     temperature,
+    maxRetries: 0, // We manage runs ourselves; AI SDK retries compound rate limits
     abortSignal: AbortSignal.timeout(timeout),
   });
 
@@ -268,10 +306,15 @@ export async function runEvalCaseAggregate({
   const model = await resolveModel(modelId);
   let passed = 0;
   let failed = 0;
+  let executedRuns = 0;
   let totalDurationMs = 0;
   const failureMap = new Map();
 
   for (let i = 0; i < runs; i++) {
+    // Small delay between runs to avoid rate limits (skip before first run)
+    if (i > 0) await new Promise((r) => setTimeout(r, 1000));
+
+    executedRuns++;
     const start = performance.now();
     try {
       const result = await runSingleEval({
@@ -286,8 +329,17 @@ export async function runEvalCaseAggregate({
       passed++;
     } catch (err) {
       failed++;
-      const msg = err.message || String(err);
+      const msg = cleanErrorMessage(err.message || String(err));
       failureMap.set(msg, (failureMap.get(msg) || 0) + 1);
+
+      if (isFatalApiError(msg)) {
+        // Count remaining runs as failed and stop early
+        const remaining = runs - i - 1;
+        failed += remaining;
+        failureMap.set(msg, (failureMap.get(msg) || 0) + remaining);
+        totalDurationMs += performance.now() - start;
+        break;
+      }
     }
     totalDurationMs += performance.now() - start;
   }
@@ -304,7 +356,7 @@ export async function runEvalCaseAggregate({
     passed,
     failed,
     passRate: runs > 0 ? passed / runs : 0,
-    avgDurationMs: runs > 0 ? totalDurationMs / runs : 0,
+    avgDurationMs: executedRuns > 0 ? totalDurationMs / executedRuns : 0,
     failures,
   };
 }

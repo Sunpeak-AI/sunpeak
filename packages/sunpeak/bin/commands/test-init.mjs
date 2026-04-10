@@ -2,11 +2,24 @@ import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { join, dirname } from 'path';
 import * as p from '@clack/prompts';
+import { EVAL_PROVIDERS, generateModelLines } from '../lib/eval/eval-providers.mjs';
+import { detectPackageManager } from '../utils.mjs';
 
 /**
  * Default dependencies (real implementations).
  * Override in tests via the `deps` parameter.
  */
+async function defaultSelectProviders() {
+  const selected = await p.multiselect({
+    message: 'AI providers for evals (space to toggle, enter to skip)',
+    options: EVAL_PROVIDERS.map((prov) => ({ value: prov, label: prov.label })),
+    initialValues: [],
+    required: false,
+  });
+  if (p.isCancel(selected)) return [];
+  return selected;
+}
+
 export const defaultDeps = {
   existsSync,
   readFileSync,
@@ -21,6 +34,9 @@ export const defaultDeps = {
   select: p.select,
   text: p.text,
   log: p.log,
+  password: p.password,
+  selectProviders: defaultSelectProviders,
+  detectPackageManager,
 };
 
 /**
@@ -60,6 +76,61 @@ export async function testInit(args = [], deps = defaultDeps) {
     await initExternalProject(cliServer, d);
   }
 
+  // Offer to configure eval providers
+  const providers = await d.selectProviders();
+  if (!d.isCancel(providers) && providers.length > 0) {
+    const pm = d.detectPackageManager();
+    const pkgsToInstall = ['ai', ...providers.map((p) => p.pkg)];
+    const installCmd = `${pm} add -D ${pkgsToInstall.join(' ')}`;
+    try {
+      d.execSync(installCmd, { cwd: d.cwd(), stdio: 'inherit' });
+    } catch {
+      d.log.info(`Provider install failed. Install manually: ${installCmd}`);
+    }
+
+    // Uncomment selected models in eval.config.ts
+    const evalDir = d.existsSync(join(d.cwd(), 'tests', 'evals'))
+      ? join(d.cwd(), 'tests', 'evals')
+      : d.existsSync(join(d.cwd(), 'tests', 'sunpeak', 'evals'))
+        ? join(d.cwd(), 'tests', 'sunpeak', 'evals')
+        : null;
+    if (evalDir) {
+      const configPath = join(evalDir, 'eval.config.ts');
+      if (d.existsSync(configPath)) {
+        let config = d.readFileSync(configPath, 'utf-8');
+        for (const prov of providers) {
+          for (const model of prov.models) {
+            config = config.replace(
+              new RegExp(`^(\\s*)// ('${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',?.*)$`, 'm'),
+              '$1$2'
+            );
+          }
+        }
+        d.writeFileSync(configPath, config);
+      }
+
+      // Prompt for API keys and write .env
+      const envLines = [];
+      const seen = new Set();
+      for (const prov of providers) {
+        if (seen.has(prov.envVar)) continue;
+        seen.add(prov.envVar);
+        const key = await d.password({
+          message: `${prov.envVar} (enter to skip)`,
+          mask: '*',
+        });
+        if (!d.isCancel(key) && key) {
+          envLines.push(`${prov.envVar}=${key}`);
+        }
+      }
+      if (envLines.length > 0 && evalDir) {
+        const relEnvPath = evalDir.startsWith(d.cwd()) ? evalDir.slice(d.cwd().length + 1) : evalDir;
+        d.writeFileSync(join(evalDir, '.env'), envLines.join('\n') + '\n');
+        d.log.info(`API keys saved to ${relEnvPath}/.env (gitignored)`);
+      }
+    }
+  }
+
   // Offer to install the testing skill
   const installSkill = await d.confirm({
     message: 'Install the test-mcp-server skill? (helps your coding agent write tests)',
@@ -67,12 +138,12 @@ export async function testInit(args = [], deps = defaultDeps) {
   });
   if (!d.isCancel(installSkill) && installSkill) {
     try {
-      d.execSync('npx skills add Sunpeak-AI/sunpeak@test-mcp-server', {
+      d.execSync('pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server', {
         cwd: d.cwd(),
         stdio: 'inherit',
       });
     } catch {
-      d.log.info('Skill install skipped. Install later: npx skills add Sunpeak-AI/sunpeak@test-mcp-server');
+      d.log.info('Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server');
     }
   }
 
@@ -205,15 +276,11 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
     "",
     "  models: [",
     "    // Uncomment models and install their provider packages:",
-    "    // 'gpt-4o',                      // OPENAI_API_KEY",
-    "    // 'gpt-4o-mini',                 // OPENAI_API_KEY",
-    "    // 'o4-mini',                     // OPENAI_API_KEY",
-    "    // 'claude-sonnet-4-20250514',    // ANTHROPIC_API_KEY",
-    "    // 'gemini-2.0-flash',            // GOOGLE_GENERATIVE_AI_API_KEY",
+    ...generateModelLines(),
     "  ],",
     "",
     "  defaults: {",
-    "    runs: 10,          // Number of times to run each case per model",
+    "    runs: 5,           // Number of times to run each case per model",
     "    maxSteps: 1,       // Max tool call steps per run",
     "    temperature: 0,    // 0 for most deterministic results",
     "    timeout: 30_000,   // Timeout per run in ms",
@@ -244,7 +311,7 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
  *
  * To get started:
  * 1. Configure models in eval.config.ts (uncomment the ones you want)
- * 2. Install the AI SDK and provider packages: pnpm add ai @ai-sdk/openai
+ * 2. Install the AI SDK and provider packages (e.g. pnpm add ai @ai-sdk/openai)
  * 3. Copy .env.example to .env and add your API keys
  * 4. Replace this file with evals for your own tools
  * 5. Run: sunpeak test --eval
@@ -565,14 +632,15 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
 
   d.log.success('Created tests/sunpeak/ with all test types.');
   d.log.step('Next steps:');
+  const pm = d.detectPackageManager();
   d.log.message('  cd tests/sunpeak');
-  d.log.message('  npm install');
-  d.log.message('  npx playwright install chromium');
+  d.log.message(`  ${pm} install`);
+  d.log.message(`  ${pm} exec playwright install chromium`);
   d.log.message('');
-  d.log.message('  npx sunpeak test              # E2E tests');
-  d.log.message('  npx sunpeak test --visual      # Visual regression (generates baselines on first run)');
-  d.log.message('  npx sunpeak test --live         # Live tests against real hosts (requires login)');
-  d.log.message('  npx sunpeak test --eval         # Multi-model evals (configure models in evals/eval.config.ts)');
+  d.log.message('  sunpeak test              # E2E tests');
+  d.log.message('  sunpeak test --visual      # Visual regression (generates baselines on first run)');
+  d.log.message('  sunpeak test --live         # Live tests against real hosts (requires login)');
+  d.log.message('  sunpeak test --eval         # Multi-model evals (configure models in evals/eval.config.ts)');
 }
 
 async function initJsProject(cliServer, d) {
@@ -639,15 +707,16 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
   // 5. Unit test
   scaffoldUnitTest(join(cwd, 'tests', 'unit', 'example.test.ts'), d);
 
+  const pkgMgr = d.detectPackageManager();
   d.log.step('Next steps:');
-  d.log.message('  npm install -D sunpeak @playwright/test vitest');
-  d.log.message('  npx playwright install chromium');
+  d.log.message(`  ${pkgMgr} add -D sunpeak @playwright/test vitest`);
+  d.log.message(`  ${pkgMgr} exec playwright install chromium`);
   d.log.message('');
-  d.log.message('  npx sunpeak test              # E2E tests');
-  d.log.message('  npx sunpeak test --unit        # Unit tests (vitest)');
-  d.log.message('  npx sunpeak test --visual      # Visual regression');
-  d.log.message('  npx sunpeak test --live         # Live tests against real hosts');
-  d.log.message('  npx sunpeak test --eval         # Multi-model evals');
+  d.log.message('  sunpeak test              # E2E tests');
+  d.log.message('  sunpeak test --unit        # Unit tests (vitest)');
+  d.log.message('  sunpeak test --visual      # Visual regression');
+  d.log.message('  sunpeak test --live         # Live tests against real hosts');
+  d.log.message('  sunpeak test --eval         # Multi-model evals');
 }
 
 async function initSunpeakProject(d) {

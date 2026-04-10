@@ -1118,11 +1118,7 @@ export function Inspector({
                   />
                 </SidebarControl>
               )}
-              <SidebarControl
-                label="Width"
-                tooltip="Chat width"
-                docsPath="testing/inspector"
-              >
+              <SidebarControl label="Width" tooltip="Chat width" docsPath="testing/inspector">
                 <SidebarSelect
                   value={state.screenWidth}
                   onChange={(value) => state.setScreenWidth(value as ScreenWidth)}

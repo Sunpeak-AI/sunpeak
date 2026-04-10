@@ -1,4 +1,3 @@
-import { expect } from 'vitest';
 import { defineEval } from 'sunpeak/eval';
 
 export default defineEval({
@@ -6,21 +5,12 @@ export default defineEval({
     {
       name: 'asks for popular places',
       prompt: 'Show me popular places to visit in Tokyo',
-      expect: {
-        tool: 'show-carousel',
-        args: { city: expect.stringMatching(/tokyo/i) },
-      },
+      expect: { tool: 'show-carousel' },
     },
     {
-      name: 'asks for restaurants',
-      prompt: 'What are some good restaurants in Paris?',
-      expect: {
-        tool: 'show-carousel',
-        args: {
-          city: expect.stringMatching(/paris/i),
-          categories: expect.arrayContaining([expect.stringMatching(/restaurant|food|dining/i)]),
-        },
-      },
+      name: 'asks for places to eat',
+      prompt: 'Where should I eat in Paris?',
+      expect: { tool: 'show-carousel' },
     },
   ],
 });

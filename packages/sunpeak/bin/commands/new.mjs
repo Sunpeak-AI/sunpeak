@@ -9,6 +9,7 @@ const execAsync = promisify(exec);
 import * as clack from '@clack/prompts';
 import { discoverResources } from '../lib/patterns.mjs';
 import { detectPackageManager } from '../utils.mjs';
+import { EVAL_PROVIDERS } from '../lib/eval/eval-providers.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -58,6 +59,21 @@ async function defaultSelectResources(availableResources) {
 }
 
 /**
+ * Default prompt for eval provider selection.
+ * @returns {Promise<Array<{ pkg: string, models: string[] }>>}
+ */
+async function defaultSelectProviders() {
+  const selected = await clack.multiselect({
+    message: 'AI providers for evals (space to toggle, enter to skip)',
+    options: EVAL_PROVIDERS.map((p) => ({ value: p, label: p.label })),
+    initialValues: [],
+    required: false,
+  });
+  if (clack.isCancel(selected)) return [];
+  return selected;
+}
+
+/**
  * Default dependencies (real implementations)
  */
 export const defaultDeps = {
@@ -73,6 +89,8 @@ export const defaultDeps = {
   execAsync,
   promptName: defaultPromptName,
   selectResources: defaultSelectResources,
+  selectProviders: defaultSelectProviders,
+  password: clack.password,
   confirm: clack.confirm,
   intro: clack.intro,
   outro: clack.outro,
@@ -233,6 +251,15 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
       d.renameSync(srcPath, destPath);
     }
   }
+  // Rename nested dotfiles (underscore convention for npm compatibility)
+  const nestedDotfiles = [['tests/evals/_env.example', 'tests/evals/.env.example']];
+  for (const [from, to] of nestedDotfiles) {
+    const srcPath = join(targetDir, from);
+    const destPath = join(targetDir, to);
+    if (d.existsSync(srcPath)) {
+      d.renameSync(srcPath, destPath);
+    }
+  }
 
   // Read sunpeak version from root package.json
   const rootPkg = JSON.parse(d.readFileSync(d.rootPkgPath, 'utf-8'));
@@ -282,6 +309,56 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     s.stop(`Install failed. You can try running "${pm} install" manually.`);
   }
 
+  // Offer to configure eval providers (only in interactive mode)
+  if (resourcesArg === undefined) {
+    const providers = await d.selectProviders();
+    if (!clack.isCancel(providers) && providers.length > 0) {
+      // Install AI SDK core + selected provider packages
+      const pkgsToInstall = ['ai', ...providers.map((p) => p.pkg)];
+      try {
+        await d.execAsync(`${pm} add -D ${pkgsToInstall.join(' ')}`, { cwd: targetDir });
+      } catch {
+        d.console.log(`Provider install failed. Install manually: ${pm} add -D ${pkgsToInstall.join(' ')}`);
+      }
+
+      // Uncomment selected models in eval.config.ts
+      const evalConfigPath = join(targetDir, 'tests', 'evals', 'eval.config.ts');
+      if (d.existsSync(evalConfigPath)) {
+        let config = d.readFileSync(evalConfigPath, 'utf-8');
+        for (const p of providers) {
+          for (const model of p.models) {
+            // Uncomment lines matching this model (e.g., "    // 'gpt-4o'," → "    'gpt-4o',")
+            config = config.replace(
+              new RegExp(`^(\\s*)// ('${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',?.*)$`, 'm'),
+              '$1$2'
+            );
+          }
+        }
+        d.writeFileSync(evalConfigPath, config);
+      }
+
+      // Prompt for API keys and write .env
+      const envLines = [];
+      const seen = new Set();
+      for (const p of providers) {
+        if (seen.has(p.envVar)) continue;
+        seen.add(p.envVar);
+        const key = await d.password({
+          message: `${p.envVar} (enter to skip)`,
+          mask: '*',
+        });
+        if (!clack.isCancel(key) && key) {
+          envLines.push(`${p.envVar}=${key}`);
+        }
+      }
+      const envPath = join(targetDir, 'tests', 'evals', '.env');
+      if (envLines.length > 0) {
+        d.writeFileSync(envPath, envLines.join('\n') + '\n');
+        clack.log.info(`API keys saved to tests/evals/.env (gitignored)`);
+      }
+    }
+  }
+
   // Offer to install the sunpeak skills (only in interactive mode)
   if (resourcesArg === undefined) {
     const installSkill = await d.confirm({
@@ -290,17 +367,15 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     });
     if (!clack.isCancel(installSkill) && installSkill) {
       try {
-        d.execSync('npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server', {
+        d.execSync('pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server', {
           cwd: targetDir,
           stdio: 'inherit',
         });
       } catch {
-        d.console.log('Skill install skipped. You can install later with: npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server');
+        d.console.log('Skill install skipped. You can install later with: pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server');
       }
     }
   }
-
-  const runCmd = pm === 'npm' ? 'npm run' : pm;
 
   d.outro(`Done! To get started:
 
@@ -309,9 +384,12 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
 
 Your project commands:
 
-  sunpeak dev       # Start dev server + MCP endpoint
-  sunpeak build     # Build for production
-  ${runCmd} test         # Run tests`);
+  sunpeak dev                # Start dev server + MCP endpoint
+  sunpeak build              # Build for production
+  sunpeak test               # Run unit + e2e tests
+  sunpeak test --eval        # Run LLM evals (configure models in tests/evals/eval.config.ts)
+  sunpeak test --visual      # Run visual regression tests
+  sunpeak test --live        # Run live tests against real AI hosts`);
 }
 
 // Allow running directly
