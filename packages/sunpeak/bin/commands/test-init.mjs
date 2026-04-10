@@ -489,6 +489,7 @@ async function initExternalProject(cliServer, d) {
         private: true,
         type: 'module',
         devDependencies: {
+          '@types/node': 'latest',
           sunpeak: 'latest',
           '@playwright/test': 'latest',
         },
