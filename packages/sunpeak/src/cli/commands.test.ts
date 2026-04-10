@@ -645,6 +645,35 @@ describe('CLI Commands', () => {
       );
     });
 
+    it('should warn when sunpeak project has non-sunpeak playwright config', async () => {
+      const { testInit } = await importTestInit();
+      const logWarnMock = vi.fn();
+      const logMessageMock = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          existsSync: (path: string) =>
+            path.includes('package.json') || path.includes('playwright.config.ts'),
+          readFileSync: (path: string) => {
+            if (path.includes('package.json')) {
+              return JSON.stringify({ dependencies: { sunpeak: '*' } });
+            }
+            // Config exists but uses raw @playwright/test, not sunpeak
+            return "import { defineConfig } from '@playwright/test';";
+          },
+          log: { ...noopLog, warn: logWarnMock, message: logMessageMock },
+        })
+      );
+
+      expect(logWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('does not use sunpeak/test/config')
+      );
+      expect(logMessageMock).toHaveBeenCalledWith(
+        expect.stringContaining('defineConfig')
+      );
+    });
+
     it('should detect JS project type and use CLI server arg', async () => {
       const { testInit } = await importTestInit();
       const writeFileSync = vi.fn();
@@ -663,6 +692,237 @@ describe('CLI Commands', () => {
         expect.stringContaining('playwright.config.ts'),
         expect.stringContaining('http://localhost:9000/mcp')
       );
+    });
+
+    /** Extract written file content. Pass enough trailing path to be unique. */
+    function getWrittenContent(
+      mock: ReturnType<typeof vi.fn>,
+      pathSuffix: string
+    ): string | undefined {
+      const call = mock.mock.calls.find((c: [string, string]) =>
+        (c[0] as string).endsWith(pathSuffix)
+      );
+      return call ? (call[1] as string) : undefined;
+    }
+
+    it('should scaffold e2e, visual, live, and eval tests for external projects', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+      const mkdirSync = vi.fn();
+
+      await testInit(
+        ['--server', 'http://localhost:8000/mcp'],
+        createTestInitDeps({
+          writeFileSync,
+          mkdirSync,
+        })
+      );
+
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+
+      // All expected files
+      expect(writtenPaths).toContainEqual(expect.stringContaining('smoke.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('visual.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('live/playwright.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('live/example.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('evals/eval.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('evals/example.eval.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('package.json'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('tsconfig.json'));
+
+      // No unit tests for external projects (server is in another language)
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/'));
+
+      // Server URL flows through to root config (not live/playwright.config.ts)
+      const config = getWrittenContent(writeFileSync, 'sunpeak/playwright.config.ts');
+      expect(config).toContain('http://localhost:8000/mcp');
+      expect(config).toContain("from 'sunpeak/test/config'");
+
+      // Eval config has server URL
+      const evalConfig = getWrittenContent(writeFileSync, 'evals/eval.config.ts');
+      expect(evalConfig).toContain('http://localhost:8000/mcp');
+
+      // Live config has NOTE for non-sunpeak projects
+      const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
+      expect(liveConfig).toContain('NOTE:');
+      expect(liveConfig).toContain("from 'sunpeak/test/live/config'");
+    });
+
+    it('should scaffold all 5 test types for JS projects with correct imports', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        ['--server', 'http://localhost:8000/mcp'],
+        createTestInitDeps({
+          existsSync: (path: string) => path.includes('package.json') || false,
+          readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
+          writeFileSync,
+        })
+      );
+
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+
+      // All 5 test types
+      expect(writtenPaths).toContainEqual(expect.stringContaining('e2e/smoke.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('e2e/visual.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('live/playwright.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('live/example.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('evals/eval.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('unit/example.test.ts'));
+
+      // Verify correct imports
+      const smoke = getWrittenContent(writeFileSync, 'e2e/smoke.test.ts');
+      expect(smoke).toContain("from 'sunpeak/test'");
+
+      const visual = getWrittenContent(writeFileSync, 'e2e/visual.test.ts');
+      expect(visual).toContain("from 'sunpeak/test'");
+      expect(visual).toContain('mcp.screenshot');
+
+      const liveTest = getWrittenContent(writeFileSync, 'live/example.test.ts');
+      expect(liveTest).toContain("from 'sunpeak/test/live'");
+      expect(liveTest).toContain('live.invoke');
+
+      const unit = getWrittenContent(writeFileSync, 'unit/example.test.ts');
+      expect(unit).toContain("from 'vitest'");
+
+      const evalTest = getWrittenContent(writeFileSync, 'evals/example.eval.ts');
+      expect(evalTest).toContain("from 'sunpeak/eval'");
+      expect(evalTest).toContain('defineEval');
+    });
+
+    it('should scaffold all test types for sunpeak projects without NOTE in live config', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          existsSync: (path: string) => path.includes('package.json') || false,
+          readFileSync: (path: string) => {
+            if (path.includes('package.json')) {
+              return JSON.stringify({ dependencies: { sunpeak: '*' } });
+            }
+            return '{}';
+          },
+          writeFileSync,
+        })
+      );
+
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+
+      // All test types
+      expect(writtenPaths).toContainEqual(expect.stringContaining('playwright.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('visual.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('live/playwright.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('evals/eval.config.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('unit/example.test.ts'));
+
+      // Config uses defineConfig() with no args (root config, not live/)
+      const config = getWrittenContent(writeFileSync, 'project/playwright.config.ts');
+      expect(config).toContain('defineConfig()');
+
+      // Live config should NOT have NOTE (this IS a sunpeak project)
+      const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
+      expect(liveConfig).not.toContain('NOTE:');
+
+      // Eval config has sunpeak-specific comment
+      const evalConfig = getWrittenContent(writeFileSync, 'evals/eval.config.ts');
+      expect(evalConfig).toContain('Omit server for sunpeak projects');
+    });
+
+    it('should skip existing files without overwriting', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        ['--server', 'http://localhost:8000/mcp'],
+        createTestInitDeps({
+          existsSync: (path: string) => {
+            if (path.includes('package.json')) return true;
+            if (path.includes('visual.test.ts')) return true;
+            if (path.includes('live/playwright.config.ts')) return true;
+            if (path.includes('unit/example.test.ts')) return true;
+            return false;
+          },
+          readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
+          writeFileSync,
+        })
+      );
+
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+
+      // Should NOT have written visual, live config, or unit test (they already exist)
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('visual.test.ts'));
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('live/playwright.config.ts'));
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('live/example.test.ts'));
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/example.test.ts'));
+
+      // Should still have written smoke test and evals (they don't exist in the mock)
+      expect(writtenPaths).toContainEqual(expect.stringContaining('smoke.test.ts'));
+      expect(writtenPaths).toContainEqual(expect.stringContaining('evals/eval.config.ts'));
+    });
+
+    it('should parse command-based server into command and args', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(['--server', 'python src/server.py'], createTestInitDeps({ writeFileSync }));
+
+      const config = getWrittenContent(writeFileSync, 'sunpeak/playwright.config.ts');
+      expect(config).toContain("command: 'python'");
+      expect(config).toContain("'src/server.py'");
+    });
+
+    it('should not scaffold test bodies that would fail on missing tools', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        ['--server', 'http://localhost:8000/mcp'],
+        createTestInitDeps({
+          existsSync: (path: string) => path.includes('package.json') || false,
+          readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
+          writeFileSync,
+        })
+      );
+
+      // Visual test: all callTool/screenshot lines should be commented
+      const visual = getWrittenContent(writeFileSync, 'visual.test.ts');
+      expect(visual).toBeDefined();
+      // Should not have uncommented callTool (which would crash on 'your-tool')
+      const uncommentedLines = visual!
+        .split('\n')
+        .filter(
+          (l) =>
+            !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/**')
+        );
+      expect(uncommentedLines.join('\n')).not.toContain('callTool');
+      expect(uncommentedLines.join('\n')).not.toContain('screenshot');
+
+      // Live test: invoke should be commented
+      const liveTest = getWrittenContent(writeFileSync, 'live/example.test.ts');
+      expect(liveTest).toBeDefined();
+      const liveUncommented = liveTest!
+        .split('\n')
+        .filter(
+          (l) =>
+            !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/**')
+        );
+      expect(liveUncommented.join('\n')).not.toContain('live.invoke');
+
+      // Unit test: handler import and test bodies should be commented
+      const unit = getWrittenContent(writeFileSync, 'unit/example.test.ts');
+      expect(unit).toBeDefined();
+      const unitUncommented = unit!
+        .split('\n')
+        .filter(
+          (l) =>
+            !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/**')
+        );
+      // The vitest import is OK uncommented, but actual test logic should be commented
+      expect(unitUncommented.join('\n')).not.toContain('handler');
+      expect(unitUncommented.join('\n')).not.toContain('expect(tool');
     });
   });
 

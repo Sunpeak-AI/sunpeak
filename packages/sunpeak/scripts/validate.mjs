@@ -254,6 +254,242 @@ function validateDocs() {
 // ============================================================================
 
 /**
+ * Validate `sunpeak test init` across all 3 project types.
+ *
+ * For each type (external, JS, sunpeak), scaffolds into a temp directory
+ * and verifies:
+ * - All expected files are created
+ * - File contents contain expected imports/exports
+ * - Idempotency: running twice doesn't crash or overwrite
+ * - Server config flows through to generated files
+ */
+function runTestInitSmokeTest() {
+  const tmpBase = join(REPO_ROOT, '.tmp-validate-test-init');
+
+  if (existsSync(tmpBase)) {
+    rmSync(tmpBase, { recursive: true });
+  }
+  mkdirSync(tmpBase, { recursive: true });
+
+  try {
+    const allOutput = [];
+
+    // ── External project (empty dir, no package.json) ──
+    {
+      const dir = join(tmpBase, 'external');
+      mkdirSync(dir, { recursive: true });
+
+      const result = runCommandCapture(
+        `node ${SUNPEAK_BIN} test init --server http://localhost:8000/mcp`,
+        dir,
+        { CI: '1' }
+      );
+      allOutput.push(`--- external: init ---\n${result.output}`);
+      if (!result.ok) return { ok: false, step: 'test-init external', output: allOutput.join('\n') };
+
+      const testDir = join(dir, 'tests', 'sunpeak');
+      const expected = [
+        'package.json',
+        'playwright.config.ts',
+        'tsconfig.json',
+        'smoke.test.ts',
+        'visual.test.ts',
+        'live/playwright.config.ts',
+        'live/example.test.ts',
+        'evals/eval.config.ts',
+        'evals/example.eval.ts',
+        'evals/.env.example',
+      ];
+
+      for (const file of expected) {
+        const fullPath = join(testDir, file);
+        if (!existsSync(fullPath)) {
+          return { ok: false, step: `test-init external: missing ${file}`, output: allOutput.join('\n') };
+        }
+      }
+
+      // Verify server URL flows through
+      const configContent = readFileSync(join(testDir, 'playwright.config.ts'), 'utf-8');
+      if (!configContent.includes('http://localhost:8000/mcp')) {
+        return { ok: false, step: 'test-init external: server URL missing from playwright.config.ts', output: allOutput.join('\n') };
+      }
+
+      const evalConfig = readFileSync(join(testDir, 'evals/eval.config.ts'), 'utf-8');
+      if (!evalConfig.includes('http://localhost:8000/mcp')) {
+        return { ok: false, step: 'test-init external: server URL missing from eval.config.ts', output: allOutput.join('\n') };
+      }
+
+      // Verify live config has the NOTE for non-sunpeak projects
+      const liveConfig = readFileSync(join(testDir, 'live/playwright.config.ts'), 'utf-8');
+      if (!liveConfig.includes('NOTE:')) {
+        return { ok: false, step: 'test-init external: live config missing NOTE for non-sunpeak', output: allOutput.join('\n') };
+      }
+
+      // Idempotency: second run should not crash
+      const result2 = runCommandCapture(
+        `node ${SUNPEAK_BIN} test init --server http://localhost:8000/mcp`,
+        dir,
+        { CI: '1' }
+      );
+      allOutput.push(`--- external: idempotency ---\n${result2.output}`);
+      if (!result2.ok) return { ok: false, step: 'test-init external: idempotency', output: allOutput.join('\n') };
+    }
+
+    // ── JS project (package.json without sunpeak) ──
+    {
+      const dir = join(tmpBase, 'js');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'package.json'), JSON.stringify({
+        name: 'test-js-project',
+        dependencies: { express: '*' },
+      }, null, 2) + '\n');
+
+      const result = runCommandCapture(
+        `node ${SUNPEAK_BIN} test init --server http://localhost:9000/mcp`,
+        dir,
+        { CI: '1' }
+      );
+      allOutput.push(`--- js: init ---\n${result.output}`);
+      if (!result.ok) return { ok: false, step: 'test-init js', output: allOutput.join('\n') };
+
+      const expected = [
+        'playwright.config.ts',
+        'tests/e2e/smoke.test.ts',
+        'tests/e2e/visual.test.ts',
+        'tests/live/playwright.config.ts',
+        'tests/live/example.test.ts',
+        'tests/evals/eval.config.ts',
+        'tests/evals/example.eval.ts',
+        'tests/evals/.env.example',
+        'tests/unit/example.test.ts',
+      ];
+
+      for (const file of expected) {
+        if (!existsSync(join(dir, file))) {
+          return { ok: false, step: `test-init js: missing ${file}`, output: allOutput.join('\n') };
+        }
+      }
+
+      // Verify correct imports in scaffolded files
+      const smokeContent = readFileSync(join(dir, 'tests/e2e/smoke.test.ts'), 'utf-8');
+      if (!smokeContent.includes("from 'sunpeak/test'")) {
+        return { ok: false, step: 'test-init js: smoke test missing sunpeak/test import', output: allOutput.join('\n') };
+      }
+
+      const visualContent = readFileSync(join(dir, 'tests/e2e/visual.test.ts'), 'utf-8');
+      if (!visualContent.includes("from 'sunpeak/test'") || !visualContent.includes('mcp.screenshot')) {
+        return { ok: false, step: 'test-init js: visual test missing expected content', output: allOutput.join('\n') };
+      }
+
+      const liveTest = readFileSync(join(dir, 'tests/live/example.test.ts'), 'utf-8');
+      if (!liveTest.includes("from 'sunpeak/test/live'") || !liveTest.includes('live.invoke')) {
+        return { ok: false, step: 'test-init js: live test missing expected content', output: allOutput.join('\n') };
+      }
+
+      const unitTest = readFileSync(join(dir, 'tests/unit/example.test.ts'), 'utf-8');
+      if (!unitTest.includes("from 'vitest'")) {
+        return { ok: false, step: 'test-init js: unit test missing vitest import', output: allOutput.join('\n') };
+      }
+
+      const evalExample = readFileSync(join(dir, 'tests/evals/example.eval.ts'), 'utf-8');
+      if (!evalExample.includes("from 'sunpeak/eval'") || !evalExample.includes('defineEval')) {
+        return { ok: false, step: 'test-init js: eval test missing expected content', output: allOutput.join('\n') };
+      }
+
+      // JS project live config should have the NOTE
+      const liveConfig = readFileSync(join(dir, 'tests/live/playwright.config.ts'), 'utf-8');
+      if (!liveConfig.includes('NOTE:')) {
+        return { ok: false, step: 'test-init js: live config missing NOTE', output: allOutput.join('\n') };
+      }
+
+      // Verify server URL in main config
+      const mainConfig = readFileSync(join(dir, 'playwright.config.ts'), 'utf-8');
+      if (!mainConfig.includes('http://localhost:9000/mcp')) {
+        return { ok: false, step: 'test-init js: server URL missing from config', output: allOutput.join('\n') };
+      }
+    }
+
+    // ── sunpeak project (package.json with sunpeak dep) ──
+    {
+      const dir = join(tmpBase, 'sunpeak-app');
+      mkdirSync(dir, { recursive: true });
+      writeFileSync(join(dir, 'package.json'), JSON.stringify({
+        name: 'my-app',
+        dependencies: { sunpeak: '*' },
+      }, null, 2) + '\n');
+
+      const result = runCommandCapture(
+        `node ${SUNPEAK_BIN} test init`,
+        dir,
+        { CI: '1' }
+      );
+      allOutput.push(`--- sunpeak: init ---\n${result.output}`);
+      if (!result.ok) return { ok: false, step: 'test-init sunpeak', output: allOutput.join('\n') };
+
+      const expected = [
+        'playwright.config.ts',
+        'tests/e2e/visual.test.ts',
+        'tests/live/playwright.config.ts',
+        'tests/live/example.test.ts',
+        'tests/evals/eval.config.ts',
+        'tests/evals/example.eval.ts',
+        'tests/evals/.env.example',
+        'tests/unit/example.test.ts',
+      ];
+
+      for (const file of expected) {
+        if (!existsSync(join(dir, file))) {
+          return { ok: false, step: `test-init sunpeak: missing ${file}`, output: allOutput.join('\n') };
+        }
+      }
+
+      // Verify playwright.config uses defineConfig() (no server arg)
+      const config = readFileSync(join(dir, 'playwright.config.ts'), 'utf-8');
+      if (!config.includes('defineConfig()')) {
+        return { ok: false, step: 'test-init sunpeak: config should use defineConfig()', output: allOutput.join('\n') };
+      }
+
+      // sunpeak project live config should NOT have the NOTE
+      const liveConfig = readFileSync(join(dir, 'tests/live/playwright.config.ts'), 'utf-8');
+      if (liveConfig.includes('NOTE:')) {
+        return { ok: false, step: 'test-init sunpeak: live config should NOT have NOTE', output: allOutput.join('\n') };
+      }
+
+      // Eval config should have sunpeak-specific comment
+      const evalConfig = readFileSync(join(dir, 'tests/evals/eval.config.ts'), 'utf-8');
+      if (!evalConfig.includes('Omit server for sunpeak projects')) {
+        return { ok: false, step: 'test-init sunpeak: eval config missing sunpeak comment', output: allOutput.join('\n') };
+      }
+    }
+
+    // ── Command-based server (external project) ──
+    {
+      const dir = join(tmpBase, 'command-server');
+      mkdirSync(dir, { recursive: true });
+
+      const result = runCommandCapture(
+        `node ${SUNPEAK_BIN} test init --server "python src/server.py"`,
+        dir,
+        { CI: '1' }
+      );
+      allOutput.push(`--- command-server: init ---\n${result.output}`);
+      if (!result.ok) return { ok: false, step: 'test-init command-server', output: allOutput.join('\n') };
+
+      const config = readFileSync(join(dir, 'tests/sunpeak/playwright.config.ts'), 'utf-8');
+      if (!config.includes("command: 'python'") || !config.includes("'src/server.py'")) {
+        return { ok: false, step: 'test-init command-server: config missing parsed command/args', output: allOutput.join('\n') };
+      }
+    }
+
+    return { ok: true, step: null, output: allOutput.join('\n') };
+  } finally {
+    if (existsSync(tmpBase)) {
+      rmSync(tmpBase, { recursive: true });
+    }
+  }
+}
+
+/**
  * Scaffold smoke test — validates the `sunpeak new` CLI path.
  * Runs captured (no stdio inherit) so it can run in parallel.
  */
@@ -889,11 +1125,13 @@ try {
   printSection('PARALLEL: SCAFFOLD + EXAMPLES');
 
   const parallelStart = Date.now();
-  console.log(`Running scaffold smoke test + ${resources.length} examples in parallel...\n`);
+  console.log(`Running scaffold smoke test + test init + ${resources.length} examples in parallel...\n`);
 
-  const [scaffoldResult, ...exampleResults] = await Promise.all([
-    // Scaffold smoke test
+  const [scaffoldResult, testInitResult, ...exampleResults] = await Promise.all([
+    // Scaffold smoke test (sunpeak new)
     new Promise(resolve => resolve(runScaffoldSmokeTest())),
+    // Test init smoke test (sunpeak test init)
+    new Promise(resolve => resolve(runTestInitSmokeTest())),
     // All examples in parallel
     ...resources.map((resource, index) =>
       new Promise(resolve => resolve(testExample(resource, index)))
@@ -902,11 +1140,20 @@ try {
 
   // Report scaffold result
   if (scaffoldResult.ok) {
-    printSuccess('scaffold smoke test');
+    printSuccess('scaffold smoke test (sunpeak new)');
   } else {
     console.error(`\n${colors.red}✗ scaffold smoke test failed at: ${scaffoldResult.step}${colors.reset}`);
     console.error(`${colors.dim}${scaffoldResult.output.split('\n').slice(-30).join('\n')}${colors.reset}`);
     throw new Error(`Scaffold smoke test failed at: ${scaffoldResult.step}`);
+  }
+
+  // Report test init result
+  if (testInitResult.ok) {
+    printSuccess('test init smoke test (sunpeak test init)');
+  } else {
+    console.error(`\n${colors.red}✗ test init smoke test failed at: ${testInitResult.step}${colors.reset}`);
+    console.error(`${colors.dim}${testInitResult.output.split('\n').slice(-30).join('\n')}${colors.reset}`);
+    throw new Error(`Test init smoke test failed at: ${testInitResult.step}`);
   }
 
   // Report example results
