@@ -49,7 +49,7 @@ export function defineInspectConfig(options) {
   const serverArg = server.includes(' ') ? `"${server}"` : server;
   const command = [
     `SUNPEAK_SANDBOX_PORT=${sandboxPort}`,
-    'npx sunpeak inspect',
+    'sunpeak inspect',
     `--server ${serverArg}`,
     ...(simulationsDir ? [`--simulations ${simulationsDir}`] : []),
     `--port ${port}`,

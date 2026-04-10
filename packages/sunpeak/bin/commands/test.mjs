@@ -311,13 +311,42 @@ function validateApiKeys(models) {
 }
 
 /**
+ * Check that required AI SDK provider packages are installed for the configured models.
+ * @param {string[]} models
+ * @returns {Promise<Array<{ pkg: string, reason: string }>>}
+ */
+async function checkProviderPackages(models) {
+  const { createRequire } = await import('module');
+  // Resolve from the project's node_modules, not the global CLI install
+  const require = createRequire(join(process.cwd(), 'package.json'));
+  const missing = [];
+  const checked = new Set();
+
+  try {
+    require.resolve('ai');
+  } catch {
+    missing.push({ pkg: 'ai', reason: 'core AI SDK' });
+  }
+
+  for (const modelId of models) {
+    const pkg = getProviderForModel(modelId);
+    if (!pkg || checked.has(pkg)) continue;
+    checked.add(pkg);
+    try {
+      require.resolve(pkg);
+    } catch {
+      missing.push({ pkg, reason: modelId });
+    }
+  }
+
+  return missing;
+}
+
+/**
  * Run eval tests via vitest with the eval plugin.
  */
 async function runEvals(args) {
-  const { dirname, resolve, basename } = await import('path');
-  const { fileURLToPath } = await import('url');
-
-  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const { resolve, basename } = await import('path');
   const evalDir = findEvalDir();
 
   if (!evalDir) {
@@ -365,8 +394,19 @@ async function runEvals(args) {
     }
   }
 
-  // Validate API keys for configured models
+  // Check for missing provider packages and API keys
   if (configModels && configModels.length > 0) {
+    const missingPkgs = await checkProviderPackages(configModels);
+    if (missingPkgs.length > 0) {
+      console.error('\nMissing required packages for eval models:\n');
+      for (const { pkg, reason } of missingPkgs) {
+        console.error(`  ${pkg}  (needed for ${reason})`);
+      }
+      const installCmd = missingPkgs.map((m) => m.pkg).join(' ');
+      console.error(`\nInstall with:\n\n  pnpm add -D ${installCmd}\n`);
+      return 1;
+    }
+
     const warnings = validateApiKeys(configModels);
     if (warnings.length > 0) {
       console.log('');
@@ -416,8 +456,10 @@ async function runEvals(args) {
   // Use .ts extension so vitest handles TypeScript imports natively
   const vitestConfigPath = join(absEvalDir, '.eval-vitest.config.ts');
 
-  const evalPluginPath = resolve(__dirname, '..', 'lib', 'eval', 'eval-vitest-plugin.mjs');
-  const evalReporterPath = resolve(__dirname, '..', 'lib', 'eval', 'eval-reporter.mjs');
+  // Use package exports so vitest resolves from the project's node_modules,
+  // not the global CLI install. This ensures import('ai') finds project-local deps.
+  const evalPluginImport = 'sunpeak/eval/plugin';
+  const evalReporterImport = 'sunpeak/eval/reporter';
 
   // Clean up dev server and temp config
   const cleanupResources = () => {
@@ -442,17 +484,19 @@ async function runEvals(args) {
     ? './' + basename(configFile)
     : null;
 
-  // Generate a vitest config that loads the eval config and plugin
+  // Generate a vitest config that loads the eval config and plugin.
+  // Imports use package names (sunpeak/eval/plugin) so vitest resolves from
+  // the project's node_modules, ensuring import('ai') finds project-local deps.
   const vitestConfig = `
 import { defineConfig } from 'vitest/config';
-import { evalVitestPlugin } from ${JSON.stringify(evalPluginPath)};
+import { evalVitestPlugin } from '${evalPluginImport}';
 ${configImportPath ? `import evalConfig from ${JSON.stringify(configImportPath)};` : 'const evalConfig = { models: [], defaults: {} };'}
 
 export default defineConfig({
   test: {
     globals: true,
     include: ['**/*.eval.ts', '**/*.eval.js'],
-    reporters: ['default', ${JSON.stringify(evalReporterPath)}],
+    reporters: ['default', '${evalReporterImport}'],
     testTimeout: 600000,
   },
   plugins: [

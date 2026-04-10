@@ -132,7 +132,7 @@ sunpeak new
 Install the sunpeak skills to give your coding agent (Claude Code, Cursor, etc.) built-in knowledge of sunpeak patterns, hooks, and testing:
 
 ```bash
-npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server
+pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server
 ```
 
 ## Troubleshooting

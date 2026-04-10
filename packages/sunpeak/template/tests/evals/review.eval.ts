@@ -1,4 +1,3 @@
-import { expect } from 'vitest';
 import { defineEval } from 'sunpeak/eval';
 
 export default defineEval({
@@ -11,10 +10,7 @@ export default defineEval({
     {
       name: 'asks to draft a social post',
       prompt: 'Write a launch announcement for X and LinkedIn',
-      expect: {
-        tool: 'review-post',
-        args: { platforms: expect.arrayContaining([expect.stringMatching(/x|twitter/i)]) },
-      },
+      expect: { tool: 'review-post' },
     },
     {
       name: 'asks to review a purchase',
@@ -22,27 +18,36 @@ export default defineEval({
       expect: { tool: 'review-purchase' },
     },
 
-    // --- Other assertion patterns ---
+    // To also check argument extraction, add args expectations
+    // (import { expect } from 'vitest' to use matchers):
+    // {
+    //   name: 'passes platforms',
+    //   prompt: 'Write a launch announcement for X and LinkedIn',
+    //   expect: {
+    //     tool: 'review-post',
+    //     args: { platforms: expect.arrayContaining([expect.stringMatching(/x|twitter/i)]) },
+    //   },
+    // },
     //
     // Multi-step (ordered tool call sequence):
-    //   {
-    //     name: 'multi-step flow',
-    //     prompt: 'Draft a post and then review it',
-    //     maxSteps: 3,
-    //     expect: [
-    //       { tool: 'review-post' },
-    //       { tool: 'publish-post' },
-    //     ],
-    //   },
+    // {
+    //   name: 'multi-step flow',
+    //   prompt: 'Draft a post and then review it',
+    //   maxSteps: 3,
+    //   expect: [
+    //     { tool: 'review-post' },
+    //     { tool: 'publish-post' },
+    //   ],
+    // },
     //
     // Custom assertion (full access to result):
-    //   {
-    //     name: 'custom check',
-    //     prompt: 'Show me my recent reviews',
-    //     assert: (result) => {
-    //       expect(result.toolCalls).toHaveLength(1);
-    //       expect(result.toolCalls[0].name).toBe('review-diff');
-    //     },
+    // {
+    //   name: 'custom check',
+    //   prompt: 'Show me my recent reviews',
+    //   assert: (result) => {
+    //     expect(result.toolCalls).toHaveLength(1);
+    //     expect(result.toolCalls[0].name).toBe('review-diff');
     //   },
+    // },
   ],
 });

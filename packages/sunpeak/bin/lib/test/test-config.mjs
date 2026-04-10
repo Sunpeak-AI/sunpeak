@@ -103,7 +103,7 @@ function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
     }
   }
 
-  parts.push('npx sunpeak inspect');
+  parts.push('sunpeak inspect');
 
   if (server.url) {
     parts.push(`--server ${server.url}`);

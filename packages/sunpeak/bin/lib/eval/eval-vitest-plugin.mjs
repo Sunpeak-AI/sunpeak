@@ -14,7 +14,6 @@
 
 import { readFileSync } from 'fs';
 import { basename } from 'path';
-import { fileURLToPath } from 'url';
 
 const EVAL_RE = /\.eval\.[tj]s$/;
 const VIRTUAL_PREFIX = '\0sunpeak-eval-spec:';
@@ -61,11 +60,12 @@ export function evalVitestPlugin({ server, models, defaults }) {
       virtualToReal.set(virtualId, id);
 
       const testName = basename(id).replace(EVAL_RE, '');
-      const runnerPath = resolveRunnerPath();
 
+      // Import from 'sunpeak/eval' (package export) so vitest resolves from
+      // the project's node_modules, not the global CLI install.
       const transformed = `
 import { describe, it, beforeAll, afterAll } from 'vitest';
-import { createMcpConnection, discoverAndConvertTools, runEvalCaseAggregate, checkAiSdkInstalled } from '${runnerPath}';
+import { createMcpConnection, discoverAndConvertTools, runEvalCaseAggregate, checkAiSdkInstalled } from 'sunpeak/eval';
 
 // Import the original eval spec via virtual module (bypasses this transform)
 import evalSpec from ${JSON.stringify(virtualId)};
@@ -145,14 +145,3 @@ describe.skipIf(shouldSkip)(${JSON.stringify(testName)}, () => {
   };
 }
 
-/**
- * Get the absolute path to the eval-runner module.
- */
-function resolveRunnerPath() {
-  const url = new URL('./eval-runner.mjs', import.meta.url);
-  // fileURLToPath requires file:// scheme; fall back to pathname for other schemes (e.g., vitest)
-  if (url.protocol === 'file:') {
-    return fileURLToPath(url);
-  }
-  return url.pathname;
-}

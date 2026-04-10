@@ -547,7 +547,7 @@ These variables use CSS `light-dark()` so they respond to theme changes automati
 For all testing capabilities (e2e tests, visual regression, live tests against real ChatGPT, multi-model evals, Playwright config), install the `test-mcp-server` skill:
 
 ```bash
-npx skills add Sunpeak-AI/sunpeak@test-mcp-server
+pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server
 ```
 
 The testing skill works with any MCP server (not just sunpeak projects). Simulations (above) are part of the dev workflow and defined here. Tests consume them via the `mcp` fixture.
