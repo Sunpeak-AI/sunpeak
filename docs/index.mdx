@@ -63,11 +63,11 @@ sunpeak inspect --server "python my_server.py"
 
 ### 2. Testing Framework
 
-<Card horizontal title="Testing" icon="flask" href="/mcp-apps-testing">
+<Card horizontal title="Testing" icon="flask" href="/testing/overview">
   Automated tests powered by the inspector and simulations.
 </Card>
 
-Two levels of automated testing for MCP Apps:
+Four levels of automated testing for MCP Apps (E2E, Live, Evals, Unit):
 
 **E2E tests** — the inspector as a test runtime. Define simulation fixtures (JSON), write Playwright tests that load them in the inspector across hosts, themes, and display modes:
 
@@ -101,18 +101,19 @@ Next.js for MCP Apps. Convention-over-configuration with the inspector and testi
 
 <ProjectStructure />
 
-- **[Runtime APIs](/mcp-apps-framework#runtime-apis)**: Multi-platform React hooks for the MCP Apps runtime
-- **[Project Scaffold](/framework/project-scaffold)**: Complete dev setup with pre-configured tooling
-- **[UI Components](/framework/ui-components)**: Production-ready components following MCP App design guidelines
-- **Convention over configuration**: resources, tools, and [simulations](/api-reference/simulations/simulation) are auto-discovered from `src/` and `tests/`
+- **[Runtime APIs](/app-framework/runtime-apis)**: Multi-platform React hooks for the MCP Apps runtime
+- **[Project Scaffold](/app-framework/project-scaffold)**: Complete dev setup with pre-configured tooling
+- **[UI Components](/app-framework/ui-components)**: Production-ready components following MCP App design guidelines
+- **Convention over configuration**: resources, tools, and [simulations](/testing/simulations) are auto-discovered from `src/` and `tests/`
 
 ### The sunpeak CLI
 
-- [`sunpeak new`](/api-reference/cli/new) - Create a new project
-- [`sunpeak dev`](/api-reference/cli/dev) - Start dev server with inspector and MCP endpoint
-- [`sunpeak inspect`](/api-reference/cli/inspect) - Inspect any MCP server (standalone)
-- [`sunpeak build`](/api-reference/cli/build) - Build resources for production
-- [`sunpeak start`](/api-reference/cli/start) - Start the production MCP server
-- [`sunpeak upgrade`](/api-reference/cli/upgrade) - Upgrade sunpeak to latest version
+- [`sunpeak new`](/app-framework/cli/new) - Create a new project
+- [`sunpeak dev`](/app-framework/cli/dev) - Start dev server with inspector and MCP endpoint
+- [`sunpeak inspect`](/testing/cli/inspect) - Inspect any MCP server (standalone)
+- [`sunpeak test`](/testing/cli/test) - Run unit, E2E, visual, live, and eval tests
+- [`sunpeak build`](/app-framework/cli/build) - Build resources for production
+- [`sunpeak start`](/app-framework/cli/start) - Start the production MCP server
+- [`sunpeak upgrade`](/testing/cli/upgrade) - Upgrade sunpeak to latest version
 
 <Examples />

@@ -8,7 +8,7 @@ keywords: ["MCP app testing", "ChatGPT app testing", "MCP Apps", "ChatGPT Apps",
 
 sunpeak provides four levels of automated testing for MCP Apps:
 
-1. **E2E tests** against the [inspector](/mcp-apps-inspector) — the `mcp` fixture from `sunpeak/test` calls tools, renders them in simulated ChatGPT and Claude runtimes, and gives you a frame locator for the rendered UI. [Simulations](/api-reference/simulations/simulation) (JSON fixtures) define reproducible tool states. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
+1. **E2E tests** against the [inspector](/mcp-apps-inspector) — the `mcp` fixture from `sunpeak/test` calls tools, renders them in simulated ChatGPT and Claude runtimes, and gives you a frame locator for the rendered UI. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
 
 2. **Live tests** against real hosts — `sunpeak/test/live` provides Playwright fixtures that open real ChatGPT (and future hosts), send messages, wait for app iframes, and let you assert against the rendered result. All host DOM interaction (auth, selectors, iframe access) is maintained by sunpeak — you only write resource assertions.
 
@@ -30,6 +30,10 @@ sunpeak provides four levels of automated testing for MCP Apps:
   `--eval` and `--live` are not included in the default `sunpeak test` run because they require API keys and cost money. You must opt in explicitly.
 </Note>
 
+<Tip>
+  For complete documentation on each testing level, see the [MCP Testing Framework](/testing/overview) tab.
+</Tip>
+
 ## E2E Testing
 
 E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests. Tests run against both ChatGPT and Claude hosts via Playwright projects.
@@ -37,7 +41,7 @@ E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts a
 ```bash
 sunpeak test                               # Run unit + e2e
 sunpeak test --e2e                         # E2E only
-sunpeak test --e2e -- --ui                 # Playwright UI mode
+sunpeak test --e2e --ui                    # Playwright UI mode
 sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
 ```
 
@@ -73,7 +77,7 @@ test('should render in fullscreen mode', async ({ mcp }) => {
   alt="Inspector set to inline light mode via URL params"
 />
 
-The `mcp.callTool()` method accepts options for `theme`, `displayMode`, and `prodResources`. For advanced URL parameters, see the [Inspector API Reference](/api-reference/simulations/inspector#createinspectorurl).
+The `mcp.callTool()` method accepts options for `theme`, `displayMode`, and `prodResources`. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
 
 The config is a one-liner:
 
@@ -85,7 +89,7 @@ export default defineConfig();
 
 ### Testing Backend-Only Tools
 
-If your resource calls backend tools via [`useCallServerTool`](/api-reference/hooks/use-call-server-tool), define mock responses using the `serverTools` field in the [simulation JSON](/api-reference/simulations/simulation). The inspector resolves these mocks based on the tool call arguments:
+If your resource calls backend tools via [`useCallServerTool`](/app-framework/hooks/use-call-server-tool), define mock responses using the `serverTools` field in the [simulation JSON](/testing/simulations). The inspector resolves these mocks based on the tool call arguments:
 
 ```json
 // tests/simulations/review-purchase.json
@@ -125,7 +129,7 @@ test('should show success when server confirms', async ({ mcp }) => {
 });
 ```
 
-The `serverTools` field supports both simple (single result) and conditional (`when`/`result` array) forms. See [Simulation API Reference](/api-reference/simulations/simulation#mocking-server-tool-calls) for details.
+The `serverTools` field supports both simple (single result) and conditional (`when`/`result` array) forms. See [Simulation API Reference](/testing/simulations#mocking-server-tool-calls) for details.
 
 ### Example E2E Test Structure
 
@@ -426,9 +430,12 @@ export default defineEval({
 <Card horizontal title="Inspector" icon="desktop" href="/mcp-apps-inspector">
   The inspector that powers E2E tests.
 </Card>
-<Card horizontal title="Simulations API Reference" icon="folder" href="/api-reference/simulations/simulation">
+<Card horizontal title="Simulations API Reference" icon="folder" href="/testing/simulations">
   JSON schema, conventions, and auto-discovery.
 </Card>
-<Card horizontal title="Inspector API Reference" icon="code" href="/api-reference/simulations/inspector">
+<Card horizontal title="Inspector API Reference" icon="code" href="/testing/inspector">
   createInspectorUrl parameters and Inspector component props.
+</Card>
+<Card horizontal title="MCP Testing Framework" icon="book" href="/testing/overview">
+  Complete documentation for all four testing levels.
 </Card>

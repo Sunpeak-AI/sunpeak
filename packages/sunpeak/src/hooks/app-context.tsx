@@ -113,7 +113,7 @@ async function connectWithRetry(
 
   console.error(
     '[sunpeak] All connection attempts failed. Try refreshing the page or opening a new chat.\n' +
-      'Troubleshooting: https://sunpeak.ai/docs/guides/troubleshooting'
+      'Troubleshooting: https://sunpeak.ai/docs/app-framework/guides/troubleshooting'
   );
   throw lastError ?? new Error('Failed to connect');
 }

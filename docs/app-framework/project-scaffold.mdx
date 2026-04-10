@@ -1,0 +1,78 @@
+---
+title: "Project Scaffold"
+description: "Understanding your sunpeak project structure."
+keywords: ["MCP Apps", "MCP app framework", "ChatGPT app framework", "project structure", "scaffold", "template"]
+---
+
+import ProjectStructure from '/snippets/project-structure.mdx';
+import Examples from '/snippets/examples.mdx';
+
+## Overview
+
+When you create a new project with `sunpeak new`, the sunpeak framework gives you a minimal, convention-based project structure with everything needed for MCP App development.
+
+<ProjectStructure />
+
+## Key Files & Directories
+
+- `src/resources/` - Directory containing all your [MCP Resources](/mcp-apps/mcp/resources) (MCP App UIs).
+    - Each resource lives in its own folder: `src/resources/{name}/`
+    - Each folder contains:
+        - `{name}.tsx` - React component + resource metadata (`export const resource: ResourceConfig`)
+        - `components/` - Optional subfolder for resource-specific components
+- `src/tools/` - Directory containing [MCP tool](/mcp-apps/mcp/tools) files.
+    - Each tool is a `.ts` file that exports `tool` (metadata with optional resource link), `schema` (Zod), and a `default` handler. Tools without a `resource` field are registered as plain MCP tools (no UI).
+    - Multiple tools can reference the same resource.
+- `src/server.ts` - Optional server entry for auth and server configuration.
+- `tests/simulations/` - Directory containing simulation files for local development and testing.
+    - Simulation files are flat `*.json` files with a `tool` string field referencing a tool filename.
+    - Any filename works — multiple simulations can reference the same tool.
+- `tests/e2e/` - Directory containing end-to-end Playwright tests for each resource.
+    Uses the Inspector to test your resources render properly across hosts (ChatGPT, Claude) and states (tool calls, saved state, dark mode, pip display mode, etc.).
+- `tests/live/` - Directory containing live tests that run against real ChatGPT.
+    These tests open your browser, send messages to ChatGPT, and validate your app renders correctly in the real host environment.
+
+<Note>
+No entry point files needed! The framework automatically discovers your resources, tools, and simulations using conventions.
+</Note>
+
+<Examples />
+
+## Included Tooling
+
+The template includes minimal, essential tooling:
+
+### Vite
+
+Fast build tool with hot-reload (HMR) for instant development feedback. The framework owns the dev server configuration - just run `sunpeak dev`.
+
+### Tailwind CSS 4
+
+Utility-first CSS framework for rapid UI development. Pre-configured via Vite plugin.
+
+### TypeScript
+
+Type safety with TypeScript 5. Configured via `tsconfig.json`.
+
+### Vitest (Unit Tests)
+
+Vite-native testing framework for component testing. Run with `pnpm test`.
+
+### Playwright (E2E Tests)
+
+End-to-end testing against the ChatGPT Inspector. Tests live in `tests/e2e/`. Run with `pnpm test:e2e`.
+
+### Playwright (Live Tests)
+
+Automated testing against real ChatGPT. Tests live in `tests/live/`. Run with `pnpm test:live`. See the [Testing Guide](/testing/live) for setup details.
+
+### Add Your Own Tooling
+
+The template is intentionally minimal. Add your preferred tools as needed:
+- **Linting**: ESLint
+- **Formatting**: Prettier
+- **Type checking**: Run `tsc --noEmit` as a script
+
+<Card horizontal title="sunpeak CLI API Reference" icon="code" href="/app-framework/cli/new">
+  All sunpeak CLI commands and configurations.
+</Card>

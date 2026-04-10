@@ -1,0 +1,149 @@
+---
+title: "Runtime APIs"
+description: "Strongly typed, multi-platform APIs for the MCP Apps runtime."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "runtime API", "React hooks", "MCP app framework"]
+---
+
+## Overview
+
+sunpeak provides a multi-platform runtime abstraction layer that helps you build
+MCP Apps once and deploy them across different AI chat hosts like
+ChatGPT, Claude, and more. These hooks wrap the [MCP Apps protocol](/mcp-apps/introduction) — see that reference for the underlying request and notification types.
+
+## Why Multi-Platform?
+
+<Card horizontal title="Write Once, Deploy Everywhere" icon="recycle">
+  Build your app logic once, run it on multiple platforms without rewriting.
+</Card>
+
+<Card horizontal title="Consistent Developer Experience" icon="code">
+  Same React hooks and patterns across all platforms.
+</Card>
+
+<Card horizontal title="Future-Proof" icon="shield">
+  Automatically support new platforms as they emerge.
+</Card>
+
+<Card horizontal title="Easy Migration" icon="arrow-right-arrow-left">
+  Switch platforms without major code changes.
+</Card>
+
+## React Hooks
+
+sunpeak provides access to the entire MCP Apps runtime API via platform-agnostic React hooks. All hooks read from context automatically — no need to pass an `app` instance:
+
+```tsx
+import { useTheme, useDisplayMode, useAppState } from 'sunpeak';
+
+function MyResource() {
+  const theme = useTheme();                          // 'light' | 'dark'
+  const displayMode = useDisplayMode();              // 'inline' | 'pip' | 'fullscreen'
+  const [state, setState] = useAppState({ count: 0 });
+
+  return <div className={displayMode === 'fullscreen' ? 'h-screen' : 'max-h-96'}>...</div>;
+}
+```
+
+### Action Hooks
+
+sunpeak provides individual hooks for interacting with the host runtime, including calling [MCP tools](/mcp-apps/mcp/tools), sending messages, opening links, and pushing model context updates.
+
+```tsx
+import { useCallServerTool, useSendMessage, useOpenLink, useUpdateModelContext } from 'sunpeak';
+
+function MyResource() {
+  const callTool = useCallServerTool();
+  const sendMessage = useSendMessage();
+  const openLink = useOpenLink();
+  const updateModelContext = useUpdateModelContext();
+
+  const handleAction = async () => {
+    // Call an MCP tool.
+    const result = await callTool({ name: 'my-tool', arguments: { arg: 'value' } });
+
+    // Send a follow-up message.
+    await sendMessage({ role: 'user', content: [{ type: 'text', text: 'Continue' }] });
+
+    // Open an external URL.
+    await openLink({ url: 'https://sunpeak.ai' });
+
+    // Push structured data to the model's context.
+    await updateModelContext({ structuredContent: { selectedItem: 'abc' } });
+  };
+
+  return <button onClick={handleAction}>Interact with Host</button>;
+}
+```
+
+### Bidirectional Tool Calling
+
+Apps can also register tools that the host can call, enabling two-way communication:
+
+```tsx
+import { useAppTools } from 'sunpeak';
+
+function MyResource() {
+  useAppTools({
+    tools: [{ name: 'get-selection', description: 'Get the current selection' }],
+    onCallTool: async ({ name }) => {
+      if (name === 'get-selection') {
+        return { content: [{ type: 'text', text: selectedText }] };
+      }
+      return { content: [], isError: true };
+    },
+  });
+}
+```
+
+## ChatGPT-Specific Hooks
+
+Some ChatGPT features go beyond the MCP Apps standard. sunpeak provides typed hooks for these host-specific APIs, imported from `sunpeak/host/chatgpt`:
+
+```tsx
+import { isChatGPT } from 'sunpeak/host';
+import { useUploadFile, useRequestModal, useRequestCheckout } from 'sunpeak/host/chatgpt';
+
+function MyResource() {
+  if (!isChatGPT()) {
+    return <div>Standard MCP App UI</div>;
+  }
+
+  return <ChatGPTFeatures />;
+}
+
+function ChatGPTFeatures() {
+  const uploadFile = useUploadFile();
+  const requestModal = useRequestModal();
+  const requestCheckout = useRequestCheckout();
+
+  return (
+    <div>
+      <button onClick={() => uploadFile(new File([], 'photo.png'))}>Upload</button>
+      <button onClick={() => requestModal({})}>Open Modal</button>
+    </div>
+  );
+}
+```
+
+| Hook | Description |
+|------|-------------|
+| `useUploadFile` | Upload files into the ChatGPT conversation |
+| `useDownloadFile` | Download files via the MCP Apps protocol |
+| `useRequestModal` | Open a host-controlled modal |
+| `useRequestCheckout` | Trigger the instant checkout flow |
+
+<Warning>
+These hooks throw if called outside ChatGPT. Always feature-detect with `isChatGPT()` first. See [Host Detection](/app-framework/functions/host-detection).
+</Warning>
+
+## Dive Deeper
+
+<Card horizontal title="Runtime API Reference" icon="code" href="/app-framework/hooks/use-app">
+  All hooks provided by sunpeak.
+</Card>
+<Card horizontal title="ChatGPT Hooks" icon="bolt" href="/app-framework/hooks/chatgpt-hooks">
+  ChatGPT-specific hook API reference.
+</Card>
+<Card horizontal title="Host Detection" icon="radar" href="/app-framework/functions/host-detection">
+  Detect which host is running your app.
+</Card>

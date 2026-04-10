@@ -1145,7 +1145,7 @@ export async function inspectServer(opts) {
   server.bindCLIShortcuts({ print: true });
 
   // Print troubleshooting link (dimmed)
-  console.log('\n  \x1b[2mApp not loading? \u2192 https://sunpeak.ai/docs/guides/troubleshooting\x1b[0m');
+  console.log('\n  \x1b[2mApp not loading? \u2192 https://sunpeak.ai/docs/app-framework/guides/troubleshooting\x1b[0m');
 
   // Print star-begging message unless suppressed
   if (!noBegging) {

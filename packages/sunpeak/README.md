@@ -145,7 +145,7 @@ If your app doesn't render in ChatGPT or Claude:
 4. **Hard refresh** the host page (`Cmd+Shift+R` / `Ctrl+Shift+R`)
 5. **Open a new chat** in the host (cached iframes persist per-conversation)
 
-Full guide: [sunpeak.ai/docs/guides/troubleshooting](https://sunpeak.ai/docs/guides/troubleshooting)
+Full guide: [sunpeak.ai/docs/app-framework/guides/troubleshooting](https://sunpeak.ai/docs/app-framework/guides/troubleshooting)
 
 ## Resources
 

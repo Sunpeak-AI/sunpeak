@@ -1,0 +1,64 @@
+---
+title: "useDeviceCapabilities"
+description: "Get device input capabilities."
+keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "device capabilities", "touch", "hover"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+## Overview
+
+The `useDeviceCapabilities` hook returns the device input capabilities reported by the host. It is a convenience wrapper around `useHostContext`.
+
+<Card horizontal title="Wraps onhostcontextchanged" icon="cube" href="/mcp-apps/app/event-handlers/onhostcontextchanged">
+  MCP Apps SDK reference
+</Card>
+
+## Import
+
+```tsx
+import { useDeviceCapabilities } from 'sunpeak';
+```
+
+## Signature
+
+```tsx
+function useDeviceCapabilities(): DeviceCapabilities
+```
+
+## Returns
+
+<ResponseField name="return" type="DeviceCapabilities">
+  Device input capabilities reported by the host:
+
+  ```typescript
+  {
+    touch?: boolean;  // Whether the device supports touch input
+    hover?: boolean;  // Whether the device supports hover interactions
+  }
+  ```
+
+  Returns an empty object `{}` if the host does not report capabilities.
+</ResponseField>
+
+## Usage
+
+```tsx
+import { useDeviceCapabilities } from 'sunpeak';
+
+function MyResource() {
+  const { touch, hover } = useDeviceCapabilities();
+
+  return (
+    <button className={touch ? 'p-4 text-lg' : 'p-2'}>
+      {hover ? 'Hover me' : 'Tap me'}
+    </button>
+  );
+}
+```
+
+The device capabilities come from [`McpUiHostContext.deviceCapabilities`](/mcp-apps/types/core-types#mcpuihostcontext).
+
+<Tip>
+For browser-level detection outside of React or when host context is unavailable, sunpeak also exports [`isPrimarilyTouchDevice`](/app-framework/functions/utilities#isprimarilytouchdevice) and [`isHoverAvailable`](/app-framework/functions/utilities#ishoveravailable) utility functions.
+</Tip>

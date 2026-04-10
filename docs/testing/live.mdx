@@ -1,0 +1,119 @@
+---
+title: "Live Testing"
+description: "Automated browser testing of MCP Apps against real ChatGPT and future hosts."
+keywords: ["MCP app testing", "live testing", "ChatGPT testing", "Playwright", "browser testing"]
+---
+
+## Overview
+
+Live tests validate your MCP Apps inside real ChatGPT — not the inspector. They open your browser, navigate to ChatGPT, send messages that trigger tool calls against your MCP server, and verify the rendered app using Playwright assertions.
+
+This catches issues that inspector tests can't: real MCP connection behavior, actual LLM tool invocation, host-specific iframe rendering, and production resource loading.
+
+## Prerequisites
+
+- **ChatGPT account** — You need a ChatGPT account with MCP/Apps support
+- **Tunnel tool** — [ngrok](https://ngrok.com/), [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), or similar
+- **Browser session** — Logged into chatgpt.com in Chrome, Arc, Brave, or Edge
+
+## One-Time Setup
+
+Add your MCP server in ChatGPT settings:
+
+1. Go to **Settings > Apps > Create** in ChatGPT
+2. Enter your tunnel URL with the `/mcp` path (e.g., `https://abc123.ngrok.io/mcp`)
+3. Save the connection
+
+This only needs to be done once per tunnel URL pattern.
+
+## Running Live Tests
+
+```bash
+# Terminal 1: Start a tunnel to your MCP server
+ngrok http 8000
+
+# Terminal 2: Run live tests
+pnpm test:live
+```
+
+The test runner:
+1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found. Sessions typically last a few hours — Cloudflare's HttpOnly `cf_clearance` cookie cannot be persisted, so re-authentication is needed when it expires.
+2. Starts `sunpeak dev --prod-resources` automatically
+3. Refreshes the MCP server connection in ChatGPT settings (once in globalSetup, before all workers)
+4. Runs `tests/live/*.spec.ts` files fully in parallel — each test gets its own chat window
+
+<Note>
+  Live tests always run with a visible browser window. chatgpt.com uses bot detection that blocks headless browsers, so a visible browser is required for reliable results.
+</Note>
+
+### Running via Validate
+
+You can also run live tests as part of the full validation pipeline:
+
+```bash
+sunpeak validate --live
+```
+
+## Writing Live Tests
+
+Live test specs live in `tests/live/` — one file per resource, just like e2e tests. Import `test` and `expect` from `sunpeak/test/live` to get a `live` fixture that handles login, MCP server refresh, and host-specific message formatting automatically.
+
+```typescript
+// tests/live/weather.spec.ts
+import { test, expect } from 'sunpeak/test/live';
+
+test('weather tool renders forecast', async ({ live }) => {
+  // invoke() starts a new chat, sends the prompt, and returns the app iframe
+  const app = await live.invoke('show me the weather in Austin');
+  await expect(app.locator('h1')).toBeVisible();
+});
+```
+
+### The `live` Fixture
+
+The `live` fixture provides:
+- **`invoke(prompt)`** — one-liner: starts a new chat, sends the prompt (with host-specific formatting like `/{appName}` for ChatGPT), waits for the app iframe, and returns a `FrameLocator`
+- **`startNewChat()`** — opens a fresh conversation (for multi-step flows)
+- **`sendMessage(text)`** — sends a message with host-appropriate formatting (read from your `package.json`)
+- **`waitForAppIframe()`** — waits for the MCP app iframe to render and returns a `FrameLocator`
+- **`sendRawMessage(text)`** — sends a message without any prefix
+- **`setColorScheme(scheme, appFrame?)`** — switches the host to `'light'` or `'dark'` theme; optionally pass an app `FrameLocator` to wait for it to update
+- **`page`** — raw Playwright `Page` object for advanced assertions
+
+### Configuration
+
+The Playwright config is a one-liner:
+```typescript
+// tests/live/playwright.config.ts
+import { defineLiveConfig } from 'sunpeak/test/live/config';
+export default defineLiveConfig();
+```
+
+The config generates one Playwright project per host (by default, just `chatgpt`). Tests switch themes internally using `live.setColorScheme()`. When new hosts are supported, add them with a one-line change:
+
+```typescript
+import { defineLiveConfig } from 'sunpeak/test/live/config';
+export default defineLiveConfig({ hosts: ['chatgpt', 'claude'] });
+```
+
+All host DOM interaction (selectors, login, settings navigation, iframe access) is maintained by sunpeak — you only write resource assertions. The same test code runs across all hosts.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="'Not logged into ChatGPT' error">
+    On first run, a browser window opens for you to log in to ChatGPT. The session is saved to `.auth/chatgpt.json` but typically only lasts a few hours because Cloudflare's `cf_clearance` cookie is HttpOnly and cannot be persisted across runs. When you see this error, just re-authenticate in the browser window that opens. If it keeps failing, delete the `.auth/` directory and run `pnpm test:live` again.
+  </Accordion>
+
+  <Accordion title="Tunnel not reachable">
+    Verify your tunnel is running and the URL is correct. The test checks the tunnel's `/health` endpoint before proceeding.
+  </Accordion>
+
+  <Accordion title="'ChatGPT DOM may have changed' warning">
+    ChatGPT occasionally updates their UI. The `ChatGPTPage` class checks selector health at startup. If selectors are stale, update the `SELECTORS` constant in `chatgpt-page.mjs`.
+  </Accordion>
+
+  <Accordion title="Tool not called by ChatGPT">
+    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected — check ChatGPT settings.
+  </Accordion>
+</AccordionGroup>

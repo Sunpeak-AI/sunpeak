@@ -24,8 +24,8 @@ sunpeak discovers resources, tools, and simulations from your file system:
 
 - **Resources** from `src/resources/{name}/{name}.tsx` — each exports a React component and a `resource` config
 - **Tools** from `src/tools/{name}.ts` — each exports `tool` (metadata), `schema` (Zod), and a `default` handler. Tools with a `resource` field link to a resource UI.
-- **[Simulations](/api-reference/simulations/simulation)** from `tests/simulations/{name}.json` — JSON fixtures loaded by the inspector and used in E2E tests
-- **Server config** from `src/server.ts` (optional) — exports `server` for identity/icons and `auth()` for request authentication (see [Authorization](/guides/authorization))
+- **[Simulations](/testing/simulations)** from `tests/simulations/{name}.json` — JSON fixtures loaded by the inspector and used in E2E tests
+- **Server config** from `src/server.ts` (optional) — exports `server` for identity/icons and `auth()` for request authentication (see [Authorization](/app-framework/guides/authorization))
 
 ## Runtime APIs
 
@@ -35,39 +35,39 @@ sunpeak provides multi-platform React hooks that wrap the [MCP Apps protocol](/m
 
 | Hook | Description |
 |------|-------------|
-| [`useToolInput()`](/api-reference/hooks/use-tool-data) | Arguments passed to the tool by the model |
-| [`useToolResult()`](/api-reference/hooks/use-tool-data) | Structured content returned by the tool handler |
-| [`useAppState()`](/api-reference/hooks/use-app-state) | Persistent state shared with the model via [`useUpdateModelContext()`](/api-reference/hooks/use-update-model-context) |
-| [`useHostContext()`](/api-reference/hooks/use-host-context) | Full host-provided context object |
+| [`useToolInput()`](/app-framework/hooks/use-tool-data) | Arguments passed to the tool by the model |
+| [`useToolResult()`](/app-framework/hooks/use-tool-data) | Structured content returned by the tool handler |
+| [`useAppState()`](/app-framework/hooks/use-app-state) | Persistent state shared with the model via [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context) |
+| [`useHostContext()`](/app-framework/hooks/use-host-context) | Full host-provided context object |
 
 ### Environment Hooks
 
 | Hook | Description |
 |------|-------------|
-| [`useTheme()`](/api-reference/hooks/use-theme) | `'light'` or `'dark'` from the host |
-| [`useDisplayMode()`](/api-reference/hooks/use-display-mode) | `'inline'`, `'pip'`, or `'fullscreen'` |
-| [`usePlatform()`](/api-reference/hooks/use-platform) | `'mobile'`, `'desktop'`, or `'web'` |
-| [`useLocale()`](/api-reference/hooks/use-locale) | BCP 47 language tag (e.g., `'en-US'`) |
-| [`useTimeZone()`](/api-reference/hooks/use-time-zone) | IANA time zone (e.g., `'America/New_York'`) |
-| [`useViewport()`](/api-reference/hooks/use-viewport) | Container dimensions and constraints |
-| [`useSafeArea()`](/api-reference/hooks/use-safe-area) | Device safe area insets |
-| [`useDeviceCapabilities()`](/api-reference/hooks/use-device-capabilities) | Hover and touch support |
+| [`useTheme()`](/app-framework/hooks/use-theme) | `'light'` or `'dark'` from the host |
+| [`useDisplayMode()`](/app-framework/hooks/use-display-mode) | `'inline'`, `'pip'`, or `'fullscreen'` |
+| [`usePlatform()`](/app-framework/hooks/use-platform) | `'mobile'`, `'desktop'`, or `'web'` |
+| [`useLocale()`](/app-framework/hooks/use-locale) | BCP 47 language tag (e.g., `'en-US'`) |
+| [`useTimeZone()`](/app-framework/hooks/use-time-zone) | IANA time zone (e.g., `'America/New_York'`) |
+| [`useViewport()`](/app-framework/hooks/use-viewport) | Container dimensions and constraints |
+| [`useSafeArea()`](/app-framework/hooks/use-safe-area) | Device safe area insets |
+| [`useDeviceCapabilities()`](/app-framework/hooks/use-device-capabilities) | Hover and touch support |
 
 ### Action Hooks
 
 | Hook | Description |
 |------|-------------|
-| [`useCallServerTool()`](/api-reference/hooks/use-call-server-tool) | Call another tool on your MCP server |
-| [`useOpenLink()`](/api-reference/hooks/use-open-link) | Open a URL in the host browser |
-| [`useDownloadFile()`](/api-reference/hooks/use-download-file) | Trigger a file download |
-| [`useRequestDisplayMode()`](/api-reference/hooks/use-request-display-mode) | Request inline/PiP/fullscreen switch |
+| [`useCallServerTool()`](/app-framework/hooks/use-call-server-tool) | Call another tool on your MCP server |
+| [`useOpenLink()`](/app-framework/hooks/use-open-link) | Open a URL in the host browser |
+| [`useDownloadFile()`](/app-framework/hooks/use-download-file) | Trigger a file download |
+| [`useRequestDisplayMode()`](/app-framework/hooks/use-request-display-mode) | Request inline/PiP/fullscreen switch |
 | `useSetAutoScroll()` | Control host auto-scroll behavior |
 
-See the [Hooks API Reference](/api-reference/hooks/use-tool-data) for complete documentation.
+See the [Hooks API Reference](/app-framework/hooks/use-tool-data) for complete documentation.
 
 ### Host Detection
 
-Detect which host your app is running in — see [Host Detection](/api-reference/functions/host-detection):
+Detect which host your app is running in — see [Host Detection](/app-framework/functions/host-detection):
 
 ```typescript
 import { detectHost, isChatGPT, isClaude } from 'sunpeak/host';
@@ -79,7 +79,7 @@ if (isChatGPT()) {
 
 ## MCP Server
 
-The MCP server lets you serve your apps to AI hosts like ChatGPT and Claude. During development, [`sunpeak dev`](/api-reference/cli/dev) runs an MCP server that serves simulation fixture data. For production, use [`sunpeak build`](/api-reference/cli/build) followed by [`sunpeak start`](/api-reference/cli/start).
+The MCP server lets you serve your apps to AI hosts like ChatGPT and Claude. During development, [`sunpeak dev`](/app-framework/cli/dev) runs an MCP server that serves simulation fixture data. For production, use [`sunpeak build`](/app-framework/cli/build) followed by [`sunpeak start`](/app-framework/cli/start).
 
 ```bash
 sunpeak dev        # Dev server with HMR + inspector + MCP endpoint
@@ -87,7 +87,7 @@ sunpeak build      # Build resources for production
 sunpeak start      # Start the production MCP server
 ```
 
-See the [Deployment Guide](/guides/deployment) for connecting to hosts, tunnels, and production setup.
+See the [Deployment Guide](/app-framework/guides/deployment) for connecting to hosts, tunnels, and production setup.
 
 ## UI Components
 
@@ -99,32 +99,32 @@ The framework includes pre-built components in `src/resources/` and shared compo
 </div>
 ```
 
-See [UI Components](/framework/ui-components) for the full list.
+See [UI Components](/app-framework/ui-components) for the full list.
 
 ## The sunpeak CLI
 
 | Command | Description |
 |---------|-------------|
-| [`sunpeak new`](/api-reference/cli/new) | Create a new project |
-| [`sunpeak dev`](/api-reference/cli/dev) | Dev server with inspector and MCP endpoint |
-| [`sunpeak inspect`](/api-reference/cli/inspect) | [Inspect any MCP server](/mcp-apps-inspector) (standalone) |
-| [`sunpeak build`](/api-reference/cli/build) | Build resources for production |
-| [`sunpeak start`](/api-reference/cli/start) | Start the production MCP server |
-| [`sunpeak upgrade`](/api-reference/cli/upgrade) | Upgrade sunpeak to latest version |
+| [`sunpeak new`](/app-framework/cli/new) | Create a new project |
+| [`sunpeak dev`](/app-framework/cli/dev) | Dev server with inspector and MCP endpoint |
+| [`sunpeak inspect`](/testing/cli/inspect) | [Inspect any MCP server](/mcp-apps-inspector) (standalone) |
+| [`sunpeak test`](/testing/cli/test) | Run unit, E2E, visual, live, and eval tests |
+| [`sunpeak build`](/app-framework/cli/build) | Build resources for production |
+| [`sunpeak start`](/app-framework/cli/start) | Start the production MCP server |
+| [`sunpeak upgrade`](/testing/cli/upgrade) | Upgrade sunpeak to latest version |
 
-See the [CLI Reference](/cli/cli-overview) for all commands and options.
 
 ## Dive Deeper
 
 <Card horizontal title="Inspector" icon="desktop" href="/mcp-apps-inspector">
   Test MCP Apps in replicated ChatGPT and Claude runtimes.
 </Card>
-<Card horizontal title="Testing Framework" icon="flask" href="/mcp-apps-testing">
+<Card horizontal title="Testing Framework" icon="flask" href="/testing/overview">
   E2E tests against the inspector. Live tests against real hosts.
 </Card>
-<Card horizontal title="Project Scaffold" icon="folder" href="/framework/project-scaffold">
+<Card horizontal title="Project Scaffold" icon="folder" href="/app-framework/project-scaffold">
   Detailed project structure and file conventions.
 </Card>
-<Card horizontal title="Deployment Guide" icon="rocket" href="/guides/deployment">
+<Card horizontal title="Deployment Guide" icon="rocket" href="/app-framework/guides/deployment">
   Deploy to production with tunnels and hosting.
 </Card>

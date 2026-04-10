@@ -1,0 +1,99 @@
+---
+title: "sunpeak test"
+description: "Run unit tests, E2E tests, visual regression, live host tests, and multi-model evals."
+keywords: ["MCP testing", "sunpeak test", "e2e testing", "visual regression", "live testing", "evals", "unit testing"]
+---
+
+## Overview
+
+The `sunpeak test` command runs automated tests for your MCP server. It supports unit tests, E2E tests against the inspector, visual regression, live tests against real hosts, and multi-model evals.
+
+```bash
+sunpeak test
+```
+
+With no flags, `sunpeak test` runs unit tests (Vitest) and E2E tests (Playwright). Live tests and evals are never included in the default run because they require API keys and cost money.
+
+## Options
+
+| Flag | Description |
+|------|-------------|
+| `--unit` | Run unit tests only (Vitest + happy-dom) |
+| `--e2e` | Run E2E tests only (Playwright + inspector) |
+| `--visual` | Run E2E tests with visual regression comparison |
+| `--visual --update` | Update visual regression baselines |
+| `--live` | Run live tests against real hosts (ChatGPT) |
+| `--eval` | Run evals against multiple LLM models |
+
+Flags are additive: `--unit --e2e --live --eval` runs all four. `--visual` implies `--e2e`. `--update` implies `--visual`.
+
+Extra arguments are passed through to the underlying test runner (Playwright or Vitest):
+
+```bash
+sunpeak test --e2e --ui                    # Playwright UI mode
+sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
+sunpeak test --eval albums                 # Filter evals by name
+```
+
+## Subcommands
+
+### `sunpeak test init`
+
+Scaffold test infrastructure for an existing MCP server (not built with sunpeak):
+
+```bash
+sunpeak test init
+```
+
+This generates:
+- `tests/e2e/` with example Playwright specs and config
+- `tests/simulations/` with example simulation JSON fixtures
+- `tests/evals/` with eval config, `.env.example`, and example eval specs
+- `tests/live/` with live test config and example specs
+
+For sunpeak framework projects, `sunpeak new` scaffolds all of this automatically.
+
+## Examples
+
+```bash
+# Default: unit + e2e
+sunpeak test
+
+# Unit tests only
+sunpeak test --unit
+
+# E2E tests only
+sunpeak test --e2e
+
+# Visual regression (compare against baselines)
+sunpeak test --visual
+
+# Update visual baselines
+sunpeak test --visual --update
+
+# Live tests against real ChatGPT
+sunpeak test --live
+
+# Evals against multiple LLM models
+sunpeak test --eval
+
+# Run everything
+sunpeak test --unit --e2e --live --eval
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card horizontal title="E2E Testing" icon="flask" href="/testing/e2e">
+    Write Playwright tests against simulated hosts.
+  </Card>
+  <Card horizontal title="Visual Regression" icon="image" href="/testing/visual">
+    Screenshot comparison and baseline management.
+  </Card>
+  <Card horizontal title="Live Testing" icon="globe" href="/testing/live">
+    Test against real ChatGPT.
+  </Card>
+  <Card horizontal title="Evals" icon="chart-bar" href="/testing/evals">
+    Multi-model tool calling tests.
+  </Card>
+</CardGroup>

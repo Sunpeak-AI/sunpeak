@@ -595,7 +595,7 @@ If the app doesn't show up after the tool is called, follow these steps:
 5. **Hard refresh the host page** — `Cmd+Shift+R` / `Ctrl+Shift+R` clears cached MCP connections.
 6. **Open a new chat** — both hosts cache iframe content per-conversation. A new chat forces a fresh connection.
 
-Full troubleshooting guide: https://sunpeak.ai/docs/guides/troubleshooting
+Full troubleshooting guide: https://sunpeak.ai/docs/app-framework/guides/troubleshooting
 
 ## Export Paths
 

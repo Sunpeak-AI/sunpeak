@@ -1,0 +1,116 @@
+---
+title: "MCP Testing Framework"
+description: "Test any MCP server with E2E, live host, eval, and unit testing. Works standalone or as part of a sunpeak framework project."
+keywords: ["MCP testing", "MCP server testing", "ChatGPT app testing", "MCP Apps", "Playwright", "e2e testing", "live testing", "evals", "LLM testing", "visual regression"]
+---
+
+The sunpeak testing framework tests any MCP server, whether or not you use the sunpeak app framework. It provides four levels of automated testing that cover everything from fast unit checks to live host validation and multi-model eval runs.
+
+## Standalone Usage
+
+You do not need to build your MCP server with sunpeak to use the testing framework. Point it at any MCP server URL:
+
+```bash
+# Scaffold test infrastructure for an existing MCP server
+sunpeak test init
+
+# Launch the inspector against any MCP server
+sunpeak inspect --server http://localhost:8000/mcp
+```
+
+`sunpeak test init` generates the test directory structure, Playwright configs, example specs, and eval boilerplate. From there, configure `defineConfig()` with your server URL and write tests against your tools and resources.
+
+For sunpeak framework projects, the dev server starts automatically and no server URL is needed.
+
+## Testing Levels
+
+### 1. E2E Tests
+
+Playwright specs that call your MCP tools and render them in simulated ChatGPT and Claude runtimes. The `mcp` fixture from `sunpeak/test` handles inspector navigation, iframe traversal, and host switching. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states so you can test every combination of host, theme, display mode, and device without deploying or burning API credits.
+
+Visual regression is built in. Pass `--visual` to compare screenshots against baselines, or `--visual --update` to regenerate them.
+
+<Card horizontal title="E2E Testing" icon="vial" href="/testing/e2e">
+  Write Playwright tests against simulated ChatGPT and Claude runtimes.
+</Card>
+
+<Card horizontal title="Visual Regression" icon="image" href="/testing/visual">
+  Screenshot comparison across themes, display modes, and hosts.
+</Card>
+
+### 2. Live Tests
+
+Playwright specs that run against real ChatGPT (and future hosts). They open a browser, send messages that trigger tool calls against your MCP server, and verify the rendered app. This catches issues that inspector tests cannot: real MCP connection behavior, actual LLM tool invocation, host-specific iframe rendering, and production resource loading.
+
+<Card horizontal title="Live Testing" icon="globe" href="/testing/live">
+  Validate your MCP Apps inside real AI chat hosts.
+</Card>
+
+### 3. Evals
+
+Multi-model tool calling tests. Evals connect to your MCP server via the MCP protocol, discover its tools, and send prompts to multiple LLM models (GPT-4o, Claude, Gemini, etc.). Each eval case runs N times per model and reports statistical pass/fail counts, so you can measure whether your tool descriptions work reliably across models.
+
+<Card horizontal title="Evals" icon="chart-bar" href="/testing/evals">
+  Test tool calling reliability across GPT-4o, Claude, Gemini, and more.
+</Card>
+
+### 4. Unit Tests
+
+Standard Vitest with happy-dom for component and hook logic testing. No special framework integration required.
+
+## CLI Commands
+
+| Command | What it runs | Runtime |
+|---------|-------------|---------|
+| `sunpeak test` | Unit + E2E tests | Vitest + Playwright |
+| `sunpeak test --unit` | Unit tests only | Vitest + happy-dom |
+| `sunpeak test --e2e` | E2E tests only | Playwright + inspector |
+| `sunpeak test --visual` | E2E with visual regression | Playwright + inspector |
+| `sunpeak test --visual --update` | Update visual baselines | Playwright + inspector |
+| `sunpeak test --live` | Live tests against real hosts | Playwright + real host |
+| `sunpeak test --eval` | Evals against multiple models | Vitest + Vercel AI SDK |
+
+Flags are additive: `--unit --e2e --live --eval` runs all four.
+
+<Note>
+  `--eval` and `--live` are not included in the default `sunpeak test` run because they require API keys and cost money. You must opt in explicitly.
+</Note>
+
+## Scaffolding
+
+For existing MCP servers (not built with sunpeak), run `sunpeak test init` to generate all the test infrastructure:
+
+```bash
+sunpeak test init
+```
+
+This creates:
+- `tests/e2e/` with example Playwright specs and config
+- `tests/simulations/` with example simulation JSON fixtures
+- `tests/evals/` with eval config, `.env.example`, and example eval specs
+- `tests/live/` with live test config and example specs
+
+For sunpeak framework projects, `sunpeak new` scaffolds all of this automatically.
+
+## Learn More
+
+<CardGroup cols={2}>
+  <Card title="Inspector" icon="desktop" href="/testing/inspector">
+    The multi-host inspector that powers E2E tests.
+  </Card>
+  <Card title="Simulations" icon="folder" href="/testing/simulations">
+    JSON fixtures for reproducible tool states.
+  </Card>
+  <Card title="E2E Testing" icon="vial" href="/testing/e2e">
+    Playwright specs against simulated hosts.
+  </Card>
+  <Card title="Visual Regression" icon="image" href="/testing/visual">
+    Screenshot baselines and comparison.
+  </Card>
+  <Card title="Live Testing" icon="globe" href="/testing/live">
+    Tests against real ChatGPT and Claude.
+  </Card>
+  <Card title="Evals" icon="chart-bar" href="/testing/evals">
+    Multi-model tool calling reliability.
+  </Card>
+</CardGroup>

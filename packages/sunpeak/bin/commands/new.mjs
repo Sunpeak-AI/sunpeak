@@ -44,7 +44,7 @@ async function defaultSelectResources(availableResources) {
       const maxLen = Math.max(...availableResources.map((r) => r.length));
       return availableResources.map((r) => ({
         value: r,
-        label: `${r.padEnd(maxLen)}  (https://sunpeak.ai/docs/api-reference/resources/${r})`,
+        label: `${r.padEnd(maxLen)}  (https://sunpeak.ai/docs/app-framework/resources/${r})`,
       }));
     })(),
     initialValues: availableResources,

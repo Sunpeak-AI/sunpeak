@@ -1,0 +1,64 @@
+---
+title: "MCP Server"
+description: "Serve your MCP Apps to AI hosts like ChatGPT."
+keywords: ["MCP Apps", "ChatGPT Apps", "MCP server", "Model Context Protocol", "MCP app framework"]
+---
+
+<img
+  src="https://cdn.sunpeak.ai/chatgpt-counter.png"
+  alt="MCP App in ChatGPT"
+/>
+
+## Overview
+
+The [MCP (Model Context Protocol)](/mcp-apps/mcp/overview) server lets you serve your apps to AI hosts like ChatGPT and Claude. Once running, the host can discover and render your MCP Apps.
+
+During development, `sunpeak dev` runs an MCP server that serves simulation fixture data. For production, use `sunpeak build` followed by `sunpeak start` to run your real tool handlers — see the [Deployment Guide](/app-framework/guides/deployment).
+
+## What is MCP?
+
+MCP is the protocol AI hosts use to communicate with your servers. It handles [tool](/mcp-apps/mcp/tools) and [resource](/mcp-apps/mcp/resources) registration, discovery, and invocation.
+
+<Info>
+Learn more in the [MCP primer](/mcp-apps/mcp/overview) or the [Model Context Protocol documentation](https://modelcontextprotocol.io/).
+</Info>
+
+For details on how MCP Apps extends the protocol with interactive UIs, see the [MCP Apps documentation](/mcp-apps/introduction).
+
+## Quick Start
+
+<Tabs>
+  <Tab title="Development">
+    Start the development server:
+
+    ```bash
+    sunpeak dev
+    ```
+
+    This starts both the inspector and an MCP server with Hot Module Reload.
+    The MCP server runs on port `8000` and serves simulation fixture data.
+  </Tab>
+  <Tab title="Production">
+    Build and start the production server:
+
+    ```bash
+    sunpeak build && sunpeak start
+    ```
+
+    This compiles your tools, resources, and optional auth, then starts a production MCP server with real handlers.
+  </Tab>
+</Tabs>
+
+Then connect to a host using a tunnel. See [runMCPServer API Reference](/app-framework/run-mcp-server#connecting-to-chatgpt) for the full connection flow.
+
+## Dive Deeper
+
+<Card horizontal title="runMCPServer API Reference" icon="code" href="/app-framework/run-mcp-server">
+  Complete configuration options and host connection guide.
+</Card>
+<Card horizontal title="Deployment Guide" icon="rocket" href="/app-framework/guides/deployment">
+  Build, start, and deploy your app to production.
+</Card>
+<Card horizontal title="Simulation API Reference" icon="code" href="/testing/simulations">
+  Complete simulation documentation.
+</Card>

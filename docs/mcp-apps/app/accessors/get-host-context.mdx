@@ -120,7 +120,7 @@ if (insets) {
 `getHostContext()` always returns the latest context. When the host sends a context change notification, the `App` class merges the partial update into its stored context. To react to changes:
 
 - **Vanilla JS** — Register an [`onhostcontextchanged`](/mcp-apps/app/event-handlers/onhostcontextchanged) handler
-- **React** — Use the sunpeak [`useHostContext`](/api-reference/hooks/use-host-context) hook for reactive updates
+- **React** — Use the sunpeak [`useHostContext`](/app-framework/hooks/use-host-context) hook for reactive updates
 
 ```ts
 app.onhostcontextchanged = (ctx) => {
@@ -139,5 +139,5 @@ app.onhostcontextchanged = (ctx) => {
 - [Accessors overview](/mcp-apps/app/accessors) — All App accessor methods
 
 <Tip>
-The [sunpeak framework](/quickstart) provides reactive hooks for individual context fields: [`useHostContext`](/api-reference/hooks/use-host-context), [`useTheme`](/api-reference/hooks/use-theme), [`useLocale`](/api-reference/hooks/use-locale), [`useTimeZone`](/api-reference/hooks/use-time-zone), [`useDisplayMode`](/api-reference/hooks/use-display-mode), [`useViewport`](/api-reference/hooks/use-viewport), [`useDeviceCapabilities`](/api-reference/hooks/use-device-capabilities), [`useSafeArea`](/api-reference/hooks/use-safe-area), and [`usePlatform`](/api-reference/hooks/use-platform).
+The [sunpeak framework](/quickstart) provides reactive hooks for individual context fields: [`useHostContext`](/app-framework/hooks/use-host-context), [`useTheme`](/app-framework/hooks/use-theme), [`useLocale`](/app-framework/hooks/use-locale), [`useTimeZone`](/app-framework/hooks/use-time-zone), [`useDisplayMode`](/app-framework/hooks/use-display-mode), [`useViewport`](/app-framework/hooks/use-viewport), [`useDeviceCapabilities`](/app-framework/hooks/use-device-capabilities), [`useSafeArea`](/app-framework/hooks/use-safe-area), and [`usePlatform`](/app-framework/hooks/use-platform).
 </Tip>
