@@ -24,6 +24,7 @@ When you create a new project with `sunpeak new`, the sunpeak framework gives yo
     - Each tool is a `.ts` file that exports `tool` (metadata with optional resource link), `schema` (Zod), and a `default` handler. Tools without a `resource` field are registered as plain MCP tools (no UI).
     - Multiple tools can reference the same resource.
 - `src/server.ts` - Optional server entry for auth and server configuration.
+- `tests/unit/` - Directory containing unit tests for component and hook logic (Vitest + happy-dom).
 - `tests/simulations/` - Directory containing simulation files for local development and testing.
     - Simulation files are flat `*.json` files with a `tool` string field referencing a tool filename.
     - Any filename works — multiple simulations can reference the same tool.
@@ -31,6 +32,7 @@ When you create a new project with `sunpeak new`, the sunpeak framework gives yo
     Uses the Inspector to test your resources render properly across hosts (ChatGPT, Claude) and states (tool calls, saved state, dark mode, pip display mode, etc.).
 - `tests/live/` - Directory containing live tests that run against real ChatGPT.
     These tests open your browser, send messages to ChatGPT, and validate your app renders correctly in the real host environment.
+- `tests/evals/` - Directory containing multi-model eval specs and config.
 
 <Note>
 No entry point files needed! The framework automatically discovers your resources, tools, and simulations using conventions.
