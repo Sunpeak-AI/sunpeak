@@ -8,13 +8,13 @@ keywords: ["MCP app testing", "ChatGPT app testing", "MCP Apps", "ChatGPT Apps",
 
 sunpeak provides four levels of automated testing for MCP Apps:
 
-1. **E2E tests** against the [inspector](/mcp-apps-inspector) — the `mcp` fixture from `sunpeak/test` calls tools, renders them in simulated ChatGPT and Claude runtimes, and gives you a frame locator for the rendered UI. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
+1. **Unit tests** — Vitest with happy-dom for component and hook logic testing.
 
-2. **Live tests** against real hosts — `sunpeak/test/live` provides Playwright fixtures that open real ChatGPT (and future hosts), send messages, wait for app iframes, and let you assert against the rendered result. All host DOM interaction (auth, selectors, iframe access) is maintained by sunpeak — you only write resource assertions.
+2. **E2E tests** against the [inspector](/mcp-apps-inspector) — the `mcp` fixture from `sunpeak/test` calls tools, renders them in simulated ChatGPT and Claude runtimes, and gives you a frame locator for the rendered UI. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
 
-3. **Evals** against multiple LLM models — `sunpeak/eval` connects to any MCP server, discovers tools via MCP protocol, sends prompts to multiple models (GPT-4o, Claude, Gemini, etc.), and asserts that each model calls the right tools with the right arguments. Each eval runs multiple times per model to measure reliability across non-deterministic LLM responses.
+3. **Live tests** against real hosts — `sunpeak/test/live` provides Playwright fixtures that open real ChatGPT (and future hosts), send messages, wait for app iframes, and let you assert against the rendered result. All host DOM interaction (auth, selectors, iframe access) is maintained by sunpeak — you only write resource assertions.
 
-4. **Unit tests** — Vitest with happy-dom for component and hook logic testing.
+4. **Evals** against multiple LLM models — `sunpeak/eval` connects to any MCP server, discovers tools via MCP protocol, sends prompts to multiple models (GPT-4o, Claude, Gemini, etc.), and asserts that each model calls the right tools with the right arguments. Each eval runs multiple times per model to measure reliability across non-deterministic LLM responses.
 
 | Command | What it tests | Runtime |
 |---------|--------------|---------|

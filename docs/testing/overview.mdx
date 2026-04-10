@@ -24,13 +24,21 @@ For sunpeak framework projects, the dev server starts automatically and no serve
 
 ## Testing Levels
 
-### 1. E2E Tests
+### 1. Unit Tests
+
+Standard Vitest with happy-dom for component and hook logic testing. No special framework integration required.
+
+<Card horizontal title="Unit Testing" icon="vial" href="/testing/unit">
+  Fast component and hook tests with Vitest.
+</Card>
+
+### 2. E2E Tests
 
 Playwright specs that call your MCP tools and render them in simulated ChatGPT and Claude runtimes. The `mcp` fixture from `sunpeak/test` handles inspector navigation, iframe traversal, and host switching. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states so you can test every combination of host, theme, display mode, and device without deploying or burning API credits.
 
 Visual regression is built in. Pass `--visual` to compare screenshots against baselines, or `--visual --update` to regenerate them.
 
-<Card horizontal title="E2E Testing" icon="vial" href="/testing/e2e">
+<Card horizontal title="E2E Testing" icon="flask" href="/testing/e2e">
   Write Playwright tests against simulated ChatGPT and Claude runtimes.
 </Card>
 
@@ -38,7 +46,7 @@ Visual regression is built in. Pass `--visual` to compare screenshots against ba
   Screenshot comparison across themes, display modes, and hosts.
 </Card>
 
-### 2. Live Tests
+### 3. Live Tests
 
 Playwright specs that run against real ChatGPT (and future hosts). They open a browser, send messages that trigger tool calls against your MCP server, and verify the rendered app. This catches issues that inspector tests cannot: real MCP connection behavior, actual LLM tool invocation, host-specific iframe rendering, and production resource loading.
 
@@ -46,17 +54,13 @@ Playwright specs that run against real ChatGPT (and future hosts). They open a b
   Validate your MCP Apps inside real AI chat hosts.
 </Card>
 
-### 3. Evals
+### 4. Evals
 
 Multi-model tool calling tests. Evals connect to your MCP server via the MCP protocol, discover its tools, and send prompts to multiple LLM models (GPT-4o, Claude, Gemini, etc.). Each eval case runs N times per model and reports statistical pass/fail counts, so you can measure whether your tool descriptions work reliably across models.
 
 <Card horizontal title="Evals" icon="chart-bar" href="/testing/evals">
   Test tool calling reliability across GPT-4o, Claude, Gemini, and more.
 </Card>
-
-### 4. Unit Tests
-
-Standard Vitest with happy-dom for component and hook logic testing. No special framework integration required.
 
 ## CLI Commands
 
@@ -101,7 +105,10 @@ For sunpeak framework projects, `sunpeak new` scaffolds all of this automaticall
   <Card title="Simulations" icon="folder" href="/testing/simulations">
     JSON fixtures for reproducible tool states.
   </Card>
-  <Card title="E2E Testing" icon="vial" href="/testing/e2e">
+  <Card title="Unit Testing" icon="vial" href="/testing/unit">
+    Fast component and hook tests with Vitest.
+  </Card>
+  <Card title="E2E Testing" icon="flask" href="/testing/e2e">
     Playwright specs against simulated hosts.
   </Card>
   <Card title="Visual Regression" icon="image" href="/testing/visual">
