@@ -333,6 +333,22 @@ function runTestInitSmokeTest() {
       );
       allOutput.push(`--- external: idempotency ---\n${result2.output}`);
       if (!result2.ok) return { ok: false, step: 'test-init external: idempotency', output: allOutput.join('\n') };
+
+      // ── Compile scaffolded files ──
+      // This is the Testing Framework page user journey: after `sunpeak test init`,
+      // the user installs deps and runs tests. Verify the scaffolded TypeScript
+      // actually compiles against real sunpeak types.
+      const testPkgPath = join(testDir, 'package.json');
+      const testPkg = JSON.parse(readFileSync(testPkgPath, 'utf-8'));
+      testPkg.devDependencies.sunpeak = `file:${PACKAGE_ROOT}`;
+      writeFileSync(testPkgPath, JSON.stringify(testPkg, null, 2) + '\n');
+
+      const compileResult = runSteps([
+        { name: 'test-init install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
+        { name: 'test-init typecheck', command: 'pnpm exec tsc --noEmit' },
+      ], testDir);
+      allOutput.push(`--- external: compile ---\n${compileResult.output}`);
+      if (!compileResult.ok) return { ok: false, step: `test-init external: ${compileResult.step}`, output: allOutput.join('\n') };
     }
 
     // ── JS project (package.json without sunpeak) ──
@@ -490,10 +506,69 @@ function runTestInitSmokeTest() {
 }
 
 /**
- * Scaffold smoke test — validates the `sunpeak new` CLI path.
+ * Start a server process, poll for health, return it.
+ * Caller must kill the process when done.
+ */
+async function startServerProcess(command, args, cwd, env, label, maxWaitMs = 15000) {
+  const proc = spawn(command, args, {
+    cwd,
+    env: { ...process.env, ...env },
+    stdio: ['pipe', 'pipe', 'pipe'],
+  });
+
+  let stdout = '';
+  let stderr = '';
+  proc.stdout.on('data', (data) => { stdout += data.toString(); });
+  proc.stderr.on('data', (data) => { stderr += data.toString(); });
+
+  // Extract port from args for health check
+  const portIdx = args.indexOf('--port');
+  const port = portIdx >= 0 ? args[portIdx + 1] : null;
+  if (!port) throw new Error(`${label}: no --port in args`);
+
+  let ready = false;
+  const polls = Math.ceil(maxWaitMs / 500);
+  for (let i = 0; i < polls; i++) {
+    await new Promise(r => setTimeout(r, 500));
+    try {
+      const response = await fetch(`http://localhost:${port}/health`);
+      if (response.ok) { ready = true; break; }
+    } catch { /* not up yet */ }
+    if (proc.exitCode !== null) break;
+  }
+
+  if (!ready) {
+    proc.kill('SIGTERM');
+    await new Promise(r => setTimeout(r, 500));
+    if (proc.exitCode === null) proc.kill('SIGKILL');
+    const reason = proc.exitCode !== null
+      ? `exited with code ${proc.exitCode}`
+      : `failed to start within ${maxWaitMs / 1000}s`;
+    throw new Error(`${label}: ${reason}\nstdout: ${stdout}\nstderr: ${stderr}`);
+  }
+
+  return { proc, port, stdout: () => stdout, stderr: () => stderr };
+}
+
+function killServer(proc) {
+  proc.kill('SIGTERM');
+  return new Promise(resolve => {
+    setTimeout(() => {
+      if (proc.exitCode === null) proc.kill('SIGKILL');
+      resolve();
+    }, 500);
+  });
+}
+
+/**
+ * Scaffold smoke test — validates the full `sunpeak new` user journey.
+ *
+ * Mirrors the marketing CTA path:
+ *   sunpeak new → sunpeak dev (verify) → sunpeak test → sunpeak build → sunpeak start (verify)
+ *
  * Runs captured (no stdio inherit) so it can run in parallel.
  */
-function runScaffoldSmokeTest() {
+async function runScaffoldSmokeTest() {
   const tmpDir = join(REPO_ROOT, '.tmp-validate-new');
 
   if (existsSync(tmpDir)) {
@@ -513,12 +588,92 @@ function runScaffoldSmokeTest() {
     pkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
     writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
-    return runSteps([
+    // ── Install + typecheck ──
+    const setupResult = runSteps([
       { name: 'pnpm install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
+      { name: 'playwright install', command: 'pnpm exec playwright install chromium' },
       { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
-      { name: 'pnpm test:unit', command: 'pnpm test:unit' },
-      { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
     ], projectDir);
+    if (!setupResult.ok) return setupResult;
+
+    // ── sunpeak dev smoke test ──
+    // This is the first command users run after `sunpeak new`. Verify the dev
+    // server starts, discovers tools, and serves resource HTML.
+    const devPort = await getPort(19100);
+    const devSandboxPort = await getPort(24700);
+    const devHmrPort = await getPort(24701);
+    {
+      let devServer;
+      try {
+        devServer = await startServerProcess(
+          'node', [SUNPEAK_BIN, 'dev', '--port', String(devPort), '--no-begging'],
+          projectDir,
+          { CI: '1', SUNPEAK_SANDBOX_PORT: String(devSandboxPort), SUNPEAK_HMR_PORT: String(devHmrPort) },
+          'scaffold dev', 30000
+        );
+
+        // Verify tool discovery
+        const listResp = await fetch(`http://localhost:${devPort}/__sunpeak/list-tools`);
+        if (!listResp.ok) throw new Error(`scaffold dev: list-tools returned ${listResp.status}`);
+        const { tools } = await listResp.json();
+        if (!tools || tools.length === 0) throw new Error('scaffold dev: no tools discovered');
+      } catch (e) {
+        return { ok: false, step: 'sunpeak dev (scaffold)', output: e.message };
+      } finally {
+        if (devServer) await killServer(devServer.proc);
+      }
+    }
+
+    // ── sunpeak test (unit + e2e) ──
+    // Users run `sunpeak test` which exercises both unit tests and Playwright e2e.
+    const testPort = await getPort(19200);
+    const testHmrPort = await getPort(24712);
+    const testSandboxPort = await getPort(24710);
+    const testResult = runCommandCapture('pnpm test', projectDir, {
+      SUNPEAK_TEST_PORT: String(testPort),
+      SUNPEAK_HMR_PORT: String(testHmrPort),
+      SUNPEAK_SANDBOX_PORT: String(testSandboxPort),
+    });
+    if (!testResult.ok) return { ok: false, step: 'sunpeak test (scaffold)', output: testResult.output };
+
+    // ── sunpeak build ──
+    const buildResult = runCommandCapture(`node ${SUNPEAK_BIN} build`, projectDir);
+    if (!buildResult.ok) return { ok: false, step: 'sunpeak build (scaffold)', output: buildResult.output };
+
+    // ── sunpeak start smoke test ──
+    // Mirrors the `sunpeak build && sunpeak start` CTA. Verify production
+    // server health and MCP initialize handshake.
+    const startPort = await getPort(19300);
+    {
+      let startServer;
+      try {
+        startServer = await startServerProcess(
+          'node', [SUNPEAK_BIN, 'start', '--port', String(startPort)],
+          projectDir, {}, 'scaffold start'
+        );
+
+        // Verify MCP initialize
+        const mcpResp = await fetch(`http://localhost:${startPort}/mcp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream, application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'initialize',
+            params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'validate', version: '0.0.1' } },
+          }),
+        });
+        if (!mcpResp.ok) throw new Error(`scaffold start: MCP returned ${mcpResp.status}`);
+        const respText = await mcpResp.text();
+        const dataLine = respText.split('\n').find(l => l.startsWith('data: '));
+        const mcpBody = dataLine ? JSON.parse(dataLine.slice(6)) : JSON.parse(respText);
+        if (!mcpBody.result?.serverInfo) throw new Error(`scaffold start: MCP missing serverInfo`);
+      } catch (e) {
+        return { ok: false, step: 'sunpeak start (scaffold)', output: e.message };
+      } finally {
+        if (startServer) await killServer(startServer.proc);
+      }
+    }
+
+    return { ok: true, step: null, output: '' };
   } finally {
     if (existsSync(tmpDir)) {
       rmSync(tmpDir, { recursive: true });
@@ -1128,8 +1283,8 @@ try {
   console.log(`Running scaffold smoke test + test init + ${resources.length} examples in parallel...\n`);
 
   const [scaffoldResult, testInitResult, ...exampleResults] = await Promise.all([
-    // Scaffold smoke test (sunpeak new)
-    new Promise(resolve => resolve(runScaffoldSmokeTest())),
+    // Scaffold smoke test (sunpeak new → dev → test → build → start)
+    runScaffoldSmokeTest(),
     // Test init smoke test (sunpeak test init)
     new Promise(resolve => resolve(runTestInitSmokeTest())),
     // All examples in parallel
@@ -1140,7 +1295,7 @@ try {
 
   // Report scaffold result
   if (scaffoldResult.ok) {
-    printSuccess('scaffold smoke test (sunpeak new)');
+    printSuccess('scaffold smoke test (new → dev → test → build → start)');
   } else {
     console.error(`\n${colors.red}✗ scaffold smoke test failed at: ${scaffoldResult.step}${colors.reset}`);
     console.error(`${colors.dim}${scaffoldResult.output.split('\n').slice(-30).join('\n')}${colors.reset}`);
