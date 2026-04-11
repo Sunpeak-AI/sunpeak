@@ -17,7 +17,7 @@
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
-    "sunpeak": "^0.19.12",
+    "sunpeak": "^0.19.13",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },
@@ -31,7 +31,7 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
-    "happy-dom": "^18.0.1",
+    "happy-dom": "^20.8.9",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "tailwindcss": "^4.2.2",
