@@ -88,11 +88,13 @@ For existing MCP servers (not built with sunpeak), run `sunpeak test init` to ge
 sunpeak test init
 ```
 
-This creates:
-- `tests/e2e/` with example Playwright specs and config
-- `tests/simulations/` with example simulation JSON fixtures
+For JS/TS projects, this creates files at the project root:
+- `tests/e2e/` with smoke and visual regression test specs
 - `tests/evals/` with eval config, `.env.example`, and example eval specs
 - `tests/live/` with live test config and example specs
+- `tests/unit/` with unit test example
+
+For non-JS projects (Python, Go, Rust, etc.), everything goes into a self-contained `tests/sunpeak/` directory with its own `package.json`.
 
 For sunpeak framework projects, `sunpeak new` scaffolds all of this automatically.
 
