@@ -129,6 +129,7 @@
           {
             "group": "Overview",
             "pages": [
+              "testing/getting-started",
               "testing/overview"
             ]
           },

@@ -212,11 +212,23 @@ async function getServerConfig(cliServer, d) {
 
 function generateServerConfigBlock(server, relativeTo = '.') {
   if (server.type === 'later') {
-    return `  // TODO: Configure your MCP server connection
-  // server: {
-  //   command: 'python',
-  //   args: ['server.py'],
-  // },`;
+    return `  // TODO: Configure your MCP server connection before running tests.
+  // Uncomment one of the options below:
+  //
+  // HTTP server (Python FastAPI, Go, etc.):
+  // server: { url: 'http://localhost:8000/mcp' },
+  //
+  // Python (uv):
+  // server: { command: 'uv', args: ['run', 'python', 'server.py'] },
+  //
+  // Python (venv):
+  // server: { command: '.venv/bin/python', args: ['server.py'] },
+  //
+  // Go:
+  // server: { command: 'go', args: ['run', './cmd/server'] },
+  //
+  // Node.js:
+  // server: { command: 'node', args: ['server.js'] },`;
   }
   if (server.type === 'url') {
     return `  server: {
@@ -631,7 +643,12 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
   scaffoldEvals(join(testDir, 'evals'), { server, d });
 
   d.log.success('Created tests/sunpeak/ with all test types.');
+  if (server.type === 'later') {
+    d.log.warn('Server not configured. Edit tests/sunpeak/playwright.config.ts before running tests.');
+  }
   d.log.step('Next steps:');
+  d.log.message('  Requires: Node.js 20+');
+  d.log.message('');
   const pm = d.detectPackageManager();
   d.log.message('  cd tests/sunpeak');
   d.log.message(`  ${pm} install`);
@@ -707,6 +724,9 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
   // 5. Unit test
   scaffoldUnitTest(join(cwd, 'tests', 'unit', 'example.test.ts'), d);
 
+  if (server.type === 'later') {
+    d.log.warn('Server not configured. Edit playwright.config.ts before running tests.');
+  }
   const pkgMgr = d.detectPackageManager();
   d.log.step('Next steps:');
   d.log.message(`  ${pkgMgr} add -D sunpeak @playwright/test vitest`);

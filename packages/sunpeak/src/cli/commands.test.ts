@@ -929,6 +929,73 @@ describe('CLI Commands', () => {
       expect(unitUncommented.join('\n')).not.toContain('handler');
       expect(unitUncommented.join('\n')).not.toContain('expect(tool');
     });
+
+    it('should include multi-language hints in "configure later" config', async () => {
+      const { testInit } = await importTestInit();
+      const writeFileSync = vi.fn();
+
+      await testInit([], createTestInitDeps({ writeFileSync }));
+
+      const config = getWrittenContent(writeFileSync, 'sunpeak/playwright.config.ts');
+      expect(config).toBeDefined();
+      // Should contain TODO and language-specific examples
+      expect(config).toContain('TODO: Configure your MCP server');
+      expect(config).toContain('Python (uv)');
+      expect(config).toContain('Python (venv)');
+      expect(config).toContain('Go:');
+      expect(config).toContain('Node.js:');
+      expect(config).toContain('HTTP server');
+    });
+
+    it('should warn when server is "configure later" for external projects', async () => {
+      const { testInit } = await importTestInit();
+      const logWarnMock = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          log: { ...noopLog, warn: logWarnMock },
+        })
+      );
+
+      expect(logWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('Server not configured')
+      );
+    });
+
+    it('should warn when server is "configure later" for JS projects', async () => {
+      const { testInit } = await importTestInit();
+      const logWarnMock = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          existsSync: (path: string) => path.includes('package.json') || false,
+          readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
+          log: { ...noopLog, warn: logWarnMock },
+        })
+      );
+
+      expect(logWarnMock).toHaveBeenCalledWith(
+        expect.stringContaining('Server not configured')
+      );
+    });
+
+    it('should show Node.js requirement in external project next steps', async () => {
+      const { testInit } = await importTestInit();
+      const logMessageMock = vi.fn();
+
+      await testInit(
+        ['--server', 'http://localhost:8000/mcp'],
+        createTestInitDeps({
+          log: { ...noopLog, message: logMessageMock },
+        })
+      );
+
+      expect(logMessageMock).toHaveBeenCalledWith(
+        expect.stringContaining('Node.js 20+')
+      );
+    });
   });
 
   describe('version command', () => {
@@ -967,6 +1034,28 @@ describe('CLI Commands', () => {
       const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 
       expect(output).toBe(pkg.version);
+    });
+  });
+
+  describe('docs navigation', () => {
+    it('testing/getting-started should be in docs.json and the file should exist', async () => {
+      const { readFileSync, existsSync } = await import('fs');
+      const { join } = await import('path');
+
+      // Check docs.json includes the page
+      const docsJsonPath = join(process.cwd(), '../../docs/docs.json');
+      const docsJson = JSON.parse(readFileSync(docsJsonPath, 'utf-8'));
+      const testingTab = docsJson.navigation.tabs.find(
+        (t: { tab: string }) => t.tab === 'MCP Testing Framework'
+      );
+      const overviewGroup = testingTab.groups.find(
+        (g: { group: string }) => g.group === 'Overview'
+      );
+      expect(overviewGroup.pages).toContain('testing/getting-started');
+
+      // Check the file exists
+      const filePath = join(process.cwd(), '../../docs/testing/getting-started.mdx');
+      expect(existsSync(filePath)).toBe(true);
     });
   });
 
