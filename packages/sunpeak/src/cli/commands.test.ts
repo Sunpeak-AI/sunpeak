@@ -543,6 +543,7 @@ describe('CLI Commands', () => {
       mkdirSync: vi.fn(),
       execSync: vi.fn(),
       cwd: () => '/test/project',
+      isTTY: () => true,
       intro: vi.fn(),
       outro: vi.fn(),
       confirm: vi.fn().mockResolvedValue(false),
@@ -625,6 +626,37 @@ describe('CLI Commands', () => {
       expect(logInfoMock).toHaveBeenCalledWith(
         'Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server'
       );
+    });
+
+    it('should skip interactive prompts without a TTY', async () => {
+      const { testInit } = await importTestInit();
+      const confirmMock = vi.fn().mockResolvedValue(true);
+      const selectProvidersMock = vi.fn().mockResolvedValue([]);
+      const selectMock = vi.fn().mockResolvedValue('later');
+      const writeFileSync = vi.fn();
+
+      await testInit(
+        [],
+        createTestInitDeps({
+          isTTY: () => false,
+          confirm: confirmMock,
+          selectProviders: selectProvidersMock,
+          select: selectMock,
+          writeFileSync,
+        })
+      );
+
+      // Server config prompt, eval providers, and skill install should all be skipped
+      expect(selectMock).not.toHaveBeenCalled();
+      expect(selectProvidersMock).not.toHaveBeenCalled();
+      expect(confirmMock).not.toHaveBeenCalled();
+
+      // But the scaffold should still be created (with "configure later" default)
+      const configCall = writeFileSync.mock.calls.find(
+        ([path]: [string]) => path.includes('playwright.config.ts')
+      );
+      expect(configCall).toBeDefined();
+      expect(configCall[1]).toContain('// TODO: Configure your MCP server');
     });
 
     it('should detect sunpeak project type', async () => {

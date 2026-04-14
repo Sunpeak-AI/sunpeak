@@ -40,6 +40,7 @@ export const defaultDeps = {
   mkdirSync,
   execSync,
   cwd: () => process.cwd(),
+  isTTY: () => !!process.stdin.isTTY,
   intro: p.intro,
   outro: p.outro,
   confirm: p.confirm,
@@ -80,6 +81,7 @@ export async function testInit(args = [], deps = defaultDeps) {
       : undefined;
 
   const projectType = detectProjectType(d);
+  const interactive = d.isTTY();
 
   if (projectType === 'sunpeak') {
     await initSunpeakProject(d);
@@ -89,74 +91,76 @@ export async function testInit(args = [], deps = defaultDeps) {
     await initExternalProject(cliServer, d);
   }
 
-  // Offer to configure eval providers
-  const providers = await d.selectProviders();
-  if (!d.isCancel(providers) && providers.length > 0) {
-    const pm = d.detectPackageManager();
-    const pkgsToInstall = ['ai', ...providers.map((p) => p.pkg)];
-    const installCmd = `${pm} add -D ${pkgsToInstall.join(' ')}`;
-    try {
-      d.execSync(installCmd, { cwd: d.cwd(), stdio: 'inherit' });
-    } catch {
-      d.log.info(`Provider install failed. Install manually: ${installCmd}`);
-    }
+  // Offer to configure eval providers (skip without a TTY — prompts can't work)
+  if (interactive) {
+    const providers = await d.selectProviders();
+    if (!d.isCancel(providers) && providers.length > 0) {
+      const pm = d.detectPackageManager();
+      const pkgsToInstall = ['ai', ...providers.map((p) => p.pkg)];
+      const installCmd = `${pm} add -D ${pkgsToInstall.join(' ')}`;
+      try {
+        d.execSync(installCmd, { cwd: d.cwd(), stdio: 'inherit' });
+      } catch {
+        d.log.info(`Provider install failed. Install manually: ${installCmd}`);
+      }
 
-    // Uncomment selected models in eval.config.ts
-    const evalDir = d.existsSync(join(d.cwd(), 'tests', 'evals'))
-      ? join(d.cwd(), 'tests', 'evals')
-      : d.existsSync(join(d.cwd(), 'tests', 'sunpeak', 'evals'))
-        ? join(d.cwd(), 'tests', 'sunpeak', 'evals')
-        : null;
-    if (evalDir) {
-      const configPath = join(evalDir, 'eval.config.ts');
-      if (d.existsSync(configPath)) {
-        let config = d.readFileSync(configPath, 'utf-8');
+      // Uncomment selected models in eval.config.ts
+      const evalDir = d.existsSync(join(d.cwd(), 'tests', 'evals'))
+        ? join(d.cwd(), 'tests', 'evals')
+        : d.existsSync(join(d.cwd(), 'tests', 'sunpeak', 'evals'))
+          ? join(d.cwd(), 'tests', 'sunpeak', 'evals')
+          : null;
+      if (evalDir) {
+        const configPath = join(evalDir, 'eval.config.ts');
+        if (d.existsSync(configPath)) {
+          let config = d.readFileSync(configPath, 'utf-8');
+          for (const prov of providers) {
+            for (const model of prov.models) {
+              config = config.replace(
+                new RegExp(`^(\\s*)// ('${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',?.*)$`, 'm'),
+                '$1$2'
+              );
+            }
+          }
+          d.writeFileSync(configPath, config);
+        }
+
+        // Prompt for API keys and write .env
+        const envLines = [];
+        const seen = new Set();
         for (const prov of providers) {
-          for (const model of prov.models) {
-            config = config.replace(
-              new RegExp(`^(\\s*)// ('${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',?.*)$`, 'm'),
-              '$1$2'
-            );
+          if (seen.has(prov.envVar)) continue;
+          seen.add(prov.envVar);
+          const key = await d.password({
+            message: `${prov.envVar} (enter to skip)`,
+            mask: '*',
+          });
+          if (!d.isCancel(key) && key) {
+            envLines.push(`${prov.envVar}=${key}`);
           }
         }
-        d.writeFileSync(configPath, config);
-      }
-
-      // Prompt for API keys and write .env
-      const envLines = [];
-      const seen = new Set();
-      for (const prov of providers) {
-        if (seen.has(prov.envVar)) continue;
-        seen.add(prov.envVar);
-        const key = await d.password({
-          message: `${prov.envVar} (enter to skip)`,
-          mask: '*',
-        });
-        if (!d.isCancel(key) && key) {
-          envLines.push(`${prov.envVar}=${key}`);
+        if (envLines.length > 0 && evalDir) {
+          const relEnvPath = evalDir.startsWith(d.cwd()) ? evalDir.slice(d.cwd().length + 1) : evalDir;
+          d.writeFileSync(join(evalDir, '.env'), envLines.join('\n') + '\n');
+          d.log.info(`API keys saved to ${relEnvPath}/.env (gitignored)`);
         }
       }
-      if (envLines.length > 0 && evalDir) {
-        const relEnvPath = evalDir.startsWith(d.cwd()) ? evalDir.slice(d.cwd().length + 1) : evalDir;
-        d.writeFileSync(join(evalDir, '.env'), envLines.join('\n') + '\n');
-        d.log.info(`API keys saved to ${relEnvPath}/.env (gitignored)`);
-      }
     }
-  }
 
-  // Offer to install the testing skill
-  const installSkill = await d.confirm({
-    message: 'Install the test-mcp-server skill? (helps your coding agent write tests)',
-    initialValue: true,
-  });
-  if (!d.isCancel(installSkill) && installSkill) {
-    try {
-      d.execSync('pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server', {
-        cwd: d.cwd(),
-        stdio: 'inherit',
-      });
-    } catch {
-      d.log.info('Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server');
+    // Offer to install the testing skill
+    const installSkill = await d.confirm({
+      message: 'Install the test-mcp-server skill? (helps your coding agent write tests)',
+      initialValue: true,
+    });
+    if (!d.isCancel(installSkill) && installSkill) {
+      try {
+        d.execSync('pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server', {
+          cwd: d.cwd(),
+          stdio: 'inherit',
+        });
+      } catch {
+        d.log.info('Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server');
+      }
     }
   }
 
@@ -189,6 +193,11 @@ async function getServerConfig(cliServer, d) {
       return { type: 'url', value: cliServer };
     }
     return { type: 'command', value: cliServer };
+  }
+
+  // Without a TTY, interactive prompts can't work — default to "configure later".
+  if (!d.isTTY()) {
+    return { type: 'later' };
   }
 
   const serverType = await d.select({

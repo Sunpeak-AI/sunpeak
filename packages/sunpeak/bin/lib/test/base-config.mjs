@@ -44,7 +44,9 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
       ? { expect: { toHaveScreenshot: toHaveScreenshotDefaults } }
       : {}),
     use: {
-      baseURL: `http://localhost:${port}`,
+      // Use 127.0.0.1 instead of localhost to avoid IPv4/IPv6 resolution
+      // ambiguity that causes ECONNREFUSED flakes on macOS.
+      baseURL: `http://127.0.0.1:${port}`,
       trace: 'on-first-retry',
       ...use,
     },

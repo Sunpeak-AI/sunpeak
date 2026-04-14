@@ -22,7 +22,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : 2,
   reporter: 'list',
   use: {
-    baseURL: `http://localhost:${port}`,
+    baseURL: `http://127.0.0.1:${port}`,
     trace: 'on-first-retry',
   },
   projects: [
@@ -38,7 +38,7 @@ export default defineConfig({
   ],
   webServer: {
     command: `PORT=${port} SUNPEAK_SANDBOX_PORT=${sandboxPort} pnpm -C template dev`,
-    url: `http://localhost:${port}/health`,
+    url: `http://127.0.0.1:${port}/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60000,
   },

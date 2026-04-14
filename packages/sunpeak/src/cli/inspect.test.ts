@@ -71,7 +71,7 @@ describe('defineInspectConfig', () => {
     expect(config.webServer.command).toContain('sunpeak inspect');
     expect(config.webServer.command).toContain('--server http://localhost:8000/mcp');
     expect(config.webServer.url).toContain('/health');
-    expect(config.use.baseURL).toContain('http://localhost:');
+    expect(config.use.baseURL).toContain('http://127.0.0.1:');
     expect(config.use.trace).toBe('on-first-retry');
   });
 

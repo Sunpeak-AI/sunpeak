@@ -77,7 +77,13 @@ export async function createMcpConnection(serverArg) {
     const { StreamableHTTPClientTransport } = await import(
       '@modelcontextprotocol/sdk/client/streamableHttp.js'
     );
-    const transport = new StreamableHTTPClientTransport(new URL(serverArg));
+    // Follow redirects (e.g. /mcp → /mcp/) before creating the transport.
+    let finalUrl = serverArg;
+    try {
+      const resp = await fetch(serverArg, { method: 'HEAD', redirect: 'follow' });
+      if (resp.url && resp.url !== serverArg) finalUrl = resp.url;
+    } catch { /* use original URL */ }
+    const transport = new StreamableHTTPClientTransport(new URL(finalUrl));
     await client.connect(transport);
     return { client, transport };
   } else {

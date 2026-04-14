@@ -388,7 +388,7 @@ function isAuthError(err) {
  * Create an MCP client connection.
  * @param {string} serverArg - URL or command string
  * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, env?: Record<string, string>, cwd?: string }} [authConfig]
- * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport, stderrOutput?: string[] }>}
+ * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport, serverUrl?: string, stderrOutput?: string[] }>}
  */
 async function createMcpConnection(serverArg, authConfig) {
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
@@ -400,6 +400,19 @@ async function createMcpConnection(serverArg, authConfig) {
       '@modelcontextprotocol/sdk/client/streamableHttp.js'
     );
 
+    // Follow redirects (e.g. /mcp → /mcp/) before creating the transport.
+    // The MCP SDK transport doesn't follow redirects on its own.
+    let finalUrl = serverArg;
+    try {
+      const probeResponse = await fetch(serverArg, { method: 'HEAD', redirect: 'follow' });
+      if (probeResponse.url && probeResponse.url !== serverArg) {
+        finalUrl = probeResponse.url;
+      }
+    } catch {
+      // Probe failed (server down, network error) — use original URL and let
+      // the transport handle the error with its own diagnostics.
+    }
+
     const transportOpts = {};
 
     if (authConfig?.type === 'bearer' && authConfig.bearerToken) {
@@ -410,9 +423,9 @@ async function createMcpConnection(serverArg, authConfig) {
       transportOpts.authProvider = authConfig.authProvider;
     }
 
-    const transport = new StreamableHTTPClientTransport(new URL(serverArg), transportOpts);
+    const transport = new StreamableHTTPClientTransport(new URL(finalUrl), transportOpts);
     await client.connect(transport);
-    return { client, transport };
+    return { client, transport, serverUrl: finalUrl };
   } else {
     // Stdio transport — parse command string
     const parts = serverArg.split(/\s+/);
@@ -501,8 +514,21 @@ async function discoverSimulations(client) {
     const uri = tool._meta?.ui?.resourceUri ?? tool._meta?.['ui/resourceUri'];
     if (uri) {
       resource = resourceByUri.get(uri);
-      if (resource) {
-        resourceUrl = `/__sunpeak/read-resource?uri=${encodeURIComponent(uri)}`;
+      // Always create a resource URL when a tool declares a resourceUri,
+      // even if it wasn't found in listResources(). The server may use
+      // resource templates (e.g., ui://counter/{ui}) that resolve dynamically.
+      // The /__sunpeak/read-resource endpoint calls client.readResource()
+      // which handles template resolution server-side.
+      resourceUrl = `/__sunpeak/read-resource?uri=${encodeURIComponent(uri)}`;
+      // Create a synthetic resource object when not found via listResources().
+      // The inspector UI needs .resource to include the tool in the simulation list.
+      if (!resource) {
+        resource = {
+          uri,
+          name: tool.name,
+          title: tool.title || tool.name,
+          mimeType: 'text/html',
+        };
       }
     }
 
@@ -1229,13 +1255,16 @@ export async function inspectServer(opts) {
   // Connect to the MCP server (with retry for local servers that may still be starting)
   let mcpConnection;
   let lastStderrOutput = [];
+  // Track the resolved URL (after following redirects like /mcp → /mcp/).
+  let resolvedServerUrl = serverArg;
   const maxRetries = 5;
   const connectionOpts = {};
   if (serverEnv) connectionOpts.env = serverEnv;
   if (serverCwd) connectionOpts.cwd = serverCwd;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      mcpConnection = await createMcpConnection(serverArg, connectionOpts);
+      mcpConnection = await createMcpConnection(resolvedServerUrl, connectionOpts);
+      if (mcpConnection.serverUrl) resolvedServerUrl = mcpConnection.serverUrl;
       break;
     } catch (err) {
       // Capture stderr from the failed connection attempt for diagnostics.
@@ -1244,16 +1273,17 @@ export async function inspectServer(opts) {
       }
 
       // If the server requires OAuth, negotiate it and retry once.
-      if (isAuthError(err) && serverArg.startsWith('http')) {
+      if (isAuthError(err) && resolvedServerUrl.startsWith('http')) {
         console.log('Server requires authentication. Negotiating OAuth...');
         try {
-          const authProvider = await negotiateOAuth(serverArg);
+          const authProvider = await negotiateOAuth(resolvedServerUrl);
           console.log('OAuth authorized. Reconnecting...');
-          mcpConnection = await createMcpConnection(serverArg, {
+          mcpConnection = await createMcpConnection(resolvedServerUrl, {
             ...connectionOpts,
             type: 'oauth',
             authProvider,
           });
+          if (mcpConnection.serverUrl) resolvedServerUrl = mcpConnection.serverUrl;
           break;
         } catch (oauthErr) {
           console.error(`OAuth negotiation failed: ${oauthErr.message}`);
@@ -1333,7 +1363,7 @@ export async function inspectServer(opts) {
 </body>
 </html>`;
 
-  const inspectorServerUrl = serverArg;
+  const inspectorServerUrl = resolvedServerUrl;
 
   // Create the Vite server.
   // Use the sunpeak package dir as root to avoid scanning the user's project
@@ -1441,8 +1471,12 @@ export async function inspectServer(opts) {
     ],
     server: {
       port,
+      // Listen on all interfaces so both 127.0.0.1 (used by Playwright tests)
+      // and localhost (used by interactive browsing) connect successfully.
+      // Without this, Vite defaults to localhost which may resolve to IPv6-only
+      // (::1) on macOS, causing ECONNREFUSED for IPv4 clients.
+      host: '0.0.0.0',
       open: open ?? (!process.env.CI && !process.env.SUNPEAK_LIVE_TEST),
-      allowedHosts: 'all',
     },
     optimizeDeps: {
       // Only pre-bundle React — the virtual entry module imports sunpeak from

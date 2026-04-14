@@ -79,7 +79,7 @@ export function defineInspectConfig(options) {
     timeout,
     webServer: {
       command,
-      healthUrl: `http://localhost:${port}/health`,
+      healthUrl: `http://127.0.0.1:${port}/health`,
     },
   });
 }
