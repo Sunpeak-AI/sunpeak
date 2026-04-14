@@ -1,8 +1,8 @@
 /**
  * MCP-native custom matchers for Playwright's expect.
  *
- * These matchers operate on ToolResult objects returned by mcp.callTool()
- * and provide MCP-concept-native assertions.
+ * These matchers operate on tool results from mcp.callTool() or
+ * InspectorResult from inspector.renderTool().
  */
 
 /**

@@ -101,6 +101,8 @@ Install dependencies:
 sunpeak test
 ```
 
+For non-JS projects, `sunpeak test` auto-discovers `tests/sunpeak/playwright.config.ts` when no root-level config exists. You can run it from your project root without cd-ing into the test directory.
+
 The scaffolded smoke test verifies that the inspector can connect to your server and load. You should see one passing test.
 
 ## 5. Write your first real test
@@ -110,24 +112,26 @@ Open the scaffolded smoke test (`smoke.test.ts`) and add a test for one of your 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('server is reachable and inspector loads', async ({ mcp }) => {
-  await expect(mcp.page.locator('#root')).not.toBeEmpty();
+test('server is reachable and inspector loads', async ({ inspector }) => {
+  await expect(inspector.page.locator('#root')).not.toBeEmpty();
 });
 
 test('my tool returns a result', async ({ mcp }) => {
   const result = await mcp.callTool('your-tool', { key: 'value' });
-  expect(result).not.toBeError();
+  expect(result.isError).toBeFalsy();
 });
 
 // If your tool renders a UI, you can interact with it:
-test('my tool renders a UI', async ({ mcp }) => {
-  const result = await mcp.callTool('your-tool', { key: 'value' });
+test('my tool renders a UI', async ({ inspector }) => {
+  const result = await inspector.renderTool('your-tool', { key: 'value' });
   const app = result.app();
   await expect(app.getByText('Expected text')).toBeVisible();
 });
 ```
 
-The `mcp` fixture handles all the plumbing: starting the inspector, connecting to your server, navigating to the tool, and traversing the double-iframe sandbox. Each test runs automatically against both ChatGPT and Claude hosts.
+The `mcp` and `inspector` fixtures handle all the plumbing: starting the inspector, connecting to your server, navigating to the tool, and traversing the double-iframe sandbox. Each test runs automatically against both ChatGPT and Claude hosts.
+
+There are two fixtures: `mcp` for protocol-level testing (`callTool`, `listTools`, etc., returning raw MCP data) and `inspector` for UI testing (`renderTool`, which renders the result in the inspector). When you pass `input` to `renderTool`, the tool is called on your real server and the result is rendered. Without `input`, the tool uses pre-baked simulation fixture data (if available) for fast, deterministic tests. See [Simulations](/testing/simulations#simulations-vs-real-server-calls) for more on when to use each approach.
 
 <Tip>
   Run `sunpeak inspect --server <url>` to browse your tools interactively and find the right tool names and arguments to use in tests.
@@ -165,6 +169,12 @@ Start with E2E tests (free, fast, local). Add visual regression when you want to
 
         // Option 3: HTTP server (no shell needed)
         // url: 'http://localhost:8000/mcp',
+
+        // Pass environment variables to the server process
+        env: { PYTHONPATH: './src', DATABASE_URL: 'sqlite:///test.db' },
+
+        // Set the working directory
+        cwd: './my-python-server',
       },
     });
     ```
@@ -178,6 +188,7 @@ Start with E2E tests (free, fast, local). Add visual regression when you want to
     export default defineConfig({
       server: {
         command: 'go', args: ['run', './cmd/server'],
+        env: { GO_ENV: 'test' },
 
         // Or connect to a running HTTP server:
         // url: 'http://localhost:8000/mcp',

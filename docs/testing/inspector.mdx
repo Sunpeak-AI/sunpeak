@@ -12,6 +12,39 @@ import InspectorSnippet from '/snippets/inspector.mdx';
 
 The `Inspector` component provides a local development environment that replicates the MCP App runtime used by hosts like ChatGPT and Claude. It renders your resources inside iframes, matching the production hosting behavior. The inspector supports multiple host shells — switch between ChatGPT and Claude conversation chrome, theming, and reported capabilities from the sidebar or via URL parameters.
 
+## CLI Usage
+
+```bash
+sunpeak inspect --server <url-or-command>
+```
+
+### CLI Flags
+
+| Flag | Description |
+|------|-------------|
+| `--server <url>` | HTTP URL or stdio command for the MCP server |
+| `--env KEY=VALUE` | Set an environment variable for stdio server processes. Repeatable. |
+| `--cwd <path>` | Working directory for stdio server processes |
+
+Examples:
+
+```bash
+# HTTP server
+sunpeak inspect --server http://localhost:8000/mcp
+
+# Python stdio server with env vars
+sunpeak inspect --server "python server.py" --env DATABASE_URL=sqlite:///test.db --env DEBUG=1
+
+# Stdio server with a working directory
+sunpeak inspect --server "python server.py" --cwd ./my-server
+```
+
+### Authentication
+
+sunpeak auto-negotiates MCP OAuth when connecting to servers that return 401 Unauthorized. For servers with auto-approved (anonymous) OAuth, this happens without user interaction. For servers requiring interactive login, sunpeak opens the authorization URL in your browser and waits for the callback.
+
+No configuration is needed. sunpeak follows the [MCP OAuth specification](https://spec.modelcontextprotocol.io), discovering metadata from `/.well-known/oauth-protected-resource` and registering a client dynamically.
+
 ## Import
 
 ```tsx

@@ -782,7 +782,7 @@ describe('CLI Commands', () => {
 
       const visual = getWrittenContent(writeFileSync, 'e2e/visual.test.ts');
       expect(visual).toContain("from 'sunpeak/test'");
-      expect(visual).toContain('mcp.screenshot');
+      expect(visual).toContain('result.screenshot');
 
       const liveTest = getWrittenContent(writeFileSync, 'live/example.test.ts');
       expect(liveTest).toContain("from 'sunpeak/test/live'");
@@ -958,9 +958,7 @@ describe('CLI Commands', () => {
         })
       );
 
-      expect(logWarnMock).toHaveBeenCalledWith(
-        expect.stringContaining('Server not configured')
-      );
+      expect(logWarnMock).toHaveBeenCalledWith(expect.stringContaining('Server not configured'));
     });
 
     it('should warn when server is "configure later" for JS projects', async () => {
@@ -976,12 +974,10 @@ describe('CLI Commands', () => {
         })
       );
 
-      expect(logWarnMock).toHaveBeenCalledWith(
-        expect.stringContaining('Server not configured')
-      );
+      expect(logWarnMock).toHaveBeenCalledWith(expect.stringContaining('Server not configured'));
     });
 
-    it('should show Node.js requirement in external project next steps', async () => {
+    it('should show run commands in external project next steps', async () => {
       const { testInit } = await importTestInit();
       const logMessageMock = vi.fn();
 
@@ -992,9 +988,7 @@ describe('CLI Commands', () => {
         })
       );
 
-      expect(logMessageMock).toHaveBeenCalledWith(
-        expect.stringContaining('Node.js 20+')
-      );
+      expect(logMessageMock).toHaveBeenCalledWith(expect.stringContaining('sunpeak test'));
     });
   });
 

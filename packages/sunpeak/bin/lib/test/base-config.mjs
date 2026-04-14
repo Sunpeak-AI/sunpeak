@@ -15,9 +15,10 @@ import { getPortSync } from '../get-port.mjs';
  * @param {number} options.port - Inspector port
  * @param {Object} [options.use] - Additional Playwright `use` options
  * @param {string} [options.globalSetup] - Global setup file path
+ * @param {number} [options.timeout] - WebServer startup timeout in ms (default: 60000)
  * @returns {import('@playwright/test').PlaywrightTestConfig}
  */
-export function createBaseConfig({ hosts, testDir, webServer, port, use, globalSetup, visual }) {
+export function createBaseConfig({ hosts, testDir, webServer, port, use, globalSetup, visual, timeout }) {
   // Separate snapshot path from other visual options passed to expect.toHaveScreenshot
   const { snapshotPathTemplate, ...toHaveScreenshotDefaults } = visual ?? {};
 
@@ -52,7 +53,7 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
       command: webServer.command,
       url: webServer.healthUrl,
       reuseExistingServer: !process.env.CI,
-      timeout: 60_000,
+      timeout: timeout ?? 60_000,
     },
   };
 }

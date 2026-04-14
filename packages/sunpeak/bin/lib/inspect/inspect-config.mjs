@@ -15,6 +15,7 @@
  * and external servers.
  */
 import { createBaseConfig, resolvePorts } from '../test/base-config.mjs';
+import { resolveSunpeakBin } from '../resolve-bin.mjs';
 
 /**
  * Create a complete Playwright config for testing an external MCP server.
@@ -26,6 +27,9 @@ import { createBaseConfig, resolvePorts } from '../test/base-config.mjs';
  * @param {string[]} [options.hosts=['chatgpt', 'claude']] - Host shells to test
  * @param {string} [options.name] - App name in inspector chrome
  * @param {Object} [options.use] - Additional Playwright `use` options
+ * @param {number} [options.timeout] - Server startup timeout in ms (default: 60000)
+ * @param {Record<string, string>} [options.env] - Environment variables for stdio servers
+ * @param {string} [options.cwd] - Working directory for stdio servers
  * @returns {import('@playwright/test').PlaywrightTestConfig}
  */
 export function defineInspectConfig(options) {
@@ -37,6 +41,9 @@ export function defineInspectConfig(options) {
     name,
     use: userUse,
     visual,
+    timeout,
+    env,
+    cwd,
   } = options;
 
   if (!server) {
@@ -49,8 +56,15 @@ export function defineInspectConfig(options) {
   const serverArg = server.includes(' ') ? `"${server}"` : server;
   const command = [
     `SUNPEAK_SANDBOX_PORT=${sandboxPort}`,
-    'sunpeak inspect',
+    `${resolveSunpeakBin()} inspect`,
     `--server ${serverArg}`,
+    ...(env
+      ? Object.entries(env).map(([k, v]) => {
+          const pair = `${k}=${v}`;
+          return pair.includes(' ') ? `--env "${pair}"` : `--env ${pair}`;
+        })
+      : []),
+    ...(cwd ? [cwd.includes(' ') ? `--cwd "${cwd}"` : `--cwd ${cwd}`] : []),
     ...(simulationsDir ? [`--simulations ${simulationsDir}`] : []),
     `--port ${port}`,
     ...(name ? [`--name "${name}"`] : []),
@@ -62,6 +76,7 @@ export function defineInspectConfig(options) {
     port,
     use: userUse,
     visual,
+    timeout,
     webServer: {
       command,
       healthUrl: `http://localhost:${port}/health`,

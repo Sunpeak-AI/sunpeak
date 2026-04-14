@@ -1,6 +1,6 @@
 {
   "name": "sunpeak",
-  "version": "0.19.15",
+  "version": "0.20.0",
   "description": "Inspector, testing framework, and app framework for MCP Apps.",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -94,6 +94,12 @@
       "import": {
         "types": "./bin/lib/inspect/inspect-config.d.mts",
         "default": "./bin/lib/inspect/inspect-config.mjs"
+      }
+    },
+    "./inspect": {
+      "import": {
+        "types": "./bin/lib/inspect/inspect-server.d.mts",
+        "default": "./bin/lib/inspect/inspect-server.mjs"
       }
     },
     "./eval": {

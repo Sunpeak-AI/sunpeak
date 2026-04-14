@@ -153,12 +153,16 @@ export function Inspector({
 
   // Parse URL params once for tool/simulation initialization.
   const initUrlParams = React.useMemo(() => {
-    if (typeof window === 'undefined') return { tool: null, simulation: null, noMockData: false };
+    if (typeof window === 'undefined')
+      return { tool: null, simulation: null, noMockData: false, autoRun: false };
     const params = new URLSearchParams(window.location.search);
     return {
       tool: params.get('tool'),
       simulation: params.get('simulation'),
       noMockData: false,
+      // autoRun: test fixtures set this to call the tool immediately on load
+      // when no fixture data exists. Interactive users don't set this.
+      autoRun: params.get('autoRun') === 'true',
     };
   }, []);
 
@@ -518,6 +522,23 @@ export function Inspector({
       setIsRunning(false);
     }
   }, [onCallTool, onCallToolDirect, simulations, effectiveSimulationName, state]);
+
+  // Auto-run: when ?autoRun=true is set (by test fixtures) and no fixture data
+  // is active, call the tool immediately with the current toolInput. Interactive
+  // users don't set this flag, so browsing tools in the sidebar never triggers
+  // an automatic server call. Only fires once on mount.
+  const autoRunFired = React.useRef(false);
+  React.useEffect(() => {
+    if (
+      initUrlParams.autoRun &&
+      !autoRunFired.current &&
+      activeSimulationName === null &&
+      (onCallTool || onCallToolDirect)
+    ) {
+      autoRunFired.current = true;
+      handleRun();
+    }
+  }, [initUrlParams.autoRun, activeSimulationName, onCallTool, onCallToolDirect, handleRun]);
 
   // Resolve the active host shell
   const activeShell = getHostShell(state.activeHost);
@@ -1487,6 +1508,21 @@ export function Inspector({
       >
         {conversationContent}
       </SimpleSidebar>
+      {/* Expose tool result as structured data for test fixtures to read.
+          This is the authoritative source — test matchers read from here,
+          not from sidebar textarea values. Includes `source` so tests can
+          distinguish fixture data from real server responses. */}
+      <script
+        type="application/json"
+        id="__tool-result"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            state.toolResult
+              ? { ...state.toolResult, source: activeSimulationName ? 'fixture' : 'server' }
+              : null
+          ).replace(/</g, '\\u003c'),
+        }}
+      />
     </ThemeProvider>
   );
 }

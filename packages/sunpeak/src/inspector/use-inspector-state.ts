@@ -146,11 +146,14 @@ export interface InspectorState {
  * - safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight: number
  * - host: 'chatgpt' | 'claude'
  * - tool: tool name (e.g., 'show-albums') — selects tool without mock data
+ * - toolInput: JSON-encoded tool arguments (overrides simulation fixture data)
+ * - autoRun: 'true' — call the tool on load when no fixture data exists (set by test fixtures)
  * - prodResources: 'true' | 'false'
  */
 function parseUrlParams(): {
   simulation?: string;
   tool?: string;
+  toolInput?: Record<string, unknown>;
   theme?: McpUiTheme;
   displayMode?: McpUiDisplayMode;
   locale?: string;
@@ -170,6 +173,15 @@ function parseUrlParams(): {
 
   const simulation = params.get('simulation') ?? undefined;
   const tool = params.get('tool') ?? undefined;
+  const toolInputParam = params.get('toolInput');
+  let toolInput: Record<string, unknown> | undefined;
+  if (toolInputParam) {
+    try {
+      toolInput = JSON.parse(toolInputParam);
+    } catch {
+      // Invalid JSON — ignore, simulation data will be used instead
+    }
+  }
   const theme = params.get('theme') as McpUiTheme | null;
   const displayMode = params.get('displayMode') as McpUiDisplayMode | null;
   const locale = params.get('locale');
@@ -228,6 +240,7 @@ function parseUrlParams(): {
   return {
     simulation,
     tool,
+    toolInput,
     theme: theme ?? undefined,
     displayMode: displayMode ?? undefined,
     locale: locale ?? undefined,
@@ -412,7 +425,7 @@ export function useInspectorState({
   // ── Tool data state ──
 
   const [toolInput, setToolInput] = useState<Record<string, unknown>>(
-    () => selectedSim?.toolInput ?? {}
+    () => urlParams.toolInput ?? selectedSim?.toolInput ?? {}
   );
   const [toolResult, setToolResult] = useState<CallToolResult | undefined>(
     () => selectedSim?.toolResult as CallToolResult | undefined
@@ -436,9 +449,11 @@ export function useInspectorState({
   const [toolResultError, setToolResultError] = useState('');
   const [modelContextError, setModelContextError] = useState('');
 
-  // Reset tool data when simulation changes.
+  // Reset tool data when simulation changes. URL-provided toolInput takes
+  // precedence over the simulation fixture data, allowing tests to pass
+  // dynamic arguments to the server.
   useEffect(() => {
-    const newInput = selectedSim?.toolInput ?? {};
+    const newInput = urlParams.toolInput ?? selectedSim?.toolInput ?? {};
     const newResult = (selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
     setToolInput(newInput);
     setToolResult(newResult);

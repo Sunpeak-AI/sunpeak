@@ -18,6 +18,7 @@ import * as path from 'path';
 const { existsSync, readdirSync, readFileSync } = fs;
 const { join, resolve, dirname } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
+import { createServer as createHttpServer } from 'http';
 import { getPort } from '../lib/get-port.mjs';
 import { startSandboxServer } from '../lib/sandbox-server.mjs';
 import { getDevOverlayScript } from '../lib/dev-overlay.mjs';
@@ -35,6 +36,8 @@ function parseArgs(args) {
     simulations: undefined,
     port: undefined,
     name: undefined,
+    env: undefined,
+    cwd: undefined,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -47,6 +50,16 @@ function parseArgs(args) {
       opts.port = Number(args[++i]);
     } else if (arg === '--name' && i + 1 < args.length) {
       opts.name = args[++i];
+    } else if (arg === '--env' && i + 1 < args.length) {
+      // Repeatable: --env KEY=VALUE --env KEY2=VALUE2
+      const pair = args[++i];
+      const eqIdx = pair.indexOf('=');
+      if (eqIdx > 0) {
+        opts.env = opts.env || {};
+        opts.env[pair.slice(0, eqIdx)] = pair.slice(eqIdx + 1);
+      }
+    } else if (arg === '--cwd' && i + 1 < args.length) {
+      opts.cwd = args[++i];
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -68,11 +81,14 @@ Options:
   --simulations <dir>        Simulation JSON directory (opt-in, no default)
   --port, -p <number>        Dev server port (default: 3000)
   --name <string>            App name in inspector chrome
+  --env <KEY=VALUE>          Environment variable for stdio servers (repeatable)
+  --cwd <path>               Working directory for stdio servers
   --help, -h                 Show this help
 
 Examples:
   sunpeak inspect --server http://localhost:8000/mcp
   sunpeak inspect --server "python my_server.py"
+  sunpeak inspect --server "python server.py" --env API_KEY=sk-123 --cwd ./backend
   sunpeak inspect --server http://localhost:8000/mcp --simulations tests/simulations
 `);
 }
@@ -161,10 +177,218 @@ function createInMemoryOAuthProvider(redirectUrl, opts = {}) {
 }
 
 /**
+ * Negotiate OAuth with an MCP server and return an authenticated provider.
+ *
+ * Handles two cases:
+ * 1. Anonymous/auto-approved OAuth: the authorization endpoint redirects
+ *    immediately back with a code (no user interaction needed).
+ * 2. Interactive OAuth: opens the authorization URL in the user's browser
+ *    and waits for the callback.
+ *
+ * @param {string} serverUrl - The MCP server URL
+ * @returns {Promise<import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider>}
+ */
+async function negotiateOAuth(serverUrl) {
+  const { auth } = await import('@modelcontextprotocol/sdk/client/auth.js');
+
+  // Start a temporary callback server for receiving the OAuth code.
+  const callbackPort = await getPort(24681);
+  const callbackUrl = `http://localhost:${callbackPort}/oauth/callback`;
+
+  const oauthState = createInMemoryOAuthProvider(callbackUrl);
+  const { provider } = oauthState;
+
+  // First call to auth() — discovers metadata, registers client, and either
+  // returns AUTHORIZED (client_credentials) or REDIRECT (authorization_code).
+  const result = await auth(provider, { serverUrl: new URL(serverUrl) });
+
+  if (result === 'AUTHORIZED') {
+    return provider;
+  }
+
+  // result === 'REDIRECT': we need to follow the authorization URL.
+  const authUrl = oauthState.getAuthUrl();
+  if (!authUrl) {
+    throw new Error('OAuth flow returned REDIRECT but no authorization URL was captured');
+  }
+
+  // Try the anonymous/auto-approved path first: follow the authorization URL
+  // without a browser and see if it immediately redirects with a code.
+  const code = await tryAnonymousOAuth(authUrl.toString(), callbackUrl);
+  if (code) {
+    // Complete the flow with the authorization code.
+    const tokenResult = await auth(provider, {
+      serverUrl: new URL(serverUrl),
+      authorizationCode: code,
+    });
+    if (tokenResult === 'AUTHORIZED') {
+      return provider;
+    }
+    throw new Error('OAuth token exchange failed after anonymous authorization');
+  }
+
+  // Anonymous path didn't work — this server requires interactive login.
+  // Start a callback server and open the auth URL in the user's browser.
+  const interactiveCode = await waitForInteractiveOAuth(
+    authUrl.toString(),
+    callbackUrl,
+    callbackPort
+  );
+
+  const tokenResult = await auth(provider, {
+    serverUrl: new URL(serverUrl),
+    authorizationCode: interactiveCode,
+  });
+  if (tokenResult === 'AUTHORIZED') {
+    return provider;
+  }
+  throw new Error('OAuth token exchange failed after interactive authorization');
+}
+
+/**
+ * Try to complete OAuth without user interaction by following redirects.
+ * Returns the authorization code if the server auto-approves, or null if
+ * the server requires interactive login (returns an HTML page).
+ *
+ * @param {string} authUrl - The authorization URL
+ * @param {string} callbackUrl - The expected callback URL prefix
+ * @returns {Promise<string | null>}
+ */
+async function tryAnonymousOAuth(authUrl, callbackUrl) {
+  // Follow redirects manually to detect when the server redirects back
+  // to our callback URL with a code parameter.
+  let url = authUrl;
+  const maxRedirects = 10;
+  for (let i = 0; i < maxRedirects; i++) {
+    const response = await fetch(url, { redirect: 'manual' });
+    const location = response.headers.get('location');
+
+    if (!location) {
+      // No redirect — server returned a page (login form). Not auto-approved.
+      // Drain the response body to free the socket.
+      await response.text().catch(() => {});
+      return null;
+    }
+
+    // Resolve relative redirects.
+    const resolved = new URL(location, url).toString();
+
+    // Check if the redirect goes to our callback URL.
+    if (resolved.startsWith(callbackUrl)) {
+      const params = new URL(resolved).searchParams;
+      const code = params.get('code');
+      if (code) return code;
+      const error = params.get('error');
+      if (error) {
+        throw new Error(`OAuth authorization failed: ${error} — ${params.get('error_description') || ''}`);
+      }
+      return null;
+    }
+
+    url = resolved;
+  }
+
+  return null;
+}
+
+/**
+ * Wait for the user to complete an interactive OAuth flow in their browser.
+ * Starts a temporary HTTP server to receive the callback, opens the auth URL,
+ * and resolves with the authorization code.
+ *
+ * @param {string} authUrl - The authorization URL to open in the browser
+ * @param {string} callbackUrl - Our callback URL
+ * @param {number} callbackPort - Port for the callback server
+ * @returns {Promise<string>}
+ */
+async function waitForInteractiveOAuth(authUrl, callbackUrl, callbackPort) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const settle = (fn, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      server.close();
+      fn(value);
+    };
+
+    const server = createHttpServer((req, res) => {
+      const reqUrl = new URL(req.url, callbackUrl);
+      if (!reqUrl.pathname.startsWith('/oauth/callback')) {
+        res.writeHead(404);
+        res.end('Not found');
+        return;
+      }
+
+      const code = reqUrl.searchParams.get('code');
+      const error = reqUrl.searchParams.get('error');
+
+      // Serve a simple page that tells the user they can close the tab.
+      const escHtml = (s) => s.replace(/[<>&"']/g, (c) =>
+        ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c]
+      );
+      const message = code
+        ? 'Authorization complete. You can close this tab.'
+        : `Authorization failed: ${escHtml(error || 'unknown error')}`;
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(`<!DOCTYPE html><html><body><p>${message}</p></body></html>`);
+
+      if (code) {
+        settle(resolve, code);
+      } else {
+        settle(reject, new Error(`OAuth authorization failed: ${error || 'unknown error'}`));
+      }
+    });
+
+    server.on('error', (err) => {
+      settle(reject, new Error(`OAuth callback server failed: ${err.message}`));
+    });
+
+    server.listen(callbackPort, async () => {
+      console.log('Opening browser for OAuth authorization...');
+      // Use execFile with array args to avoid shell injection from the auth URL.
+      const { execFile } = await import('child_process');
+      const cmd = process.platform === 'darwin' ? 'open' :
+                  process.platform === 'win32' ? 'start' : 'xdg-open';
+      execFile(cmd, [authUrl], (err) => {
+        if (err) console.error(`Failed to open browser: ${err.message}`);
+      });
+    });
+
+    // Timeout after 2 minutes.
+    const timer = setTimeout(() => {
+      settle(reject, new Error('OAuth authorization timed out (2 minutes)'));
+    }, 120_000);
+  });
+}
+
+/**
+ * Detect if an error from createMcpConnection is an auth error (401/Unauthorized).
+ * @param {Error} err
+ * @returns {boolean}
+ */
+function isAuthError(err) {
+  // The MCP SDK throws UnauthorizedError for auth failures.
+  if (err.constructor?.name === 'UnauthorizedError') return true;
+
+  // StreamableHTTPError includes a status code in its message.
+  // Check for the specific "401" HTTP status pattern, not substring matches.
+  const msg = err.message || '';
+  if (msg.includes('invalid_token')) return true;
+
+  // Connection errors (ECONNREFUSED, ETIMEDOUT, etc.) are never auth errors.
+  if (msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT') || msg.includes('ENOTFOUND')) {
+    return false;
+  }
+
+  return false;
+}
+
+/**
  * Create an MCP client connection.
  * @param {string} serverArg - URL or command string
- * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider }} [authConfig]
- * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport }>}
+ * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, env?: Record<string, string>, cwd?: string }} [authConfig]
+ * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport, stderrOutput?: string[] }>}
  */
 async function createMcpConnection(serverArg, authConfig) {
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
@@ -197,9 +421,47 @@ async function createMcpConnection(serverArg, authConfig) {
     const { StdioClientTransport } = await import(
       '@modelcontextprotocol/sdk/client/stdio.js'
     );
-    const transport = new StdioClientTransport({ command, args: cmdArgs });
-    await client.connect(transport);
-    return { client, transport };
+
+    const transportOpts = {
+      command,
+      args: cmdArgs,
+      stderr: 'pipe',
+      ...(authConfig?.env ? { env: { ...process.env, ...authConfig.env } } : {}),
+      ...(authConfig?.cwd ? { cwd: authConfig.cwd } : {}),
+    };
+
+    const transport = new StdioClientTransport(transportOpts);
+
+    // Buffer stderr lines so we can surface them on connection failure,
+    // while still printing them in real time (preserving the SDK's default
+    // 'inherit' behavior for interactive use).
+    const stderrOutput = [];
+    const MAX_STDERR_LINES = 50;
+    if (transport.stderr) {
+      transport.stderr.on('data', (chunk) => {
+        process.stderr.write(chunk);
+        const lines = chunk.toString().split('\n');
+        for (const line of lines) {
+          if (line) {
+            stderrOutput.push(line);
+            if (stderrOutput.length > MAX_STDERR_LINES) {
+              stderrOutput.shift();
+            }
+          }
+        }
+      });
+    }
+
+    try {
+      await client.connect(transport);
+    } catch (err) {
+      // Attach captured stderr so callers can surface it for diagnostics.
+      err._stderrOutput = stderrOutput;
+      // Clean up the spawned process so it doesn't linger.
+      try { await transport.close(); } catch { /* best-effort */ }
+      throw err;
+    }
+    return { client, transport, stderrOutput };
   }
 }
 
@@ -402,6 +664,20 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
         } catch (err) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+
+      // List resources from connected server
+      server.middlewares.use('/__sunpeak/list-resources', async (_req, res) => {
+        try {
+          const client = getClient();
+          const result = await client.listResources();
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        } catch (err) {
+          // Server may not support resources — return empty list
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ resources: [] }));
         }
       });
 
@@ -911,6 +1187,8 @@ function readRequestBody(req) {
  * @param {Record<string, string>} [opts.resolveAlias] - Vite resolve aliases (e.g., to map sunpeak imports to source)
  * @param {object[]} [opts.vitePlugins] - Additional Vite plugins (e.g., Tailwind for source CSS)
  * @param {object} [opts.viteCssConfig] - Vite css config override (e.g., lightningcss customAtRules)
+ * @param {Record<string, string>} [opts.env] - Extra environment variables for stdio server processes
+ * @param {string} [opts.cwd] - Working directory for stdio server processes
  */
 export async function inspectServer(opts) {
   const {
@@ -928,6 +1206,8 @@ export async function inspectServer(opts) {
     resolveAlias,
     vitePlugins: extraVitePlugins = [],
     viteCssConfig,
+    env: serverEnv,
+    cwd: serverCwd,
   } = opts;
 
   // Load favicon from sunpeak package for the inspector UI.
@@ -948,14 +1228,47 @@ export async function inspectServer(opts) {
 
   // Connect to the MCP server (with retry for local servers that may still be starting)
   let mcpConnection;
+  let lastStderrOutput = [];
   const maxRetries = 5;
+  const connectionOpts = {};
+  if (serverEnv) connectionOpts.env = serverEnv;
+  if (serverCwd) connectionOpts.cwd = serverCwd;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      mcpConnection = await createMcpConnection(serverArg);
+      mcpConnection = await createMcpConnection(serverArg, connectionOpts);
       break;
     } catch (err) {
+      // Capture stderr from the failed connection attempt for diagnostics.
+      if (err._stderrOutput?.length) {
+        lastStderrOutput = err._stderrOutput;
+      }
+
+      // If the server requires OAuth, negotiate it and retry once.
+      if (isAuthError(err) && serverArg.startsWith('http')) {
+        console.log('Server requires authentication. Negotiating OAuth...');
+        try {
+          const authProvider = await negotiateOAuth(serverArg);
+          console.log('OAuth authorized. Reconnecting...');
+          mcpConnection = await createMcpConnection(serverArg, {
+            ...connectionOpts,
+            type: 'oauth',
+            authProvider,
+          });
+          break;
+        } catch (oauthErr) {
+          console.error(`OAuth negotiation failed: ${oauthErr.message}`);
+          process.exit(1);
+        }
+      }
+
       if (attempt === maxRetries) {
         console.error(`Failed to connect to MCP server: ${err.message}`);
+        if (lastStderrOutput.length) {
+          console.error('\nServer stderr output:');
+          for (const line of lastStderrOutput) {
+            console.error(`  ${line}`);
+          }
+        }
         process.exit(1);
       }
       console.log(`Connection attempt ${attempt}/${maxRetries} failed, retrying...`);
@@ -1195,5 +1508,7 @@ export async function inspect(args) {
     simulationsDir,
     port: opts.port,
     name: opts.name,
+    env: opts.env,
+    cwd: opts.cwd,
   });
 }

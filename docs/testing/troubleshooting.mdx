@@ -14,6 +14,27 @@ If the inspector loads but the resource iframe is blank:
 
 For standalone usage (`sunpeak inspect --server`), verify your MCP server is running and reachable at the URL you provided.
 
+## Stdio server fails to start
+
+When a stdio MCP server fails to start, sunpeak captures and displays the server's stderr output. This includes Python tracebacks, import errors, missing dependencies, and other startup failures. Check the error message for the specific cause.
+
+Common fixes:
+
+- **Python `ModuleNotFoundError`**: Install missing dependencies or set `PYTHONPATH` via the `env` option in your config or `--env` on the CLI.
+- **Wrong working directory**: Set `cwd` in your config or `--cwd` on the CLI so the server resolves relative imports correctly.
+- **Missing environment variables**: Pass them with `server.env` in `defineConfig()` or `--env KEY=VALUE` on the CLI.
+
+```typescript
+// Example: fixing a Python server that needs a specific working directory and env
+export default defineConfig({
+  server: {
+    command: 'python', args: ['server.py'],
+    cwd: './backend',
+    env: { PYTHONPATH: './src' },
+  },
+});
+```
+
 ## Tests failing with iframe errors
 
 E2E tests must use the double-iframe locator pattern because resource content renders inside a nested sandbox:
@@ -26,15 +47,38 @@ page.locator('.my-element')
 page.frameLocator('iframe').frameLocator('iframe').locator('.my-element')
 ```
 
-When using the `mcp` fixture from `sunpeak/test`, `result.app()` returns a locator already scoped to the inner iframe, so you don't need to chain `frameLocator` manually:
+When using the `inspector` fixture from `sunpeak/test`, `result.app()` returns a locator already scoped to the inner iframe, so you don't need to chain `frameLocator` manually:
 
 ```typescript
-const result = await mcp.callTool('show-albums');
+const result = await inspector.renderTool('show-albums');
 const app = result.app();
 await expect(app.locator('.my-element')).toBeVisible();
 ```
 
 See the [Inspector architecture](/testing/inspector) for details on the double-iframe sandbox.
+
+## MCP server requires authentication (OAuth)
+
+sunpeak auto-negotiates OAuth when connecting to MCP servers that require it. If your server returns a 401 response, sunpeak will:
+
+1. Discover the server's OAuth metadata
+2. Register a client dynamically
+3. Complete the authorization flow
+
+For servers with auto-approved (anonymous) OAuth, this happens automatically with no user interaction. For servers that require interactive login, sunpeak opens the authorization URL in your browser and waits for the callback.
+
+If OAuth negotiation fails, check that your server's OAuth endpoints are accessible and return standard MCP OAuth responses (`/.well-known/oauth-protected-resource` and `/.well-known/oauth-authorization-server`).
+
+## Server startup timeout
+
+If your MCP server takes a long time to start (compiling, loading large models, etc.), you may see a timeout error. Increase the startup timeout in your config:
+
+```typescript
+export default defineConfig({
+  server: { command: 'python', args: ['server.py'] },
+  timeout: 120_000, // 120 seconds (default: 60000)
+});
+```
 
 ## Flaky E2E tests
 

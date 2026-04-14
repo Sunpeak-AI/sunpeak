@@ -143,6 +143,60 @@ The `when` object does shallow key matching against the tool call arguments. The
 
 Use `structuredContent` in the result to return structured data to the calling resource. For example, the review tool returns `{ status: 'success', message: '...' }` or `{ status: 'cancelled', message: '...' }` — the review resource reads `status` to determine success/error styling and displays `message`. Use `isError: true` only for actual tool execution failures.
 
+## Simulations vs real server calls
+
+When testing an external MCP server (Python, Go, etc.), you have two testing modes:
+
+**Simulation fixtures (fast, no server needed):** Write JSON files with pre-baked `toolResult` data. The inspector renders the result without calling your server. Use this for visual regression tests and UI state testing where you want fast, deterministic results.
+
+```typescript
+// Uses fixture data from tests/simulations/search.json
+const result = await inspector.renderTool('search');
+const app = result.app();
+await expect(app.getByText('Results')).toBeVisible();
+```
+
+**Real server calls (integration testing):** Pass `input` to `inspector.renderTool`. The inspector calls your MCP server with those arguments and renders the response. Use this to verify that your server returns correct data and the UI handles it properly. You can also use `mcp.callTool` for protocol-level assertions without rendering.
+
+```typescript
+// Calls the real server with { query: 'headphones' } and renders
+const result = await inspector.renderTool('search', { query: 'headphones' });
+expect(result).not.toBeError();
+const app = result.app();
+await expect(app.getByText('headphones')).toBeVisible();
+
+// Or test at the protocol level without rendering
+const raw = await mcp.callTool('search', { query: 'headphones' });
+expect(raw.isError).toBeFalsy();
+```
+
+Both modes work for external servers. Without any simulation fixtures, `inspector.renderTool` falls back to real server calls by default.
+
+### Simulation fixtures for external servers
+
+External servers don't have `src/tools/` directories. Instead, tools are auto-discovered via `listTools()` when the inspector connects. You can still write simulation fixtures to test specific UI states without calling the server. Create a `tests/simulations/` directory and pass it to your config:
+
+```typescript
+export default defineConfig({
+  server: { command: 'python', args: ['server.py'] },
+  simulationsDir: 'tests/simulations',
+});
+```
+
+The JSON format is the same as for sunpeak projects. The `tool` field references the tool name as reported by `listTools()`:
+
+```json
+{
+  "tool": "search",
+  "toolInput": { "query": "headphones" },
+  "toolResult": {
+    "structuredContent": {
+      "results": [{ "name": "Sony WH-1000XM5", "price": 348 }]
+    }
+  }
+}
+```
+
 ## Properties
 
 <ResponseField name="name" type="string" required>

@@ -10,7 +10,7 @@ sunpeak provides four levels of automated testing for MCP Apps:
 
 1. **Unit tests** — Vitest with happy-dom for component and hook logic testing.
 
-2. **E2E tests** against the [inspector](/mcp-apps-inspector) — the `mcp` fixture from `sunpeak/test` calls tools, renders them in simulated ChatGPT and Claude runtimes, and gives you a frame locator for the rendered UI. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
+2. **E2E tests** against the [inspector](/mcp-apps-inspector) — the `mcp` and `inspector` fixtures from `sunpeak/test` call tools and render them in simulated ChatGPT and Claude runtimes. The `mcp` fixture provides protocol-level methods (`callTool`, `listTools`), and the `inspector` fixture renders tools and gives you a frame locator for the UI. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states. Test every combination of host, theme, display mode, and device type without deploying or burning API credits.
 
 3. **Live tests** against real hosts — `sunpeak/test/live` provides Playwright fixtures that open real ChatGPT (and future hosts), send messages, wait for app iframes, and let you assert against the rendered result. All host DOM interaction (auth, selectors, iframe access) is maintained by sunpeak — you only write resource assertions.
 
@@ -47,19 +47,19 @@ sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
 
 ### Writing E2E Tests
 
-Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture handles inspector navigation, double-iframe traversal, and host selection:
+Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture provides protocol-level methods, and the `inspector` fixture handles rendering, double-iframe traversal, and host selection:
 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('should render album cards in light mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('should render album cards in light mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 
-test('should render in fullscreen mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+test('should render in fullscreen mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { displayMode: 'fullscreen' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
@@ -77,7 +77,7 @@ test('should render in fullscreen mode', async ({ mcp }) => {
   alt="Inspector set to inline light mode via URL params"
 />
 
-The `mcp.callTool()` method accepts options for `theme`, `displayMode`, and `prodResources`. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
+The `inspector.renderTool()` method accepts options for `theme`, `displayMode`, and `timeout`. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
 
 The config is a one-liner:
 
@@ -120,8 +120,8 @@ If your resource calls backend tools via [`useCallServerTool`](/app-framework/ho
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('should show success when server confirms', async ({ mcp }) => {
-  const result = await mcp.callTool('review-purchase');
+test('should show success when server confirms', async ({ inspector }) => {
+  const result = await inspector.renderTool('review-purchase');
   const app = result.app();
 
   await app.locator('button:has-text("Place Order")').evaluate((el) => (el as HTMLElement).click());
@@ -138,20 +138,20 @@ A typical e2e test file tests a resource across different modes. Each test runs 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('should render album cards', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('should render album cards', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 
-test('should render with dark theme', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'dark' });
+test('should render with dark theme', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 
-test('should render in fullscreen', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+test('should render in fullscreen', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { displayMode: 'fullscreen' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
@@ -161,32 +161,32 @@ test('should render in fullscreen', async ({ mcp }) => {
 
 Visual regression tests capture screenshots and compare them against saved baselines. This catches unintended visual changes across themes, display modes, and hosts.
 
-Screenshot comparisons only run when you pass `--visual`. Without it, `mcp.screenshot()` calls are silently skipped, so you can include them in your regular e2e tests without affecting normal runs.
+Screenshot comparisons only run when you pass `--visual`. Without it, `result.screenshot()` calls are silently skipped, so you can include them in your regular e2e tests without affecting normal runs.
 
 ```bash
 sunpeak test --visual                  # Compare against baselines
 sunpeak test --visual --update         # Update baselines
 ```
 
-Use `mcp.screenshot()` in any e2e test:
+Use `result.screenshot()` in any e2e test:
 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('albums renders correctly', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('albums renders correctly', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-  await mcp.screenshot('albums-light');
+  await result.screenshot('albums-light');
 });
 ```
 
 By default, `screenshot()` captures the app inside the double-iframe. Use `target: 'page'` for the full inspector, or pass a specific `element` locator:
 
 ```typescript
-await mcp.screenshot('full-page', { target: 'page' });
-await mcp.screenshot('card', { element: app.locator('.card') });
+await result.screenshot('full-page', { target: 'page' });
+await result.screenshot('card', { element: app.locator('.card') });
 ```
 
 Configure project-wide visual defaults in your Playwright config:

@@ -1,7 +1,7 @@
 import { test, expect } from 'sunpeak/test';
 
-test('should render carousel cards with correct styles', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel');
+test('should render carousel cards with correct styles', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel');
   const app = result.app();
 
   const card = app.locator('.rounded-2xl').first();
@@ -15,8 +15,8 @@ test('should render carousel cards with correct styles', async ({ mcp }) => {
   expect(styles.cursor).toBe('pointer');
 });
 
-test('should have card with border styling', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel');
+test('should have card with border styling', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel');
   const app = result.app();
 
   const card = app.locator('.rounded-2xl.border').first();
@@ -30,8 +30,8 @@ test('should have card with border styling', async ({ mcp }) => {
   expect(styles.borderStyle).toBe('solid');
 });
 
-test('should have interactive buttons', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel');
+test('should have interactive buttons', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel');
   const app = result.app();
 
   const visitButton = app.locator('button:has-text("Visit")').first();
@@ -43,51 +43,23 @@ test('should have interactive buttons', async ({ mcp }) => {
   expect(styles.cursor).toBe('pointer');
 });
 
-test('should show empty state with Run button in prod tools mode', async ({ mcp }) => {
-  await mcp.openTool('show-carousel', { theme: 'dark' });
-
-  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
-  await expect(mcp.page.locator('button:has-text("Run")')).toBeVisible();
-  await expect(mcp.page.locator('iframe')).not.toBeAttached();
-});
-
-test('should have themed empty state colors in light mode', async ({ mcp }) => {
-  await mcp.openTool('show-carousel', { theme: 'light' });
-
-  const emptyState = mcp.page.locator('text=Press Run to call the tool');
-  await expect(emptyState).toBeVisible();
-
-  const color = await emptyState.evaluate((el) => window.getComputedStyle(el).color);
-  const [r, g, b] = color.match(/\d+/g)!.map(Number);
-  expect(r + g + b).toBeLessThan(600);
-});
-
-test('should have themed empty state colors in dark mode', async ({ mcp }) => {
-  await mcp.openTool('show-carousel', { theme: 'dark' });
-
-  const emptyState = mcp.page.locator('text=Press Run to call the tool');
-  await expect(emptyState).toBeVisible();
-
-  const color = await emptyState.evaluate((el) => window.getComputedStyle(el).color);
-  const [r, g, b] = color.match(/\d+/g)!.map(Number);
-  expect(r + g + b).toBeGreaterThan(200);
-});
-
-test('should activate prod resources mode without errors', async ({ mcp }) => {
-  await mcp.callTool('show-carousel', {}, { theme: 'dark', prodResources: true });
-  const root = mcp.page.locator('#root');
+test('should activate prod resources mode without errors', async ({ inspector }) => {
+  await inspector.renderTool('show-carousel', undefined, { theme: 'dark', prodResources: true });
+  const root = inspector.page.locator('#root');
   await expect(root).not.toBeEmpty();
 });
 
-test('should render correctly in fullscreen', async ({ mcp }) => {
-  await mcp.callTool('show-carousel', {}, { displayMode: 'fullscreen' });
-  await mcp.page.waitForLoadState('networkidle');
-  const root = mcp.page.locator('#root');
+test('should render correctly in fullscreen', async ({ inspector }) => {
+  await inspector.renderTool('show-carousel', undefined, { displayMode: 'fullscreen' });
+  await inspector.page.waitForLoadState('networkidle');
+  const root = inspector.page.locator('#root');
   await expect(root).not.toBeEmpty();
 });
 
-test('should show detail view with place info in fullscreen', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel', {}, { displayMode: 'fullscreen' });
+test('should show detail view with place info in fullscreen', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   const card = app.locator('.rounded-2xl').first();
@@ -99,8 +71,10 @@ test('should show detail view with place info in fullscreen', async ({ mcp }) =>
   await expect(app.locator('text=Tips')).toBeVisible();
 });
 
-test('should show detail view when Learn More is clicked', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel', {}, { displayMode: 'fullscreen' });
+test('should show detail view when Learn More is clicked', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   const learnMore = app.locator('button:has-text("Learn More")').first();
@@ -111,8 +85,10 @@ test('should show detail view when Learn More is clicked', async ({ mcp }) => {
   await expect(app.locator('text=Address')).toBeVisible();
 });
 
-test('should not have a back button in detail view', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel', {}, { displayMode: 'fullscreen' });
+test('should not have a back button in detail view', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   const card = app.locator('.rounded-2xl').first();
@@ -124,8 +100,10 @@ test('should not have a back button in detail view', async ({ mcp }) => {
   await expect(backButton).not.toBeAttached();
 });
 
-test('should center the hero image without stretching', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel', {}, { displayMode: 'fullscreen' });
+test('should center the hero image without stretching', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   const card = app.locator('.rounded-2xl').first();
@@ -140,8 +118,8 @@ test('should center the hero image without stretching', async ({ mcp }) => {
   expect(styles.justifyContent).toBe('center');
 });
 
-test('should render carousel in dark mode with correct styles', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel', {}, { theme: 'dark' });
+test('should render carousel in dark mode with correct styles', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel', undefined, { theme: 'dark' });
   const app = result.app();
 
   const card = app.locator('.rounded-2xl').first();
@@ -155,8 +133,8 @@ test('should render carousel in dark mode with correct styles', async ({ mcp }) 
   expect(styles.cursor).toBe('pointer');
 });
 
-test('should have appropriate dark mode styling', async ({ mcp }) => {
-  const result = await mcp.callTool('show-carousel', {}, { theme: 'dark' });
+test('should have appropriate dark mode styling', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-carousel', undefined, { theme: 'dark' });
   const app = result.app();
 
   const card = app.locator('.rounded-2xl.border').first();
@@ -170,13 +148,13 @@ test('should have appropriate dark mode styling', async ({ mcp }) => {
   expect(styles.borderStyle).toBe('solid');
 });
 
-test('should load without console errors in dark mode', async ({ mcp }) => {
+test('should load without console errors in dark mode', async ({ inspector }) => {
   const errors: string[] = [];
-  mcp.page.on('console', (msg) => {
+  inspector.page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  const result = await mcp.callTool('show-carousel', {}, { theme: 'dark' });
+  const result = await inspector.renderTool('show-carousel', undefined, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('.rounded-2xl').first()).toBeVisible();
 

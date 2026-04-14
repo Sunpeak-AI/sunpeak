@@ -48,32 +48,32 @@ sunpeak test --eval          # Run evals against multiple LLM models (requires A
 
 Flags are additive: `--unit --e2e --live --eval` runs all four. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
 
-## E2E Tests with the `mcp` Fixture
+## E2E Tests with the `mcp` and `inspector` Fixtures
 
-Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture handles inspector navigation, double-iframe traversal, URL construction, and host selection. Tests run automatically across ChatGPT and Claude hosts via Playwright projects.
+Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture provides protocol-level methods, and the `inspector` fixture handles rendering, double-iframe traversal, URL construction, and host selection. Tests run automatically across ChatGPT and Claude hosts via Playwright projects.
 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('renders weather card', async ({ mcp }) => {
-  const result = await mcp.callTool('show-weather');
+test('renders weather card', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-weather');
   const app = result.app();
   await expect(app.locator('h1')).toHaveText('Austin');
 });
 
-test('renders in dark mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-weather', {}, { theme: 'dark' });
+test('renders in dark mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-weather', {}, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('h1')).toBeVisible();
 });
 
-test('loads without console errors', async ({ mcp }) => {
+test('loads without console errors', async ({ inspector }) => {
   const errors: string[] = [];
-  mcp.page.on('console', (msg) => {
+  inspector.page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  const result = await mcp.callTool('show-weather', {}, { theme: 'dark' });
+  const result = await inspector.renderTool('show-weather', {}, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('h1')).toBeVisible();
 
@@ -87,33 +87,38 @@ test('loads without console errors', async ({ mcp }) => {
   expect(unexpectedErrors).toHaveLength(0);
 });
 
-test('prod tools empty state', async ({ mcp }) => {
-  await mcp.openTool('show-weather');
-  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
-});
-
-test('pip mode (skip on Claude)', async ({ mcp }) => {
-  test.skip(mcp.host === 'claude', 'Claude does not support PiP');
-  const result = await mcp.callTool('show-weather');
-  await mcp.setDisplayMode('pip');
+test('pip mode (skip on Claude)', async ({ inspector }) => {
+  test.skip(inspector.host === 'claude', 'Claude does not support PiP');
+  const result = await inspector.renderTool('show-weather', {}, { displayMode: 'pip' });
   await expect(result.app().locator('h1')).toBeVisible({ timeout: 5000 });
 });
 ```
 
 ### `mcp` Fixture API
 
+Protocol-level methods (raw MCP data, no rendering):
+
 | Method | Description |
 |--------|-------------|
-| `callTool(name, input?, options?)` | Navigate to simulation, wait for render, return `ToolResult` |
-| `openTool(name, options?)` | Navigate to tool with no mock data ("Press Run" state) |
-| `runTool()` | Click Run button, wait for resource, return `ToolResult` |
-| `setTheme(theme)` | Switch to `'light'` or `'dark'` via sidebar |
-| `setDisplayMode(mode)` | Switch to `'inline'`, `'pip'`, or `'fullscreen'` via sidebar |
-| `screenshot(name?, options?)` | Take a screenshot and compare against a baseline (only runs with `--visual`) |
+| `listTools()` | List all tools from the server. Returns `Tool[]`. |
+| `callTool(name, input?)` | Call a tool, return the raw MCP result. No rendering. |
+| `listResources()` | List all resources from the server. Returns `Resource[]`. |
+| `readResource(uri)` | Read a resource by URI. Returns the content string. |
+
+### `inspector` Fixture API
+
+Rendering methods and properties:
+
+| Method | Description |
+|--------|-------------|
+| `renderTool(name, input?, options?)` | Render a tool result in the inspector, return `InspectorResult` |
+
+| Property | Description |
+|----------|-------------|
 | `page` | Raw Playwright `Page` for chrome-level assertions |
 | `host` | Current host ID (`'chatgpt'` or `'claude'`) from Playwright project |
 
-### `ToolResult` API
+### `InspectorResult` API
 
 | Property/Method | Description |
 |--------|-------------|
@@ -121,6 +126,8 @@ test('pip mode (skip on Claude)', async ({ mcp }) => {
 | `content` | Raw MCP content items |
 | `structuredContent` | Structured content from tool response |
 | `isError` | Whether the tool returned an error |
+| `source` | Where the data came from: `'fixture'` or `'server'` |
+| `screenshot(name?, options?)` | Take a screenshot and compare against a baseline (only runs with `--visual`) |
 
 ### MCP-Native Matchers
 
@@ -131,27 +138,51 @@ test('pip mode (skip on Claude)', async ({ mcp }) => {
 | `expect(result).toHaveStructuredContent(shape)` | Assert structuredContent matches shape |
 | `expect(result).toHaveContentType(type)` | Assert content includes item of given type |
 
-### `callTool` Options
+### `renderTool`
+
+`inspector.renderTool` renders the tool result in the inspector and returns an `InspectorResult`. With `input`, the tool is called on the real server with those arguments. Without `input`, simulation fixture data is used when available, or the real server is called with empty args.
+
+```typescript
+// Calls the real server with arguments and renders
+const result = await inspector.renderTool('search', { query: 'headphones' });
+
+// Uses simulation fixture data, or calls server with empty args
+const result = await inspector.renderTool('show-albums');
+```
 
 | Option | Type | Description |
 |--------|------|-------------|
 | `theme` | `'light' \| 'dark'` | Color theme (default: inspector default) |
 | `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | Display mode |
+| `timeout` | `number` | Iframe render timeout in ms (default: 15s, or `mcpTimeout` from config) |
 | `prodResources` | `boolean` | Use production-built resource bundles |
+
+### Configuring Timeouts
+
+Set default timeouts in Playwright config for servers that need more time:
+```typescript
+export default defineConfig({
+  server: { command: 'python', args: ['server.py'] },
+  timeout: 120_000,  // Server startup timeout (default: 60s)
+  use: {
+    mcpTimeout: 30_000,    // renderTool iframe timeout (default: 15s)
+  },
+});
+```
 
 ### Visual Regression Testing
 
-Use `mcp.screenshot()` to capture and compare screenshots against saved baselines. Comparisons only run with `sunpeak test --visual`. Without it, `screenshot()` silently skips, so you can include it in regular e2e tests.
+Use `result.screenshot()` to capture and compare screenshots against saved baselines. Comparisons only run with `sunpeak test --visual`. Without it, `screenshot()` silently skips, so you can include it in regular e2e tests.
 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('albums renders correctly', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('albums renders correctly', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-  await mcp.screenshot('albums-light');
+  await result.screenshot('albums-light');
 });
 ```
 
@@ -197,24 +228,27 @@ export default defineConfig({
   },
 });
 
-// Or with a command:
+// Or with a command (stdio server):
 export default defineConfig({
   server: {
     command: 'python',
     args: ['server.py'],
+    env: { API_KEY: 'test-key' },  // Extra environment variables
+    cwd: './backend',               // Working directory
   },
+  timeout: 120_000,  // Server startup timeout in ms (default: 60s)
 });
 ```
 
 ### Locator Rules
 
 Resource content renders inside a double-iframe (outer sandbox proxy + inner app iframe). In e2e tests:
-- Use `result.app().locator(...)` (from `mcp.callTool()`) for resource content. This handles the double-iframe sandbox architecture.
-- Use `mcp.page.locator(...)` only for inspector chrome elements (header, `#root`, sidebar controls).
+- Use `result.app().locator(...)` (from `inspector.renderTool()`) for resource content. This handles the double-iframe sandbox architecture.
+- Use `inspector.page.locator(...)` only for inspector chrome elements (header, `#root`, sidebar controls).
 
 ## Simulations
 
-E2e tests consume simulation fixtures defined in `tests/simulations/*.json`. For sunpeak projects, simulations are part of the app project structure (see the `create-sunpeak-app` skill for the simulation file format). For non-sunpeak servers, `callTool` connects to the live server via the configured `server` option.
+E2e tests consume simulation fixtures defined in `tests/simulations/*.json`. For sunpeak projects, simulations are part of the app project structure (see the `create-sunpeak-app` skill for the simulation file format). For non-sunpeak servers, `renderTool` connects to the live server via the configured `server` option.
 
 ## Live Testing (against real ChatGPT)
 
@@ -355,7 +389,7 @@ Not included in the default `sunpeak test` run (costs money, like `--live`).
 
 ## Common Mistakes
 
-1. **Wrong Playwright locator** -- Use `result.app().locator(...)` (from `mcp.callTool()`) for resource content. This handles the double-iframe sandbox architecture. Use `mcp.page.locator(...)` only for inspector chrome elements.
+1. **Wrong Playwright locator** -- Use `result.app().locator(...)` (from `inspector.renderTool()`) for resource content. This handles the double-iframe sandbox architecture. Use `inspector.page.locator(...)` only for inspector chrome elements.
 2. **Simulation tool mismatch** -- The `"tool"` field in simulation JSON must match a tool filename in `src/tools/` (e.g. `"tool": "show-weather"` matches `src/tools/show-weather.ts`).
 3. **Missing console error filter** -- When testing for console errors, always filter out expected MCP handshake errors (`[IframeResource]`, `mcp`, `PostMessage`, `connect`).
 
@@ -363,7 +397,7 @@ Not included in the default `sunpeak test` run (costs money, like `--live`).
 
 | Import | Contents |
 |--------|----------|
-| `sunpeak/test` | MCP-first Playwright fixtures (`test` with `mcp` fixture, `expect` with MCP-native matchers) |
+| `sunpeak/test` | MCP-first Playwright fixtures (`test` with `mcp` fixture for protocol methods and `inspector` fixture for rendering, `expect` with MCP-native matchers) |
 | `sunpeak/test/config` | Playwright config factory (`defineConfig` for e2e tests) |
 | `sunpeak/test/live` | Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`) |
 | `sunpeak/test/live/config` | Live test config factory (`defineLiveConfig` with `hosts` array) |
@@ -371,6 +405,37 @@ Not included in the default `sunpeak test` run (costs money, like `--live`).
 | `sunpeak/test/live/chatgpt/config` | ChatGPT-specific Playwright config factory |
 | `sunpeak/test/inspect/config` | Inspect config factory for external MCP servers (`defineInspectConfig`) |
 | `sunpeak/eval` | Eval framework (`defineEval`, `defineEvalConfig`) for multi-model tool calling evals |
+
+## Migrating from older versions
+
+When upgrading sunpeak, check for deprecated API patterns in test files and update them. This section lists breaking changes by version.
+
+### 0.20.0: Fixture split (`mcp` + `inspector`)
+
+The single `mcp` fixture was split into two: `mcp` (MCP protocol) and `inspector` (rendering).
+
+| Old | New |
+|-----|-----|
+| `{ mcp }` (for rendering tests) | `{ inspector }` |
+| `mcp.callTool('name', {}, { theme })` | `inspector.renderTool('name', undefined, { theme })` |
+| `mcp.callTool('name')` with `result.app()` | `inspector.renderTool('name')` |
+| `mcp.screenshot('name')` | `result.screenshot('name')` (on the result object) |
+| `mcp.host` | `inspector.host` |
+| `mcp.page` | `inspector.page` |
+| `mcp.openTool(...)` | Removed. Use `inspector.renderTool` instead. |
+| `mcp.runTool(...)` | Removed. Use `inspector.renderTool` with input. |
+| `mcp.setTheme(...)` | Removed. Pass `{ theme }` to `inspector.renderTool`. |
+| `mcp.setDisplayMode(...)` | Removed. Pass `{ displayMode }` to `inspector.renderTool`. |
+| `ToolResult` type | `InspectorResult` type |
+
+How to identify tests that need migration:
+- `{ mcp }` destructuring where the test uses `result.app()`, `.screenshot()`, `theme`, `displayMode`, or `prodResources` → change to `{ inspector }` and use `inspector.renderTool`
+- `{ mcp }` destructuring where the test only uses `callTool` without `.app()` or rendering options → keep as `{ mcp }`, this is the protocol-level API (no change needed)
+- Tests using `mcp.callTool('name', {}, { theme: 'dark' })` → the empty `{}` second arg was ignored before; now change to `inspector.renderTool('name', undefined, { theme: 'dark' })`
+
+New protocol methods added to `mcp`: `listTools()`, `listResources()`, `readResource(uri)`.
+
+New `InspectorResult` fields: `source` (`'fixture'` | `'server'`), `screenshot()` method.
 
 ## References
 

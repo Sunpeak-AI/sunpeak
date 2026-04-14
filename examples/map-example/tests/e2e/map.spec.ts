@@ -1,7 +1,7 @@
 import { test, expect } from 'sunpeak/test';
 
-test('should render map container with correct styles', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map');
+test('should render map container with correct styles', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map');
   const app = result.app();
 
   const mapContainer = app.locator('.antialiased.w-full.overflow-hidden').first();
@@ -13,8 +13,8 @@ test('should render map container with correct styles', async ({ mcp }) => {
   expect(styles.overflow).toBe('hidden');
 });
 
-test('should have rounded border in inline mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map', {}, { displayMode: 'inline' });
+test('should have rounded border in inline mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map', undefined, { displayMode: 'inline' });
   const app = result.app();
 
   const innerContainer = app.locator('.border.rounded-2xl').first();
@@ -26,8 +26,8 @@ test('should have rounded border in inline mode', async ({ mcp }) => {
   expect(parseInt(styles.borderRadius)).toBeGreaterThanOrEqual(16);
 });
 
-test('should have fullscreen expand button in inline mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map', {}, { displayMode: 'inline' });
+test('should have fullscreen expand button in inline mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map', undefined, { displayMode: 'inline' });
   const app = result.app();
 
   const expandButton = app.locator('button[aria-label="Enter fullscreen"]');
@@ -41,13 +41,13 @@ test('should have fullscreen expand button in inline mode', async ({ mcp }) => {
   expect(styles.position).toBe('absolute');
 });
 
-test('should load without console errors in light mode', async ({ mcp }) => {
+test('should load without console errors in light mode', async ({ inspector }) => {
   const errors: string[] = [];
-  mcp.page.on('console', (msg) => {
+  inspector.page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  const result = await mcp.callTool('show-map');
+  const result = await inspector.renderTool('show-map');
   const app = result.app();
   await expect(app.locator('.antialiased.w-full.overflow-hidden').first()).toBeVisible({
     timeout: 10000,
@@ -63,52 +63,25 @@ test('should load without console errors in light mode', async ({ mcp }) => {
   expect(unexpectedErrors).toHaveLength(0);
 });
 
-test('should show empty state with Run button in prod tools mode', async ({ mcp }) => {
-  await mcp.openTool('show-map', { theme: 'dark' });
-
-  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
-  await expect(mcp.page.locator('button:has-text("Run")')).toBeVisible();
-  await expect(mcp.page.locator('iframe')).not.toBeAttached();
-});
-
-test('should have themed empty state colors in light mode', async ({ mcp }) => {
-  await mcp.openTool('show-map', { theme: 'light' });
-
-  const emptyState = mcp.page.locator('text=Press Run to call the tool');
-  await expect(emptyState).toBeVisible();
-
-  const color = await emptyState.evaluate((el) => window.getComputedStyle(el).color);
-  const [r, g, b] = color.match(/\d+/g)!.map(Number);
-  expect(r + g + b).toBeLessThan(600);
-});
-
-test('should have themed empty state colors in dark mode', async ({ mcp }) => {
-  await mcp.openTool('show-map', { theme: 'dark' });
-
-  const emptyState = mcp.page.locator('text=Press Run to call the tool');
-  await expect(emptyState).toBeVisible();
-
-  const color = await emptyState.evaluate((el) => window.getComputedStyle(el).color);
-  const [r, g, b] = color.match(/\d+/g)!.map(Number);
-  expect(r + g + b).toBeGreaterThan(200);
-});
-
-test('should activate prod resources mode without errors', async ({ mcp }) => {
-  await mcp.callTool('show-map', {}, { theme: 'dark', prodResources: true });
-  const root = mcp.page.locator('#root');
+test('should activate prod resources mode without errors', async ({ inspector }) => {
+  await inspector.renderTool('show-map', undefined, { theme: 'dark', prodResources: true });
+  const root = inspector.page.locator('#root');
   await expect(root).not.toBeEmpty();
 });
 
-test('should render map in dark mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map', {}, { theme: 'dark' });
+test('should render map in dark mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map', undefined, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('.antialiased.w-full.overflow-hidden').first()).toBeVisible({
     timeout: 10000,
   });
 });
 
-test('should have appropriate border color in dark mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map', {}, { theme: 'dark', displayMode: 'inline' });
+test('should have appropriate border color in dark mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map', undefined, {
+    theme: 'dark',
+    displayMode: 'inline',
+  });
   const app = result.app();
 
   const innerContainer = app.locator('.border.rounded-2xl').first();
@@ -120,13 +93,13 @@ test('should have appropriate border color in dark mode', async ({ mcp }) => {
   expect(styles.borderColor).toBeTruthy();
 });
 
-test('should load without console errors in dark mode', async ({ mcp }) => {
+test('should load without console errors in dark mode', async ({ inspector }) => {
   const errors: string[] = [];
-  mcp.page.on('console', (msg) => {
+  inspector.page.on('console', (msg) => {
     if (msg.type() === 'error') errors.push(msg.text());
   });
 
-  const result = await mcp.callTool('show-map', {}, { theme: 'dark' });
+  const result = await inspector.renderTool('show-map', undefined, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('.antialiased.w-full.overflow-hidden').first()).toBeVisible({
     timeout: 10000,
@@ -142,8 +115,10 @@ test('should load without console errors in dark mode', async ({ mcp }) => {
   expect(unexpectedErrors).toHaveLength(0);
 });
 
-test('should not have rounded border in fullscreen mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map', {}, { displayMode: 'fullscreen' });
+test('should not have rounded border in fullscreen mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   const innerContainer = app.locator('.rounded-none.border-0').first();
@@ -155,8 +130,10 @@ test('should not have rounded border in fullscreen mode', async ({ mcp }) => {
   expect(styles.borderRadius).toBe('0px');
 });
 
-test('should not show fullscreen button in fullscreen mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-map', {}, { displayMode: 'fullscreen' });
+test('should not show fullscreen button in fullscreen mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-map', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   await expect(app.locator('.antialiased.w-full.overflow-hidden').first()).toBeVisible({
@@ -165,10 +142,12 @@ test('should not show fullscreen button in fullscreen mode', async ({ mcp }) => 
   await expect(app.locator('button[aria-label="Enter fullscreen"]')).not.toBeVisible();
 });
 
-test('should show suggestion chips in fullscreen on desktop', async ({ mcp }) => {
-  await mcp.page.setViewportSize({ width: 1024, height: 768 });
+test('should show suggestion chips in fullscreen on desktop', async ({ inspector }) => {
+  await inspector.page.setViewportSize({ width: 1024, height: 768 });
 
-  const result = await mcp.callTool('show-map', {}, { displayMode: 'fullscreen' });
+  const result = await inspector.renderTool('show-map', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
 
   await expect(app.locator('.antialiased.w-full.overflow-hidden').first()).toBeVisible({

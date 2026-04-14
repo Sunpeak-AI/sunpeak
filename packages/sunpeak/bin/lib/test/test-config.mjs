@@ -18,6 +18,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { createBaseConfig, resolvePorts } from './base-config.mjs';
+import { resolveSunpeakBin } from '../resolve-bin.mjs';
 
 /**
  * @param {Object} [options]
@@ -26,11 +27,13 @@ import { createBaseConfig, resolvePorts } from './base-config.mjs';
  * @param {string[]} [options.server.args] - Command arguments
  * @param {string} [options.server.url] - HTTP server URL (alternative to command)
  * @param {Record<string, string>} [options.server.env] - Environment variables
+ * @param {string} [options.server.cwd] - Working directory for the server process
  * @param {string[]} [options.hosts] - Host shells to test (default: ['chatgpt', 'claude'])
  * @param {string} [options.testDir] - Test directory
  * @param {string} [options.simulationsDir] - Simulations directory for mock data
  * @param {string} [options.globalSetup] - Global setup file path
  * @param {Object} [options.use] - Additional Playwright `use` options
+ * @param {number} [options.timeout] - Server startup timeout in ms (default: 60000)
  * @returns {import('@playwright/test').PlaywrightTestConfig}
  */
 export function defineConfig(options = {}) {
@@ -42,6 +45,7 @@ export function defineConfig(options = {}) {
     globalSetup,
     use: userUse,
     visual,
+    timeout,
   } = options;
 
   const { port, sandboxPort } = resolvePorts();
@@ -69,6 +73,7 @@ export function defineConfig(options = {}) {
     use: userUse,
     globalSetup,
     visual,
+    timeout,
     webServer: {
       command,
       healthUrl: `http://localhost:${port}/health`,
@@ -97,13 +102,7 @@ function detectSunpeakProject() {
 function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
   const parts = [`SUNPEAK_SANDBOX_PORT=${sandboxPort}`];
 
-  if (server.env) {
-    for (const [key, value] of Object.entries(server.env)) {
-      parts.push(`${key}=${value}`);
-    }
-  }
-
-  parts.push('sunpeak inspect');
+  parts.push(`${resolveSunpeakBin()} inspect`);
 
   if (server.url) {
     parts.push(`--server ${server.url}`);
@@ -113,6 +112,18 @@ function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
       : server.command;
     // Quote the command if it contains spaces
     parts.push(`--server "${cmd}"`);
+  }
+
+  // Pass environment variables as --env KEY=VALUE flags (stdio servers only).
+  if (server.env) {
+    for (const [key, value] of Object.entries(server.env)) {
+      const pair = `${key}=${value}`;
+      parts.push(pair.includes(' ') ? `--env "${pair}"` : `--env ${pair}`);
+    }
+  }
+
+  if (server.cwd) {
+    parts.push(server.cwd.includes(' ') ? `--cwd "${server.cwd}"` : `--cwd ${server.cwd}`);
   }
 
   if (simulationsDir) {

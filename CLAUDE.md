@@ -103,14 +103,15 @@ packages/sunpeak/
 - `sunpeak/mcp` — Server utilities (`runMCPServer`, `createMcpHandler`, `createHandler`, `createProductionMcpServer`, `startProductionHttpServer`, `setJsonLogging`, `detectClientFromHeaders`), tool types (`AppToolConfig`, `ToolHandlerExtra`, `CallToolResult`, `AuthInfo`), server config (`ServerConfig`, `MCPServerConfig`, `MCPServerHandle`), production types (`ProductionTool`, `ProductionResource`, `ProductionServerConfig`, `HttpServerOptions`, `AuthFunction`, `WebAuthFunction`, `WebHandlerConfig`), domain resolution (`resolveDomain`, `computeClaudeDomain`, `computeChatGPTDomain`, `injectResolvedDomain`, `injectDefaultDomain`, `DomainConfig`), favicon (`FAVICON_BASE64`, `FAVICON_DATA_URI`, `FAVICON_BUFFER`), SDK server helpers (`registerAppTool`, `registerAppResource`, `getUiCapability`, `EXTENSION_ID`, `RESOURCE_URI_META_KEY`, `RESOURCE_MIME_TYPE`, `McpUiAppToolConfig`, `McpUiAppResourceConfig`, `ToolConfig`, `ToolCallback`, `ReadResourceCallback`, `ResourceMetadata`)
 - `sunpeak/host` — Host detection
 - `sunpeak/host/chatgpt` — ChatGPT-specific hooks (file upload, modals, checkout)
-- `sunpeak/test` — MCP-first Playwright fixtures (`test` with `mcp` fixture including `screenshot()` for visual regression, `expect` with MCP-native matchers)
-- `sunpeak/test/config` — Playwright config factory (`defineConfig` — auto-detects sunpeak projects, or accepts `server` option for external MCP servers; supports `visual` option for visual regression config)
+- `sunpeak/test` — MCP-first Playwright fixtures (`test` with `mcp` fixture for protocol methods: `callTool(name, input?)`, `listTools()`, `listResources()`, `readResource(uri)`; and `inspector` fixture for rendering: `renderTool(name, input?, options?)` returning `InspectorResult` with `app()`, `source`, `screenshot()`; plus `inspector.host`, `inspector.page`; `expect` with MCP-native matchers)
+- `sunpeak/test/config` — Playwright config factory (`defineConfig` — auto-detects sunpeak projects, or accepts `server` option for external MCP servers; `server` supports `command`, `args`, `url`, `env`, `cwd`; top-level `timeout` for server startup; `visual` option for visual regression config)
 - `sunpeak/test/live` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
 - `sunpeak/test/live/config` — Live test config factory (`defineLiveConfig` with `hosts` array)
 - `sunpeak/test/live/chatgpt` — ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture)
 - `sunpeak/eval` — Eval framework (`defineEval`, `defineEvalConfig`, `checkExpectations`, `createMcpConnection`, `discoverAndConvertTools`, `runEvalCaseAggregate`)
 - `sunpeak/test/live/chatgpt/config` — ChatGPT-specific Playwright config factory
-- `sunpeak/test/inspect/config` — Inspect config factory for external MCP servers (`defineInspectConfig`; supports `visual` option for visual regression config)
+- `sunpeak/test/inspect/config` — Inspect config factory for external MCP servers (`defineInspectConfig`; supports `env`, `cwd`, `timeout`, `visual` options)
+- `sunpeak/inspect` — Programmatic inspector server (`inspectServer` — start the inspector from code instead of CLI; accepts `server`, `port`, `env`, `cwd`, etc.)
 - `sunpeak/style.css` — Main stylesheet
 
 ## Key Types
@@ -197,24 +198,55 @@ The overlay is **never** present in production builds (only injected when `viteM
 
 ### Inspector URL Parameters
 
-The inspector reads `sidebar` and `devOverlay` URL params (parsed in `use-inspector-state.ts`):
+The inspector reads URL params (parsed in `use-inspector-state.ts`):
 - `sidebar=false` — hides the sidebar, renders only conversation content (useful for headless testing or embedding)
 - `devOverlay=false` — strips the dev overlay from resource HTML (for e2e tests where the overlay could interfere with assertions)
+- `toolInput=<json>` — JSON-encoded tool arguments that override the simulation fixture's default toolInput (used by the `inspector` fixture when `renderTool` receives an `input` argument)
+- `autoRun=true` — call the tool on load when no fixture data exists (set by test fixtures to get results without clicking Run; not set during interactive use)
 
-Template e2e tests use the `mcp` fixture from `sunpeak/test`, which sets `devOverlay: false` automatically. The `dev-overlay.spec.ts` test files (excluded from `sunpeak new` via `dev-` prefix filter in `new.mjs`) test the overlay explicitly and import `createInspectorUrl` directly from `sunpeak/chatgpt`.
+Template e2e tests use the `mcp` and `inspector` fixtures from `sunpeak/test`, which set `devOverlay: false` automatically. The `dev-overlay.spec.ts` test files (excluded from `sunpeak new` via `dev-` prefix filter in `new.mjs`) test the overlay explicitly and import `createInspectorUrl` directly from `sunpeak/chatgpt`.
 
-### Testing Architecture (Three Layers)
+### sunpeak Is Three Things
 
-The testing framework has three composable layers, each usable in isolation:
+Each layer builds on the previous and works independently. The inspector and testing framework work with any MCP server in any language and can be embedded within other frameworks.
 
-1. **Inspector** (Layer 1) — `sunpeak inspect --server <url>` starts the inspector against any MCP server. Hidden plumbing for the testing framework.
-2. **Testing Framework** (Layer 2) — Works with any MCP server. `sunpeak test init` scaffolds test infrastructure. Includes:
-   - **E2E tests** — `sunpeak/test` exports an `mcp` Playwright fixture with `callTool()`, MCP-native matchers (`toBeError`, `toHaveTextContent`), and `defineConfig()`.
-   - **Live tests** — `sunpeak/test/live` exports Playwright fixtures for testing against real hosts (ChatGPT, Claude).
-   - **Evals** — `sunpeak/eval` exports `defineEval` and `defineEvalConfig` for multi-model tool calling evals. Connects to any MCP server via MCP protocol, discovers tools, sends prompts to multiple LLM models (via Vercel AI SDK), and asserts that models call the right tools with the right arguments. Each eval case runs N times per model and reports statistical pass/fail counts. Eval specs live in `tests/evals/*.eval.ts`. Configuration (models, runs, temperature) is in `tests/evals/eval.config.ts`. Requires optional peer deps: `ai` + provider packages (`@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`).
-3. **sunpeak Framework** (Layer 3) — Template tests use Layer 2's fixtures and configs. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend. For evals, the dev server auto-starts with `--prod-tools`.
+#### 1. Inspector
+
+Test any MCP server in replicated ChatGPT and Claude runtimes. No sunpeak project required.
+
+- **CLI**: `sunpeak inspect --server <url>` or `sunpeak inspect --server "python server.py"`. Supports `--env KEY=VALUE` (repeatable) and `--cwd <path>` for stdio servers.
+- **Programmatic**: `inspectServer()` from `sunpeak/inspect` lets other frameworks start the inspector from their own CLI.
+- **OAuth**: Auto-negotiates MCP OAuth when servers return 401. Handles anonymous/auto-approved OAuth without user interaction. For interactive OAuth, opens the authorization URL in the user's browser and waits for the callback. Uses the MCP SDK's standard `OAuthClientProvider` interface.
+- Built into `sunpeak dev` for app framework users.
+
+#### 2. Testing Framework
+
+Automated testing powered by the inspector. Works with any MCP server in any language. sunpeak's long-term goal is to be the generic testing framework for all MCP servers, not just MCP Apps. MCP Apps (interactive UIs in chat) are the current specialty, but the testing framework should work for any server that implements the MCP protocol. Keep MCP protocol primitives as a clean, 1:1 layer that can evolve with the spec. Layer sunpeak-specific functionality (inspector rendering, visual regression, simulations, MCP Apps features) on top without mixing it into the protocol layer.
+
+**`mcp` fixture** (`sunpeak/test`) — protocol-only methods:
+- `callTool(name, input?)` — call a tool, return the MCP result
+- `listTools()` — list tool definitions
+- `listResources()` — list resource definitions
+- `readResource(uri)` — read resource content
+
+**`inspector` fixture** (`sunpeak/test`) — rendering in the inspector:
+- `renderTool(name, input?, options?)` — call a tool, render in the inspector, return `InspectorResult` with `app()` locator, `source` field (`'fixture'` or `'server'`), and `screenshot(name?, options?)` method
+- `host` — current host ID (`'chatgpt'` or `'claude'`)
+- `page` — raw Playwright `Page` for chrome-level assertions
+
+`renderTool` with `input` navigates via `?tool=X&toolInput=JSON&autoRun=true` (real server call, bypasses fixtures). Without `input`, it uses `?simulation=X&autoRun=true` (uses fixture data when available, falls back to real call). `autoRun` tells the inspector to call the tool on load when no fixture result exists; interactive users don't set this flag so browsing tools doesn't trigger server calls. The fixture reads the tool result from a `<script id="__tool-result">` data element so MCP-native matchers (`toBeError`, `toHaveTextContent`, `toHaveStructuredContent`, `toHaveContentType`) operate on real data. Fixture timeouts are configurable via `use: { mcpTimeout }` in Playwright config or per-call `{ timeout }` option.
+
+**Server configuration**: `defineConfig({ server: { command, args, url, env, cwd }, timeout })` connects to any MCP server. For non-JS projects, `sunpeak test init` scaffolds a self-contained `tests/sunpeak/` directory with its own `package.json` (version-pinned), auto-installs dependencies, and is ready to run. `sunpeak test` auto-discovers this directory from the project root.
+
+**Embedding**: Other frameworks import `defineConfig` from `sunpeak/test/config` to generate Playwright configs programmatically. Binary resolution checks local `node_modules/.bin` first so sunpeak doesn't need to be installed globally.
+
+**Test types**: E2E (`sunpeak/test`), Visual regression (`result.screenshot()` on `InspectorResult`), Live tests (`sunpeak/test/live` for real ChatGPT/Claude), Evals (`sunpeak/eval` for multi-model tool calling via Vercel AI SDK).
 
 **CLI**: `sunpeak test` runs unit + e2e tests, `sunpeak test --unit` runs only vitest, `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test --eval` runs multi-model evals, `sunpeak test init` scaffolds test infrastructure (including eval boilerplate). Flags are additive: `--unit --e2e --live --eval` runs all four. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
+
+#### 3. App Framework
+
+Convention-over-configuration for building MCP Apps. The inspector and testing are built in. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend. Template tests use the testing framework's fixtures and configs. For evals, the dev server auto-starts with `--prod-tools`.
 
 ## Documentation (`docs/`)
 

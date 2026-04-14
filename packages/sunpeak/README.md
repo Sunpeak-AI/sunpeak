@@ -53,8 +53,8 @@ Automatically test any MCP server against replicated ChatGPT and Claude runtimes
 ```ts
 import { test, expect } from 'sunpeak/test';
 
-test('review tool renders title', async ({ mcp }) => {
-  const result = await mcp.callTool('review-diff');
+test('review tool renders title', async ({ inspector }) => {
+  const result = await inspector.renderTool('review-diff');
   const app = result.app();
   await expect(app.locator('h1:has-text("Refactor")')).toBeVisible();
 });

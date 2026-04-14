@@ -1,9 +1,22 @@
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'fs';
 import { execSync } from 'child_process';
 import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import * as p from '@clack/prompts';
 import { EVAL_PROVIDERS, generateModelLines } from '../lib/eval/eval-providers.mjs';
 import { detectPackageManager } from '../utils.mjs';
+
+/** Read the current sunpeak package version for pinning in scaffolded configs. */
+function getSunpeakVersion() {
+  try {
+    const __dirname = dirname(fileURLToPath(import.meta.url));
+    const pkgPath = join(__dirname, '..', '..', 'package.json');
+    const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    return pkg.version ? `^${pkg.version}` : 'latest';
+  } catch {
+    return 'latest';
+  }
+}
 
 /**
  * Default dependencies (real implementations).
@@ -49,7 +62,7 @@ export const defaultDeps = {
  *
  * Scaffolds all 5 test types:
  * 1. E2E tests — Playwright-based inspector tests (mcp fixture)
- * 2. Visual regression — Screenshot comparison via mcp.screenshot()
+ * 2. Visual regression — Screenshot comparison via result.screenshot()
  * 3. Live tests — Test against real ChatGPT/Claude hosts
  * 4. Evals — Multi-model tool calling reliability tests
  * 5. Unit tests — Direct tool handler tests (JS/TS projects only)
@@ -228,7 +241,16 @@ function generateServerConfigBlock(server, relativeTo = '.') {
   // server: { command: 'go', args: ['run', './cmd/server'] },
   //
   // Node.js:
-  // server: { command: 'node', args: ['server.js'] },`;
+  // server: { command: 'node', args: ['server.js'] },
+  //
+  // Optional server options:
+  // server: {
+  //   command: 'python', args: ['server.py'],
+  //   env: { API_KEY: 'test-key' },  // Extra environment variables
+  //   cwd: './backend',               // Working directory
+  // },
+  //
+  // timeout: 120_000,  // Server startup timeout in ms (default: 60s)`;
   }
   if (server.type === 'url') {
     return `  server: {
@@ -381,31 +403,31 @@ function scaffoldVisualTest(filePath, d) {
  * Uncomment the tests below and replace 'your-tool' with your tool name.
  */
 
-// test('tool renders correctly in light mode', async ({ mcp }) => {
-//   const result = await mcp.callTool('your-tool', { key: 'value' }, { theme: 'light' });
+// test('tool renders correctly in light mode', async ({ inspector }) => {
+//   const result = await inspector.renderTool('your-tool', { key: 'value' }, { theme: 'light' });
 //   expect(result).not.toBeError();
 //
 //   // Wait for UI to render, then screenshot:
 //   // const app = result.app();
 //   // await expect(app.getByText('Expected text')).toBeVisible();
-//   // await mcp.screenshot('tool-light');
+//   // await result.screenshot('tool-light');
 // });
 
-// test('tool renders correctly in dark mode', async ({ mcp }) => {
-//   const result = await mcp.callTool('your-tool', { key: 'value' }, { theme: 'dark' });
+// test('tool renders correctly in dark mode', async ({ inspector }) => {
+//   const result = await inspector.renderTool('your-tool', { key: 'value' }, { theme: 'dark' });
 //   expect(result).not.toBeError();
 //
 //   // const app = result.app();
 //   // await expect(app.getByText('Expected text')).toBeVisible();
-//   // await mcp.screenshot('tool-dark');
+//   // await result.screenshot('tool-dark');
 // });
 
 // Full-page screenshot (captures the inspector chrome too):
-// test('full page renders correctly', async ({ mcp }) => {
-//   const result = await mcp.callTool('your-tool', {}, { theme: 'light' });
+// test('full page renders correctly', async ({ inspector }) => {
+//   const result = await inspector.renderTool('your-tool', {}, { theme: 'light' });
 //   const app = result.app();
 //   await expect(app.getByText('Expected text')).toBeVisible();
-//   await mcp.screenshot('tool-page', { target: 'page', maxDiffPixelRatio: 0.02 });
+//   await result.screenshot('tool-page', { target: 'page', maxDiffPixelRatio: 0.02 });
 // });
 `
   );
@@ -569,7 +591,7 @@ async function initExternalProject(cliServer, d) {
         type: 'module',
         devDependencies: {
           '@types/node': 'latest',
-          sunpeak: 'latest',
+          sunpeak: getSunpeakVersion(),
           '@playwright/test': 'latest',
         },
         scripts: {
@@ -611,24 +633,28 @@ ${serverBlock}
     ) + '\n'
   );
 
-  // 1. E2E test — smoke test, verifies the server is reachable
+  // 1. E2E test — smoke test, verifies the server exposes tools
   d.writeFileSync(
     join(testDir, 'smoke.test.ts'),
     `import { test, expect } from 'sunpeak/test';
 
-test('server is reachable and inspector loads', async ({ mcp }) => {
-  // Verify the inspector page loads successfully
-  await expect(mcp.page.locator('#root')).not.toBeEmpty();
+test('server exposes tools', async ({ mcp }) => {
+  const tools = await mcp.listTools();
+  expect(tools.length).toBeGreaterThan(0);
 });
 
-// Uncomment and customize for your tools:
-// test('my tool renders correctly', async ({ mcp }) => {
+// Protocol-level test (no UI rendering):
+// test('my tool returns data', async ({ mcp }) => {
 //   const result = await mcp.callTool('your-tool', { key: 'value' });
+//   expect(result.isError).toBeFalsy();
+// });
+
+// UI rendering test:
+// test('my tool renders correctly', async ({ inspector }) => {
+//   const result = await inspector.renderTool('your-tool', { key: 'value' });
 //   expect(result).not.toBeError();
-//
-//   // If your tool has a UI:
-//   // const app = result.app();
-//   // await expect(app.getByText('Hello')).toBeVisible();
+//   const app = result.app();
+//   await expect(app.getByText('Hello')).toBeVisible();
 // });
 `
   );
@@ -646,14 +672,24 @@ test('server is reachable and inspector loads', async ({ mcp }) => {
   if (server.type === 'later') {
     d.log.warn('Server not configured. Edit tests/sunpeak/playwright.config.ts before running tests.');
   }
-  d.log.step('Next steps:');
-  d.log.message('  Requires: Node.js 20+');
-  d.log.message('');
+
+  // Auto-install dependencies so users can run tests immediately
   const pm = d.detectPackageManager();
-  d.log.message('  cd tests/sunpeak');
-  d.log.message(`  ${pm} install`);
-  d.log.message(`  ${pm} exec playwright install chromium`);
-  d.log.message('');
+  d.log.step('Installing dependencies...');
+  try {
+    d.execSync(`${pm} install`, { cwd: testDir, stdio: 'inherit' });
+  } catch {
+    d.log.warn(`Dependency install failed. Run manually: cd tests/sunpeak && ${pm} install`);
+  }
+
+  d.log.step('Installing Playwright browser...');
+  try {
+    d.execSync(`${pm} exec playwright install chromium`, { cwd: testDir, stdio: 'inherit' });
+  } catch {
+    d.log.warn(`Browser install failed. Run manually: cd tests/sunpeak && ${pm} exec playwright install chromium`);
+  }
+
+  d.log.step('Ready! Run tests with:');
   d.log.message('  sunpeak test              # E2E tests');
   d.log.message('  sunpeak test --visual      # Visual regression (generates baselines on first run)');
   d.log.message('  sunpeak test --live         # Live tests against real hosts (requires login)');
@@ -694,18 +730,23 @@ ${serverBlock}
       testPath,
       `import { test, expect } from 'sunpeak/test';
 
-test('server is reachable and inspector loads', async ({ mcp }) => {
-  await expect(mcp.page.locator('#root')).not.toBeEmpty();
+test('server exposes tools', async ({ mcp }) => {
+  const tools = await mcp.listTools();
+  expect(tools.length).toBeGreaterThan(0);
 });
 
-// Uncomment and customize for your tools:
-// test('my tool renders correctly', async ({ mcp }) => {
+// Protocol-level test (no UI rendering):
+// test('my tool returns data', async ({ mcp }) => {
 //   const result = await mcp.callTool('your-tool', { key: 'value' });
+//   expect(result.isError).toBeFalsy();
+// });
+
+// UI rendering test:
+// test('my tool renders correctly', async ({ inspector }) => {
+//   const result = await inspector.renderTool('your-tool', { key: 'value' });
 //   expect(result).not.toBeError();
-//
-//   // If your tool has a UI:
-//   // const app = result.app();
-//   // await expect(app.getByText('Hello')).toBeVisible();
+//   const app = result.app();
+//   await expect(app.getByText('Hello')).toBeVisible();
 // });
 `
     );
@@ -792,6 +833,6 @@ export default defineConfig();
   d.log.message('  Replace: import { test, expect } from "@playwright/test"');
   d.log.message('  With:    import { test, expect } from "sunpeak/test"');
   d.log.message('');
-  d.log.message('  Use the `mcp` fixture instead of raw page navigation.');
+  d.log.message('  Use the `mcp` and `inspector` fixtures instead of raw page navigation.');
   d.log.message('  See sunpeak docs for migration examples.');
 }

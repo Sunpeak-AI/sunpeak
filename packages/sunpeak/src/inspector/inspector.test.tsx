@@ -865,6 +865,65 @@ describe('Inspector', () => {
     });
   });
 
+  describe('Tool result data element', () => {
+    it('renders __tool-result script element with simulation data', () => {
+      const sim = createSim({
+        toolResult: { content: [{ type: 'text', text: 'hello' }], structuredContent: { v: 1 } },
+      });
+      render(<Inspector simulations={{ test: sim }} />);
+
+      const script = document.getElementById('__tool-result');
+      expect(script).toBeInTheDocument();
+      expect(script?.getAttribute('type')).toBe('application/json');
+      const data = JSON.parse(script?.textContent || 'null');
+      expect(data.content).toEqual([{ type: 'text', text: 'hello' }]);
+      expect(data.structuredContent).toEqual({ v: 1 });
+      expect(data.source).toBe('fixture');
+    });
+
+    it('renders null when no tool result exists', () => {
+      render(<Inspector simulations={{ test: createSim() }} />);
+
+      const script = document.getElementById('__tool-result');
+      expect(script).toBeInTheDocument();
+      expect(JSON.parse(script?.textContent || 'null')).toBeNull();
+    });
+
+    it('sets source to server after calling real tool handler', async () => {
+      const user = userEvent.setup();
+      const onCallTool = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'server response' }],
+      });
+
+      // Use a sim without fixture data so "None (call server)" is the default
+      const sim = createSim({ toolInput: undefined, toolResult: undefined });
+      render(<Inspector simulations={{ test: sim }} onCallTool={onCallTool} />);
+
+      await user.click(screen.getByRole('button', { name: /run/i }));
+
+      await waitFor(() => {
+        const script = document.getElementById('__tool-result');
+        const data = JSON.parse(script?.textContent || 'null');
+        expect(data?.source).toBe('server');
+        expect(data?.content[0]?.text).toBe('server response');
+      });
+    });
+
+    it('escapes < in tool result to prevent script injection', () => {
+      const sim = createSim({
+        toolResult: { content: [{ type: 'text', text: '<script>alert(1)</script>' }] },
+      });
+      render(<Inspector simulations={{ test: sim }} />);
+
+      const script = document.getElementById('__tool-result');
+      // The raw innerHTML should not contain unescaped <
+      expect(script?.innerHTML).not.toContain('</script>');
+      // But parsing should recover the original text
+      const data = JSON.parse(script?.textContent || 'null');
+      expect(data.content[0].text).toBe('<script>alert(1)</script>');
+    });
+  });
+
   // ── Story 2: Inspect-only user ──
   describe('Inspect-only: exploring external servers', () => {
     it('starts empty, then populates after reconnect', async () => {

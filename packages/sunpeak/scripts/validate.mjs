@@ -393,7 +393,7 @@ function runTestInitSmokeTest() {
       }
 
       const visualContent = readFileSync(join(dir, 'tests/e2e/visual.test.ts'), 'utf-8');
-      if (!visualContent.includes("from 'sunpeak/test'") || !visualContent.includes('mcp.screenshot')) {
+      if (!visualContent.includes("from 'sunpeak/test'") || !visualContent.includes('result.screenshot')) {
         return { ok: false, step: 'test-init js: visual test missing expected content', output: allOutput.join('\n') };
       }
 

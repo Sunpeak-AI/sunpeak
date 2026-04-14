@@ -69,18 +69,20 @@ sunpeak inspect --server "python my_server.py"
 
 Four levels of automated testing for MCP Apps (Unit, E2E, Live, Evals):
 
-**E2E tests** — the inspector as a test runtime. Define simulation fixtures (JSON), write Playwright tests that load them in the inspector across hosts, themes, and display modes:
+**E2E tests** — the inspector as a test runtime. Call tools, assert on protocol-level results, or render the UI across hosts, themes, and display modes:
 
 ```typescript
-import { createInspectorUrl } from 'sunpeak/inspector';
+import { test, expect } from 'sunpeak/test';
 
-test('album cards render in dark mode', async ({ page }) => {
-  await page.goto(createInspectorUrl({
-    simulation: 'show-albums',
-    theme: 'dark',
-    host: 'claude',
-  }));
-  // assert against the rendered resource
+test('search tool works', async ({ mcp }) => {
+  const result = await mcp.callTool('search', { query: 'headphones' });
+  expect(result.isError).toBeFalsy();
+});
+
+test('album cards render in dark mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'dark' });
+  const app = result.app();
+  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 ```
 

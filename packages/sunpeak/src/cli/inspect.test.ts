@@ -9,6 +9,56 @@ import * as path from 'path';
 // not exported. Instead, test the public behavior via the module.
 
 const importInspectConfig = () => import('../../bin/lib/inspect/inspect-config.mjs');
+const importTestConfig = () => import('../../bin/lib/test/test-config.mjs');
+
+describe('defineConfig (external server)', () => {
+  it('resolves local sunpeak binary when available', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: { url: 'http://localhost:8000/mcp' },
+    });
+
+    // Should contain 'sunpeak inspect' — either bare or with a node_modules/.bin prefix
+    expect(config.webServer.command).toContain('sunpeak inspect');
+  });
+
+  it('passes env as --env flags in the inspect command', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: { command: 'python', args: ['server.py'], env: { SECRET: 'abc' } },
+    });
+
+    expect(config.webServer.command).toContain('--env SECRET=abc');
+  });
+
+  it('quotes env values with spaces', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: { command: 'python', args: ['server.py'], env: { MSG: 'hi there' } },
+    });
+
+    expect(config.webServer.command).toContain('--env "MSG=hi there"');
+  });
+
+  it('passes cwd as --cwd flag', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: { command: 'python', args: ['server.py'], cwd: './backend' },
+    });
+
+    expect(config.webServer.command).toContain('--cwd ./backend');
+  });
+
+  it('uses custom timeout', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: { url: 'http://localhost:8000/mcp' },
+      timeout: 180_000,
+    });
+
+    expect(config.webServer.timeout).toBe(180_000);
+  });
+});
 
 describe('defineInspectConfig', () => {
   it('generates a valid Playwright config shape', async () => {
@@ -96,6 +146,66 @@ describe('defineInspectConfig', () => {
     expect(() => defineInspectConfig({})).toThrow('`server` option is required');
   });
 
+  it('passes env as --env flags for stdio servers', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'python server.py',
+      env: { API_KEY: 'test-123', DEBUG: 'true' },
+    });
+
+    expect(config.webServer.command).toContain('--env API_KEY=test-123');
+    expect(config.webServer.command).toContain('--env DEBUG=true');
+  });
+
+  it('quotes env values that contain spaces', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'python server.py',
+      env: { GREETING: 'hello world' },
+    });
+
+    expect(config.webServer.command).toContain('--env "GREETING=hello world"');
+  });
+
+  it('passes cwd as --cwd flag for stdio servers', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'python server.py',
+      cwd: './backend',
+    });
+
+    expect(config.webServer.command).toContain('--cwd ./backend');
+  });
+
+  it('quotes cwd paths that contain spaces', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'python server.py',
+      cwd: './my project',
+    });
+
+    expect(config.webServer.command).toContain('--cwd "./my project"');
+  });
+
+  it('uses custom timeout when provided', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'http://localhost:8000/mcp',
+      timeout: 120_000,
+    });
+
+    expect(config.webServer.timeout).toBe(120_000);
+  });
+
+  it('defaults timeout to 60s when not provided', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'http://localhost:8000/mcp',
+    });
+
+    expect(config.webServer.timeout).toBe(60_000);
+  });
+
   it('sets appropriate worker limits', async () => {
     const { defineInspectConfig } = await importInspectConfig();
     const config = defineInspectConfig({ server: 'http://localhost:8000/mcp' });
@@ -124,6 +234,56 @@ describe('defineInspectConfig', () => {
     expect(baseUrlPort).toBeGreaterThan(0);
     expect(sandboxPort).toBeGreaterThan(0);
     expect(baseUrlPort).not.toBe(sandboxPort);
+  });
+});
+
+describe('isAuthError', () => {
+  // isAuthError is not exported, so we re-implement the same logic to verify
+  // the detection patterns are correct. Keep this in sync with inspect.mjs.
+  const isAuthError = (err: Error) => {
+    if (err.constructor?.name === 'UnauthorizedError') return true;
+    const msg = err.message || '';
+    if (msg.includes('invalid_token')) return true;
+    if (msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT') || msg.includes('ENOTFOUND')) {
+      return false;
+    }
+    return false;
+  };
+
+  it('detects invalid_token error', () => {
+    const err = new Error(
+      'Streamable HTTP error: Error POSTing to endpoint: {"error":"invalid_token"}'
+    );
+    expect(isAuthError(err)).toBe(true);
+  });
+
+  it('detects UnauthorizedError by class name', () => {
+    class UnauthorizedError extends Error {
+      constructor() {
+        super('Unauthorized');
+      }
+    }
+    expect(isAuthError(new UnauthorizedError())).toBe(true);
+  });
+
+  it('does not match ECONNREFUSED', () => {
+    const err = new Error('connect ECONNREFUSED 127.0.0.1:8000');
+    expect(isAuthError(err)).toBe(false);
+  });
+
+  it('does not match ETIMEDOUT', () => {
+    const err = new Error('connect ETIMEDOUT 10.0.0.1:443');
+    expect(isAuthError(err)).toBe(false);
+  });
+
+  it('does not match generic errors', () => {
+    const err = new Error('Something went wrong');
+    expect(isAuthError(err)).toBe(false);
+  });
+
+  it('does not false-positive on URLs containing 401', () => {
+    const err = new Error('Failed to fetch http://example.com/path/4014');
+    expect(isAuthError(err)).toBe(false);
   });
 });
 

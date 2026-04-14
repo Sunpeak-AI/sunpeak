@@ -3,34 +3,36 @@ import { test, expect } from 'sunpeak/test';
 // Visual regression tests. Screenshot comparisons only run with `sunpeak test --visual`.
 // Update baselines with `sunpeak test --visual --update`.
 
-test('albums renders correctly in light mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('albums renders correctly in light mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', undefined, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-  await mcp.screenshot('albums-light');
+  await result.screenshot('albums-light');
 });
 
-test('albums renders correctly in dark mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'dark' });
+test('albums renders correctly in dark mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', undefined, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-  await mcp.screenshot('albums-dark');
+  await result.screenshot('albums-dark');
 });
 
-test('albums renders correctly in fullscreen', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+test('albums renders correctly in fullscreen', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', undefined, {
+    displayMode: 'fullscreen',
+  });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-  await mcp.screenshot('albums-fullscreen');
+  await result.screenshot('albums-fullscreen');
 });
 
-test('full page renders correctly', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('full page renders correctly', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', undefined, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 
-  await mcp.screenshot('albums-page-light', { target: 'page', maxDiffPixelRatio: 0.02 });
+  await result.screenshot('albums-page-light', { target: 'page', maxDiffPixelRatio: 0.02 });
 });

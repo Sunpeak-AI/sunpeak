@@ -17,6 +17,14 @@ import type {
 
 const DEFAULT_HOST_INFO = { name: 'SunpeakInspector', version: '1.0.0' };
 
+/**
+ * Debug logger for MCP bridge messages. Uses CSS-formatted console.log in browsers,
+ * no-ops during unit tests (Vitest) where the output is just noise.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const debugLog: (...args: any[]) => void =
+  typeof process !== 'undefined' && process.env?.VITEST ? () => {} : console.log;
+
 const DEFAULT_HOST_CAPABILITIES: McpUiHostCapabilities = {
   openLinks: {},
   serverTools: {},
@@ -111,7 +119,7 @@ export class McpAppHost {
         }
       }
       const ack = {};
-      console.log(
+      debugLog(
         `%c[MCP ↓]%c host → app: %copenLink ack`,
         'color:#f9a8d4',
         'color:inherit',
@@ -126,7 +134,7 @@ export class McpAppHost {
         this.options.onMessage(role, content);
       }
       const ack = {};
-      console.log(
+      debugLog(
         `%c[MCP ↓]%c host → app: %csendMessage ack`,
         'color:#f9a8d4',
         'color:inherit',
@@ -139,7 +147,7 @@ export class McpAppHost {
     this.bridge.onrequestdisplaymode = async ({ mode }) => {
       this.options.onDisplayModeChange?.(mode);
       const result = { mode };
-      console.log(
+      debugLog(
         `%c[MCP ↓]%c host → app: %crequestDisplayMode result`,
         'color:#f9a8d4',
         'color:inherit',
@@ -152,7 +160,7 @@ export class McpAppHost {
     this.bridge.onupdatemodelcontext = async ({ content, structuredContent }) => {
       this.options.onUpdateModelContext?.(content ?? [], structuredContent);
       const ack = {};
-      console.log(
+      debugLog(
         `%c[MCP ↓]%c host → app: %cupdateModelContext ack`,
         'color:#f9a8d4',
         'color:inherit',
@@ -204,7 +212,7 @@ export class McpAppHost {
           ],
         };
       }
-      console.log(
+      debugLog(
         `%c[MCP ↓]%c host → app: %ccallServerTool result(${params.name})`,
         'color:#f9a8d4',
         'color:inherit',
@@ -219,7 +227,7 @@ export class McpAppHost {
         this.options.onDownloadFile(contents);
       }
       const ack = {};
-      console.log(
+      debugLog(
         `%c[MCP ↓]%c host → app: %cdownloadFile ack`,
         'color:#f9a8d4',
         'color:inherit',
@@ -233,7 +241,7 @@ export class McpAppHost {
       if (this.options.onRequestTeardown) {
         this.options.onRequestTeardown();
       } else {
-        console.log('[MCP App] requestTeardown (app requested close)');
+        debugLog('[MCP App] requestTeardown (app requested close)');
       }
     };
 
@@ -270,7 +278,7 @@ export class McpAppHost {
       if (method?.startsWith('sunpeak/') || method === 'ui/notifications/sandbox-proxy-ready')
         return;
       const label = method ?? (data.id != null ? `response #${data.id}` : 'unknown');
-      console.log(
+      debugLog(
         `%c[MCP ↑]%c app → host: %c${label}`,
         'color:#6ee7b7',
         'color:inherit',
@@ -343,7 +351,7 @@ export class McpAppHost {
    * to commit its DOM before firing onDisplayModeReady.
    */
   setHostContext(context: McpUiHostContext): void {
-    console.log(
+    debugLog(
       `%c[MCP ↓]%c host → app: %csetHostContext`,
       'color:#f9a8d4',
       'color:inherit',
@@ -368,7 +376,7 @@ export class McpAppHost {
    */
   sendToolInput(args: Record<string, unknown>): void {
     const params: McpUiToolInputNotification['params'] = { arguments: args };
-    console.log(
+    debugLog(
       `%c[MCP ↓]%c host → app: %csendToolInput`,
       'color:#f9a8d4',
       'color:inherit',
@@ -387,7 +395,7 @@ export class McpAppHost {
    * If the app hasn't initialized yet, the result is queued.
    */
   sendToolResult(result: CallToolResult): void {
-    console.log(
+    debugLog(
       `%c[MCP ↓]%c host → app: %csendToolResult`,
       'color:#f9a8d4',
       'color:inherit',
@@ -407,7 +415,7 @@ export class McpAppHost {
    */
   sendToolInputPartial(args: Record<string, unknown>): void {
     const params: McpUiToolInputPartialNotification['params'] = { arguments: args };
-    console.log(
+    debugLog(
       `%c[MCP ↓]%c host → app: %csendToolInputPartial`,
       'color:#f9a8d4',
       'color:inherit',
@@ -426,7 +434,7 @@ export class McpAppHost {
    */
   sendToolCancelled(reason?: string): void {
     const params: McpUiToolCancelledNotification['params'] = reason ? { reason } : {};
-    console.log(
+    debugLog(
       `%c[MCP ↓]%c host → app: %csendToolCancelled`,
       'color:#f9a8d4',
       'color:inherit',

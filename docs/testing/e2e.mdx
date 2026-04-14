@@ -17,26 +17,21 @@ sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
 
 ### Writing E2E Tests
 
-Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture handles inspector navigation, double-iframe traversal, and host selection:
+Import `test` and `expect` from `sunpeak/test`. The `mcp` fixture provides protocol-level methods, and the `inspector` fixture handles rendering, double-iframe traversal, and host selection:
 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('should render album cards in light mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('should render album cards in light mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'light' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 
-test('should render in fullscreen mode', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+test('should render in fullscreen mode', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { displayMode: 'fullscreen' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
-});
-
-test('prod tools empty state', async ({ mcp }) => {
-  await mcp.openTool('show-albums');
-  await expect(mcp.page.locator('text=Press Run to call the tool')).toBeVisible();
 });
 ```
 
@@ -58,6 +53,20 @@ This auto-detects sunpeak projects and creates per-host Playwright projects (cha
     import { defineConfig } from 'sunpeak/test/config';
     export default defineConfig({
       server: 'http://localhost:8000/mcp',
+    });
+    ```
+
+    For stdio servers, pass a command and optional configuration:
+
+    ```typescript
+    import { defineConfig } from 'sunpeak/test/config';
+    export default defineConfig({
+      server: {
+        command: 'python', args: ['server.py'],
+        env: { DATABASE_URL: 'sqlite:///test.db' },
+        cwd: './my-server',
+      },
+      timeout: 90_000, // Server startup timeout in ms (default: 60000)
     });
     ```
   </Tab>
@@ -83,7 +92,67 @@ This auto-detects sunpeak projects and creates per-host Playwright projects (cha
   alt="Inspector set to inline light mode via URL params"
 />
 
-The `mcp.callTool()` method accepts options for `theme`, `displayMode`, and `prodResources`. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
+### Protocol methods
+
+Test your MCP server at the protocol level without rendering anything:
+
+```typescript
+test('server exposes expected tools', async ({ mcp }) => {
+  const tools = await mcp.listTools();
+  const search = tools.find(t => t.name === 'search');
+  expect(search).toBeDefined();
+  expect(search.inputSchema.properties).toHaveProperty('query');
+});
+
+test('search tool returns results', async ({ mcp }) => {
+  const result = await mcp.callTool('search', { query: 'headphones' });
+  expect(result.isError).toBeFalsy();
+  expect(result.structuredContent.results.length).toBeGreaterThan(0);
+});
+
+test('resources have correct metadata', async ({ mcp }) => {
+  const resources = await mcp.listResources();
+  const app = resources.find(r => r.name === 'search-results');
+  expect(app?.mimeType).toBe('text/html');
+});
+```
+
+| Method | Description |
+|--------|-------------|
+| `listTools()` | List all tools. Returns `Tool[]`. |
+| `callTool(name, input?)` | Call a tool, return the raw MCP result. |
+| `listResources()` | List all resources. Returns `Resource[]`. |
+| `readResource(uri)` | Read a resource by URI. Returns the content string. |
+
+### renderTool
+
+`inspector.renderTool` renders the tool result in the inspector and returns an `InspectorResult` with both the MCP data and a UI locator. With `input`, the tool is called on the real server. Without `input`, simulation fixture data is used when available. The returned `InspectorResult` includes a `source` field (`'fixture'` or `'server'`) indicating where the data came from, and a `screenshot()` method for visual regression.
+
+```typescript
+// Call the real server with specific arguments
+const result = await inspector.renderTool('search', { query: 'test', limit: 10 });
+expect(result).not.toBeError();
+
+const app = result.app();
+await expect(app.getByText('test')).toBeVisible();
+
+// Use simulation fixture data, or call server with empty args
+const result = await inspector.renderTool('show-albums', undefined, { theme: 'dark' });
+```
+
+The options object accepts `theme`, `displayMode`, and `timeout`. Per-call timeout overrides the config default.
+
+### Configuring default timeouts
+
+```typescript
+import { defineConfig } from 'sunpeak/test/config';
+export default defineConfig({
+  server: { url: 'http://localhost:8000/mcp' },
+  use: {
+    mcpTimeout: 30_000, // Default for renderTool (default: 15s)
+  },
+});
+```
 
 ### Testing Backend-Only Tools
 
@@ -118,8 +187,8 @@ If your resource calls backend tools via `useCallServerTool`, define mock respon
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('should show success when server confirms', async ({ mcp }) => {
-  const result = await mcp.callTool('review-purchase');
+test('should show success when server confirms', async ({ inspector }) => {
+  const result = await inspector.renderTool('review-purchase');
   const app = result.app();
 
   await app.locator('button:has-text("Place Order")').evaluate((el) => (el as HTMLElement).click());
@@ -128,8 +197,8 @@ test('should show success when server confirms', async ({ mcp }) => {
   await expect(app.locator('text=Completed.')).toBeVisible({ timeout: 10000 });
 });
 
-test('should show cancel when user rejects', async ({ mcp }) => {
-  const result = await mcp.callTool('review-purchase');
+test('should show cancel when user rejects', async ({ inspector }) => {
+  const result = await inspector.renderTool('review-purchase');
   const app = result.app();
 
   await app.locator('button:has-text("Cancel")').evaluate((el) => (el as HTMLElement).click());
@@ -148,8 +217,8 @@ A typical e2e test file tests a resource across different modes. Each test runs 
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
-test('should render album cards with correct styles', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'light' });
+test('should render album cards with correct styles', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'light' });
   const app = result.app();
 
   const albumCard = app.locator('button:has-text("Summer Slice")');
@@ -163,22 +232,21 @@ test('should render album cards with correct styles', async ({ mcp }) => {
   expect(styles.borderRadius).toBe('12px');
 });
 
-test('should render with dark theme', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { theme: 'dark' });
+test('should render with dark theme', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { theme: 'dark' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 
-test('should render in fullscreen', async ({ mcp }) => {
-  const result = await mcp.callTool('show-albums', {}, { displayMode: 'fullscreen' });
+test('should render in fullscreen', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums', {}, { displayMode: 'fullscreen' });
   const app = result.app();
   await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 
-test('pip mode works (ChatGPT only)', async ({ mcp }) => {
-  test.skip(mcp.host === 'claude', 'Claude does not support PiP');
-  const result = await mcp.callTool('show-albums');
-  await mcp.setDisplayMode('pip');
+test('pip mode works (ChatGPT only)', async ({ inspector }) => {
+  test.skip(inspector.host === 'claude', 'Claude does not support PiP');
+  const result = await inspector.renderTool('show-albums', {}, { displayMode: 'pip' });
   await expect(result.app().locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 ```
@@ -212,19 +280,19 @@ test('pip mode works (ChatGPT only)', async ({ mcp }) => {
   </Accordion>
 
   <Accordion title="Test across hosts, themes, and display modes">
-    Use `mcp.callTool()` options to test your resources in different configurations. Tests run across ChatGPT and Claude hosts automatically via Playwright projects. Pass `theme` and `displayMode` as options:
+    Use `inspector.renderTool()` options to test your resources in different configurations. Tests run across ChatGPT and Claude hosts automatically via Playwright projects. Pass `theme` and `displayMode` as options:
     ```typescript
-    await mcp.callTool('show-weather', {}, { theme: 'dark', displayMode: 'fullscreen' });
+    await inspector.renderTool('show-weather', {}, { theme: 'dark', displayMode: 'fullscreen' });
     ```
 
     See [MCP Apps Display Modes](/mcp-apps/introduction#what-display-modes-are-available) for how hosts handle inline, fullscreen, and PiP views.
   </Accordion>
 
   <Accordion title="Add visual regression tests for key states">
-    Use `mcp.screenshot()` in tests that cover important visual states (light/dark theme, fullscreen, empty states). Visual tests catch CSS regressions that functional assertions miss:
+    Use `result.screenshot()` in tests that cover important visual states (light/dark theme, fullscreen, empty states). Visual tests catch CSS regressions that functional assertions miss:
     ```typescript
-    await mcp.screenshot('albums-dark');
-    await mcp.screenshot('albums-fullscreen', { target: 'page' });
+    await result.screenshot('albums-dark');
+    await result.screenshot('albums-fullscreen', { target: 'page' });
     ```
   </Accordion>
 

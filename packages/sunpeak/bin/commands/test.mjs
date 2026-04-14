@@ -70,6 +70,9 @@ export async function runTest(args) {
         'playwright.config.js',
         'sunpeak.config.ts',
         'sunpeak.config.js',
+        // Fallback for non-JS projects: tests/sunpeak/ self-contained directory
+        'tests/sunpeak/playwright.config.ts',
+        'tests/sunpeak/playwright.config.js',
       ],
       visual: isVisual,
       updateSnapshots: isVisual && isUpdate,
@@ -82,6 +85,9 @@ export async function runTest(args) {
       configCandidates: [
         'tests/live/playwright.config.ts',
         'tests/live/playwright.config.js',
+        // Fallback for non-JS projects: tests/sunpeak/ self-contained directory
+        'tests/sunpeak/live/playwright.config.ts',
+        'tests/sunpeak/live/playwright.config.js',
       ],
       configRequired: true,
       configErrorMessage: 'No live test config found at tests/live/playwright.config.ts',
