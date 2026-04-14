@@ -85,12 +85,15 @@ export async function runTest(args) {
       configCandidates: [
         'tests/live/playwright.config.ts',
         'tests/live/playwright.config.js',
-        // Fallback for non-JS projects: tests/sunpeak/ self-contained directory
+        // Non-JS projects: tests/sunpeak/ self-contained directory (run from project root)
         'tests/sunpeak/live/playwright.config.ts',
         'tests/sunpeak/live/playwright.config.js',
+        // Non-JS projects: run from within tests/sunpeak/ directly
+        'live/playwright.config.ts',
+        'live/playwright.config.js',
       ],
       configRequired: true,
-      configErrorMessage: 'No live test config found at tests/live/playwright.config.ts',
+      configErrorMessage: 'No live test config found. Expected at tests/live/playwright.config.ts or live/playwright.config.ts',
     });
     results.push({ suite: 'live', code });
   }
@@ -537,6 +540,8 @@ function findEvalDir() {
   const candidates = [
     'tests/evals',
     'tests/sunpeak/evals',
+    // When running from within tests/sunpeak/ directly (non-JS projects)
+    'evals',
   ];
 
   for (const candidate of candidates) {
