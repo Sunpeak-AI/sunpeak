@@ -114,7 +114,7 @@ The `mcp` and `inspector` fixtures handle all the plumbing: starting the inspect
 There are two fixtures: `mcp` for protocol-level testing (`callTool`, `listTools`, etc., returning raw MCP data) and `inspector` for UI testing (`renderTool`, which renders the result in the inspector). When you pass `input` to `renderTool`, the tool is called on your real server and the result is rendered. Without `input`, the tool uses pre-baked simulation fixture data (if available) for fast, deterministic tests. See [Simulations](/testing/simulations#simulations-vs-real-server-calls) for more on when to use each approach.
 
 <Tip>
-  Run `sunpeak inspect --server <url>` to browse your tools interactively and find the right tool names and arguments to use in tests.
+  Run `npx sunpeak inspect --server <url>` to browse your tools interactively and find the right tool names and arguments to use in tests.
 </Tip>
 
 ## 5. Add more test levels

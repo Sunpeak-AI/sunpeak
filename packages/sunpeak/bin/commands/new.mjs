@@ -316,7 +316,7 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
       readme = readme.replace(/pnpm test:visual\b/g, `${run} test:visual`);
       readme = readme.replace(/pnpm test:live\b/g, `${run} test:live`);
       readme = readme.replace(/pnpm test:eval\b/g, `${run} test:eval`);
-      readme = readme.replace(/pnpm add\b/g, `${pm} add`);
+      readme = readme.replace(/pnpm add\b/g, pm === 'npm' ? 'npm install' : `${pm} add`);
       readme = readme.replace(/pnpm dlx\b/g, dlx);
       d.writeFileSync(readmePath, readme);
     }
