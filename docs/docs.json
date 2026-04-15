@@ -110,9 +110,9 @@
           {
             "group": "sunpeak is an",
             "pages": [
-              "mcp-apps-inspector",
+              "mcp-apps-framework",
               "mcp-apps-testing",
-              "mcp-apps-framework"
+              "mcp-apps-inspector"
             ]
           },
           {

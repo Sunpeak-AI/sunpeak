@@ -208,16 +208,11 @@ Template e2e tests use the `mcp` and `inspector` fixtures from `sunpeak/test`, w
 
 ### sunpeak Is Three Things
 
-Each layer builds on the previous and works independently. The inspector and testing framework work with any MCP server in any language and can be embedded within other frameworks.
+Each layer works independently. The inspector and testing framework work with any MCP server in any language and can be embedded within other frameworks.
 
-#### 1. Inspector
+#### 1. App Framework
 
-Test any MCP server in replicated ChatGPT and Claude runtimes. No sunpeak project required.
-
-- **CLI**: `sunpeak inspect --server <url>` or `sunpeak inspect --server "python server.py"`. Supports `--env KEY=VALUE` (repeatable) and `--cwd <path>` for stdio servers.
-- **Programmatic**: `inspectServer()` from `sunpeak/inspect` lets other frameworks start the inspector from their own CLI.
-- **OAuth**: Auto-negotiates MCP OAuth when servers return 401. Handles anonymous/auto-approved OAuth without user interaction. For interactive OAuth, opens the authorization URL in the user's browser and waits for the callback. Uses the MCP SDK's standard `OAuthClientProvider` interface.
-- Built into `sunpeak dev` for app framework users.
+Convention-over-configuration for building MCP Apps. The inspector and testing are built in. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend. Template tests use the testing framework's fixtures and configs. For evals, the dev server auto-starts with `--prod-tools`.
 
 #### 2. Testing Framework
 
@@ -244,9 +239,14 @@ Automated testing powered by the inspector. Works with any MCP server in any lan
 
 **CLI**: `sunpeak test` runs unit + e2e tests, `sunpeak test --unit` runs only vitest, `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test --eval` runs multi-model evals, `sunpeak test init` scaffolds test infrastructure (including eval boilerplate). Flags are additive: `--unit --e2e --live --eval` runs all four. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
 
-#### 3. App Framework
+#### 3. Inspector
 
-Convention-over-configuration for building MCP Apps. The inspector and testing are built in. `defineConfig()` auto-detects sunpeak projects and starts `sunpeak dev` as the backend. Template tests use the testing framework's fixtures and configs. For evals, the dev server auto-starts with `--prod-tools`.
+Test any MCP server in replicated ChatGPT and Claude runtimes. No sunpeak project required.
+
+- **CLI**: `sunpeak inspect --server <url>` or `sunpeak inspect --server "python server.py"`. Supports `--env KEY=VALUE` (repeatable) and `--cwd <path>` for stdio servers.
+- **Programmatic**: `inspectServer()` from `sunpeak/inspect` lets other frameworks start the inspector from their own CLI.
+- **OAuth**: Auto-negotiates MCP OAuth when servers return 401. Handles anonymous/auto-approved OAuth without user interaction. For interactive OAuth, opens the authorization URL in the user's browser and waits for the callback. Uses the MCP SDK's standard `OAuthClientProvider` interface.
+- Built into `sunpeak dev` for app framework users.
 
 ## Documentation (`docs/`)
 

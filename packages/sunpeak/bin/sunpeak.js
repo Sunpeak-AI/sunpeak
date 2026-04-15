@@ -102,21 +102,11 @@ function getVersion() {
       {
         const resources = discoverResources();
         console.log(`
-☀️ 🏔️ sunpeak - Inspector, testing framework, and app framework for MCP Apps
+☀️ 🏔️ sunpeak - App framework, testing framework, and inspector for MCP Apps
 
 Usage: npx sunpeak <command>
 
-Testing (works with any MCP server):
-  sunpeak inspect          Inspect any MCP server in the inspector
-    --server, -s <url|cmd> MCP server URL or stdio command (required)
-    --simulations <dir>    Simulation JSON directory
-  sunpeak test             Run e2e tests against the inspector
-    init                   Scaffold test infrastructure into a project
-    --unit                 Run unit tests (vitest)
-    --live                 Run live tests against real hosts
-    --eval                 Run evals against LLM models
-
-App framework (for sunpeak projects):
+App framework:
   sunpeak new [name] [resources]  Create a new project
   sunpeak dev              Start dev server + inspector + MCP endpoint
     --no-begging           Suppress GitHub star message
@@ -124,8 +114,20 @@ App framework (for sunpeak projects):
   sunpeak start            Start production MCP server
     --port, -p             Server port (default: 8000, or PORT env)
   sunpeak upgrade          Upgrade sunpeak to latest version
-  sunpeak --version        Show version number
 
+Testing (works with any MCP server):
+  sunpeak test             Run e2e tests against the inspector
+    init                   Scaffold test infrastructure into a project
+    --unit                 Run unit tests (vitest)
+    --live                 Run live tests against real hosts
+    --eval                 Run evals against LLM models
+
+Inspector (works with any MCP server):
+  sunpeak inspect          Inspect any MCP server in the inspector
+    --server, -s <url|cmd> MCP server URL or stdio command (required)
+    --simulations <dir>    Simulation JSON directory
+
+  sunpeak --version        Show version number
   Resources: ${resources.join(', ')} (comma/space separated)
   Example: sunpeak new sunpeak-app "${resources.slice(0, 2).join(',')}"
 `);

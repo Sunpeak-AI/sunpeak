@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "Inspector, testing framework, and app framework for MCP Apps."
+description: "App framework, testing framework, and inspector for MCP Apps."
 keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framework", "Claude Apps", "Claude Connectors", "sunpeak"]
 ---
 
@@ -57,22 +57,24 @@ Install the sunpeak coding agent skills for built-in knowledge of patterns, hook
 
 ## sunpeak is three things
 
-Each layer builds on the previous one and works independently.
+### 1. App Framework
 
-### 1. Inspector
-
-See how your MCP server looks and behaves inside ChatGPT and Claude, without deploying to either. Works with any MCP server in any language.
+A convention-over-configuration framework for building MCP Apps with the inspector and testing built in. Like Next.js for AI chat apps.
 
 ```bash
-npx sunpeak inspect --server http://localhost:8000/mcp
+npx sunpeak new sunpeak-app && cd sunpeak-app && pnpm dev
 ```
 
-The inspector replicates the ChatGPT and Claude app runtimes locally. Toggle between hosts, themes, display modes, and device types from the sidebar. Call real tool handlers or load simulation fixtures for deterministic mock data. Changes reflect instantly via HMR.
+Tools, resources, and simulations are auto-discovered from the file system. Multi-platform React hooks let you write your app logic once and deploy across ChatGPT, Claude, and future hosts.
 
-No tunnel, no host account, no deployment. Just instant local feedback.
+<ProjectStructure />
 
-<Card horizontal title="Inspector documentation" icon="desktop" href="/mcp-apps-inspector">
-  Full inspector guide, simulations, and sidebar controls.
+- **[Runtime APIs](/app-framework/runtime-apis)**: `useToolData`, `useAppState`, `useTheme`, `useDisplayMode`, and more
+- **[Project Scaffold](/app-framework/project-scaffold)**: Complete dev setup with pre-configured tooling
+- **Convention over configuration**: resources, tools, and [simulations](/testing/simulations) are auto-discovered from `src/` and `tests/`
+
+<Card horizontal title="App framework documentation" icon="hammer" href="/mcp-apps-framework">
+  Project structure, runtime APIs, deployment, and CLI reference.
 </Card>
 
 ### 2. Testing Framework
@@ -104,34 +106,30 @@ test('album cards render in dark mode', async ({ inspector }) => {
   Getting started, E2E, visual regression, live tests, and evals.
 </Card>
 
-### 3. App Framework
+### 3. Inspector
 
-A convention-over-configuration framework for building MCP Apps with the inspector and testing built in. Like Next.js for AI chat apps.
+See how your MCP server looks and behaves inside ChatGPT and Claude, without deploying to either. Works with any MCP server in any language.
 
 ```bash
-npx sunpeak new sunpeak-app && cd sunpeak-app && pnpm dev
+npx sunpeak inspect --server http://localhost:8000/mcp
 ```
 
-Tools, resources, and simulations are auto-discovered from the file system. Multi-platform React hooks let you write your app logic once and deploy across ChatGPT, Claude, and future hosts.
+The inspector replicates the ChatGPT and Claude app runtimes locally. Toggle between hosts, themes, display modes, and device types from the sidebar. Call real tool handlers or load simulation fixtures for deterministic mock data. Changes reflect instantly via HMR.
 
-<ProjectStructure />
+No tunnel, no host account, no deployment. Just instant local feedback.
 
-- **[Runtime APIs](/app-framework/runtime-apis)**: `useToolData`, `useAppState`, `useTheme`, `useDisplayMode`, and more
-- **[Project Scaffold](/app-framework/project-scaffold)**: Complete dev setup with pre-configured tooling
-- **Convention over configuration**: resources, tools, and [simulations](/testing/simulations) are auto-discovered from `src/` and `tests/`
-
-<Card horizontal title="App framework documentation" icon="hammer" href="/mcp-apps-framework">
-  Project structure, runtime APIs, deployment, and CLI reference.
+<Card horizontal title="Inspector documentation" icon="desktop" href="/mcp-apps-inspector">
+  Full inspector guide, simulations, and sidebar controls.
 </Card>
 
 ### The sunpeak CLI
 
 - [`sunpeak new`](/app-framework/cli/new) - Create a new project
 - [`sunpeak dev`](/app-framework/cli/dev) - Start dev server with inspector and MCP endpoint
-- [`sunpeak inspect`](/testing/cli/inspect) - Inspect any MCP server (standalone)
-- [`sunpeak test`](/testing/cli/test) - Run unit, E2E, visual, live, and eval tests
 - [`sunpeak build`](/app-framework/cli/build) - Build resources for production
 - [`sunpeak start`](/app-framework/cli/start) - Start the production MCP server
+- [`sunpeak test`](/testing/cli/test) - Run unit, E2E, visual, live, and eval tests
+- [`sunpeak inspect`](/testing/cli/inspect) - Inspect any MCP server (standalone)
 - [`sunpeak upgrade`](/testing/cli/upgrade) - Upgrade sunpeak to latest version
 
 <Examples />
