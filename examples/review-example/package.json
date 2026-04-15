@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "sunpeak": "^0.20.3",
+    "sunpeak": "^0.20.4",
     "tailwind-merge": "^3.5.0",
     "zod": "^4.3.6"
   },

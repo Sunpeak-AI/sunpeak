@@ -16,9 +16,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript&label=ts&color=FFB800&logoColor=white&labelColor=000035)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&label=react&color=FFB800&logoColor=white&labelColor=000035)](https://reactjs.org/)
 
-App framework, testing framework, and inspector for MCP servers and MCP Apps.
+MCP App framework, MCP testing framework, and inspector for MCP servers and MCP Apps.
 
-Build cross-platform: MCP App framework, ChatGPT App framework, and Claude Connector framework.
+Build cross-platform: sunpeak is a ChatGPT App framework, Claude Connector framework, and more.
 
 ```bash
 npx sunpeak new
