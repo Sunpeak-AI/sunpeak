@@ -652,8 +652,8 @@ describe('CLI Commands', () => {
       expect(confirmMock).not.toHaveBeenCalled();
 
       // But the scaffold should still be created (with "configure later" default)
-      const configCall = writeFileSync.mock.calls.find(
-        ([path]: [string]) => path.includes('playwright.config.ts')
+      const configCall = writeFileSync.mock.calls.find(([path]: [string]) =>
+        path.includes('playwright.config.ts')
       );
       expect(configCall).toBeDefined();
       expect(configCall[1]).toContain('// TODO: Configure your MCP server');
