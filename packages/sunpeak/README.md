@@ -105,7 +105,7 @@ npx sunpeak new
 This creates a project, starts a dev server with HMR, and opens the inspector at `localhost:3000`:
 
 ```
-my-app/
+sunpeak-app/
 ├── src/resources/review/review.tsx    # UI component (React)
 ├── src/tools/review-diff.ts           # Tool handler, schema, resource link
 ├── tests/simulations/review-diff.json # Mock data for the inspector
