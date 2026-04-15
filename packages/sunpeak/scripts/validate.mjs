@@ -319,10 +319,10 @@ function runTestInitSmokeTest() {
         return { ok: false, step: 'test-init external: server URL missing from eval.config.ts', output: allOutput.join('\n') };
       }
 
-      // Verify live config has the NOTE for non-sunpeak projects
+      // Verify live config has server option for non-sunpeak projects
       const liveConfig = readFileSync(join(testDir, 'live/playwright.config.ts'), 'utf-8');
-      if (!liveConfig.includes('NOTE:')) {
-        return { ok: false, step: 'test-init external: live config missing NOTE for non-sunpeak', output: allOutput.join('\n') };
+      if (!liveConfig.includes("server: { url: 'http://localhost:8000/mcp' }")) {
+        return { ok: false, step: 'test-init external: live config missing server option', output: allOutput.join('\n') };
       }
 
       // Idempotency: second run should not crash
@@ -412,10 +412,10 @@ function runTestInitSmokeTest() {
         return { ok: false, step: 'test-init js: eval test missing expected content', output: allOutput.join('\n') };
       }
 
-      // JS project live config should have the NOTE
+      // JS project live config should have server option
       const liveConfig = readFileSync(join(dir, 'tests/live/playwright.config.ts'), 'utf-8');
-      if (!liveConfig.includes('NOTE:')) {
-        return { ok: false, step: 'test-init js: live config missing NOTE', output: allOutput.join('\n') };
+      if (!liveConfig.includes("server: { url: 'http://localhost:9000/mcp' }")) {
+        return { ok: false, step: 'test-init js: live config missing server option', output: allOutput.join('\n') };
       }
 
       // Verify server URL in main config
@@ -465,10 +465,10 @@ function runTestInitSmokeTest() {
         return { ok: false, step: 'test-init sunpeak: config should use defineConfig()', output: allOutput.join('\n') };
       }
 
-      // sunpeak project live config should NOT have the NOTE
+      // sunpeak project live config should NOT have a server option
       const liveConfig = readFileSync(join(dir, 'tests/live/playwright.config.ts'), 'utf-8');
-      if (liveConfig.includes('NOTE:')) {
-        return { ok: false, step: 'test-init sunpeak: live config should NOT have NOTE', output: allOutput.join('\n') };
+      if (liveConfig.includes('server:')) {
+        return { ok: false, step: 'test-init sunpeak: live config should NOT have server option', output: allOutput.join('\n') };
       }
 
       // Eval config should have sunpeak-specific comment
