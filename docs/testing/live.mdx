@@ -31,10 +31,28 @@ This only needs to be done once per tunnel URL pattern.
 ```bash
 # Terminal 1: Start a tunnel to your MCP server
 ngrok http 8000
-
-# Terminal 2: Run live tests
-pnpm test:live
 ```
+
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    # Terminal 2: Run live tests
+    pnpm test:live
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    # Terminal 2: Run live tests
+    npm run test:live
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    # Terminal 2: Run live tests
+    yarn test:live
+    ```
+  </Tab>
+</Tabs>
 
 The test runner:
 1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found. Sessions typically last a few hours — Cloudflare's HttpOnly `cf_clearance` cookie cannot be persisted, so re-authentication is needed when it expires.

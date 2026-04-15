@@ -54,12 +54,32 @@ Four levels of automated testing:
 
 E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests. Tests run against both ChatGPT and Claude hosts via Playwright projects.
 
-```bash
-pnpm test                               # Run unit + e2e
-pnpm test:e2e                           # E2E only
-pnpm test:e2e -- --ui                   # Playwright UI mode
-pnpm test:e2e -- tests/e2e/albums.spec.ts  # Single file
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm test                               # Run unit + e2e
+    pnpm test:e2e                           # E2E only
+    pnpm test:e2e -- --ui                   # Playwright UI mode
+    pnpm test:e2e -- tests/e2e/albums.spec.ts  # Single file
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run test                               # Run unit + e2e
+    npm run test:e2e                           # E2E only
+    npm run test:e2e -- --ui                   # Playwright UI mode
+    npm run test:e2e -- tests/e2e/albums.spec.ts  # Single file
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn test                               # Run unit + e2e
+    yarn test:e2e                           # E2E only
+    yarn test:e2e --ui                      # Playwright UI mode
+    yarn test:e2e tests/e2e/albums.spec.ts  # Single file
+    ```
+  </Tab>
+</Tabs>
 
 ### Writing E2E Tests
 
@@ -179,10 +199,26 @@ Visual regression tests capture screenshots and compare them against saved basel
 
 Screenshot comparisons only run when you pass `--visual`. Without it, `result.screenshot()` calls are silently skipped, so you can include them in your regular e2e tests without affecting normal runs.
 
-```bash
-pnpm test:visual                           # Compare against baselines
-pnpm test:visual -- --update               # Update baselines
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm test:visual                           # Compare against baselines
+    pnpm test:visual -- --update               # Update baselines
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run test:visual                           # Compare against baselines
+    npm run test:visual -- --update               # Update baselines
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn test:visual                           # Compare against baselines
+    yarn test:visual --update                  # Update baselines
+    ```
+  </Tab>
+</Tabs>
 
 Use `result.screenshot()` in any e2e test:
 
@@ -240,13 +276,35 @@ This only needs to be done once per tunnel URL pattern.
 
 ### Running Live Tests
 
-```bash
-# Terminal 1: Start a tunnel to your MCP server
-ngrok http 8000
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    # Terminal 1: Start a tunnel to your MCP server
+    ngrok http 8000
 
-# Terminal 2: Run live tests
-pnpm test:live
-```
+    # Terminal 2: Run live tests
+    pnpm test:live
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    # Terminal 1: Start a tunnel to your MCP server
+    ngrok http 8000
+
+    # Terminal 2: Run live tests
+    npm run test:live
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    # Terminal 1: Start a tunnel to your MCP server
+    ngrok http 8000
+
+    # Terminal 2: Run live tests
+    yarn test:live
+    ```
+  </Tab>
+</Tabs>
 
 The test runner:
 1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found.
@@ -408,10 +466,26 @@ Three assertion levels:
 
 ### Running
 
-```bash
-pnpm test:eval                                   # Run all evals
-pnpm test:eval -- tests/evals/albums.eval.ts     # Run one eval file
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm test:eval                                   # Run all evals
+    pnpm test:eval -- tests/evals/albums.eval.ts     # Run one eval file
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run test:eval                                   # Run all evals
+    npm run test:eval -- tests/evals/albums.eval.ts     # Run one eval file
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn test:eval                                   # Run all evals
+    yarn test:eval tests/evals/albums.eval.ts        # Run one eval file
+    ```
+  </Tab>
+</Tabs>
 
 ### Output
 

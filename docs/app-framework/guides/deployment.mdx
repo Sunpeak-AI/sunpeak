@@ -8,9 +8,23 @@ keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "deployment", "production"
 
 Build your app for production using the sunpeak CLI:
 
-```bash
-pnpm build
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm build
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run build
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn build
+    ```
+  </Tab>
+</Tabs>
 
 This generates a `dist/` directory with built resources and compiled tools:
 
@@ -30,20 +44,58 @@ Each `.html` file is a complete, self-contained app bundle — no external scrip
 
 ## Start the Production Server
 
-```bash
-pnpm start
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm start
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run start
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn start
+    ```
+  </Tab>
+</Tabs>
 
 This loads your compiled tool handlers, Zod schemas, and optional auth from `dist/`, registers them with the [MCP protocol](/mcp-apps/mcp/overview), and starts a [Streamable HTTP](/mcp-apps/mcp/overview#transports) server on port 8000.
 
-```bash
-pnpm start -- --port 3000          # Custom port
-pnpm start -- --host 127.0.0.1     # Bind to localhost only
-pnpm start -- --json-logs           # Structured JSON logging
-pnpm start -- --sse                 # Use SSE streaming instead of JSON responses
-pnpm start -- --stateless           # Stateless mode (no session tracking)
-PORT=3000 HOST=127.0.0.1 pnpm start  # Or via environment variables
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm start -- --port 3000          # Custom port
+    pnpm start -- --host 127.0.0.1     # Bind to localhost only
+    pnpm start -- --json-logs           # Structured JSON logging
+    pnpm start -- --sse                 # Use SSE streaming instead of JSON responses
+    pnpm start -- --stateless           # Stateless mode (no session tracking)
+    PORT=3000 HOST=127.0.0.1 pnpm start  # Or via environment variables
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run start -- --port 3000          # Custom port
+    npm run start -- --host 127.0.0.1     # Bind to localhost only
+    npm run start -- --json-logs           # Structured JSON logging
+    npm run start -- --sse                 # Use SSE streaming instead of JSON responses
+    npm run start -- --stateless           # Stateless mode (no session tracking)
+    PORT=3000 HOST=127.0.0.1 npm run start  # Or via environment variables
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn start --port 3000          # Custom port
+    yarn start --host 127.0.0.1     # Bind to localhost only
+    yarn start --json-logs           # Structured JSON logging
+    yarn start --sse                 # Use SSE streaming instead of JSON responses
+    yarn start --stateless           # Stateless mode (no session tracking)
+    PORT=3000 HOST=127.0.0.1 yarn start  # Or via environment variables
+    ```
+  </Tab>
+</Tabs>
 
 The production server:
 - Registers each tool from `dist/tools/` with its real handler and Zod schema (input validation)
@@ -57,9 +109,23 @@ The production server:
 
 Use `sunpeak build` and `sunpeak start` to test production behavior locally:
 
-```bash
-pnpm build && pnpm start
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm build && pnpm start
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run build && npm run start
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn build && yarn start
+    ```
+  </Tab>
+</Tabs>
 
 Then expose the MCP server with a tunnel (e.g., `ngrok http 8000`) and connect from ChatGPT.
 
@@ -176,9 +242,23 @@ Use this for load balancer probes, Kubernetes liveness/readiness checks, and upt
 
 Pass `--json-logs` to output structured JSON lines instead of human-readable logs:
 
-```bash
-pnpm start -- --json-logs
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm start -- --json-logs
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run start -- --json-logs
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn start --json-logs
+    ```
+  </Tab>
+</Tabs>
 
 Each line is a JSON object with `ts`, `level`, and `msg` fields, plus contextual data:
 
@@ -193,10 +273,26 @@ This format is compatible with log aggregation tools like Datadog, CloudWatch, L
 
 By default, the server binds to `0.0.0.0` (all interfaces). To restrict it to localhost only:
 
-```bash
-pnpm start -- --host 127.0.0.1
-HOST=127.0.0.1 pnpm start
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm start -- --host 127.0.0.1
+    HOST=127.0.0.1 pnpm start
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run start -- --host 127.0.0.1
+    HOST=127.0.0.1 npm run start
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn start --host 127.0.0.1
+    HOST=127.0.0.1 yarn start
+    ```
+  </Tab>
+</Tabs>
 
 ### Process Management
 
@@ -246,9 +342,23 @@ For multi-instance deployments behind a load balancer, you have two options:
 
 **Stateless mode (recommended for serverless)** — Disable session tracking entirely. Each request creates a fresh server instance, so any backend can handle any request:
 
-```bash
-pnpm start -- --stateless
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm start -- --stateless
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run start -- --stateless
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn start --stateless
+    ```
+  </Tab>
+</Tabs>
 
 Or with a custom server:
 

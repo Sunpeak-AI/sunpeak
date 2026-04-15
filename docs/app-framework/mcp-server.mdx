@@ -31,9 +31,23 @@ For details on how MCP Apps extends the protocol with interactive UIs, see the [
   <Tab title="Development">
     Start the development server:
 
-    ```bash
-    pnpm dev
-    ```
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm dev
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm run dev
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn dev
+        ```
+      </Tab>
+    </Tabs>
 
     This starts both the inspector and an MCP server with Hot Module Reload.
     The MCP server runs on port `8000` and serves simulation fixture data.
@@ -41,9 +55,23 @@ For details on how MCP Apps extends the protocol with interactive UIs, see the [
   <Tab title="Production">
     Build and start the production server:
 
-    ```bash
-    pnpm build && pnpm start
-    ```
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm build && pnpm start
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm run build && npm run start
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn build && yarn start
+        ```
+      </Tab>
+    </Tabs>
 
     This compiles your tools, resources, and optional auth, then starts a production MCP server with real handlers.
   </Tab>

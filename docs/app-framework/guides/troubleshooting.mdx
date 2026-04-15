@@ -29,10 +29,26 @@ If the port changed (e.g. `port 8000 was in use`), update your tunnel and host c
 
 ### 3. Restart the dev server
 
-```bash
-# Stop the dev server (Ctrl+C), then restart
-pnpm dev
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    # Stop the dev server (Ctrl+C), then restart
+    pnpm dev
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    # Stop the dev server (Ctrl+C), then restart
+    npm run dev
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    # Stop the dev server (Ctrl+C), then restart
+    yarn dev
+    ```
+  </Tab>
+</Tabs>
 
 This clears any stale connections and re-registers all tools and resources.
 
@@ -87,13 +103,35 @@ Safari automatically upgrades cross-origin HTTP requests to HTTPS. The dev serve
 
 If `--prod-resources` mode fails, the built HTML may be stale or missing:
 
-```bash
-# Rebuild manually
-pnpm build
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    # Rebuild manually
+    pnpm build
 
-# Then retry with prod resources
-pnpm dev -- --prod-resources
-```
+    # Then retry with prod resources
+    pnpm dev -- --prod-resources
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    # Rebuild manually
+    npm run build
+
+    # Then retry with prod resources
+    npm run dev -- --prod-resources
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    # Rebuild manually
+    yarn build
+
+    # Then retry with prod resources
+    yarn dev --prod-resources
+    ```
+  </Tab>
+</Tabs>
 
 <Note>
 For inspector and test-related troubleshooting (blank inspector page, iframe test errors, live test auth), see [Testing Troubleshooting](/testing/troubleshooting).

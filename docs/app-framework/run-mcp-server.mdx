@@ -18,9 +18,23 @@ This server is for **local development only**. For production, use `sunpeak star
 
 sunpeak handles MCP server configuration automatically:
 
-```bash
-pnpm dev
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm dev
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run dev
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn dev
+    ```
+  </Tab>
+</Tabs>
 
 This starts the inspector and an MCP server with Hot Module Reload.
 The MCP server discovers tools from `src/tools/` and simulations from `tests/simulations/`, and serves the apps with automatic rebuilding.

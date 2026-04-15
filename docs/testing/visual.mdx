@@ -12,10 +12,26 @@ Screenshot comparisons only run when you pass `--visual`. Without it, `result.sc
 
 ## Running Visual Tests
 
-```bash
-pnpm test:visual                           # Compare against baselines
-pnpm test:visual -- --update               # Update baselines
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm test:visual                           # Compare against baselines
+    pnpm test:visual -- --update               # Update baselines
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run test:visual                           # Compare against baselines
+    npm run test:visual -- --update               # Update baselines
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn test:visual                           # Compare against baselines
+    yarn test:visual --update                  # Update baselines
+    ```
+  </Tab>
+</Tabs>
 
 ## Writing Visual Tests
 

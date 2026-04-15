@@ -89,11 +89,29 @@ if (isChatGPT()) {
 
 The MCP server lets you serve your apps to AI hosts like ChatGPT and Claude. During development, [`sunpeak dev`](/app-framework/cli/dev) runs an MCP server that serves simulation fixture data. For production, use [`sunpeak build`](/app-framework/cli/build) followed by [`sunpeak start`](/app-framework/cli/start).
 
-```bash
-pnpm dev        # Dev server with HMR + inspector + MCP endpoint
-pnpm build      # Build resources for production
-pnpm start      # Start the production MCP server
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm dev        # Dev server with HMR + inspector + MCP endpoint
+    pnpm build      # Build resources for production
+    pnpm start      # Start the production MCP server
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run dev        # Dev server with HMR + inspector + MCP endpoint
+    npm run build      # Build resources for production
+    npm run start      # Start the production MCP server
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn dev        # Dev server with HMR + inspector + MCP endpoint
+    yarn build      # Build resources for production
+    yarn start      # Start the production MCP server
+    ```
+  </Tab>
+</Tabs>
 
 See the [Deployment Guide](/app-framework/guides/deployment) for connecting to hosts, tunnels, and production setup.
 

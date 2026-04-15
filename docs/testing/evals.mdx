@@ -132,11 +132,29 @@ Args use partial matching. Extra keys in the actual tool call are allowed. Vites
 
 ## Running Evals
 
-```bash
-pnpm test:eval                             # Run all evals
-pnpm test:eval -- albums                   # Filter by name
-pnpm test:eval -- --unit                   # Run evals + unit tests
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm test:eval                             # Run all evals
+    pnpm test:eval -- albums                   # Filter by name
+    pnpm test:eval -- --unit                   # Run evals + unit tests
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run test:eval                             # Run all evals
+    npm run test:eval -- albums                   # Filter by name
+    npm run test:eval -- --unit                   # Run evals + unit tests
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn test:eval                             # Run all evals
+    yarn test:eval albums                      # Filter by name
+    yarn test:eval --unit                      # Run evals + unit tests
+    ```
+  </Tab>
+</Tabs>
 
 ## Output
 

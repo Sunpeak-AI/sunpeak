@@ -8,10 +8,26 @@ keywords: ["MCP app testing", "unit testing", "Vitest", "happy-dom", "React test
 
 Unit tests run your component and hook logic in isolation using Vitest with happy-dom. They're fast, don't require the inspector or a browser, and are included in the default `sunpeak test` run.
 
-```bash
-pnpm test                    # Run unit + e2e tests
-pnpm test:unit               # Unit tests only
-```
+<Tabs>
+  <Tab title="pnpm">
+    ```bash
+    pnpm test                    # Run unit + e2e tests
+    pnpm test:unit               # Unit tests only
+    ```
+  </Tab>
+  <Tab title="npm">
+    ```bash
+    npm run test                    # Run unit + e2e tests
+    npm run test:unit               # Unit tests only
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn test                    # Run unit + e2e tests
+    yarn test:unit               # Unit tests only
+    ```
+  </Tab>
+</Tabs>
 
 ## Setup
 
@@ -110,9 +126,23 @@ Unit tests and E2E tests are complementary. Unit tests catch logic bugs fast. [E
 
 <AccordionGroup>
   <Accordion title="Linting (ESLint)">
-    ```bash
-    pnpm add -D eslint @typescript-eslint/eslint-plugin
-    ```
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm add -D eslint @typescript-eslint/eslint-plugin
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm install -D eslint @typescript-eslint/eslint-plugin
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn add -D eslint @typescript-eslint/eslint-plugin
+        ```
+      </Tab>
+    </Tabs>
     Add `"lint": "eslint . --ext .ts,.tsx"` to package.json scripts.
   </Accordion>
 
@@ -124,9 +154,23 @@ Unit tests and E2E tests are complementary. Unit tests catch logic bugs fast. [E
   </Accordion>
 
   <Accordion title="Formatting (Prettier)">
-    ```bash
-    pnpm add -D prettier
-    ```
+    <Tabs>
+      <Tab title="pnpm">
+        ```bash
+        pnpm add -D prettier
+        ```
+      </Tab>
+      <Tab title="npm">
+        ```bash
+        npm install -D prettier
+        ```
+      </Tab>
+      <Tab title="yarn">
+        ```bash
+        yarn add -D prettier
+        ```
+      </Tab>
+    </Tabs>
     Add `"format": "prettier --write ."` to package.json scripts.
   </Accordion>
 </AccordionGroup>
