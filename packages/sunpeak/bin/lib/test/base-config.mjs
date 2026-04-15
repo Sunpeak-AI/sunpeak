@@ -5,8 +5,6 @@
  * Produces a config with per-host Playwright projects, sensible defaults for
  * MCP App testing, and a webServer entry to launch the inspector backend.
  */
-import { getPortSync } from '../get-port.mjs';
-
 /**
  * @param {Object} options
  * @param {string[]} options.hosts - Host shells to create projects for
@@ -63,10 +61,19 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
 /**
  * Resolve ports for the inspector and sandbox proxy.
  * Respects env vars for CI where validate.mjs assigns unique ports.
+ *
+ * Uses FIXED default ports (no dynamic probing) so all Playwright workers
+ * resolve the same baseURL. Dynamic port probing (getPortSync) caused flaky
+ * tests: the main process would pick port X, start the webServer on it, then
+ * worker processes re-evaluating the config would find X occupied and resolve
+ * to random ports Y/Z — causing ERR_CONNECTION_REFUSED.
+ *
+ * If the default port is busy, Playwright's reuseExistingServer (local) reuses
+ * it, or strictPort (CI) fails fast with a clear error.
  */
 export function resolvePorts() {
-  const port = parsePort(process.env.SUNPEAK_TEST_PORT) ?? getPortSync(6776);
-  const sandboxPort = parsePort(process.env.SUNPEAK_SANDBOX_PORT) ?? getPortSync(24680);
+  const port = parsePort(process.env.SUNPEAK_TEST_PORT) ?? 6776;
+  const sandboxPort = parsePort(process.env.SUNPEAK_SANDBOX_PORT) ?? 24680;
   return { port, sandboxPort };
 }
 

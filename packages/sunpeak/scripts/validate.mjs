@@ -624,17 +624,146 @@ async function runScaffoldSmokeTest() {
       }
     }
 
-    // ── sunpeak test (unit + e2e) ──
-    // Users run `sunpeak test` which exercises both unit tests and Playwright e2e.
+    // ── sunpeak test (unit + e2e) with CLEAN Vite cache ──
+    // Users run `sunpeak test` right after `sunpeak new`. The first run has no
+    // Vite dep cache, so this catches flaky first-run issues (port mismatches,
+    // slow Vite optimization, etc.). We explicitly delete the cache before running.
     const testPort = await getPort(19200);
     const testHmrPort = await getPort(24712);
     const testSandboxPort = await getPort(24710);
+    const viteCacheDir = join(projectDir, 'node_modules', '.vite-mcp');
+    if (existsSync(viteCacheDir)) rmSync(viteCacheDir, { recursive: true });
     const testResult = runCommandCapture('pnpm test', projectDir, {
       SUNPEAK_TEST_PORT: String(testPort),
       SUNPEAK_HMR_PORT: String(testHmrPort),
       SUNPEAK_SANDBOX_PORT: String(testSandboxPort),
     });
     if (!testResult.ok) return { ok: false, step: 'sunpeak test (scaffold)', output: testResult.output };
+
+    // ── eval framework smoke test ──
+    // Verify that `sunpeak test --eval` can start the dev server, connect,
+    // discover tools with valid schemas, and convert them for AI providers.
+    // Does NOT make actual API calls (no API key needed). Catches schema
+    // conversion bugs (like the ai v6 inputSchema rename, or OpenAI-incompatible
+    // JSON Schema fields) before users hit them.
+    {
+      const evalPort = await getPort(19250);
+      const evalInspectorPort = await getPort(19251);
+      let evalServer;
+      try {
+        evalServer = await startServerProcess(
+          'node', [SUNPEAK_BIN, 'dev', '--port', String(evalInspectorPort), '--no-begging', '--', '--prod-tools'],
+          projectDir,
+          { SUNPEAK_MCP_PORT: String(evalPort), SUNPEAK_DEV_OVERLAY: 'false' },
+          'scaffold eval schema', 30000
+        );
+
+        // Connect to MCP and discover tools (same flow as the eval runner)
+        const mcpUrl = `http://localhost:${evalPort}/mcp`;
+        const initResp = await fetch(mcpUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream, application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 1, method: 'initialize',
+            params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'validate-eval', version: '0.0.1' } },
+          }),
+        });
+        if (!initResp.ok) throw new Error(`eval schema: initialize returned ${initResp.status}`);
+        const sessionId = initResp.headers.get('mcp-session-id');
+        if (!sessionId) throw new Error('eval schema: no session ID');
+
+        const toolsResp = await fetch(mcpUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream, application/json',
+            'Mcp-Session-Id': sessionId,
+          },
+          body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
+        });
+        const toolsText = await toolsResp.text();
+        const dataLine = toolsText.split('\n').find(l => l.startsWith('data: '));
+        const toolsBody = dataLine ? JSON.parse(dataLine.slice(6)) : JSON.parse(toolsText);
+        const tools = toolsBody.result?.tools || [];
+        if (tools.length === 0) throw new Error('eval schema: no tools discovered');
+
+        // Verify all tool schemas are valid for AI providers:
+        // - Must have type: "object"
+        // - Must not have additionalProperties: {} (empty schema)
+        // - Must have real properties (not empty)
+        // - No required array (dev server makes all fields optional)
+        for (const tool of tools) {
+          const schema = tool.inputSchema;
+          if (!schema) throw new Error(`eval schema: ${tool.name} has no inputSchema`);
+          if (schema.type !== 'object') throw new Error(`eval schema: ${tool.name} has type "${schema.type}" instead of "object"`);
+          if (schema.additionalProperties && typeof schema.additionalProperties === 'object' && Object.keys(schema.additionalProperties).length === 0) {
+            throw new Error(`eval schema: ${tool.name} has empty additionalProperties (breaks OpenAI)`);
+          }
+          const propCount = Object.keys(schema.properties || {}).length;
+          if (propCount === 0) throw new Error(`eval schema: ${tool.name} has empty properties (real schemas should be populated)`);
+          if (schema.required && schema.required.length > 0) {
+            throw new Error(`eval schema: ${tool.name} has required fields ${JSON.stringify(schema.required)} (dev server should make all fields optional so partial args are accepted)`);
+          }
+        }
+
+        // Verify the eval runner's tool conversion produces valid AI SDK tools.
+        // This catches the ai v6 `parameters` → `inputSchema` rename and
+        // schema cleanup issues without needing an API key.
+        const { discoverAndConvertTools } = await import('../bin/lib/eval/eval-runner.mjs');
+        const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
+        const { StreamableHTTPClientTransport } = await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
+        const evalClient = new Client({ name: 'validate-eval-convert', version: '1.0.0' });
+        const evalTransport = new StreamableHTTPClientTransport(new URL(mcpUrl));
+        await evalClient.connect(evalTransport);
+        try {
+          const aiTools = await discoverAndConvertTools(evalClient);
+          const toolNames = Object.keys(aiTools);
+          if (toolNames.length === 0) throw new Error('eval convert: no tools converted');
+          for (const name of toolNames) {
+            const t = aiTools[name];
+            // ai v6 reads `inputSchema`; ai v4/v5 reads `parameters`.
+            // The eval runner must set both for cross-version compatibility.
+            if (!('inputSchema' in t)) throw new Error(`eval convert: tool "${name}" missing inputSchema (ai v6 won't find schema)`);
+            if (!('parameters' in t)) throw new Error(`eval convert: tool "${name}" missing parameters (ai v4/v5 won't find schema)`);
+            // Verify the schema has real content (not the empty fallback)
+            const schemaObj = t.inputSchema?.jsonSchema || t.parameters?.jsonSchema;
+            if (!schemaObj || !schemaObj.properties || Object.keys(schemaObj.properties).length === 0) {
+              throw new Error(`eval convert: tool "${name}" has empty schema after conversion`);
+            }
+            if (schemaObj.$schema) throw new Error(`eval convert: tool "${name}" still has $schema (breaks OpenAI)`);
+            if (schemaObj.required) throw new Error(`eval convert: tool "${name}" still has required (models refuse to call with partial args)`);
+          }
+        } finally {
+          try { await evalTransport.close(); } catch { /* best-effort */ }
+        }
+
+        // Verify the dev server accepts partial args (no SDK validation error).
+        // makeSchemaOptional() makes all fields optional so tools accept any
+        // subset of args. Without this, models sending partial args get rejected.
+        const callResp = await fetch(mcpUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'text/event-stream, application/json',
+            'Mcp-Session-Id': sessionId,
+          },
+          body: JSON.stringify({
+            jsonrpc: '2.0', id: 3, method: 'tools/call',
+            params: { name: tools[0].name, arguments: {} },
+          }),
+        });
+        const callText = await callResp.text();
+        const callDataLine = callText.split('\n').find(l => l.startsWith('data: '));
+        const callBody = callDataLine ? JSON.parse(callDataLine.slice(6)) : JSON.parse(callText);
+        if (callBody.error?.message?.includes('validation error') || callBody.error?.message?.includes('Invalid arguments')) {
+          throw new Error(`eval partial args: tool "${tools[0].name}" rejected empty args — makeSchemaOptional may be broken`);
+        }
+      } catch (e) {
+        return { ok: false, step: 'eval schema (scaffold)', output: e.message };
+      } finally {
+        if (evalServer) await killServer(evalServer.proc);
+      }
+    }
 
     // ── sunpeak build ──
     const buildResult = runCommandCapture(`node ${SUNPEAK_BIN} build`, projectDir);

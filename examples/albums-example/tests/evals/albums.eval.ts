@@ -4,7 +4,7 @@ export default defineEval({
   cases: [
     {
       name: 'asks for photo albums',
-      prompt: 'Show me my photo albums',
+      prompt: 'Show me all my photo albums, no filter needed',
       expect: { tool: 'show-albums' },
     },
     {

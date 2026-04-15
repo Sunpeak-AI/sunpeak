@@ -44,7 +44,12 @@ export async function resolveModel(modelId) {
   // that creates model instances: openai('gpt-4o'), anthropic('claude-...'), google('gemini-...')
   if (pkg === '@ai-sdk/openai') {
     const { openai } = provider;
-    return openai(modelId);
+    // @ai-sdk/openai v3 defaults to the Responses API, which requires strict
+    // JSON Schema (additionalProperties: false at every level, all properties
+    // required) — incompatible with arbitrary MCP server schemas. Use .chat()
+    // (Chat Completions API) when available. v1/v2 default to Chat Completions
+    // already and may not have .chat(), so fall back to the default.
+    return typeof openai.chat === 'function' ? openai.chat(modelId) : openai(modelId);
   }
   if (pkg === '@ai-sdk/anthropic') {
     const { anthropic } = provider;

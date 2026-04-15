@@ -112,9 +112,35 @@ export async function discoverAndConvertTools(client) {
   const tools = {};
 
   for (const t of mcpTools) {
+    // Clean up the MCP inputSchema for AI provider compatibility.
+    // OpenAI rejects $schema, additionalProperties: {} (empty schema has no type),
+    // and other JSON Schema features that MCP servers may include.
+    const rawSchema = t.inputSchema || { type: 'object', properties: {} };
+    const cleanSchema = { ...rawSchema };
+    delete cleanSchema.$schema;
+    if (
+      cleanSchema.additionalProperties != null &&
+      typeof cleanSchema.additionalProperties === 'object' &&
+      Object.keys(cleanSchema.additionalProperties).length === 0
+    ) {
+      // Empty additionalProperties ({}) causes OpenAI to report type: "None".
+      // Remove it so the schema is a plain { type: "object", properties: {...} }.
+      delete cleanSchema.additionalProperties;
+    }
+    if (!cleanSchema.type) cleanSchema.type = 'object';
+    if (!cleanSchema.properties) cleanSchema.properties = {};
+    // Remove `required` so the model isn't forced to ask the user for every
+    // parameter before calling a tool. Eval prompts are intentionally vague
+    // ("show me photo albums") and the model should call the tool with
+    // reasonable defaults, not refuse because required fields are missing.
+    delete cleanSchema.required;
+
     tools[t.name] = aiTool({
       description: t.description || '',
-      parameters: jsonSchema(t.inputSchema || { type: 'object', properties: {} }),
+      // Set both so the tool works with ai v4/v5 (reads `parameters`)
+      // and ai v6 (reads `inputSchema`). tool() passes through both.
+      inputSchema: jsonSchema(cleanSchema),
+      parameters: jsonSchema(cleanSchema),
       execute: async (args) => {
         const result = await client.callTool({ name: t.name, arguments: args });
         // Return a simplified version for the model to consume

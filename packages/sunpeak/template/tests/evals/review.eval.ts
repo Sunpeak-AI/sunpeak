@@ -9,12 +9,14 @@ export default defineEval({
     },
     {
       name: 'asks to draft a social post',
-      prompt: 'Write a launch announcement for X and LinkedIn',
+      prompt:
+        'Draft a social media post announcing our new AI features launching today, for X and LinkedIn',
       expect: { tool: 'review-post' },
     },
     {
       name: 'asks to review a purchase',
-      prompt: 'Review my order for the Pro plan upgrade',
+      prompt:
+        'Show me a purchase review for cart abc-123 with the Pro plan item, shipping to address addr-1 via standard shipping, paying with card pm-1',
       expect: { tool: 'review-purchase' },
     },
 

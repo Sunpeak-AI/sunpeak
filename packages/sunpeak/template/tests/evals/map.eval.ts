@@ -9,7 +9,7 @@ export default defineEval({
     },
     {
       name: 'asks for nearby places',
-      prompt: 'Find me some parks nearby',
+      prompt: 'Show me parks near Central Park, New York',
       expect: { tool: 'show-map' },
     },
   ],

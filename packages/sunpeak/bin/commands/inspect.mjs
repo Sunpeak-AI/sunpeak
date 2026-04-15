@@ -1429,8 +1429,14 @@ export async function inspectServer(opts) {
     ownsSandbox = true;
   }
 
-  // Determine server port
-  const port = preferredPort || Number(process.env.PORT) || (await getPort(3000));
+  // Determine server port.
+  // Track whether the port was explicitly requested (via option or env var) vs
+  // auto-discovered. When explicit, use strictPort so Vite fails fast instead of
+  // silently picking another port — Playwright tests set baseURL from the same port
+  // and a silent fallback causes ERR_CONNECTION_REFUSED. When auto-discovered,
+  // the port is guaranteed free so strictPort is irrelevant.
+  const explicitPort = preferredPort || (process.env.PORT ? Number(process.env.PORT) : null);
+  const port = explicitPort || (await getPort(3000));
 
   // Import Vite
   const { createServer } = await import('vite');
@@ -1562,6 +1568,12 @@ export async function inspectServer(opts) {
     ],
     server: {
       port,
+      // When the port was explicitly requested (Playwright tests, --port flag, PORT env),
+      // fail fast if busy instead of silently picking another port. Playwright tests
+      // configure baseURL from the same port, so a silent fallback causes
+      // ERR_CONNECTION_REFUSED. When auto-discovered via getPort(), the port is
+      // already free so this doesn't apply.
+      ...(explicitPort ? { strictPort: true } : {}),
       // Listen on all interfaces so both 127.0.0.1 (used by Playwright tests)
       // and localhost (used by interactive browsing) connect successfully.
       // Without this, Vite defaults to localhost which may resolve to IPv6-only

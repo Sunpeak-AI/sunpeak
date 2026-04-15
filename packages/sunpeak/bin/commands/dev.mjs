@@ -149,11 +149,15 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const tailwindPlugin = await importFromProject(require, '@tailwindcss/vite');
   const tailwindcss = tailwindPlugin.default;
 
-  // Parse port from args or use default
-  let port = parseInt(process.env.PORT || '3000');
+  // Parse port from args or env. When neither is set, leave undefined so
+  // inspectServer auto-discovers a free port (and doesn't use strictPort,
+  // which would crash instead of falling back when port 3000 is busy).
+  let port = undefined;
   const portArgIndex = args.findIndex(arg => arg === '--port' || arg === '-p');
   if (portArgIndex !== -1 && args[portArgIndex + 1]) {
     port = parseInt(args[portArgIndex + 1]);
+  } else if (process.env.PORT) {
+    port = parseInt(process.env.PORT);
   }
 
   // Parse --no-begging flag
@@ -166,7 +170,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   if (isProdTools) console.log('Prod Tools: MCP tool calls will use real handlers instead of simulation mocks');
   if (isProdResources) console.log('Prod Resources: resources will use production-built HTML from dist/');
 
-  console.log(`Starting dev server on port ${port}...`);
+  console.log(`Starting dev server${port ? ` on port ${port}` : ''}...`);
 
   // Check if we're in the sunpeak workspace (directory is named "template")
   const isTemplate = basename(projectRoot) === 'template';
@@ -261,6 +265,8 @@ export async function dev(projectRoot = process.cwd(), args = []) {
 
   // Build path map for prod-tools handler reloading (re-imports on each call for HMR).
   // Also do an initial load to validate handlers and populate toolHandlerMap for the MCP server.
+  // Extract the raw Zod shape (schema export) so the MCP server can register tools
+  // with their actual inputSchema instead of z.object({}).passthrough().
   const toolHandlerMap = new Map();
   for (const [toolName, { tool, path: toolPath }] of toolMap) {
     void tool; // Used for metadata; handler loaded unconditionally
@@ -268,7 +274,15 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     try {
       const mod = await toolLoaderServer.ssrLoadModule(`./${relativePath}`);
       if (typeof mod.default === 'function') {
-        toolHandlerMap.set(toolName, { handler: mod.default, outputSchema: mod.outputSchema });
+        toolHandlerMap.set(toolName, {
+          handler: mod.default,
+          outputSchema: mod.outputSchema,
+          // The raw Zod shape from the tool file (e.g., { query: z.string(), limit: z.number() }).
+          // Passed to the MCP server so tools/list reports actual parameter schemas instead of
+          // empty objects. The MCP SDK duck-types Zod values (checks for parse/safeParse) so
+          // this works across module instances.
+          schema: mod.schema,
+        });
       }
     } catch (err) {
       console.warn(`Warning: Could not load handler for tool "${toolName}" (${relativePath}):\n  ${err.message}`);
@@ -327,6 +341,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       ...(toolHandlerMap.has(toolName) ? {
         handler: toolHandlerMap.get(toolName).handler,
       } : {}),
+      // Attach the raw Zod shape so the MCP server registers tools with real schemas.
+      ...(toolHandlerMap.has(toolName) && toolHandlerMap.get(toolName).schema ? {
+        inputSchema: toolHandlerMap.get(toolName).schema,
+      } : {}),
     });
   }
 
@@ -346,6 +364,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       tool: { name: toolName, ...tool },
       ...(handlerInfo?.outputSchema ? { outputSchema: handlerInfo.outputSchema } : {}),
       ...(handlerInfo ? { handler: handlerInfo.handler } : {}),
+      ...(handlerInfo?.schema ? { inputSchema: handlerInfo.schema } : {}),
     });
   }
 

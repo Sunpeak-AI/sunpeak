@@ -246,6 +246,27 @@ type AppServerResult = {
 // but changes on restart so Claude picks up rebuilt resources.
 const startupTimestamp = Date.now().toString(36);
 
+/**
+ * Make all properties in a Zod raw shape optional.
+ *
+ * Tool schemas from `src/tools/*.ts` have required fields by default (e.g.
+ * `z.string()`). The dev server needs to accept partial args because:
+ * - Mock mode returns fixture data regardless of args
+ * - Models may not send every required field
+ * - The inspector's "Re-run" button sends args from the last run
+ *
+ * Making fields optional preserves property types/descriptions in `tools/list`
+ * (so models know what args to send) while letting the SDK accept any subset.
+ */
+function makeSchemaOptional(shape: Record<string, unknown>): Record<string, unknown> {
+  const optional: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(shape)) {
+    const v = value as { optional?: () => unknown };
+    optional[key] = typeof v.optional === 'function' ? v.optional() : value;
+  }
+  return optional;
+}
+
 function createAppServer(
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
@@ -371,9 +392,14 @@ function createAppServer(
 
       // Register the tool using ext-apps helper (normalizes ui/resourceUri metadata).
       // Capture the returned RegisteredTool handle for metadata updates on rebuild.
-      // Use passthrough schema so the MCP SDK forwards all arguments to the handler
-      // without stripping. Can't use the tool's own Zod schema because it's loaded
-      // via Vite SSR from a different Zod module instance.
+      // Use the tool's actual Zod schema (raw shape) when available so that
+      // tools/list returns real parameter definitions. The MCP SDK duck-types
+      // Zod values (checks for parse/safeParse), so raw shapes from Vite SSR
+      // work across module instances. Fall back to z.object({}).passthrough()
+      // for tools that don't export a schema.
+      const toolInputSchema = simulation.inputSchema
+        ? makeSchemaOptional(simulation.inputSchema as Record<string, unknown>)
+        : z.object({}).passthrough();
       const fullToolMeta = {
         ...toolMeta,
         ui: {
@@ -384,23 +410,18 @@ function createAppServer(
             : {}),
         },
       };
-      const toolHandle = registerAppTool(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const toolHandle = (registerAppTool as any)(
         mcpServer,
         tool.name as string,
         {
           description: tool.description as string | undefined,
-          inputSchema: z.object({}).passthrough(),
-          ...(simulation.outputSchema
-            ? {
-                outputSchema: simulation.outputSchema as Parameters<
-                  typeof registerAppTool
-                >[2]['outputSchema'],
-              }
-            : {}),
+          inputSchema: toolInputSchema,
+          ...(simulation.outputSchema ? { outputSchema: simulation.outputSchema } : {}),
           annotations: tool.annotations as Record<string, unknown> | undefined,
           _meta: fullToolMeta,
         },
-        async (args: Record<string, unknown>, extra) => {
+        async (args: Record<string, unknown>, extra: unknown) => {
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
 
@@ -472,17 +493,15 @@ function createAppServer(
       // otherwise fall back to mock response from simulation data.
       //
       // Use a passthrough Zod schema so the MCP SDK passes args to the handler.
-      // We can't use the tool's own Zod schema because it's loaded via Vite SSR
-      // from a different Zod module instance, causing isZodSchemaInstance checks
-      // to fail. A passthrough schema from the same Zod instance as the SDK
-      // accepts any arguments and forwards them to the handler.
+      // Use the tool's actual Zod schema when available (same duck-typing
+      // approach as UI tools above). Fall back to passthrough for tools
+      // that don't export a schema.
       const realHandler = simulation.handler;
       const plainToolConfig: Record<string, unknown> = {
         description: tool.description as string | undefined,
-        // Use passthrough so the SDK passes all args to the handler without stripping.
-        // We can't use the tool's own Zod schema because it's loaded via Vite SSR
-        // from a different Zod module instance, causing isZodSchemaInstance checks to fail.
-        inputSchema: z.object({}).passthrough(),
+        inputSchema: simulation.inputSchema
+          ? makeSchemaOptional(simulation.inputSchema as Record<string, unknown>)
+          : z.object({}).passthrough(),
         ...(simulation.outputSchema ? { outputSchema: simulation.outputSchema } : {}),
         annotations: tool.annotations as Record<string, unknown> | undefined,
         _meta: toolMeta,

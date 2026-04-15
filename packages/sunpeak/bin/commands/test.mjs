@@ -418,11 +418,12 @@ async function runEvals(args) {
 
     const warnings = validateApiKeys(configModels);
     if (warnings.length > 0) {
-      console.log('');
+      console.error('');
       for (const w of warnings) {
-        console.warn(`⚠  ${w}`);
+        console.error(`✗  ${w}`);
       }
-      console.log('');
+      console.error('');
+      return 1;
     }
   }
 

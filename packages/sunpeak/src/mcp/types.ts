@@ -88,6 +88,13 @@ export interface SimulationWithDist {
     isError?: boolean;
   };
 
+  // Raw Zod shape (Record<string, ZodType>) from the tool module's `schema` export.
+  // Passed to the MCP SDK's registerTool so that tools/list reports actual
+  // parameter schemas instead of empty objects. The MCP SDK duck-types
+  // Zod values, so raw shapes from Vite SSR work across module instances.
+  // Falls back to z.object({}).passthrough() when absent.
+  inputSchema?: unknown;
+
   // Output schema Zod shape from the tool module's `outputSchema` export.
   // Typed as `unknown` because it's loaded dynamically via Vite SSR —
   // at runtime it will be a Zod shape (Record<string, ZodType>).
