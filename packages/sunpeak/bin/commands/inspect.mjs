@@ -667,6 +667,45 @@ root.render(
  * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null }} [pluginOpts]
  */
 function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
+  // Server URL and options for automatic session recovery.
+  // Set by inspectServer() after creating the initial connection.
+  let _serverUrl = '';
+  /** @type {Record<string, unknown>} */
+  let _connectionOpts = {};
+
+  /**
+   * Check if an error is a dead-session error (MCP server no longer recognizes
+   * the session ID). This happens when the MCP server restarts, the session
+   * times out, or the connection is interrupted.
+   * @param {Error} err
+   */
+  function isDeadSession(err) {
+    const msg = err?.message ?? '';
+    return msg.includes('Unknown session') || msg.includes('404') || msg.includes('fetch failed');
+  }
+
+  /**
+   * Attempt to reconnect to the MCP server and replace the current client.
+   * Returns true if reconnection succeeded.
+   */
+  async function tryReconnect() {
+    if (!_serverUrl) return false;
+    try {
+      console.warn(`[inspect] MCP session lost, reconnecting to ${_serverUrl}...`);
+      const newConn = await createMcpConnection(_serverUrl, _connectionOpts);
+      setClient(newConn.client);
+      console.log('[inspect] MCP session re-established');
+      return true;
+    } catch (err) {
+      console.error(`[inspect] MCP reconnection failed: ${err?.message ?? err}`);
+      return false;
+    }
+  }
+
+  // Initialize reconnection state from plugin options.
+  if (pluginOpts.serverUrl) _serverUrl = pluginOpts.serverUrl;
+  if (pluginOpts.connectionOpts) _connectionOpts = pluginOpts.connectionOpts;
+
   // In-memory OAuth state keyed by server URL, persisted across reconnects.
   /** @type {Map<string, { provider: any, getAuthUrl: () => URL | undefined, hasTokens: () => boolean, stateParam: string }>} */
   const oauthProviders = new Map();
@@ -680,7 +719,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   return {
     name: 'sunpeak-inspect-endpoints',
     configureServer(server) {
-      // List tools from connected server
+      // List tools from connected server (with automatic session recovery)
       server.middlewares.use('/__sunpeak/list-tools', async (_req, res) => {
         try {
           const client = getClient();
@@ -688,6 +727,15 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result));
         } catch (err) {
+          // If the session died (server restarted, timeout, etc.), try to reconnect once.
+          if (isDeadSession(err) && await tryReconnect()) {
+            try {
+              const result = await getClient().listTools();
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(result));
+              return;
+            } catch { /* fall through to error response */ }
+          }
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
         }
@@ -732,6 +780,16 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result));
         } catch (err) {
+          // Try reconnecting on dead session before returning error
+          if (isDeadSession(err) && await tryReconnect()) {
+            try {
+              const { name, arguments: args } = parsed;
+              const result = await getClient().callTool({ name, arguments: args });
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify(result));
+              return;
+            } catch { /* fall through */ }
+          }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
             JSON.stringify({
@@ -1171,6 +1229,22 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             res.end('');
           }
         } catch (err) {
+          // Try reconnecting on dead session before returning error
+          if (isDeadSession(err) && await tryReconnect()) {
+            try {
+              const retryResult = await getClient().readResource({ uri });
+              const retryContent = retryResult.contents?.[0];
+              if (retryContent) {
+                const mimeType = retryContent.mimeType || 'text/html';
+                res.writeHead(200, {
+                  'Content-Type': `${mimeType}; charset=utf-8`,
+                  'X-Content-Type-Options': 'nosniff',
+                });
+                res.end(typeof retryContent.text === 'string' ? retryContent.text : '');
+                return;
+              }
+            } catch { /* fall through */ }
+          }
           res.writeHead(500, { 'Content-Type': 'text/plain' });
           res.end(`Error reading resource: ${err.message}`);
         }
@@ -1308,6 +1382,23 @@ export async function inspectServer(opts) {
 
   console.log('Connected. Discovering tools and resources...');
 
+  // Monitor transport health. The MCP SDK opens a background SSE stream after
+  // initialization. If this stream drops, the server may purge the session,
+  // causing "Unknown session" errors on subsequent requests. Log lifecycle
+  // events so we can diagnose connection issues when they occur.
+  if (mcpConnection.transport) {
+    const origOnError = mcpConnection.transport.onerror;
+    mcpConnection.transport.onerror = (err) => {
+      console.warn(`[inspect] MCP transport error: ${err?.message ?? err}`);
+      origOnError?.(err);
+    };
+    const origOnClose = mcpConnection.transport.onclose;
+    mcpConnection.transport.onclose = () => {
+      console.warn('[inspect] MCP transport closed (session may be lost)');
+      origOnClose?.();
+    };
+  }
+
   // Extract app name and icon from server info (reported during MCP initialize)
   const serverInfo = mcpConnection.client.getServerVersion();
   const serverAppName = nameOverride ?? serverInfo?.name;
@@ -1387,7 +1478,7 @@ export async function inspectServer(opts) {
       sunpeakInspectEndpointsPlugin(
         () => mcpConnection.client,
         (newClient) => { mcpConnection.client = newClient; },
-        { callToolDirect: opts.callToolDirect, simulationsDir }
+        { callToolDirect: opts.callToolDirect, simulationsDir, serverUrl: resolvedServerUrl, connectionOpts }
       ),
       // Serve /dist/{name}/{name}.html from the project directory (for Prod Resources mode).
       // The Inspector polls these paths via HEAD to check if built resources exist.
@@ -1476,6 +1567,10 @@ export async function inspectServer(opts) {
       // Without this, Vite defaults to localhost which may resolve to IPv6-only
       // (::1) on macOS, causing ECONNREFUSED for IPv4 clients.
       host: '0.0.0.0',
+      // Allow any hostname so the inspector works behind tunnels, in containers,
+      // and with custom /etc/hosts entries. Without this, Vite 8's DNS rebinding
+      // protection blocks requests whose Host header isn't localhost/127.0.0.1.
+      allowedHosts: 'all',
       open: open ?? (!process.env.CI && !process.env.SUNPEAK_LIVE_TEST),
     },
     optimizeDeps: {
