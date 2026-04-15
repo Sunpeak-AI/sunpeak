@@ -1,6 +1,6 @@
 ---
 title: "Overview"
-description: "App framework, testing framework, and inspector for MCP Apps."
+description: "MCP App framework, MCP testing framework, and inspector for MCP servers and MCP Apps."
 keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framework", "Claude Apps", "Claude Connectors", "sunpeak"]
 ---
 
@@ -57,12 +57,12 @@ Install the sunpeak coding agent skills for built-in knowledge of patterns, hook
 
 ## sunpeak is three things
 
-### 1. App Framework
+### 1. MCP App Framework
 
 A convention-over-configuration framework for building MCP Apps with the inspector and testing built in. Like Next.js for AI chat apps.
 
 ```bash
-npx sunpeak new sunpeak-app && cd sunpeak-app && pnpm dev
+npx sunpeak new
 ```
 
 Tools, resources, and simulations are auto-discovered from the file system. Multi-platform React hooks let you write your app logic once and deploy across ChatGPT, Claude, and future hosts.
@@ -77,9 +77,9 @@ Tools, resources, and simulations are auto-discovered from the file system. Mult
   Project structure, runtime APIs, deployment, and CLI reference.
 </Card>
 
-### 2. Testing Framework
+### 2. MCP Testing Framework
 
-Automated tests for any MCP server, run against replicated ChatGPT and Claude runtimes. Works with Python, Go, TypeScript, Rust, or any language.
+Automated tests for any MCP server, no sunpeak project required. Run against replicated ChatGPT and Claude runtimes. Works with Python, Go, TypeScript, Rust, or any language.
 
 ```bash
 npx sunpeak test init --server http://localhost:8000/mcp
@@ -102,7 +102,7 @@ test('album cards render in dark mode', async ({ inspector }) => {
 });
 ```
 
-<Card horizontal title="Testing documentation" icon="flask" href="/testing/overview">
+<Card horizontal title="Testing documentation" icon="flask" href="/mcp-testing">
   Getting started, E2E, visual regression, live tests, and evals.
 </Card>
 

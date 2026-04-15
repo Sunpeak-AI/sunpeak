@@ -1,7 +1,7 @@
 ---
-title: "MCP App Testing Framework"
-description: "Automated testing of MCP Apps using the inspector, simulations, live host testing, and multi-model evals."
-keywords: ["MCP app testing", "ChatGPT app testing", "MCP Apps", "ChatGPT Apps", "Playwright", "e2e testing", "live testing", "evals", "LLM testing"]
+title: "MCP Testing Framework"
+description: "Automated testing of MCP servers using the inspector, simulations, live host testing, and multi-model evals."
+keywords: ["MCP app testing", "MCP testing", "ChatGPT app testing", "MCP Apps", "ChatGPT Apps", "Playwright", "e2e testing", "live testing", "evals", "LLM testing"]
 ---
 
 ## Quickstart
@@ -25,12 +25,13 @@ This generates E2E specs, visual regression tests, live host tests, and multi-mo
 
 MCP Apps render inside host iframes with host-specific themes, display modes, and capabilities. Standard browser testing can't replicate this because the runtime environment only exists inside ChatGPT and Claude. sunpeak replicates those runtimes so you can run CI-friendly tests without host accounts or API credits.
 
-Four levels of automated testing:
+Five levels of automated testing:
 
-1. **Unit tests** — Vitest with happy-dom for component and hook logic.
+1. **Unit tests** — Vitest with happy-dom for component and hook logic. Exclusively for the sunpeak MCP App framework. For testing-only use cases, your unit tests will already be in the same language as your server.
 2. **E2E tests** — Playwright specs against replicated ChatGPT and Claude runtimes via the [inspector](/mcp-apps-inspector). Test every combination of host, theme, display mode, and device type.
-3. **Live tests** — Playwright specs against real ChatGPT. sunpeak handles auth, message sending, and iframe access.
-4. **Evals** — Multi-model tool calling tests (GPT-4o, Claude, Gemini). Each eval runs N times per model to measure reliability.
+4. **Visual regression tests** — Playwright specs against saved images of your rendered UI via the [inspector](/mcp-apps-inspector).
+4. **Live tests** — Playwright specs against real ChatGPT. sunpeak handles auth, message sending, and iframe access.
+5. **Evals** — Multi-model tool calling tests (GPT-4o, mini, Claude, Gemini, etc.). Each eval runs N times per model to measure how reliably each model can use your tools.
 
 | Command | What it tests | Runtime |
 |---------|--------------|---------|
@@ -527,5 +528,5 @@ export default defineEval({
   createInspectorUrl parameters and Inspector component props.
 </Card>
 <Card horizontal title="MCP Testing Framework" icon="book" href="/testing/overview">
-  Complete documentation for all four testing levels.
+  Complete documentation for all five testing levels.
 </Card>

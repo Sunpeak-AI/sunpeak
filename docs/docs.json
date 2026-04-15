@@ -93,7 +93,8 @@
     { "source": "/cli/lifecycle", "destination": "/app-framework/lifecycle" },
     { "source": "/app-framework/cli/inspect", "destination": "/testing/cli/inspect" },
     { "source": "/app-framework/cli/upgrade", "destination": "/testing/cli/upgrade" },
-    { "source": "/testing/run-mcp-server", "destination": "/app-framework/run-mcp-server" }
+    { "source": "/testing/run-mcp-server", "destination": "/app-framework/run-mcp-server" },
+    { "source": "/mcp-apps-testing", "destination": "/mcp-testing" }
   ],
   "navigation": {
     "tabs": [
@@ -111,7 +112,7 @@
             "group": "sunpeak is an",
             "pages": [
               "mcp-apps-framework",
-              "mcp-apps-testing",
+              "mcp-testing",
               "mcp-apps-inspector"
             ]
           },
@@ -119,49 +120,6 @@
             "group": "Resources",
             "pages": [
               "links"
-            ]
-          }
-        ]
-      },
-      {
-        "tab": "MCP Testing Framework",
-        "groups": [
-          {
-            "group": "Overview",
-            "pages": [
-              "testing/getting-started",
-              "testing/overview"
-            ]
-          },
-          {
-            "group": "Testing",
-            "pages": [
-              "testing/unit",
-              "testing/e2e",
-              "testing/visual",
-              "testing/live",
-              "testing/evals"
-            ]
-          },
-          {
-            "group": "Inspector & Simulations",
-            "pages": [
-              "testing/inspector",
-              "testing/simulations"
-            ]
-          },
-          {
-            "group": "CLI",
-            "pages": [
-              "testing/cli/test",
-              "testing/cli/inspect",
-              "testing/cli/upgrade"
-            ]
-          },
-          {
-            "group": "Help",
-            "pages": [
-              "testing/troubleshooting"
             ]
           }
         ]
@@ -267,7 +225,50 @@
         ]
       },
       {
-        "tab": "MCP Apps",
+        "tab": "MCP Testing Framework",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "testing/getting-started",
+              "testing/overview"
+            ]
+          },
+          {
+            "group": "Testing",
+            "pages": [
+              "testing/unit",
+              "testing/e2e",
+              "testing/visual",
+              "testing/live",
+              "testing/evals"
+            ]
+          },
+          {
+            "group": "Inspector & Simulations",
+            "pages": [
+              "testing/inspector",
+              "testing/simulations"
+            ]
+          },
+          {
+            "group": "CLI",
+            "pages": [
+              "testing/cli/test",
+              "testing/cli/inspect",
+              "testing/cli/upgrade"
+            ]
+          },
+          {
+            "group": "Help",
+            "pages": [
+              "testing/troubleshooting"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "MCP Apps Protocol",
         "groups": [
           {
             "group": "Overview",
