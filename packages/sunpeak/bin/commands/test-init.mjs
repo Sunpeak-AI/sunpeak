@@ -446,9 +446,9 @@ function scaffoldVisualTest(filePath, d) {
 /**
  * Scaffold live test boilerplate (test against real ChatGPT/Claude).
  * @param {string} liveDir - Directory to create live test files in
- * @param {{ isSunpeak?: boolean, d: object }} options
+ * @param {{ isSunpeak?: boolean, server?: object, d: object }} options
  */
-function scaffoldLiveTests(liveDir, { isSunpeak, d } = {}) {
+function scaffoldLiveTests(liveDir, { isSunpeak, server, d } = {}) {
   if (d.existsSync(join(liveDir, 'playwright.config.ts'))) {
     d.log.info('Live test config already exists. Skipping live test scaffold.');
     return;
@@ -468,28 +468,30 @@ function scaffoldLiveTests(liveDir, { isSunpeak, d } = {}) {
  * 3. Run: sunpeak test --live
  *
  * On first run, a browser window opens for you to log in to the host.
- * The session is saved for subsequent runs (typically lasts a few hours).`;
+ * The session is saved for subsequent runs (typically lasts a few hours).
+ */`;
 
-  const liveConfigExport = `export default defineLiveConfig({
+  // Build the server option for non-sunpeak projects
+  let serverOption = '';
+  if (!isSunpeak && server?.type === 'url') {
+    serverOption = `\n  server: { url: '${server.value}' },`;
+  } else if (!isSunpeak && server?.type === 'command') {
+    const parts = server.value.split(/\s+/);
+    const cmd = parts[0];
+    const args = parts.slice(1);
+    serverOption = args.length > 0
+      ? `\n  server: { command: '${cmd}', args: [${args.map(a => `'${a}'`).join(', ')}] },`
+      : `\n  server: { command: '${cmd}' },`;
+  }
+
+  const configContent = `${liveConfigPreamble}
+export default defineLiveConfig({${serverOption}
   // hosts: ['chatgpt'],           // Which hosts to test against
   // colorScheme: 'light',         // Default color scheme
   // viewport: { width: 1280, height: 720 },
   devOverlay: false,
 });
 `;
-
-  const configContent = isSunpeak
-    ? `${liveConfigPreamble}
- */
-${liveConfigExport}`
-    : `${liveConfigPreamble}
- *
- * NOTE: defineLiveConfig() starts a local sunpeak dev server as its backend.
- * If your MCP server is not a sunpeak project, you may need to customize the
- * webServer option in the Playwright config below to start your own server,
- * or remove webServer entirely if your server is already running.
- */
-${liveConfigExport}`;
 
   d.writeFileSync(join(liveDir, 'playwright.config.ts'), configContent);
 
@@ -672,7 +674,7 @@ test('server exposes tools', async ({ mcp }) => {
   scaffoldVisualTest(join(testDir, 'visual.test.ts'), d);
 
   // 3. Live tests
-  scaffoldLiveTests(join(testDir, 'live'), { isSunpeak: false, d });
+  scaffoldLiveTests(join(testDir, 'live'), { isSunpeak: false, server, d });
 
   // 4. Eval boilerplate
   scaffoldEvals(join(testDir, 'evals'), { server, d });
@@ -766,7 +768,7 @@ test('server exposes tools', async ({ mcp }) => {
   scaffoldVisualTest(join(e2eDir, 'visual.test.ts'), d);
 
   // 3. Live tests
-  scaffoldLiveTests(join(cwd, 'tests', 'live'), { isSunpeak: false, d });
+  scaffoldLiveTests(join(cwd, 'tests', 'live'), { isSunpeak: false, server, d });
 
   // 4. Eval boilerplate
   scaffoldEvals(join(cwd, 'tests', 'evals'), { server, d });

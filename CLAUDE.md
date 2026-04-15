@@ -106,7 +106,7 @@ packages/sunpeak/
 - `sunpeak/test` — MCP-first Playwright fixtures (`test` with `mcp` fixture for protocol methods: `callTool(name, input?)`, `listTools()`, `listResources()`, `readResource(uri)`; and `inspector` fixture for rendering: `renderTool(name, input?, options?)` returning `InspectorResult` with `app()`, `source`, `screenshot()`; plus `inspector.host`, `inspector.page`; `expect` with MCP-native matchers)
 - `sunpeak/test/config` — Playwright config factory (`defineConfig` — auto-detects sunpeak projects, or accepts `server` option for external MCP servers; `server` supports `command`, `args`, `url`, `env`, `cwd`; top-level `timeout` for server startup; `visual` option for visual regression config)
 - `sunpeak/test/live` — Host-agnostic Playwright fixtures for live testing (`test` with `live` fixture, `expect`, `setColorScheme`)
-- `sunpeak/test/live/config` — Live test config factory (`defineLiveConfig` with `hosts` array)
+- `sunpeak/test/live/config` — Live test config factory (`defineLiveConfig` with `hosts` array and optional `server` for external MCP servers)
 - `sunpeak/test/live/chatgpt` — ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture)
 - `sunpeak/eval` — Eval framework (`defineEval`, `defineEvalConfig`, `checkExpectations`, `createMcpConnection`, `discoverAndConvertTools`, `runEvalCaseAggregate`)
 - `sunpeak/test/live/chatgpt/config` — ChatGPT-specific Playwright config factory

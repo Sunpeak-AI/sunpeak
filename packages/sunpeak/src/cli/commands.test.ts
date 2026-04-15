@@ -779,9 +779,9 @@ describe('CLI Commands', () => {
       const evalConfig = getWrittenContent(writeFileSync, 'evals/eval.config.ts');
       expect(evalConfig).toContain('http://localhost:8000/mcp');
 
-      // Live config has NOTE for non-sunpeak projects
+      // Live config has server option for non-sunpeak projects
       const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
-      expect(liveConfig).toContain('NOTE:');
+      expect(liveConfig).toContain("server: { url: 'http://localhost:8000/mcp' }");
       expect(liveConfig).toContain("from 'sunpeak/test/live/config'");
     });
 
@@ -859,9 +859,9 @@ describe('CLI Commands', () => {
       const config = getWrittenContent(writeFileSync, 'project/playwright.config.ts');
       expect(config).toContain('defineConfig()');
 
-      // Live config should NOT have NOTE (this IS a sunpeak project)
+      // Live config should NOT have server option (this IS a sunpeak project)
       const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
-      expect(liveConfig).not.toContain('NOTE:');
+      expect(liveConfig).not.toContain('server:');
 
       // Eval config has sunpeak-specific comment
       const evalConfig = getWrittenContent(writeFileSync, 'evals/eval.config.ts');

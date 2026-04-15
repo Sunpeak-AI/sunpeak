@@ -11,6 +11,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { ANTI_BOT_ARGS, CHROME_USER_AGENT } from './utils.mjs';
 import { getPortSync } from '../get-port.mjs';
+import { resolveSunpeakBin } from '../resolve-bin.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const GLOBAL_SETUP_PATH = join(__dirname, 'global-setup.mjs');
@@ -34,6 +35,10 @@ const GLOBAL_SETUP_PATH = join(__dirname, 'global-setup.mjs');
  * @param {string[]} [options.permissions] - Browser permissions to grant (e.g., ['geolocation'])
  * @param {boolean} [options.devOverlay=true] - Show the dev overlay (resource timestamp + tool timing) in resources
  * @param {Object} [options.use] - Additional Playwright `use` options (merged with defaults)
+ * @param {Object} [options.server] - External MCP server config (omit for sunpeak projects)
+ * @param {string} [options.server.url] - Server URL (e.g., 'http://localhost:8000/mcp')
+ * @param {string} [options.server.command] - Server start command
+ * @param {string[]} [options.server.args] - Command arguments
  */
 export function createLiveConfig(hostOptions, options = {}) {
   const { hostId, authFileName } = hostOptions;
@@ -49,6 +54,7 @@ export function createLiveConfig(hostOptions, options = {}) {
     geolocation,
     permissions,
     use: userUse,
+    server,
   } = options;
 
   const resolvedAuthDir = authDir || join(testDir, '.auth');
@@ -91,10 +97,36 @@ export function createLiveConfig(hostOptions, options = {}) {
       },
     ],
     webServer: {
-      command: `SUNPEAK_LIVE_TEST=1 SUNPEAK_SANDBOX_PORT=${getPortSync(24680)}${devOverlay ? '' : ' SUNPEAK_DEV_OVERLAY=false'} pnpm dev -- --prod-resources --port ${vitePort}`,
-      url: `http://localhost:${vitePort}/health`,
+      command: buildLiveWebServerCommand({ server, vitePort, devOverlay }),
+      url: `http://127.0.0.1:${vitePort}/health`,
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
     },
   };
+}
+
+/**
+ * Build the webServer command for live tests.
+ * Uses `sunpeak inspect` for external servers, `pnpm dev` for sunpeak projects.
+ */
+function buildLiveWebServerCommand({ server, vitePort, devOverlay }) {
+  const sandboxPort = getPortSync(24680);
+  const envPrefix = `SUNPEAK_LIVE_TEST=1 SUNPEAK_SANDBOX_PORT=${sandboxPort}${devOverlay ? '' : ' SUNPEAK_DEV_OVERLAY=false'}`;
+
+  if (server) {
+    // External MCP server — launch sunpeak inspect
+    const bin = resolveSunpeakBin();
+    if (server.url) {
+      return `${envPrefix} ${bin} inspect --server ${server.url} --port ${vitePort}`;
+    }
+    if (server.command) {
+      const cmd = server.args
+        ? `${server.command} ${server.args.join(' ')}`
+        : server.command;
+      return `${envPrefix} ${bin} inspect --server "${cmd}" --port ${vitePort}`;
+    }
+  }
+
+  // sunpeak framework project — use pnpm dev
+  return `${envPrefix} pnpm dev -- --prod-resources --port ${vitePort}`;
 }
