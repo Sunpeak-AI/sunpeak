@@ -6,41 +6,38 @@ keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app inspector", "Chat
 
 import InspectorSnippet from '/snippets/inspector.mdx';
 
+## Quickstart
+
+No installation required. Point the inspector at any running MCP server:
+
+```bash
+npx sunpeak inspect --server http://localhost:8000/mcp
+```
+
+For stdio servers, pass the command directly:
+
+```bash
+npx sunpeak inspect --server "python my_server.py"
+npx sunpeak inspect --server "go run ./cmd/server"
+```
+
+This opens the inspector at `http://localhost:3000`. See [sunpeak inspect CLI Reference](/testing/cli/inspect) for all options.
+
+<Note>In sunpeak framework projects, the inspector is built into `sunpeak dev` automatically.</Note>
+
 <img
   src="https://cdn.sunpeak.ai/chatgpt-simulator.png"
   alt="MCP App Inspector"
 />
 
-## Overview
+## What it does
 
-The sunpeak inspector replicates MCP App host runtimes (ChatGPT, Claude) for local development and testing. It works with any MCP server — no sunpeak project required.
-
-<Tabs>
-  <Tab title="Standalone (any MCP server)">
-    Inspect any MCP server:
-
-    ```bash
-    sunpeak inspect --server http://localhost:8000/mcp
-    sunpeak inspect --server "python my_server.py"
-    ```
-
-    See [sunpeak inspect CLI Reference](/testing/cli/inspect) for all options.
-  </Tab>
-  <Tab title="Built into sunpeak dev">
-    In sunpeak projects, the inspector is built into the dev server:
-
-    ```bash
-    sunpeak dev
-    ```
-  </Tab>
-</Tabs>
-
-## Why Use the Inspector?
+The inspector replicates the ChatGPT and Claude MCP App runtimes on your machine. Your MCP server's tools and resources render in the same iframe sandbox that production hosts use, with the same PostMessage protocol, the same CSS variables, and the same host context values.
 
 - **Instant feedback** — HMR means changes appear immediately. No cache issues, no reloading the host.
-- **Every host, theme, and device** — toggle ChatGPT/Claude, light/dark, mobile/tablet/desktop, inline/PiP/fullscreen from the sidebar or URL params.
-- **Automated testing** — the inspector is the test runtime for [E2E tests](/testing/e2e). Load simulations via URL, assert with Playwright.
-- **No deployment needed** — develop and test locally without tunnels or host accounts.
+- **Every host, theme, and device** — toggle ChatGPT/Claude, light/dark, mobile/tablet/desktop, inline/PiP/fullscreen from the sidebar.
+- **No deployment needed** — no tunnel, no host account, no API credits.
+- **Test runtime** — the inspector powers [E2E tests](/testing/e2e). Load simulations via URL, assert with Playwright.
 
 ## Simulations
 

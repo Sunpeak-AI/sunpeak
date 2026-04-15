@@ -30,8 +30,8 @@ If the port changed (e.g. `port 8000 was in use`), update your tunnel and host c
 ### 3. Restart the dev server
 
 ```bash
-# Stop sunpeak dev (Ctrl+C), then restart
-sunpeak dev
+# Stop the dev server (Ctrl+C), then restart
+pnpm dev
 ```
 
 This clears any stale connections and re-registers all tools and resources.
@@ -89,10 +89,10 @@ If `--prod-resources` mode fails, the built HTML may be stale or missing:
 
 ```bash
 # Rebuild manually
-sunpeak build
+pnpm build
 
-# Then retry
-sunpeak dev --prod-resources
+# Then retry with prod resources
+pnpm dev -- --prod-resources
 ```
 
 <Note>

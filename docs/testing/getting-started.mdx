@@ -9,70 +9,50 @@ keywords: ["MCP testing", "MCP server testing", "test MCP server", "Python MCP t
 - **Node.js 20+** is required, even if your MCP server is written in Python, Go, or another language. The testing framework runs on Node.js and Playwright.
 - Your MCP server running locally (HTTP or stdio)
 
-## 1. Install sunpeak
-
-<Tabs>
-  <Tab title="pnpm">
-    ```bash
-    pnpm add -g sunpeak
-    ```
-  </Tab>
-  <Tab title="npm">
-    ```bash
-    npm install -g sunpeak
-    ```
-  </Tab>
-  <Tab title="yarn">
-    ```bash
-    yarn global add sunpeak
-    ```
-  </Tab>
-</Tabs>
-
-## 2. Try the inspector
+## 1. Try the inspector (optional)
 
 Before writing tests, try the inspector to verify sunpeak can connect to your server:
 
 <Tabs>
   <Tab title="HTTP server">
     ```bash
-    sunpeak inspect --server http://localhost:8000/mcp
+    npx sunpeak inspect --server http://localhost:8000/mcp
     ```
   </Tab>
   <Tab title="Python (stdio)">
     ```bash
-    sunpeak inspect --server "python server.py"
+    npx sunpeak inspect --server "python server.py"
 
     # With uv:
-    sunpeak inspect --server "uv run python server.py"
+    npx sunpeak inspect --server "uv run python server.py"
     ```
   </Tab>
   <Tab title="Go (stdio)">
     ```bash
-    sunpeak inspect --server "go run ./cmd/server"
+    npx sunpeak inspect --server "go run ./cmd/server"
     ```
   </Tab>
   <Tab title="Node.js (stdio)">
     ```bash
-    sunpeak inspect --server "node server.js"
+    npx sunpeak inspect --server "node server.js"
     ```
   </Tab>
 </Tabs>
 
 This opens the inspector at `http://localhost:3000`, where you can call your tools and see them rendered in simulated ChatGPT and Claude runtimes. Browse your tools, switch hosts and themes, and verify everything connects.
 
-## 3. Scaffold test infrastructure
+## 2. Scaffold test infrastructure
 
 Once the inspector works, scaffold automated tests:
 
 ```bash
-sunpeak test init --server http://localhost:8000/mcp
+npx sunpeak test init --server http://localhost:8000/mcp
 ```
 
 Or with a stdio command:
 
 ```bash
-sunpeak test init --server "python server.py"
+npx sunpeak test init --server "python server.py"
 ```
 
 This creates test files for all four testing levels. For non-JS projects, everything goes into a self-contained `tests/sunpeak/` directory with its own `package.json`.
@@ -95,17 +75,17 @@ Install dependencies:
   </Tab>
 </Tabs>
 
-## 4. Run the smoke test
+## 3. Run the smoke test
 
 ```bash
-sunpeak test
+npx sunpeak test
 ```
 
 For non-JS projects, `sunpeak test` auto-discovers `tests/sunpeak/playwright.config.ts` when no root-level config exists. You can run it from your project root without cd-ing into the test directory.
 
 The scaffolded smoke test verifies that the inspector can connect to your server and load. You should see one passing test.
 
-## 5. Write your first real test
+## 4. Write your first real test
 
 Open the scaffolded smoke test (`smoke.test.ts`) and add a test for one of your tools. Replace `your-tool` with an actual tool name from your server:
 
@@ -137,7 +117,7 @@ There are two fixtures: `mcp` for protocol-level testing (`callTool`, `listTools
   Run `sunpeak inspect --server <url>` to browse your tools interactively and find the right tool names and arguments to use in tests.
 </Tip>
 
-## 6. Add more test levels
+## 5. Add more test levels
 
 The scaffolded files include templates for all four testing levels:
 

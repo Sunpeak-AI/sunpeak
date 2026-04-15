@@ -299,6 +299,28 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
 
   // Install dependencies with spinner
   const pm = d.detectPackageManager();
+
+  // Replace package manager references in README
+  if (pm !== 'pnpm') {
+    const readmePath = join(targetDir, 'README.md');
+    if (d.existsSync(readmePath)) {
+      const run = pm === 'npm' ? 'npm run' : pm;
+      const dlx = pm === 'npm' ? 'npx' : 'yarn dlx';
+      let readme = d.readFileSync(readmePath, 'utf-8');
+      readme = readme.replace(/pnpm dev\b/g, `${run} dev`);
+      readme = readme.replace(/pnpm build\b/g, `${run} build`);
+      readme = readme.replace(/pnpm start\b/g, `${run} start`);
+      readme = readme.replace(/pnpm test\b/g, `${run} test`);
+      readme = readme.replace(/pnpm test:unit\b/g, `${run} test:unit`);
+      readme = readme.replace(/pnpm test:e2e\b/g, `${run} test:e2e`);
+      readme = readme.replace(/pnpm test:visual\b/g, `${run} test:visual`);
+      readme = readme.replace(/pnpm test:live\b/g, `${run} test:live`);
+      readme = readme.replace(/pnpm test:eval\b/g, `${run} test:eval`);
+      readme = readme.replace(/pnpm add\b/g, `${pm} add`);
+      readme = readme.replace(/pnpm dlx\b/g, dlx);
+      d.writeFileSync(readmePath, readme);
+    }
+  }
   const s = d.spinner();
   s.start(`Installing dependencies with ${pm}...`);
 
@@ -366,30 +388,32 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
       initialValue: true,
     });
     if (!clack.isCancel(installSkill) && installSkill) {
+      const dlx = pm === 'yarn' ? 'yarn dlx' : pm === 'npm' ? 'npx' : 'pnpm dlx';
       try {
-        d.execSync('pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server', {
+        d.execSync(`${dlx} skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server`, {
           cwd: targetDir,
           stdio: 'inherit',
         });
       } catch {
-        d.console.log('Skill install skipped. You can install later with: pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server');
+        d.console.log(`Skill install skipped. You can install later with: ${dlx} skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server`);
       }
     }
   }
 
+  const run = pm === 'npm' ? 'npm run' : pm;
   d.outro(`Done! To get started:
 
   cd ${projectName}
-  sunpeak dev
+  ${run} dev
 
 Your project commands:
 
-  sunpeak dev                # Start dev server + MCP endpoint
-  sunpeak build              # Build for production
-  sunpeak test               # Run unit + e2e tests
-  sunpeak test --eval        # Run LLM evals (configure models in tests/evals/eval.config.ts)
-  sunpeak test --visual      # Run visual regression tests
-  sunpeak test --live        # Run live tests against real AI hosts`);
+  ${run} dev              # Start dev server + MCP endpoint
+  ${run} build            # Build for production
+  ${run} test             # Run unit + e2e tests
+  ${run} test:eval        # Run LLM evals (configure models in tests/evals/eval.config.ts)
+  ${run} test:visual      # Run visual regression tests
+  ${run} test:live        # Run live tests against real AI hosts`);
 }
 
 // Allow running directly

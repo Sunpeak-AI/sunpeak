@@ -14,11 +14,11 @@ Evals are not included in the default `sunpeak test` run because they cost money
 
 ## Prerequisites
 
-- **Vercel AI SDK**: `pnpm add ai`
+- **Vercel AI SDK**: install `ai`
 - **Provider packages**: Install only the ones you need:
-  - `pnpm add @ai-sdk/openai` for GPT-4o, GPT-4o-mini, o4-mini
-  - `pnpm add @ai-sdk/anthropic` for Claude Sonnet, Claude Haiku
-  - `pnpm add @ai-sdk/google` for Gemini 2.0 Flash
+  - `@ai-sdk/openai` for GPT-4o, GPT-4o-mini, o4-mini
+  - `@ai-sdk/anthropic` for Claude Sonnet, Claude Haiku
+  - `@ai-sdk/google` for Gemini 2.0 Flash
 - **API keys**: Set in `tests/evals/.env` (gitignored) or as environment variables
 
 ## Setup
@@ -133,9 +133,9 @@ Args use partial matching. Extra keys in the actual tool call are allowed. Vites
 ## Running Evals
 
 ```bash
-sunpeak test --eval                    # Run all evals
-sunpeak test --eval albums             # Filter by name
-sunpeak test --eval --unit             # Run evals + unit tests
+pnpm test:eval                             # Run all evals
+pnpm test:eval -- albums                   # Filter by name
+pnpm test:eval -- --unit                   # Run evals + unit tests
 ```
 
 ## Output

@@ -11,7 +11,8 @@
     "test:unit": "sunpeak test --unit",
     "test:e2e": "sunpeak test --e2e",
     "test:visual": "sunpeak test --visual",
-    "test:live": "sunpeak test --live"
+    "test:live": "sunpeak test --live",
+    "test:eval": "sunpeak test --eval"
   },
   "dependencies": {
     "clsx": "^2.1.1",

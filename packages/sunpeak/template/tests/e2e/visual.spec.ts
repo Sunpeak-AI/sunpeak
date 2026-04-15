@@ -1,7 +1,7 @@
 import { test, expect } from 'sunpeak/test';
 
-// Visual regression tests. Screenshot comparisons only run with `sunpeak test --visual`.
-// Update baselines with `sunpeak test --visual --update`.
+// Visual regression tests. Screenshot comparisons only run with `pnpm test:visual`.
+// Update baselines with `pnpm test:visual -- --update`.
 
 test('albums renders correctly in light mode', async ({ inspector }) => {
   const result = await inspector.renderTool('show-albums', undefined, { theme: 'light' });

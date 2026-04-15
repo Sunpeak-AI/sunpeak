@@ -104,8 +104,7 @@ function getVersion() {
         console.log(`
 ☀️ 🏔️ sunpeak - Inspector, testing framework, and app framework for MCP Apps
 
-Install:
-  pnpm add -g sunpeak
+Usage: npx sunpeak <command>
 
 Testing (works with any MCP server):
   sunpeak inspect          Inspect any MCP server in the inspector

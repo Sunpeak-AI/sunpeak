@@ -9,7 +9,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "deployment", "production"
 Build your app for production using the sunpeak CLI:
 
 ```bash
-sunpeak build
+pnpm build
 ```
 
 This generates a `dist/` directory with built resources and compiled tools:
@@ -31,18 +31,18 @@ Each `.html` file is a complete, self-contained app bundle — no external scrip
 ## Start the Production Server
 
 ```bash
-sunpeak start
+pnpm start
 ```
 
 This loads your compiled tool handlers, Zod schemas, and optional auth from `dist/`, registers them with the [MCP protocol](/mcp-apps/mcp/overview), and starts a [Streamable HTTP](/mcp-apps/mcp/overview#transports) server on port 8000.
 
 ```bash
-sunpeak start --port 3000          # Custom port
-sunpeak start --host 127.0.0.1     # Bind to localhost only
-sunpeak start --json-logs           # Structured JSON logging
-sunpeak start --sse                 # Use SSE streaming instead of JSON responses
-sunpeak start --stateless           # Stateless mode (no session tracking)
-PORT=3000 HOST=127.0.0.1 sunpeak start  # Or via environment variables
+pnpm start -- --port 3000          # Custom port
+pnpm start -- --host 127.0.0.1     # Bind to localhost only
+pnpm start -- --json-logs           # Structured JSON logging
+pnpm start -- --sse                 # Use SSE streaming instead of JSON responses
+pnpm start -- --stateless           # Stateless mode (no session tracking)
+PORT=3000 HOST=127.0.0.1 pnpm start  # Or via environment variables
 ```
 
 The production server:
@@ -58,7 +58,7 @@ The production server:
 Use `sunpeak build` and `sunpeak start` to test production behavior locally:
 
 ```bash
-sunpeak build && sunpeak start
+pnpm build && pnpm start
 ```
 
 Then expose the MCP server with a tunnel (e.g., `ngrok http 8000`) and connect from ChatGPT.
@@ -177,7 +177,7 @@ Use this for load balancer probes, Kubernetes liveness/readiness checks, and upt
 Pass `--json-logs` to output structured JSON lines instead of human-readable logs:
 
 ```bash
-sunpeak start --json-logs
+pnpm start -- --json-logs
 ```
 
 Each line is a JSON object with `ts`, `level`, and `msg` fields, plus contextual data:
@@ -194,8 +194,8 @@ This format is compatible with log aggregation tools like Datadog, CloudWatch, L
 By default, the server binds to `0.0.0.0` (all interfaces). To restrict it to localhost only:
 
 ```bash
-sunpeak start --host 127.0.0.1
-HOST=127.0.0.1 sunpeak start
+pnpm start -- --host 127.0.0.1
+HOST=127.0.0.1 pnpm start
 ```
 
 ### Process Management
@@ -247,7 +247,7 @@ For multi-instance deployments behind a load balancer, you have two options:
 **Stateless mode (recommended for serverless)** — Disable session tracking entirely. Each request creates a fresh server instance, so any backend can handle any request:
 
 ```bash
-sunpeak start --stateless
+pnpm start -- --stateless
 ```
 
 Or with a custom server:

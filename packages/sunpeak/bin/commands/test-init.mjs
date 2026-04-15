@@ -153,13 +153,15 @@ export async function testInit(args = [], deps = defaultDeps) {
       initialValue: true,
     });
     if (!d.isCancel(installSkill) && installSkill) {
+      const pm = d.detectPackageManager();
+      const dlx = pm === 'yarn' ? 'yarn dlx' : pm === 'npm' ? 'npx' : 'pnpm dlx';
       try {
-        d.execSync('pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server', {
+        d.execSync(`${dlx} skills add Sunpeak-AI/sunpeak@test-mcp-server`, {
           cwd: d.cwd(),
           stdio: 'inherit',
         });
       } catch {
-        d.log.info('Skill install skipped. Install later: pnpm dlx skills add Sunpeak-AI/sunpeak@test-mcp-server');
+        d.log.info(`Skill install skipped. Install later: ${dlx} skills add Sunpeak-AI/sunpeak@test-mcp-server`);
       }
     }
   }
@@ -357,7 +359,7 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
  * 2. Install the AI SDK and provider packages (e.g. pnpm add ai @ai-sdk/openai)
  * 3. Copy .env.example to .env and add your API keys
  * 4. Replace this file with evals for your own tools
- * 5. Run: sunpeak test --eval
+ * 5. Run: npx sunpeak test --eval
  *
  * Each case sends a prompt to every configured model and checks
  * that the model calls the expected tool with the expected arguments.
@@ -403,10 +405,10 @@ function scaffoldVisualTest(filePath, d) {
 /**
  * Visual regression tests — compare screenshots against saved baselines.
  *
- * Screenshots only run with: sunpeak test --visual
- * Update baselines with:     sunpeak test --visual --update
+ * Screenshots only run with: npx sunpeak test --visual
+ * Update baselines with:     npx sunpeak test --visual --update
  *
- * During normal \`sunpeak test\` runs, screenshot() calls are silently
+ * During normal \`npx sunpeak test\` runs, screenshot() calls are silently
  * skipped so these tests still pass without baselines.
  *
  * Uncomment the tests below and replace 'your-tool' with your tool name.
@@ -465,7 +467,7 @@ function scaffoldLiveTests(liveDir, { isSunpeak, server, d } = {}) {
  * Prerequisites:
  * 1. Your MCP server must be accessible via a public URL (e.g., ngrok tunnel)
  * 2. The server must be registered as an MCP action in the host
- * 3. Run: sunpeak test --live
+ * 3. Run: npx sunpeak test --live
  *
  * On first run, a browser window opens for you to log in to the host.
  * The session is saved for subsequent runs (typically lasts a few hours).
@@ -508,9 +510,9 @@ export default defineLiveConfig({${serverOption}
  * - live.setColorScheme('dark', app) — switch theme while app is visible
  * - live.page — the underlying Playwright page
  *
- * Run with: sunpeak test --live
+ * Run with: npx sunpeak test --live
  *
- * These tests are excluded from normal \`sunpeak test\` runs because
+ * These tests are excluded from normal \`npx sunpeak test\` runs because
  * they require host accounts and cost API credits.
  */
 
@@ -553,7 +555,7 @@ function scaffoldUnitTest(filePath, d) {
  * Import your tool handler directly and test its input/output
  * without starting the MCP server or inspector.
  *
- * Run with: sunpeak test --unit
+ * Run with: npx sunpeak test --unit
  *
  * To set up vitest, add it to your devDependencies:
  *   npm install -D vitest
@@ -701,10 +703,10 @@ test('server exposes tools', async ({ mcp }) => {
   }
 
   d.log.step('Ready! Run tests with:');
-  d.log.message('  sunpeak test              # E2E tests');
-  d.log.message('  sunpeak test --visual      # Visual regression (generates baselines on first run)');
-  d.log.message('  sunpeak test --live         # Live tests against real hosts (requires login)');
-  d.log.message('  sunpeak test --eval         # Multi-model evals (configure models in evals/eval.config.ts)');
+  d.log.message('  npx sunpeak test              # E2E tests');
+  d.log.message('  npx sunpeak test --visual      # Visual regression (generates baselines on first run)');
+  d.log.message('  npx sunpeak test --live         # Live tests against real hosts (requires login)');
+  d.log.message('  npx sunpeak test --eval         # Multi-model evals (configure models in evals/eval.config.ts)');
 }
 
 async function initJsProject(cliServer, d) {
@@ -784,11 +786,11 @@ test('server exposes tools', async ({ mcp }) => {
   d.log.message(`  ${pkgMgr} add -D sunpeak @playwright/test vitest`);
   d.log.message(`  ${pkgMgr} exec playwright install chromium`);
   d.log.message('');
-  d.log.message('  sunpeak test              # E2E tests');
-  d.log.message('  sunpeak test --unit        # Unit tests (vitest)');
-  d.log.message('  sunpeak test --visual      # Visual regression');
-  d.log.message('  sunpeak test --live         # Live tests against real hosts');
-  d.log.message('  sunpeak test --eval         # Multi-model evals');
+  d.log.message('  npx sunpeak test              # E2E tests');
+  d.log.message('  npx sunpeak test --unit        # Unit tests (vitest)');
+  d.log.message('  npx sunpeak test --visual      # Visual regression');
+  d.log.message('  npx sunpeak test --live         # Live tests against real hosts');
+  d.log.message('  npx sunpeak test --eval         # Multi-model evals');
 }
 
 async function initSunpeakProject(d) {
@@ -835,10 +837,10 @@ export default defineConfig();
   scaffoldUnitTest(join(cwd, 'tests', 'unit', 'example.test.ts'), d);
 
   d.log.step('Scaffolded test types:');
-  d.log.message('  tests/e2e/visual.test.ts    — Visual regression (sunpeak test --visual)');
-  d.log.message('  tests/live/                 — Live host tests (sunpeak test --live)');
-  d.log.message('  tests/evals/                — Multi-model evals (sunpeak test --eval)');
-  d.log.message('  tests/unit/example.test.ts  — Unit tests (sunpeak test --unit)');
+  d.log.message('  tests/e2e/visual.test.ts    — Visual regression (npx sunpeak test --visual)');
+  d.log.message('  tests/live/                 — Live host tests (npx sunpeak test --live)');
+  d.log.message('  tests/evals/                — Multi-model evals (npx sunpeak test --eval)');
+  d.log.message('  tests/unit/example.test.ts  — Unit tests (npx sunpeak test --unit)');
   d.log.message('');
   d.log.message('  Migrate existing e2e tests:');
   d.log.message('  Replace: import { test, expect } from "@playwright/test"');

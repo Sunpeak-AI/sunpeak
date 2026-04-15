@@ -9,49 +9,27 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "create project", "s
 The `sunpeak new` command creates a new sunpeak project with a minimal, convention-based structure for building MCP Apps.
 
 ```bash
-sunpeak new
+npx sunpeak new
 ```
-
-<Tip>
-Install sunpeak globally first:
-
-<Tabs>
-  <Tab title="pnpm">
-    ```bash
-    pnpm add -g sunpeak
-    ```
-  </Tab>
-  <Tab title="npm">
-    ```bash
-    npm install -g sunpeak
-    ```
-  </Tab>
-  <Tab title="yarn">
-    ```bash
-    yarn global add sunpeak
-    ```
-  </Tab>
-</Tabs>
-</Tip>
 
 ## Usage
 
 Create a new project interactively:
 
 ```bash
-sunpeak new
+npx sunpeak new
 ```
 
 Or specify a project name:
 
 ```bash
-sunpeak new sunpeak-app
+npx sunpeak new my-app
 ```
 
 Or specify both project name and resources to include:
 
 ```bash
-sunpeak new sunpeak-app review,carousel
+npx sunpeak new my-app review,carousel
 ```
 
 ## Arguments
@@ -92,7 +70,7 @@ sunpeak-app/
 After creating your project:
 
 1. Navigate to your project: `cd sunpeak-app`
-2. Start the dev server: `sunpeak dev`
+2. Start the dev server: `pnpm dev`
 3. Open `http://localhost:3000` to see the inspector
 
 <Card horizontal title="Project Scaffold" icon="folder-tree" href="/app-framework/project-scaffold">

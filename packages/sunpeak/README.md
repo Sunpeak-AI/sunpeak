@@ -16,7 +16,13 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript&label=ts&color=FFB800&logoColor=white&labelColor=000035)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&label=react&color=FFB800&logoColor=white&labelColor=000035)](https://reactjs.org/)
 
-Inspector, testing framework, and runtime framework for MCP servers and MCP Apps.
+Inspector, testing framework, and App framework for MCP servers and MCP Apps.
+
+Build cross-platform: MCP App framework, ChatGPT App framework, and Claude Connector framework.
+
+```bash
+npx sunpeak new
+```
 
 [Demo (Hosted)](https://sunpeak.ai/inspector) ~
 [Demo (Video)](https://cdn.sunpeak.ai/sunpeak-demo-prod.mp4) ~
@@ -28,10 +34,12 @@ Inspector, testing framework, and runtime framework for MCP servers and MCP Apps
 
 ### 1. Inspector
 
-Manually test any MCP server in replicated ChatGPT and Claude runtimes.
+MCP servers are opaque. You can call tools and read the JSON responses, but you can't see how your app actually looks and behaves inside ChatGPT or Claude without deploying to each host, setting up a tunnel, paying for accounts, and manually refreshing through a multi-step cycle on every code change.
+
+The sunpeak inspector replicates the ChatGPT and Claude app runtimes locally. Point it at any MCP server and see your tools and resources rendered the same way they appear in production hosts.
 
 ```bash
-sunpeak inspect --server http://localhost:8000/mcp
+npx sunpeak inspect --server http://localhost:8000/mcp
 ```
 
 <div align="center">
@@ -42,110 +50,71 @@ sunpeak inspect --server http://localhost:8000/mcp
   </a>
 </div>
 
-- Multi-host inspector replicating ChatGPT and Claude runtimes
-- Toggle themes, display modes, device types from the sidebar or URL params
-- Call real tool handlers or use simulation fixtures for mock data
+Toggle between hosts, themes, display modes, and device types from the sidebar. Call real tool handlers or load simulation fixtures for deterministic mock data. Changes reflect instantly via HMR. Works with any MCP server in any language.
+
+[Inspector documentation →](https://sunpeak.ai/docs/mcp-apps-inspector)
+
+---
 
 ### 2. Testing Framework
 
-Automatically test any MCP server against replicated ChatGPT and Claude runtimes.
+MCP Apps render inside host iframes with host-specific themes, display modes, and capabilities. Standard browser testing can't replicate this because the runtime environment only exists inside ChatGPT and Claude. Each app also has many dimensions of state: tool inputs, tool results, server tool responses, host context, and display configuration. Testing all combinations manually is slow and error-prone.
+
+sunpeak replicates these host runtimes and provides simulation fixtures (JSON files that define reproducible tool states) so you can test every combination of host, theme, and data in CI without accounts or API credits.
+
+```bash
+npx sunpeak test
+```
+
+This scaffolds **E2E tests, visual regression, live host tests, and multi-model evals**. Then run them:
+
+```bash
+npx sunpeak test
+```
+
+Playwright fixtures handle inspector startup, MCP connection, iframe traversal, and host switching. Works with Python, Go, TypeScript, Rust, or any language.
 
 ```ts
 import { test, expect } from 'sunpeak/test';
 
-test('review tool renders title', async ({ inspector }) => {
-  const result = await inspector.renderTool('review-diff');
-  const app = result.app();
-  await expect(app.locator('h1:has-text("Refactor")')).toBeVisible();
+test('search tool returns results', async ({ mcp }) => {
+  const result = await mcp.callTool('search', { query: 'headphones' });
+  expect(result.isError).toBeFalsy();
+});
+
+test('album cards render', async ({ inspector }) => {
+  const result = await inspector.renderTool('show-albums');
+  await expect(result.app().locator('button:has-text("Summer Slice")')).toBeVisible();
 });
 ```
 
-- **Works for any MCP server**: `sunpeak test init` scaffolds tests for Python, Go, TS, or any language
-- **MCP-native assertions**: `toBeError()`, `toHaveTextContent()`, `toHaveStructuredContent()`
-- **Multi-host**: Tests run against ChatGPT and Claude hosts automatically
-- **Live tests**: Automated browser tests against real ChatGPT via `sunpeak/test/live`
-- **Evals**: Test your tool interface design against multiple LLMs (GPT-4o, Claude, Gemini, etc.) via `sunpeak/eval`
+[Testing documentation →](https://sunpeak.ai/docs/testing/overview)
+
+---
 
 ### 3. App Framework
 
-Next.js for MCP Apps. Convention-over-configuration project structure with the inspector and testing built in.
+Building an MCP App from scratch means wiring up an MCP server, handling protocol message routing, managing resource HTML bundles, and setting up a dev environment with hot reload. Each host has different capabilities and CSS variables, so you end up writing platform-specific code without a clear structure.
+
+sunpeak gives you a convention-over-configuration framework with the inspector and testing built in.
 
 ```bash
-sunpeak-app/
-├── src/
-│   ├── resources/
-│   │   └── review/
-│   │       └── review.tsx            # Review UI component + resource metadata.
-│   ├── tools/
-│   │   ├── review-diff.ts            # Tool with handler, schema, and optional resource link.
-│   │   ├── review-post.ts            # Multiple tools can share one resource.
-│   │   └── review.ts                 # Backend-only tool (no resource, no UI).
-│   └── server.ts                     # Optional: auth, server config.
-├── tests/simulations/
-│   ├── review-diff.json              # Mock state for testing (includes serverTools).
-│   ├── review-post.json              # Mock state for testing (includes serverTools).
-│   └── review-purchase.json          # Mock state for testing (includes serverTools).
+npx sunpeak new
+```
+
+This creates a project, starts a dev server with HMR, and opens the inspector at `localhost:3000`:
+
+```
+my-app/
+├── src/resources/review/review.tsx    # UI component (React)
+├── src/tools/review-diff.ts           # Tool handler, schema, resource link
+├── tests/simulations/review-diff.json # Mock data for the inspector
 └── package.json
 ```
 
-- **Runtime APIs**: Strongly typed React hooks (`useToolData`, `useAppState`, `useHostContext`, etc.)
-- **Convention over configuration**: Resources, tools, and simulations are auto-discovered
-- **Multi-platform**: Build once, deploy to ChatGPT, Claude, and future hosts
+Tools, resources, and simulations are auto-discovered from the file system. Multi-platform React hooks (`useToolData`, `useAppState`, `useTheme`, `useDisplayMode`) let you write your app logic once and deploy it across ChatGPT, Claude, and future hosts.
 
-## Quickstart
-
-Requirements: Node (20+), pnpm (10+)
-
-```bash
-pnpm add -g sunpeak
-sunpeak new
-```
-
-## CLI
-
-**Testing** (works with any MCP server):
-
-| Command                               | Description                                 |
-| ------------------------------------- | ------------------------------------------- |
-| `sunpeak inspect --server <url\|cmd>` | Inspect any MCP server in the inspector     |
-| `sunpeak test`                        | Run unit + e2e tests                        |
-| `sunpeak test --unit`                 | Run unit tests only (Vitest)                |
-| `sunpeak test --e2e`                  | Run e2e tests only (Playwright)             |
-| `sunpeak test --visual`               | Run e2e tests with visual regression        |
-| `sunpeak test --visual --update`      | Update visual regression baselines          |
-| `sunpeak test --live`                 | Run live tests against real hosts           |
-| `sunpeak test --eval`                 | Run evals against multiple LLM models       |
-| `sunpeak test init`                   | Scaffold test infrastructure into a project |
-
-**App framework** (for sunpeak projects):
-
-| Command                          | Description                                 |
-| -------------------------------- | ------------------------------------------- |
-| `sunpeak new [name] [resources]` | Create a new project                        |
-| `sunpeak dev`                    | Start dev server + inspector + MCP endpoint |
-| `sunpeak build`                  | Build resources + tools for production      |
-| `sunpeak start`                  | Start production MCP server                 |
-| `sunpeak upgrade`                | Upgrade sunpeak to latest version           |
-
-## Coding Agent Skills
-
-Install the sunpeak skills to give your coding agent (Claude Code, Cursor, etc.) built-in knowledge of sunpeak patterns, hooks, and testing:
-
-```bash
-pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server
-```
-
-## Troubleshooting
-
-If your app doesn't render in ChatGPT or Claude:
-
-1. **Check your tunnel** is running and pointing to the correct port
-2. **Restart `sunpeak dev`** to clear stale connections
-3. **Refresh or re-add the MCP server** in the host's settings (Settings > MCP Servers)
-4. **Hard refresh** the host page (`Cmd+Shift+R` / `Ctrl+Shift+R`)
-5. **Open a new chat** in the host (cached iframes persist per-conversation)
-
-Full guide: [sunpeak.ai/docs/app-framework/guides/troubleshooting](https://sunpeak.ai/docs/app-framework/guides/troubleshooting)
+[App framework documentation →](https://sunpeak.ai/docs/mcp-apps-framework)
 
 ## Resources
 
@@ -153,3 +122,4 @@ Full guide: [sunpeak.ai/docs/app-framework/guides/troubleshooting](https://sunpe
 - [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
+- [Troubleshooting](https://sunpeak.ai/docs/app-framework/guides/troubleshooting)

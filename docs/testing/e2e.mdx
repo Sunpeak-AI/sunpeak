@@ -9,10 +9,10 @@ keywords: ["MCP app testing", "e2e testing", "Playwright", "inspector", "simulat
 E2E tests are Playwright specs in `tests/e2e/*.spec.ts`. The dev server starts automatically — Playwright launches it before running tests. Tests run against both ChatGPT and Claude hosts via Playwright projects.
 
 ```bash
-sunpeak test                               # Run unit + e2e
-sunpeak test --e2e                         # E2E only
-sunpeak test --e2e --ui                    # Playwright UI mode
-sunpeak test --e2e tests/e2e/albums.spec.ts  # Single file
+pnpm test                               # Run unit + e2e
+pnpm test:e2e                           # E2E only
+pnpm test:e2e -- --ui                   # Playwright UI mode
+pnpm test:e2e -- tests/e2e/albums.spec.ts  # Single file
 ```
 
 ### Writing E2E Tests

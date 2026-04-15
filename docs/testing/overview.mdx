@@ -6,19 +6,16 @@ keywords: ["MCP testing", "MCP server testing", "ChatGPT app testing", "MCP Apps
 
 The sunpeak testing framework tests any MCP server, whether or not you use the sunpeak app framework. It provides four levels of automated testing that cover everything from fast unit checks to live host validation and multi-model eval runs.
 
-## Standalone Usage
+## Quickstart
 
-You do not need to build your MCP server with sunpeak to use the testing framework. Point it at any MCP server URL:
+No sunpeak project required. Scaffold tests for any running MCP server:
 
 ```bash
-# Scaffold test infrastructure for an existing MCP server
-sunpeak test init
-
-# Launch the inspector against any MCP server
-sunpeak inspect --server http://localhost:8000/mcp
+npx sunpeak test init --server http://localhost:8000/mcp
+npx sunpeak test
 ```
 
-`sunpeak test init` generates the test directory structure, Playwright configs, example specs, and eval boilerplate. From there, configure `defineConfig()` with your server URL and write tests against your tools and resources.
+This generates test infrastructure (Playwright configs, E2E specs, visual regression, eval boilerplate) and runs the scaffolded smoke test. See [Getting Started](/testing/getting-started) for the full setup walkthrough, including language-specific tips for Python, Go, and Rust servers.
 
 For sunpeak framework projects, the dev server starts automatically and no server URL is needed.
 

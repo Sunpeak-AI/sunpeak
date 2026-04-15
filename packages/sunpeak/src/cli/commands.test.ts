@@ -159,7 +159,7 @@ describe('CLI Commands', () => {
       });
 
       expect(execSyncMock).toHaveBeenCalledWith(
-        'pnpm dlx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server',
+        'npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server',
         expect.objectContaining({ cwd: '/test/my-project', stdio: 'inherit' })
       );
     });
