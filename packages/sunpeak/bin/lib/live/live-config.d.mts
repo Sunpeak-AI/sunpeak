@@ -28,6 +28,16 @@ export interface LiveConfigOptions {
 
   /** Additional Playwright `use` options, merged with defaults. */
   use?: Record<string, unknown>;
+
+  /** External MCP server config. Omit for sunpeak framework projects. */
+  server?: {
+    /** Server URL (e.g., 'http://localhost:8000/mcp') */
+    url?: string;
+    /** Server start command */
+    command?: string;
+    /** Command arguments */
+    args?: string[];
+  };
 }
 
 export interface HostConfigOptions {
