@@ -377,13 +377,17 @@ function runTestInitSmokeTest() {
         'tests/evals/eval.config.ts',
         'tests/evals/example.eval.ts',
         'tests/evals/.env.example',
-        'tests/unit/example.test.ts',
       ];
 
       for (const file of expected) {
         if (!existsSync(join(dir, file))) {
           return { ok: false, step: `test-init js: missing ${file}`, output: allOutput.join('\n') };
         }
+      }
+
+      // Unit tests should NOT be scaffolded (they're app-framework-only)
+      if (existsSync(join(dir, 'tests/unit/example.test.ts'))) {
+        return { ok: false, step: 'test-init js: tests/unit/ should not be scaffolded', output: allOutput.join('\n') };
       }
 
       // Verify correct imports in scaffolded files
@@ -400,11 +404,6 @@ function runTestInitSmokeTest() {
       const liveTest = readFileSync(join(dir, 'tests/live/example.test.ts'), 'utf-8');
       if (!liveTest.includes("from 'sunpeak/test/live'") || !liveTest.includes('live.invoke')) {
         return { ok: false, step: 'test-init js: live test missing expected content', output: allOutput.join('\n') };
-      }
-
-      const unitTest = readFileSync(join(dir, 'tests/unit/example.test.ts'), 'utf-8');
-      if (!unitTest.includes("from 'vitest'")) {
-        return { ok: false, step: 'test-init js: unit test missing vitest import', output: allOutput.join('\n') };
       }
 
       const evalExample = readFileSync(join(dir, 'tests/evals/example.eval.ts'), 'utf-8');
@@ -450,13 +449,17 @@ function runTestInitSmokeTest() {
         'tests/evals/eval.config.ts',
         'tests/evals/example.eval.ts',
         'tests/evals/.env.example',
-        'tests/unit/example.test.ts',
       ];
 
       for (const file of expected) {
         if (!existsSync(join(dir, file))) {
           return { ok: false, step: `test-init sunpeak: missing ${file}`, output: allOutput.join('\n') };
         }
+      }
+
+      // Unit tests should NOT be scaffolded by test init (they come from sunpeak new)
+      if (existsSync(join(dir, 'tests/unit/example.test.ts'))) {
+        return { ok: false, step: 'test-init sunpeak: tests/unit/ should not be scaffolded by test init', output: allOutput.join('\n') };
       }
 
       // Verify playwright.config uses defineConfig() (no server arg)
