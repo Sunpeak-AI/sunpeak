@@ -237,7 +237,7 @@ Automated testing powered by the inspector. Works with any MCP server in any lan
 
 **Test types**: E2E (`sunpeak/test`), Visual regression (`result.screenshot()` on `InspectorResult`), Live tests (`sunpeak/test/live` for real ChatGPT/Claude), Evals (`sunpeak/eval` for multi-model tool calling via Vercel AI SDK).
 
-**CLI**: `sunpeak test` runs unit + e2e tests, `sunpeak test --unit` runs only vitest, `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test --eval` runs multi-model evals, `sunpeak test init` scaffolds test infrastructure (including eval boilerplate). Flags are additive: `--unit --e2e --live --eval` runs all four. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
+**CLI**: `sunpeak test` runs unit + e2e tests by default (unit tests only run if vitest is configured, i.e. app framework projects), `sunpeak test --e2e` runs only Playwright e2e tests, `sunpeak test --visual` runs e2e with visual regression comparison, `sunpeak test --visual --update` updates visual baselines, `sunpeak test --live` runs live tests against real hosts, `sunpeak test --eval` runs multi-model evals, `sunpeak test --unit` runs vitest unit tests (app framework projects only, not scaffolded by `test init`), `sunpeak test init` scaffolds test infrastructure (e2e, visual, live, eval — no unit tests). Flags are additive. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
 
 #### 3. Inspector
 

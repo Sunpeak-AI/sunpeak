@@ -6,7 +6,11 @@ keywords: ["MCP app testing", "unit testing", "Vitest", "happy-dom", "React test
 
 ## Overview
 
-Unit tests run your component and hook logic in isolation using Vitest with happy-dom. They're fast, don't require the inspector or a browser, and are included in the default `sunpeak test` run.
+<Note>
+  Unit tests are for **sunpeak app framework projects** (created with `sunpeak new`). If you're using sunpeak as a standalone testing framework for an existing MCP server, use [E2E tests](/testing/e2e) instead, which test your server over the wire via the MCP protocol.
+</Note>
+
+Unit tests run your component and hook logic in isolation using Vitest with happy-dom. They're fast, don't require the inspector or a browser, and test tool handlers, React components, and data transformations directly.
 
 <Tabs>
   <Tab title="pnpm">

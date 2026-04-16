@@ -21,15 +21,7 @@ For sunpeak framework projects, the dev server starts automatically and no serve
 
 ## Testing Levels
 
-### 1. Unit Tests
-
-Standard Vitest with happy-dom for component and hook logic testing. No special framework integration required.
-
-<Card horizontal title="Unit Testing" icon="vial" href="/testing/unit">
-  Fast component and hook tests with Vitest.
-</Card>
-
-### 2. E2E Tests
+### 1. E2E Tests
 
 Playwright specs that call your MCP tools and render them in simulated ChatGPT and Claude runtimes. The `mcp` fixture from `sunpeak/test` handles inspector navigation, iframe traversal, and host switching. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states so you can test every combination of host, theme, display mode, and device without deploying or burning API credits.
 
@@ -43,7 +35,7 @@ Visual regression is built in. Pass `--visual` to compare screenshots against ba
   Screenshot comparison across themes, display modes, and hosts.
 </Card>
 
-### 3. Live Tests
+### 2. Live Tests
 
 Playwright specs that run against real ChatGPT (and future hosts). They open a browser, send messages that trigger tool calls against your MCP server, and verify the rendered app. This catches issues that inspector tests cannot: real MCP connection behavior, actual LLM tool invocation, host-specific iframe rendering, and production resource loading.
 
@@ -51,7 +43,7 @@ Playwright specs that run against real ChatGPT (and future hosts). They open a b
   Validate your MCP Apps inside real AI chat hosts.
 </Card>
 
-### 4. Evals
+### 3. Evals
 
 Multi-model tool calling tests. Evals connect to your MCP server via the MCP protocol, discover its tools, and send prompts to multiple LLM models (GPT-4o, Claude, Gemini, etc.). Each eval case runs N times per model and reports statistical pass/fail counts, so you can measure whether your tool descriptions work reliably across models.
 
@@ -63,15 +55,15 @@ Multi-model tool calling tests. Evals connect to your MCP server via the MCP pro
 
 | Command | What it runs | Runtime |
 |---------|-------------|---------|
-| `sunpeak test` | Unit + E2E tests | Vitest + Playwright |
-| `sunpeak test --unit` | Unit tests only | Vitest + happy-dom |
+| `sunpeak test` | Unit (if configured) + E2E tests | Vitest + Playwright |
 | `sunpeak test --e2e` | E2E tests only | Playwright + inspector |
 | `sunpeak test --visual` | E2E with visual regression | Playwright + inspector |
 | `sunpeak test --visual --update` | Update visual baselines | Playwright + inspector |
 | `sunpeak test --live` | Live tests against real hosts | Playwright + real host |
 | `sunpeak test --eval` | Evals against multiple models | Vitest + Vercel AI SDK |
+| `sunpeak test --unit` | Unit tests (app framework only) | Vitest + happy-dom |
 
-Flags are additive: `--unit --e2e --live --eval` runs all four.
+Flags are additive: `--e2e --live --eval` runs all three.
 
 <Note>
   `--eval` and `--live` are not included in the default `sunpeak test` run because they require API keys and cost money. You must opt in explicitly.
@@ -89,7 +81,6 @@ For JS/TS projects, this creates files at the project root:
 - `tests/e2e/` with smoke and visual regression test specs
 - `tests/evals/` with eval config, `.env.example`, and example eval specs
 - `tests/live/` with live test config and example specs
-- `tests/unit/` with unit test example
 
 For non-JS projects (Python, Go, Rust, etc.), everything goes into a self-contained `tests/sunpeak/` directory with its own `package.json`.
 
@@ -103,9 +94,6 @@ For sunpeak framework projects, `sunpeak new` scaffolds all of this automaticall
   </Card>
   <Card title="Simulations" icon="folder" href="/testing/simulations">
     JSON fixtures for reproducible tool states.
-  </Card>
-  <Card title="Unit Testing" icon="vial" href="/testing/unit">
-    Fast component and hook tests with Vitest.
   </Card>
   <Card title="E2E Testing" icon="flask" href="/testing/e2e">
     Playwright specs against simulated hosts.

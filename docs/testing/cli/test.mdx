@@ -1,31 +1,33 @@
 ---
 title: "sunpeak test"
-description: "Run unit tests, E2E tests, visual regression, live host tests, and multi-model evals."
-keywords: ["MCP testing", "sunpeak test", "e2e testing", "visual regression", "live testing", "evals", "unit testing"]
+description: "Run E2E tests, visual regression, live host tests, and multi-model evals."
+keywords: ["MCP testing", "sunpeak test", "e2e testing", "visual regression", "live testing", "evals"]
 ---
 
 ## Overview
 
-The `sunpeak test` command runs automated tests for your MCP server. It supports unit tests, E2E tests against the inspector, visual regression, live tests against real hosts, and multi-model evals.
+The `sunpeak test` command runs automated tests for your MCP server. It supports E2E tests against the inspector, visual regression, live tests against real hosts, and multi-model evals.
 
 ```bash
 sunpeak test
 ```
 
-With no flags, `sunpeak test` runs unit tests (Vitest) and E2E tests (Playwright). Live tests and evals are never included in the default run because they require API keys and cost money.
+With no flags, `sunpeak test` runs unit tests (Vitest, if configured) and E2E tests (Playwright). For standalone testing framework projects, only E2E tests run because unit tests aren't scaffolded. For sunpeak app framework projects, both unit and E2E tests run by default.
+
+Live tests and evals are never included in the default run because they require API keys and cost money.
 
 ## Options
 
 | Flag | Description |
 |------|-------------|
-| `--unit` | Run unit tests only (Vitest + happy-dom) |
 | `--e2e` | Run E2E tests only (Playwright + inspector) |
 | `--visual` | Run E2E tests with visual regression comparison |
 | `--visual --update` | Update visual regression baselines |
 | `--live` | Run live tests against real hosts (ChatGPT) |
 | `--eval` | Run evals against multiple LLM models |
+| `--unit` | Run unit tests (sunpeak app framework only, Vitest + happy-dom) |
 
-Flags are additive: `--unit --e2e --live --eval` runs all four. `--visual` implies `--e2e`. `--update` implies `--visual`.
+Flags are additive: `--e2e --live --eval` runs all three. `--visual` implies `--e2e`. `--update` implies `--visual`.
 
 Extra arguments are passed through to the underlying test runner (Playwright or Vitest):
 
@@ -56,11 +58,8 @@ For sunpeak framework projects, `sunpeak new` scaffolds all of this automaticall
 ## Examples
 
 ```bash
-# Default: unit + e2e
+# Default: unit (if configured) + e2e
 sunpeak test
-
-# Unit tests only
-sunpeak test --unit
 
 # E2E tests only
 sunpeak test --e2e
@@ -78,15 +77,12 @@ sunpeak test --live
 sunpeak test --eval
 
 # Run everything
-sunpeak test --unit --e2e --live --eval
+sunpeak test --e2e --live --eval
 ```
 
 ## See Also
 
 <CardGroup cols={2}>
-  <Card horizontal title="Unit Testing" icon="vial" href="/testing/unit">
-    Fast component and hook tests with Vitest.
-  </Card>
   <Card horizontal title="E2E Testing" icon="flask" href="/testing/e2e">
     Write Playwright tests against simulated hosts.
   </Card>

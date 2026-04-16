@@ -59,8 +59,17 @@ export async function runTest(args) {
   const results = [];
 
   if (runUnit) {
-    const code = await runChild('pnpm', ['exec', 'vitest', 'run', ...filteredArgs]);
-    results.push({ suite: 'unit', code });
+    // Only run unit tests if vitest is available (app framework projects have it,
+    // standalone testing framework projects don't).
+    const hasVitest = existsSync(join(process.cwd(), 'node_modules', '.bin', 'vitest'));
+    if (hasVitest) {
+      const code = await runChild('pnpm', ['exec', 'vitest', 'run', ...filteredArgs]);
+      results.push({ suite: 'unit', code });
+    } else if (isUnit) {
+      // Only warn if the user explicitly asked for --unit
+      console.error('vitest is not installed. Install it with: npm add -D vitest');
+      results.push({ suite: 'unit', code: 1 });
+    }
   }
 
   if (runE2e) {

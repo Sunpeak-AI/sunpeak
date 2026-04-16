@@ -61,12 +61,14 @@ export const defaultDeps = {
  * - JS/TS projects: root-level config + test files
  * - sunpeak projects: migrate to defineConfig()
  *
- * Scaffolds all 5 test types:
+ * Scaffolds 4 test types:
  * 1. E2E tests — Playwright-based inspector tests (mcp fixture)
  * 2. Visual regression — Screenshot comparison via result.screenshot()
  * 3. Live tests — Test against real ChatGPT/Claude hosts
  * 4. Evals — Multi-model tool calling reliability tests
- * 5. Unit tests — Direct tool handler tests (JS/TS projects only)
+ *
+ * Unit tests are not scaffolded here — they're part of the sunpeak app
+ * framework (`sunpeak new`) where tool handlers can be imported directly.
  */
 export async function testInit(args = [], deps = defaultDeps) {
   const d = { ...defaultDeps, ...deps };
@@ -532,56 +534,6 @@ export default defineLiveConfig({${serverOption}
   d.log.success(`Created ${liveDir}/ with live test config and example.`);
 }
 
-/**
- * Scaffold a unit test example for JS/TS projects.
- * @param {string} filePath - Full path to the unit test file
- * @param {object} d - Dependencies
- */
-function scaffoldUnitTest(filePath, d) {
-  if (d.existsSync(filePath)) {
-    d.log.info('Unit test already exists. Skipping.');
-    return;
-  }
-
-  d.mkdirSync(dirname(filePath), { recursive: true });
-
-  d.writeFileSync(
-    filePath,
-    `import { describe, it, expect } from 'vitest';
-
-/**
- * Unit tests for your MCP tool handlers.
- *
- * Import your tool handler directly and test its input/output
- * without starting the MCP server or inspector.
- *
- * Run with: npx sunpeak test --unit
- *
- * To set up vitest, add it to your devDependencies:
- *   npm install -D vitest
- *
- * Uncomment and customize the tests below for your tools.
- */
-
-// import handler, { tool, schema } from '../../src/tools/your-tool';
-// const extra = {} as Parameters<typeof handler>[1];
-
-// describe('your tool', () => {
-//   it('returns expected output', async () => {
-//     const result = await handler({ key: 'value' }, extra);
-//     expect(result.structuredContent).toBeDefined();
-//   });
-//
-//   it('exports correct tool config', () => {
-//     expect(tool.title).toBe('Your Tool');
-//     expect(tool.annotations?.readOnlyHint).toBe(true);
-//   });
-// });
-`
-  );
-  d.log.success(`Created ${filePath}`);
-}
-
 async function initExternalProject(cliServer, d) {
   d.log.info('Detected non-JS project. Creating self-contained test directory.');
 
@@ -715,6 +667,22 @@ async function initJsProject(cliServer, d) {
   const server = await getServerConfig(cliServer, d);
   const cwd = d.cwd();
 
+  // Ensure "type": "module" — sunpeak exports are ESM-only and Playwright's
+  // CJS resolver won't find them without it.
+  const pkgPath = join(cwd, 'package.json');
+  if (d.existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(d.readFileSync(pkgPath, 'utf-8'));
+      if (pkg.type !== 'module') {
+        pkg.type = 'module';
+        d.writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
+        d.log.success('Set "type": "module" in package.json (required for sunpeak imports)');
+      }
+    } catch {
+      d.log.warn('Could not read package.json. Make sure "type": "module" is set.');
+    }
+  }
+
   // Create playwright.config.ts
   const configPath = join(cwd, 'playwright.config.ts');
   if (d.existsSync(configPath)) {
@@ -775,19 +743,15 @@ test('server exposes tools', async ({ mcp }) => {
   // 4. Eval boilerplate
   scaffoldEvals(join(cwd, 'tests', 'evals'), { server, d });
 
-  // 5. Unit test
-  scaffoldUnitTest(join(cwd, 'tests', 'unit', 'example.test.ts'), d);
-
   if (server.type === 'later') {
     d.log.warn('Server not configured. Edit playwright.config.ts before running tests.');
   }
   const pkgMgr = d.detectPackageManager();
   d.log.step('Next steps:');
-  d.log.message(`  ${pkgMgr} add -D sunpeak @playwright/test vitest`);
+  d.log.message(`  ${pkgMgr} add -D sunpeak @playwright/test`);
   d.log.message(`  ${pkgMgr} exec playwright install chromium`);
   d.log.message('');
   d.log.message('  npx sunpeak test              # E2E tests');
-  d.log.message('  npx sunpeak test --unit        # Unit tests (vitest)');
   d.log.message('  npx sunpeak test --visual      # Visual regression');
   d.log.message('  npx sunpeak test --live         # Live tests against real hosts');
   d.log.message('  npx sunpeak test --eval         # Multi-model evals');
@@ -833,14 +797,10 @@ export default defineConfig();
   // 3. Eval boilerplate
   scaffoldEvals(join(cwd, 'tests', 'evals'), { isSunpeak: true, d });
 
-  // 4. Unit test
-  scaffoldUnitTest(join(cwd, 'tests', 'unit', 'example.test.ts'), d);
-
   d.log.step('Scaffolded test types:');
   d.log.message('  tests/e2e/visual.test.ts    — Visual regression (npx sunpeak test --visual)');
   d.log.message('  tests/live/                 — Live host tests (npx sunpeak test --live)');
   d.log.message('  tests/evals/                — Multi-model evals (npx sunpeak test --eval)');
-  d.log.message('  tests/unit/example.test.ts  — Unit tests (npx sunpeak test --unit)');
   d.log.message('');
   d.log.message('  Migrate existing e2e tests:');
   d.log.message('  Replace: import { test, expect } from "@playwright/test"');

@@ -36,17 +36,17 @@ Test examples live at `/tmp/sunpeak/packages/sunpeak/template/tests/`. This incl
 
 ```bash
 sunpeak inspect              # Inspect any MCP server in the inspector (standalone)
-sunpeak test                 # Run unit + e2e tests
-sunpeak test --unit          # Run unit tests only (vitest)
+sunpeak test                 # Run unit (if configured) + e2e tests
 sunpeak test --e2e           # Run e2e tests only (Playwright)
 sunpeak test --visual        # Run e2e tests with visual regression comparison
 sunpeak test --visual --update  # Update visual regression baselines
 sunpeak test init            # Scaffold test infrastructure into a project
 sunpeak test --live          # Run live tests against real ChatGPT (requires tunnel + browser session)
 sunpeak test --eval          # Run evals against multiple LLM models (requires API keys)
+sunpeak test --unit          # Run unit tests (sunpeak app framework only, not standalone)
 ```
 
-Flags are additive: `--unit --e2e --live --eval` runs all four. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money).
+Flags are additive: `--e2e --live --eval` runs all three. `--update` implies `--visual`. `--eval` and `--live` are never included in the default run (they cost money). `--unit` is only for sunpeak app framework projects (created with `sunpeak new`), not standalone testing.
 
 ## E2E Tests with the `mcp` and `inspector` Fixtures
 

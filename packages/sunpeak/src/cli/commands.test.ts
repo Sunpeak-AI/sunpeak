@@ -785,7 +785,7 @@ describe('CLI Commands', () => {
       expect(liveConfig).toContain("from 'sunpeak/test/live/config'");
     });
 
-    it('should scaffold all 5 test types for JS projects with correct imports', async () => {
+    it('should scaffold 4 test types for JS projects (no unit tests)', async () => {
       const { testInit } = await importTestInit();
       const writeFileSync = vi.fn();
 
@@ -800,13 +800,14 @@ describe('CLI Commands', () => {
 
       const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
 
-      // All 5 test types
+      // 4 test types (no unit tests — those are app-framework-only)
       expect(writtenPaths).toContainEqual(expect.stringContaining('e2e/smoke.test.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('e2e/visual.test.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('live/playwright.config.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('live/example.test.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('evals/eval.config.ts'));
-      expect(writtenPaths).toContainEqual(expect.stringContaining('unit/example.test.ts'));
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/example.test.ts'));
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('vitest.config.ts'));
 
       // Verify correct imports
       const smoke = getWrittenContent(writeFileSync, 'e2e/smoke.test.ts');
@@ -820,12 +821,13 @@ describe('CLI Commands', () => {
       expect(liveTest).toContain("from 'sunpeak/test/live'");
       expect(liveTest).toContain('live.invoke');
 
-      const unit = getWrittenContent(writeFileSync, 'unit/example.test.ts');
-      expect(unit).toContain("from 'vitest'");
-
       const evalTest = getWrittenContent(writeFileSync, 'evals/example.eval.ts');
       expect(evalTest).toContain("from 'sunpeak/eval'");
       expect(evalTest).toContain('defineEval');
+
+      // Sets "type": "module" in package.json
+      const pkgJson = getWrittenContent(writeFileSync, 'package.json');
+      expect(JSON.parse(pkgJson).type).toBe('module');
     });
 
     it('should scaffold all test types for sunpeak projects without NOTE in live config', async () => {
@@ -848,12 +850,12 @@ describe('CLI Commands', () => {
 
       const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
 
-      // All test types
+      // All test types (no unit tests — those come from sunpeak new)
       expect(writtenPaths).toContainEqual(expect.stringContaining('playwright.config.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('visual.test.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('live/playwright.config.ts'));
       expect(writtenPaths).toContainEqual(expect.stringContaining('evals/eval.config.ts'));
-      expect(writtenPaths).toContainEqual(expect.stringContaining('unit/example.test.ts'));
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/example.test.ts'));
 
       // Config uses defineConfig() with no args (root config, not live/)
       const config = getWrittenContent(writeFileSync, 'project/playwright.config.ts');
@@ -879,7 +881,6 @@ describe('CLI Commands', () => {
             if (path.includes('package.json')) return true;
             if (path.includes('visual.test.ts')) return true;
             if (path.includes('live/playwright.config.ts')) return true;
-            if (path.includes('unit/example.test.ts')) return true;
             return false;
           },
           readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
@@ -889,11 +890,10 @@ describe('CLI Commands', () => {
 
       const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
 
-      // Should NOT have written visual, live config, or unit test (they already exist)
+      // Should NOT have written visual or live config (they already exist)
       expect(writtenPaths).not.toContainEqual(expect.stringContaining('visual.test.ts'));
       expect(writtenPaths).not.toContainEqual(expect.stringContaining('live/playwright.config.ts'));
       expect(writtenPaths).not.toContainEqual(expect.stringContaining('live/example.test.ts'));
-      expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/example.test.ts'));
 
       // Should still have written smoke test and evals (they don't exist in the mock)
       expect(writtenPaths).toContainEqual(expect.stringContaining('smoke.test.ts'));
@@ -948,18 +948,9 @@ describe('CLI Commands', () => {
         );
       expect(liveUncommented.join('\n')).not.toContain('live.invoke');
 
-      // Unit test: handler import and test bodies should be commented
-      const unit = getWrittenContent(writeFileSync, 'unit/example.test.ts');
-      expect(unit).toBeDefined();
-      const unitUncommented = unit!
-        .split('\n')
-        .filter(
-          (l) =>
-            !l.trim().startsWith('//') && !l.trim().startsWith('*') && !l.trim().startsWith('/**')
-        );
-      // The vitest import is OK uncommented, but actual test logic should be commented
-      expect(unitUncommented.join('\n')).not.toContain('handler');
-      expect(unitUncommented.join('\n')).not.toContain('expect(tool');
+      // Unit tests are not scaffolded for standalone testing framework
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+      expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/'));
     });
 
     it('should include multi-language hints in "configure later" config', async () => {
