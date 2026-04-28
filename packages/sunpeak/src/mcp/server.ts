@@ -3,6 +3,7 @@ import type { AddressInfo } from 'node:net';
 import { URL } from 'node:url';
 import fs from 'node:fs';
 import path from 'node:path';
+import { gzipSync } from 'node:zlib';
 
 import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
@@ -596,6 +597,120 @@ const CORS_HEADERS = {
   'Access-Control-Expose-Headers': 'mcp-session-id',
 } as const;
 
+/**
+ * Wrap a ServerResponse to apply gzip compression for JSON responses.
+ * The SDK's StreamableHTTPServerTransport writes directly to res, so we intercept
+ * writeHead/write/end to buffer JSON bodies and compress them before sending.
+ * SSE (text/event-stream) responses pass through uncompressed.
+ */
+function wrapResponseWithGzip(
+  res: ServerResponse,
+  acceptEncoding: string | undefined
+): ServerResponse {
+  if (!acceptEncoding || !/\bgzip\b/.test(acceptEncoding)) return res;
+
+  let buffering = false;
+  let savedStatus = 200;
+  let savedHeaders: Record<string, string | string[]> = {};
+  const chunks: Buffer[] = [];
+
+  // Coerce a chunk (Buffer, Uint8Array, ArrayBufferView, or string) to a Buffer.
+  // Hono's getRequestListener writes Uint8Array chunks, NOT Node Buffers, so we
+  // must accept both. `Buffer.isBuffer(uint8Array)` returns false even though
+  // Buffer extends Uint8Array.
+  const toBuffer = (chunk: unknown): Buffer | null => {
+    if (chunk == null) return null;
+    if (Buffer.isBuffer(chunk)) return chunk;
+    if (typeof chunk === 'string') return Buffer.from(chunk);
+    if (chunk instanceof Uint8Array)
+      return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength);
+    if (ArrayBuffer.isView(chunk)) {
+      const view = chunk as ArrayBufferView;
+      return Buffer.from(view.buffer, view.byteOffset, view.byteLength);
+    }
+    return null;
+  };
+
+  // Save originals. We cast through `any` once here to avoid fighting
+  // Node's heavily-overloaded ServerResponse method signatures.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const origWriteHead = res.writeHead.bind(res) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const origWrite = res.write.bind(res) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const origEnd = res.end.bind(res) as any;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (res as any).writeHead = (statusCode: number, ...rest: any[]) => {
+    // Extract headers from the various writeHead overload signatures
+    let headers: Record<string, string | string[]> | undefined;
+    for (const arg of rest) {
+      if (arg && typeof arg === 'object' && !Array.isArray(arg)) {
+        headers = arg as Record<string, string | string[]>;
+      }
+    }
+    // Look up content-type case-insensitively
+    let contentType = '';
+    if (headers) {
+      for (const key of Object.keys(headers)) {
+        if (key.toLowerCase() === 'content-type') {
+          const value = headers[key];
+          contentType = String(Array.isArray(value) ? value[0] : value);
+          break;
+        }
+      }
+    }
+    if (contentType.includes('application/json')) {
+      buffering = true;
+      savedStatus = statusCode;
+      savedHeaders = headers ? { ...headers } : {};
+      return res;
+    }
+    return origWriteHead(statusCode, ...rest);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (res as any).write = (...args: any[]) => {
+    if (buffering) {
+      const buf = toBuffer(args[0]);
+      if (buf) chunks.push(buf);
+      // Invoke optional callback (write's last arg) so backpressure flows aren't stalled
+      const cb = args[args.length - 1];
+      if (typeof cb === 'function') cb();
+      return true;
+    }
+    return origWrite(...args);
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (res as any).end = (...args: any[]) => {
+    if (buffering) {
+      const buf = toBuffer(args[0]);
+      if (buf) chunks.push(buf);
+      const body = Buffer.concat(chunks);
+      const compressed = gzipSync(body);
+      // Drop original content-length (gzipped size differs); preserve other headers
+      for (const key of Object.keys(savedHeaders)) {
+        if (key.toLowerCase() === 'content-length') delete savedHeaders[key];
+      }
+      const finalHeaders: Record<string, string | string[]> = {
+        ...savedHeaders,
+        'content-encoding': 'gzip',
+        'content-length': String(compressed.byteLength),
+      };
+      origWriteHead(savedStatus, finalHeaders);
+      origEnd(compressed);
+      // Invoke optional callback (end's last arg)
+      const cb = args[args.length - 1];
+      if (typeof cb === 'function' && cb !== args[0]) cb();
+      return res;
+    }
+    return origEnd(...args);
+  };
+
+  return res;
+}
+
 // Periodically clean up idle sessions.
 // Closing the server triggers transport.onclose which handles session map cleanup.
 const cleanupInterval = setInterval(() => {
@@ -669,7 +784,11 @@ async function handleMcpRequest(
       return;
     }
     session.lastActivity = Date.now();
-    await session.transport.handleRequest(req, res, parsedBody);
+    await session.transport.handleRequest(
+      req,
+      wrapResponseWithGzip(res, req.headers['accept-encoding'] as string | undefined),
+      parsedBody
+    );
     return;
   }
 
@@ -732,7 +851,11 @@ async function handleMcpRequest(
     };
 
     await server.connect(transport);
-    await transport.handleRequest(req, res, parsedBody);
+    await transport.handleRequest(
+      req,
+      wrapResponseWithGzip(res, req.headers['accept-encoding'] as string | undefined),
+      parsedBody
+    );
     return;
   }
 
