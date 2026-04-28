@@ -4,7 +4,4 @@
 /* Scan app-specific source files for Tailwind classes */
 @source "../**/*.{ts,tsx}";
 
-/* Required for Tailwind to find class references in sunpeak inspector components. */
-@source "../../node_modules/sunpeak";
-
 /* Add your custom styles below */

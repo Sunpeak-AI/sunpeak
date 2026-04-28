@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { gzipSync } from 'node:zlib';
 
 import { FAVICON_BUFFER, FAVICON_DATA_URI } from './favicon.js';
 
@@ -459,6 +460,27 @@ const CORS_HEADERS = {
   'Access-Control-Expose-Headers': 'mcp-session-id',
 } as const;
 
+/**
+ * Compress a Web Standard Response with gzip when the request accepts it
+ * and the response is JSON (not SSE). Returns the response unchanged otherwise.
+ */
+async function maybeCompressResponse(
+  response: Response,
+  acceptEncoding: string | null
+): Promise<Response> {
+  if (!acceptEncoding || !/\bgzip\b/.test(acceptEncoding)) return response;
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) return response;
+  if (!response.body) return response;
+
+  const bodyBytes = new Uint8Array(await response.arrayBuffer());
+  const compressed = gzipSync(bodyBytes);
+  const headers = new Headers(response.headers);
+  headers.set('content-encoding', 'gzip');
+  headers.set('content-length', String(compressed.byteLength));
+  return new Response(compressed, { status: response.status, headers });
+}
+
 // ============================================================================
 // Node.js ↔ Web Standard conversion helpers
 // ============================================================================
@@ -475,12 +497,37 @@ function nodeReqToWebRequest(req: IncomingMessage): Request {
   return new Request(url.toString(), { method: req.method, headers });
 }
 
-/** Pipe a Web Standard Response (including streaming SSE) back to a Node.js ServerResponse. */
-async function pipeWebResponseToNode(webResponse: Response, res: ServerResponse): Promise<void> {
+/**
+ * Pipe a Web Standard Response back to a Node.js ServerResponse.
+ * Applies gzip compression for JSON responses when the client accepts it.
+ * SSE (streaming) responses are left uncompressed since they stream incrementally.
+ */
+async function pipeWebResponseToNode(
+  webResponse: Response,
+  res: ServerResponse,
+  acceptEncoding?: string
+): Promise<void> {
   const headers: Record<string, string> = {};
   webResponse.headers.forEach((value, key) => {
     headers[key] = value;
   });
+
+  // Compress JSON responses when the client supports gzip.
+  // SSE (text/event-stream) is streamed incrementally and must not be compressed here.
+  const contentType = webResponse.headers.get('content-type') ?? '';
+  const isJson = contentType.includes('application/json');
+  const clientAcceptsGzip = !!acceptEncoding && /\bgzip\b/.test(acceptEncoding);
+
+  if (isJson && clientAcceptsGzip && webResponse.body) {
+    const bodyBytes = new Uint8Array(await webResponse.arrayBuffer());
+    const compressed = gzipSync(bodyBytes);
+    headers['content-encoding'] = 'gzip';
+    headers['content-length'] = String(compressed.byteLength);
+    res.writeHead(webResponse.status, headers);
+    res.end(compressed);
+    return;
+  }
+
   res.writeHead(webResponse.status, headers);
 
   if (!webResponse.body) {
@@ -636,7 +683,11 @@ export function createMcpHandler(
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+      await pipeWebResponseToNode(
+        addCorsHeaders(webResponse),
+        res,
+        req.headers['accept-encoding'] as string | undefined
+      );
     };
   }
 
@@ -683,7 +734,11 @@ export function createMcpHandler(
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+      await pipeWebResponseToNode(
+        addCorsHeaders(webResponse),
+        res,
+        req.headers['accept-encoding'] as string | undefined
+      );
       return;
     }
 
@@ -736,7 +791,11 @@ export function createMcpHandler(
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      await pipeWebResponseToNode(addCorsHeaders(webResponse), res);
+      await pipeWebResponseToNode(
+        addCorsHeaders(webResponse),
+        res,
+        req.headers['accept-encoding'] as string | undefined
+      );
       return;
     }
 
@@ -862,7 +921,7 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      return addCorsHeaders(response);
+      return maybeCompressResponse(addCorsHeaders(response), req.headers.get('accept-encoding'));
     };
   }
 
@@ -908,7 +967,7 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      return addCorsHeaders(response);
+      return maybeCompressResponse(addCorsHeaders(response), req.headers.get('accept-encoding'));
     }
 
     // New session (POST without session ID = initialization)
@@ -958,7 +1017,7 @@ export function createHandler(config: WebHandlerConfig): (req: Request) => Promi
         parsedBody: ctx.parsedBody,
         authInfo: ctx.authInfo,
       });
-      return addCorsHeaders(response);
+      return maybeCompressResponse(addCorsHeaders(response), req.headers.get('accept-encoding'));
     }
 
     return new Response('Bad Request: session ID required', { status: 400 });
