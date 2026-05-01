@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   McpUiHostContext,
   McpUiDisplayMode,
@@ -166,6 +166,7 @@ function parseUrlParams(): {
   prodResources?: boolean;
   sidebar?: boolean;
   devOverlay?: boolean;
+  autoRun?: boolean;
 } {
   if (typeof window === 'undefined') return {};
 
@@ -237,6 +238,8 @@ function parseUrlParams(): {
       }
     : undefined;
 
+  const autoRun = params.get('autoRun') === 'true' ? true : undefined;
+
   return {
     simulation,
     tool,
@@ -253,7 +256,32 @@ function parseUrlParams(): {
     prodResources,
     sidebar,
     devOverlay,
+    autoRun,
   };
+}
+
+const PREFS_KEY = 'sunpeak-inspector-prefs';
+
+interface StoredPrefs {
+  theme?: McpUiTheme;
+  locale?: string;
+  displayMode?: McpUiDisplayMode;
+  containerMaxHeight?: number;
+  safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
+  activeHost?: HostId;
+  platform?: Platform;
+  hover?: boolean;
+  touch?: boolean;
+  screenWidth?: ScreenWidth;
+}
+
+function readStoredPrefs(): StoredPrefs {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    return raw ? (JSON.parse(raw) as StoredPrefs) : {};
+  } catch {
+    return {};
+  }
 }
 
 export function useInspectorState({
@@ -273,12 +301,16 @@ export function useInspectorState({
       return labelA.localeCompare(labelB);
     });
   const urlParams = useMemo(() => parseUrlParams(), []);
-  const [screenWidth, setScreenWidth] = useState<ScreenWidth>('full');
+  const autoRun = urlParams.autoRun === true;
+  const storedPrefs = useMemo(() => (autoRun ? {} : readStoredPrefs()), [autoRun]);
+  const [screenWidth, setScreenWidth] = useState<ScreenWidth>(storedPrefs.screenWidth ?? 'full');
 
   const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
 
   // ── Host selection ──
-  const [activeHost, setActiveHost] = useState<HostId>(urlParams.host ?? defaultHost);
+  const [activeHost, setActiveHost] = useState<HostId>(
+    urlParams.host ?? storedPrefs.activeHost ?? defaultHost
+  );
 
   // ── Simulation selection ──
   const initialSimulationName = useMemo(() => {
@@ -294,26 +326,74 @@ export function useInspectorState({
 
   // ── Host context state ──
 
-  const [theme, setTheme] = useState<McpUiTheme>(urlParams.theme ?? DEFAULT_THEME);
-  const [displayMode, _setDisplayMode] = useState<McpUiDisplayMode>(
-    urlParams.displayMode ?? DEFAULT_DISPLAY_MODE
+  const [theme, setTheme] = useState<McpUiTheme>(
+    urlParams.theme ?? storedPrefs.theme ?? DEFAULT_THEME
   );
-  const [locale, setLocale] = useState(urlParams.locale ?? 'en-US');
+  const [displayMode, _setDisplayMode] = useState<McpUiDisplayMode>(
+    urlParams.displayMode ?? storedPrefs.displayMode ?? DEFAULT_DISPLAY_MODE
+  );
+  const [locale, setLocale] = useState(urlParams.locale ?? storedPrefs.locale ?? 'en-US');
   const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
   const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
   const [containerMaxHeight, setContainerMaxHeight] = useState<number | undefined>(
-    urlParams.containerMaxHeight
+    urlParams.containerMaxHeight ?? storedPrefs.containerMaxHeight
   );
   const [containerMaxWidth, setContainerMaxWidth] = useState<number | undefined>(
     urlParams.containerMaxWidth
   );
-  const [platform, setPlatform] = useState<Platform>(urlParams.platform ?? DEFAULT_PLATFORM);
-  const [hover, setHover] = useState(urlParams.deviceCapabilities?.hover ?? true);
-  const [touch, setTouch] = useState(urlParams.deviceCapabilities?.touch ?? false);
+  const [platform, setPlatform] = useState<Platform>(
+    urlParams.platform ?? storedPrefs.platform ?? DEFAULT_PLATFORM
+  );
+  const [hover, setHover] = useState(
+    urlParams.deviceCapabilities?.hover ?? storedPrefs.hover ?? true
+  );
+  const [touch, setTouch] = useState(
+    urlParams.deviceCapabilities?.touch ?? storedPrefs.touch ?? false
+  );
   const [safeAreaInsets, setSafeAreaInsets] = useState(
-    urlParams.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
+    urlParams.safeAreaInsets ??
+      storedPrefs.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
   );
   const [timeZone, setTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+
+  // Skip persisting on the first render — only write when the user actually changes something.
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (autoRun) return;
+    try {
+      const prefs: StoredPrefs = {
+        theme,
+        locale,
+        displayMode,
+        containerMaxHeight,
+        safeAreaInsets,
+        activeHost,
+        platform,
+        hover,
+        touch,
+        screenWidth,
+      };
+      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+    } catch {
+      // localStorage may be unavailable (private browsing, storage quota) — ignore
+    }
+  }, [
+    autoRun,
+    theme,
+    locale,
+    displayMode,
+    containerMaxHeight,
+    safeAreaInsets,
+    activeHost,
+    platform,
+    hover,
+    touch,
+    screenWidth,
+  ]);
 
   // Content width measured from the conversation component's ResizeObserver.
   // Used as containerDimensions.maxWidth unless the user manually sets one.
