@@ -18,10 +18,10 @@
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
     "embla-carousel-wheel-gestures": "^8.1.0",
-    "mapbox-gl": "^3.22.0",
+    "mapbox-gl": "^3.23.0",
     "sunpeak": "workspace:*",
     "tailwind-merge": "^3.5.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",

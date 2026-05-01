@@ -16,9 +16,9 @@
   },
   "dependencies": {
     "clsx": "^2.1.1",
-    "sunpeak": "^0.20.11",
+    "sunpeak": "^0.20.12",
     "tailwind-merge": "^3.5.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.1"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
