@@ -4,7 +4,7 @@ import * as path from 'path';
 const { existsSync, readFileSync, watch: fsWatch } = fs;
 const { join, resolve, basename, dirname } = path;
 import { createRequire } from 'module';
-import { pathToFileURL } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { spawn } from 'child_process';
 import { getPort } from '../lib/get-port.mjs';
 import { startSandboxServer } from '../lib/sandbox-server.mjs';
@@ -68,7 +68,7 @@ async function importFromProject(require, moduleName) {
  */
 function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild = false } = {}) {
   let activeChild = null;
-  const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
+  const sunpeakBin = join(dirname(fileURLToPath(import.meta.url)), '..', 'sunpeak.js');
 
   const runBuild = () => {
     // Kill any in-progress build and start fresh
@@ -205,7 +205,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // --prod-resources: Run initial production build so dist/ is ready before server starts
   if (isProdResources) {
     console.log('Building production resources...');
-    const sunpeakBin = join(dirname(new URL(import.meta.url).pathname), '..', 'sunpeak.js');
+    const sunpeakBin = join(dirname(fileURLToPath(import.meta.url)), '..', 'sunpeak.js');
     const { execSync } = await import('child_process');
     try {
       execSync(`${process.execPath} ${sunpeakBin} build`, {

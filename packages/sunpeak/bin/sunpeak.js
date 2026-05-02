@@ -2,11 +2,16 @@
 
 import { existsSync, readFileSync } from 'fs';
 import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
 import { discoverResources } from './lib/patterns.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const COMMANDS_DIR = join(__dirname, 'commands');
+
+// On Windows, absolute paths like "C:\..." can't be passed directly to dynamic
+// import() — Node's ESM loader parses "C:" as a URL scheme and rejects it.
+// Wrap with pathToFileURL().href to produce a valid file:// URL.
+const commandUrl = (file) => pathToFileURL(join(COMMANDS_DIR, file)).href;
 
 function checkPackageJson() {
   const pkgPath = join(process.cwd(), 'package.json');
@@ -46,49 +51,49 @@ function getVersion() {
   switch (command) {
     case 'new':
       {
-        const { init } = await import(join(COMMANDS_DIR, 'new.mjs'));
+        const { init } = await import(commandUrl('new.mjs'));
         await init(args[0], args[1]);
       }
       break;
 
     case 'dev':
       {
-        const { dev } = await import(join(COMMANDS_DIR, 'dev.mjs'));
+        const { dev } = await import(commandUrl('dev.mjs'));
         await dev(process.cwd(), args);
       }
       break;
 
     case 'build':
       {
-        const { build } = await import(join(COMMANDS_DIR, 'build.mjs'));
+        const { build } = await import(commandUrl('build.mjs'));
         await build(process.cwd());
       }
       break;
 
     case 'start':
       {
-        const { start } = await import(join(COMMANDS_DIR, 'start.mjs'));
+        const { start } = await import(commandUrl('start.mjs'));
         await start(process.cwd(), args);
       }
       break;
 
     case 'inspect':
       {
-        const { inspect } = await import(join(COMMANDS_DIR, 'inspect.mjs'));
+        const { inspect } = await import(commandUrl('inspect.mjs'));
         await inspect(args);
       }
       break;
 
     case 'test':
       {
-        const { runTest } = await import(join(COMMANDS_DIR, 'test.mjs'));
+        const { runTest } = await import(commandUrl('test.mjs'));
         await runTest(args);
       }
       break;
 
     case 'upgrade':
       {
-        const { upgrade } = await import(join(COMMANDS_DIR, 'upgrade.mjs'));
+        const { upgrade } = await import(commandUrl('upgrade.mjs'));
         const options = {
           check: args.includes('--check') || args.includes('-c'),
           help: args.includes('--help') || args.includes('-h'),
