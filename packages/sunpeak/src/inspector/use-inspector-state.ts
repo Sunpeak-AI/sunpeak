@@ -267,6 +267,7 @@ interface StoredPrefs {
   locale?: string;
   displayMode?: McpUiDisplayMode;
   containerMaxHeight?: number;
+  containerMaxWidth?: number;
   safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
   activeHost?: HostId;
   platform?: Platform;
@@ -275,10 +276,81 @@ interface StoredPrefs {
   screenWidth?: ScreenWidth;
 }
 
+const VALID_THEMES: ReadonlySet<McpUiTheme> = new Set(['light', 'dark']);
+const VALID_DISPLAY_MODES: ReadonlySet<McpUiDisplayMode> = new Set(['inline', 'pip', 'fullscreen']);
+const VALID_PLATFORMS: ReadonlySet<Platform> = new Set(['web', 'desktop', 'mobile']);
+const VALID_SCREEN_WIDTHS: ReadonlySet<ScreenWidth> = new Set([
+  'mobile-s',
+  'mobile-l',
+  'tablet',
+  'full',
+]);
+
+// Validate the parsed JSON one field at a time so a corrupt or stale entry
+// (older sunpeak version, manual edit) can't seed bad values into state.
+function sanitizeStoredPrefs(raw: unknown): StoredPrefs {
+  if (!raw || typeof raw !== 'object') return {};
+  const obj = raw as Record<string, unknown>;
+  const prefs: StoredPrefs = {};
+
+  if (typeof obj.theme === 'string' && VALID_THEMES.has(obj.theme as McpUiTheme)) {
+    prefs.theme = obj.theme as McpUiTheme;
+  }
+  if (typeof obj.locale === 'string') {
+    prefs.locale = obj.locale;
+  }
+  if (
+    typeof obj.displayMode === 'string' &&
+    VALID_DISPLAY_MODES.has(obj.displayMode as McpUiDisplayMode)
+  ) {
+    prefs.displayMode = obj.displayMode as McpUiDisplayMode;
+  }
+  if (typeof obj.containerMaxHeight === 'number' && Number.isFinite(obj.containerMaxHeight)) {
+    prefs.containerMaxHeight = obj.containerMaxHeight;
+  }
+  if (typeof obj.containerMaxWidth === 'number' && Number.isFinite(obj.containerMaxWidth)) {
+    prefs.containerMaxWidth = obj.containerMaxWidth;
+  }
+  if (obj.safeAreaInsets && typeof obj.safeAreaInsets === 'object') {
+    const insets = obj.safeAreaInsets as Record<string, unknown>;
+    if (
+      typeof insets.top === 'number' &&
+      typeof insets.bottom === 'number' &&
+      typeof insets.left === 'number' &&
+      typeof insets.right === 'number'
+    ) {
+      prefs.safeAreaInsets = {
+        top: insets.top,
+        bottom: insets.bottom,
+        left: insets.left,
+        right: insets.right,
+      };
+    }
+  }
+  if (typeof obj.activeHost === 'string') {
+    prefs.activeHost = obj.activeHost;
+  }
+  if (typeof obj.platform === 'string' && VALID_PLATFORMS.has(obj.platform as Platform)) {
+    prefs.platform = obj.platform as Platform;
+  }
+  if (typeof obj.hover === 'boolean') prefs.hover = obj.hover;
+  if (typeof obj.touch === 'boolean') prefs.touch = obj.touch;
+  if (
+    typeof obj.screenWidth === 'string' &&
+    VALID_SCREEN_WIDTHS.has(obj.screenWidth as ScreenWidth)
+  ) {
+    prefs.screenWidth = obj.screenWidth as ScreenWidth;
+  }
+
+  return prefs;
+}
+
 function readStoredPrefs(): StoredPrefs {
+  if (typeof window === 'undefined') return {};
   try {
     const raw = localStorage.getItem(PREFS_KEY);
-    return raw ? (JSON.parse(raw) as StoredPrefs) : {};
+    if (!raw) return {};
+    return sanitizeStoredPrefs(JSON.parse(raw));
   } catch {
     return {};
   }
@@ -339,7 +411,7 @@ export function useInspectorState({
     urlParams.containerMaxHeight ?? storedPrefs.containerMaxHeight
   );
   const [containerMaxWidth, setContainerMaxWidth] = useState<number | undefined>(
-    urlParams.containerMaxWidth
+    urlParams.containerMaxWidth ?? storedPrefs.containerMaxWidth
   );
   const [platform, setPlatform] = useState<Platform>(
     urlParams.platform ?? storedPrefs.platform ?? DEFAULT_PLATFORM
@@ -370,6 +442,7 @@ export function useInspectorState({
         locale,
         displayMode,
         containerMaxHeight,
+        containerMaxWidth,
         safeAreaInsets,
         activeHost,
         platform,
@@ -387,6 +460,7 @@ export function useInspectorState({
     locale,
     displayMode,
     containerMaxHeight,
+    containerMaxWidth,
     safeAreaInsets,
     activeHost,
     platform,
