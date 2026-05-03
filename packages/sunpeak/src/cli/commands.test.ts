@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - CLI command modules are .mjs files without TypeScript declarations
 import { describe, it, expect, vi } from 'vitest';
+import path from 'node:path';
 
 // Helper functions to import CLI modules dynamically
 const importUpgrade = () => import('../../bin/commands/upgrade.mjs');
@@ -160,7 +161,7 @@ describe('CLI Commands', () => {
 
       expect(execSyncMock).toHaveBeenCalledWith(
         'npx skills add Sunpeak-AI/sunpeak@create-sunpeak-app Sunpeak-AI/sunpeak@test-mcp-server',
-        expect.objectContaining({ cwd: '/test/my-project', stdio: 'inherit' })
+        expect.objectContaining({ cwd: path.join('/test', 'my-project'), stdio: 'inherit' })
       );
     });
 
@@ -281,8 +282,8 @@ describe('CLI Commands', () => {
 
       // Verify dotfiles were renamed
       expect(renamedFiles).toContainEqual({
-        from: '/test/my-project/_gitignore',
-        to: '/test/my-project/.gitignore',
+        from: path.join('/test/my-project', '_gitignore'),
+        to: path.join('/test/my-project', '.gitignore'),
       });
 
       // Verify outro was called
@@ -737,7 +738,7 @@ describe('CLI Commands', () => {
       pathSuffix: string
     ): string | undefined {
       const call = mock.mock.calls.find((c: [string, string]) =>
-        (c[0] as string).endsWith(pathSuffix)
+        (c[0] as string).replace(/\\/g, '/').endsWith(pathSuffix)
       );
       return call ? (call[1] as string) : undefined;
     }
@@ -755,7 +756,9 @@ describe('CLI Commands', () => {
         })
       );
 
-      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) =>
+        (c[0] as string).replace(/\\/g, '/')
+      );
 
       // All expected files
       expect(writtenPaths).toContainEqual(expect.stringContaining('smoke.test.ts'));
@@ -798,7 +801,9 @@ describe('CLI Commands', () => {
         })
       );
 
-      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) =>
+        (c[0] as string).replace(/\\/g, '/')
+      );
 
       // 4 test types (no unit tests — those are app-framework-only)
       expect(writtenPaths).toContainEqual(expect.stringContaining('e2e/smoke.test.ts'));
@@ -848,7 +853,9 @@ describe('CLI Commands', () => {
         })
       );
 
-      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) =>
+        (c[0] as string).replace(/\\/g, '/')
+      );
 
       // All test types (no unit tests — those come from sunpeak new)
       expect(writtenPaths).toContainEqual(expect.stringContaining('playwright.config.ts'));
@@ -877,10 +884,11 @@ describe('CLI Commands', () => {
       await testInit(
         ['--server', 'http://localhost:8000/mcp'],
         createTestInitDeps({
-          existsSync: (path: string) => {
-            if (path.includes('package.json')) return true;
-            if (path.includes('visual.test.ts')) return true;
-            if (path.includes('live/playwright.config.ts')) return true;
+          existsSync: (p: string) => {
+            const normalized = p.replace(/\\/g, '/');
+            if (normalized.includes('package.json')) return true;
+            if (normalized.includes('visual.test.ts')) return true;
+            if (normalized.includes('live/playwright.config.ts')) return true;
             return false;
           },
           readFileSync: () => JSON.stringify({ dependencies: { express: '*' } }),
@@ -888,7 +896,9 @@ describe('CLI Commands', () => {
         })
       );
 
-      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) =>
+        (c[0] as string).replace(/\\/g, '/')
+      );
 
       // Should NOT have written visual or live config (they already exist)
       expect(writtenPaths).not.toContainEqual(expect.stringContaining('visual.test.ts'));
@@ -949,7 +959,9 @@ describe('CLI Commands', () => {
       expect(liveUncommented.join('\n')).not.toContain('live.invoke');
 
       // Unit tests are not scaffolded for standalone testing framework
-      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) => c[0]);
+      const writtenPaths = writeFileSync.mock.calls.map((c: [string, string]) =>
+        (c[0] as string).replace(/\\/g, '/')
+      );
       expect(writtenPaths).not.toContainEqual(expect.stringContaining('unit/'));
     });
 
