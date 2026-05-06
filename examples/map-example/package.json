@@ -17,10 +17,10 @@
   "dependencies": {
     "clsx": "^2.1.1",
     "embla-carousel-react": "^8.6.0",
-    "mapbox-gl": "^3.23.0",
-    "sunpeak": "^0.20.12",
+    "mapbox-gl": "^3.23.1",
+    "sunpeak": "^0.20.16",
     "tailwind-merge": "^3.5.0",
-    "zod": "^4.4.1"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.59.1",
@@ -33,8 +33,8 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
     "happy-dom": "^20.9.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "tailwindcss": "^4.2.4",
     "typescript": "^5.9.3",
     "vite": "^8.0.10",
