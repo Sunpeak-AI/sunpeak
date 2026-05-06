@@ -483,6 +483,31 @@ if (import.meta.hot) {
     appType: 'custom',
   });
 
+  // Pre-bundle resource and tool entries before exposing the server. Vite's
+  // depsOptimizer.entries scan kicks off on server creation but doesn't block
+  // request handling — the first inspector iframe load can race the optimizer
+  // and produce a 504 with a blank widget. Warming each entry and awaiting
+  // requests-idle forces pre-bundling to settle before any host can hit it.
+  // Skipped under --prod-resources where mcpViteServer is created but unused.
+  if (!isProdResources && (resourceDirs.length > 0 || toolFiles.length > 0)) {
+    const warmupTargets = [
+      ...resourceDirs.map(({ key, resourcePath }) =>
+        `/src/resources/${key}/${basename(resourcePath)}`
+      ),
+      ...toolFiles.map(({ name: toolName }) => `/src/tools/${toolName}.ts`),
+    ];
+    const warmStart = Date.now();
+    await Promise.all(
+      warmupTargets.map((url) =>
+        mcpViteServer.warmupRequest(url).catch((err) => {
+          console.warn(`[warmup] ${url}: ${err?.message ?? err}`);
+        })
+      )
+    );
+    await mcpViteServer.waitForRequestsIdle();
+    console.log(`Warmed Vite (${warmupTargets.length} ${warmupTargets.length === 1 ? 'entry' : 'entries'}) in ${Date.now() - warmStart}ms`);
+  }
+
   // Load server config from src/server.ts (if present) for server identity
   const serverEntryPath = join(projectRoot, 'src/server.ts');
   let serverInfo = undefined;
