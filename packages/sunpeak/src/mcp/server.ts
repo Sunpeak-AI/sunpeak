@@ -290,7 +290,10 @@ function createAppServer(
         },
       ],
     },
-    { capabilities: { resources: {}, tools: {} } }
+    {
+      capabilities: { resources: {}, tools: {} },
+      ...(serverInfo?.instructions ? { instructions: serverInfo.instructions } : {}),
+    }
   );
 
   // Capture the connecting host's clientInfo.name after MCP initialization.

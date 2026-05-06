@@ -261,7 +261,10 @@ export function createProductionMcpServer(config: ProductionServerConfig): McpSe
         },
       ],
     },
-    { capabilities: { resources: {}, tools: {} } }
+    {
+      capabilities: { resources: {}, tools: {} },
+      ...(serverInfo?.instructions ? { instructions: serverInfo.instructions } : {}),
+    }
   );
 
   // Build resource lookup: resource name → ProductionResource

@@ -27,7 +27,7 @@ sunpeak-app/
 │   │       └── {name}.tsx            # Resource component + ResourceConfig export
 │   ├── tools/
 │   │   └── {name}.ts                 # Tool metadata, Zod schema, handler
-│   ├── server.ts                     # Optional server entry (auth, config, icons)
+│   ├── server.ts                     # Optional server entry (auth, identity, icons, instructions)
 │   └── styles/
 │       └── globals.css               # Tailwind imports
 ├── tests/

@@ -54,7 +54,7 @@ sequenceDiagram
 ```
 
 1. The client sends `initialize` with its capabilities and preferred protocol version.
-2. The server responds with its own capabilities and the negotiated protocol version.
+2. The server responds with its own capabilities and the negotiated protocol version. The response can also include an optional `instructions` string the host may surface to the model (e.g., as part of the system prompt) to describe cross-tool relationships and constraints.
 3. The client sends `notifications/initialized` to confirm the session is ready.
 4. Requests flow in both directions for the duration of the session.
 

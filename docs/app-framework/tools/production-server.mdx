@@ -67,7 +67,7 @@ app.listen(3000);
 </ResponseField>
 
 <ResponseField name="serverInfo" type="ServerConfig">
-  Full server identity. Overrides `name` and `version` when provided. Supports additional fields like `title`, `description`, `websiteUrl`, and `icons`.
+  Full server identity. Overrides `name` and `version` when provided. Supports additional fields like `title`, `description`, `websiteUrl`, `icons`, and `instructions` (sent in the MCP `initialize` response so hosts can inject it into the model's system prompt). See [Server Entry](/app-framework/tools/server-entry#server-object-optional) for the full field list.
 </ResponseField>
 
 <ResponseField name="tools" type="ProductionTool[]" required>
