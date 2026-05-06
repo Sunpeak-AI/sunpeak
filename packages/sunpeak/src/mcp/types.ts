@@ -24,12 +24,17 @@ export type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
  *
  * If omitted, a default sunpeak icon is used.
  *
+ * `instructions` is sent in the MCP initialize response. Hosts may inject it
+ * into the model's system prompt to teach cross-tool relationships, workflow
+ * patterns, and constraints that don't fit in per-tool descriptions.
+ *
  * @example
  * ```ts
  * export const server: ServerConfig = {
  *   name: 'my-app',
  *   version: '1.0.0',
  *   description: 'My MCP app',
+ *   instructions: 'Always call get_user before update_user. Read-only after 5pm UTC.',
  *   icons: [
  *     { src: 'data:image/png;base64,...', mimeType: 'image/png', sizes: ['64x64'] },
  *     { src: 'data:image/png;base64,...', mimeType: 'image/png', sizes: ['64x64'], theme: 'dark' },
@@ -37,7 +42,22 @@ export type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
  * };
  * ```
  */
-export type ServerConfig = Partial<Implementation>;
+export type ServerConfig = Partial<Implementation> & {
+  /**
+   * Server-wide instructions sent in the MCP initialize response.
+   *
+   * Hosts (ChatGPT, Claude) may surface this string to the model, typically
+   * by injecting it into the system prompt. Use it for guidance that spans
+   * multiple tools or describes the server as a whole, e.g.:
+   *
+   * - "Always call `get_user` before `update_user`"
+   * - "This server is read-only between 5pm and 9am UTC"
+   * - "Prefer `search_albums` over listing all albums for queries with a name"
+   *
+   * Per-tool guidance still belongs in each tool's `description`.
+   */
+  instructions?: string;
+};
 
 /**
  * Extra context passed to tool handlers as the second argument.

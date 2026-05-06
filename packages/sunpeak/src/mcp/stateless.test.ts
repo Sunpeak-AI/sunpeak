@@ -159,6 +159,33 @@ describe('createHandler stateless mode', () => {
   });
 });
 
+describe('serverInfo.instructions', () => {
+  it('includes instructions in initialize result when set', async () => {
+    const text = 'Always call get_user before update_user.';
+    const handler = createHandler({
+      ...baseWebConfig,
+      serverInfo: { name: 'test', version: '1.0.0', instructions: text },
+    });
+    const res = await handler(makePostRequest(initializeBody()));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.result?.instructions).toBe(text);
+  });
+
+  it('omits instructions from initialize result when unset', async () => {
+    const handler = createHandler({
+      ...baseWebConfig,
+      serverInfo: { name: 'test', version: '1.0.0' },
+    });
+    const res = await handler(makePostRequest(initializeBody()));
+    expect(res.status).toBe(200);
+
+    const body = await res.json();
+    expect(body.result?.instructions).toBeUndefined();
+  });
+});
+
 describe('createHandler stateful mode (default)', () => {
   it('returns 404 for unknown session ID', async () => {
     const handler = createHandler({ ...baseWebConfig, stateless: false });

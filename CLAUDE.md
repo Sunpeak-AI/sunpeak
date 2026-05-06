@@ -312,6 +312,6 @@ The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export al
 - Resources discovered from `src/resources/{name}/{name}.tsx`
 - Tools discovered from `src/tools/{name}.ts` (each exports `tool: AppToolConfig`, `schema`, optional `outputSchema`, `default` handler)
 - Simulations discovered from `tests/simulations/*.json` (flat directory, `"tool"` string field references tool filename)
-- Optional server entry at `src/server.ts` (exports `server: ServerConfig` for identity/icons, `auth()` for request authentication)
+- Optional server entry at `src/server.ts` (exports `server: ServerConfig` for identity/icons/instructions, `auth()` for request authentication). `instructions` is a server-wide string sent in the MCP `initialize` response that hosts may inject into the model's system prompt — for cross-tool workflows and constraints.
 - Hook file naming: `use-{kebab-name}.ts` → export `use{PascalName}` (e.g., `use-download-file.ts` → `useDownloadFile`)
 - SDK re-exports in `src/index.ts` are organized into five sections: core classes/functions, app options/tool registration/Standard Schema types, method constants, Zod schemas, protocol types

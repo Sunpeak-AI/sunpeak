@@ -86,6 +86,34 @@ export const server = { name: 'My App', version: '1.0.0' };
   Server version.
 </ResponseField>
 
+<ResponseField name="title" type="string">
+  Human-readable display name. Shown by hosts when more polish is needed than `name`.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Short description of what the server does.
+</ResponseField>
+
+<ResponseField name="websiteUrl" type="string">
+  URL of the server's homepage.
+</ResponseField>
+
+<ResponseField name="icons" type="Icon[]">
+  64x64 PNG icons (data URIs preferred). Light and dark variants supported via the `theme` field on each icon.
+</ResponseField>
+
+<ResponseField name="instructions" type="string">
+  Server-wide instructions sent in the MCP `initialize` response. Hosts (ChatGPT, Claude) may surface this to the model, typically by injecting it into the system prompt. Use it for guidance that spans multiple tools or describes the server as a whole — e.g., "Always call `get_user` before `update_user`" or "This server is read-only between 5pm and 9am UTC". Per-tool guidance still belongs in each tool's `description`.
+
+  ```ts
+  export const server: ServerConfig = {
+    name: 'My App',
+    version: '1.0.0',
+    instructions: 'Call list_orders before fulfill_order. Refunds require a manager scope.',
+  };
+  ```
+</ResponseField>
+
 ## Using Auth in Tool Handlers
 
 The `authInfo` from the server entry is available in every tool handler:
