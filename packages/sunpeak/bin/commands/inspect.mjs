@@ -16,7 +16,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 const { existsSync, readdirSync, readFileSync } = fs;
-const { join, resolve, dirname } = path;
+const { join, resolve, dirname, sep } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createServer as createHttpServer } from 'http';
 import { getPort } from '../lib/get-port.mjs';
@@ -716,11 +716,40 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   // and clientInformation).
   /** @type {Map<string, { serverUrl: string, oauthState: any }>} */
   const pendingOAuthFlows = new Map();
+  /**
+   * Reject requests where the Origin header doesn't match the Host header.
+   * This blocks browser-issued cross-origin requests (CSRF) and DNS rebinding
+   * attacks that would otherwise reach the privileged /__sunpeak/* endpoints.
+   * Requests without an Origin header (curl, Node fetch without origin) are
+   * allowed because they cannot be triggered cross-origin from a browser.
+   * @param {import('http').IncomingMessage} req
+   * @param {import('http').ServerResponse} res
+   */
+  function requireSameOrigin(req, res) {
+    const origin = req.headers.origin;
+    if (!origin) return true;
+    let originHost;
+    try {
+      originHost = new URL(origin).host;
+    } catch {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Forbidden: invalid Origin header' }));
+      return false;
+    }
+    if (originHost !== req.headers.host) {
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Forbidden: cross-origin request blocked' }));
+      return false;
+    }
+    return true;
+  }
+
   return {
     name: 'sunpeak-inspect-endpoints',
     configureServer(server) {
       // List tools from connected server (with automatic session recovery)
-      server.middlewares.use('/__sunpeak/list-tools', async (_req, res) => {
+      server.middlewares.use('/__sunpeak/list-tools', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         try {
           const client = getClient();
           const result = await client.listTools();
@@ -742,7 +771,8 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
       });
 
       // List resources from connected server
-      server.middlewares.use('/__sunpeak/list-resources', async (_req, res) => {
+      server.middlewares.use('/__sunpeak/list-resources', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         try {
           const client = getClient();
           const result = await client.listResources();
@@ -757,6 +787,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
       // Call tool on connected server
       server.middlewares.use('/__sunpeak/call-tool', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         if (req.method !== 'POST') {
           res.writeHead(405);
           res.end('Method not allowed');
@@ -804,6 +835,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
       // Used by the Prod Tools Run button so the real handler executes even
       // when the MCP server would return simulation fixture data.
       server.middlewares.use('/__sunpeak/call-tool-direct', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         if (req.method !== 'POST') {
           res.writeHead(405);
           res.end('Method not allowed');
@@ -852,6 +884,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
       // Reconnect to a new MCP server URL.
       // Creates a new MCP client connection and replaces the current one.
       server.middlewares.use('/__sunpeak/connect', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         if (req.method !== 'POST') {
           res.writeHead(405);
           res.end('Method not allowed');
@@ -880,6 +913,17 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             res.writeHead(500, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: err.message }));
           }
+          return;
+        }
+
+        // Only http(s) URLs are accepted via the HTTP endpoint. Stdio servers
+        // (which spawn child processes) are reachable only by the CLI caller of
+        // `inspectServer()`, never by an HTTP client — otherwise a malicious
+        // page or untrusted app iframe could trigger arbitrary command
+        // execution via this endpoint.
+        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Only http(s) URLs are allowed' }));
           return;
         }
 
@@ -922,6 +966,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
       // Start OAuth: discover metadata, register client, return authorization URL
       server.middlewares.use('/__sunpeak/oauth/start', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         if (req.method !== 'POST') {
           res.writeHead(405);
           res.end('Method not allowed');
@@ -1108,6 +1153,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
       // Complete OAuth: exchange authorization code for tokens and connect
       server.middlewares.use('/__sunpeak/oauth/complete', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         if (req.method !== 'POST') {
           res.writeHead(405);
           res.end('Method not allowed');
@@ -1187,6 +1233,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
       // Read resource from connected server
       server.middlewares.use('/__sunpeak/read-resource', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
         const url = new URL(req.url, 'http://localhost');
         const uri = url.searchParams.get('uri');
         if (!uri) {
@@ -1205,7 +1252,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             return;
           }
 
-          const mimeType = content.mimeType || 'text/html';
+          const mimeType = sanitizeMimeType(content.mimeType);
           res.writeHead(200, {
             'Content-Type': `${mimeType}; charset=utf-8`,
             'X-Content-Type-Options': 'nosniff',
@@ -1235,7 +1282,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               const retryResult = await getClient().readResource({ uri });
               const retryContent = retryResult.contents?.[0];
               if (retryContent) {
-                const mimeType = retryContent.mimeType || 'text/html';
+                const mimeType = sanitizeMimeType(retryContent.mimeType);
                 res.writeHead(200, {
                   'Content-Type': `${mimeType}; charset=utf-8`,
                   'X-Content-Type-Options': 'nosniff',
@@ -1251,6 +1298,42 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
       });
     },
   };
+}
+
+/**
+ * Parse the SUNPEAK_ALLOWED_HOSTS env var into a value Vite accepts for its
+ * `server.allowedHosts` option. Empty/undefined → use Vite's default
+ * (localhost loopback only). The literal string "all" maps to Vite's
+ * "allow everything" mode, which disables DNS-rebinding protection.
+ * Otherwise the value is split on commas and trimmed.
+ *
+ * @param {string | undefined} raw
+ */
+function parseAllowedHosts(raw) {
+  if (!raw) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  if (trimmed === 'all') return 'all';
+  return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+/**
+ * Validate and normalize a Content-Type value supplied by the upstream MCP
+ * server. The mimeType is reflected back into our HTTP response, so a
+ * malformed or unexpected value would let an attacker influence how callers
+ * interpret the response (e.g. force `text/html` rendering of opaque blobs).
+ *
+ * Accepts simple `type/subtype` shapes only (RFC 7231 token chars).
+ * Anything else falls back to `text/html`, which is the protocol's documented
+ * default mime type for resources that omit one.
+ *
+ * @param {unknown} mimeType
+ */
+function sanitizeMimeType(mimeType) {
+  if (typeof mimeType !== 'string' || mimeType.length === 0) return 'text/html';
+  // RFC 7231 token chars, no parameters/whitespace allowed here.
+  if (!/^[\w.+-]+\/[\w.+-]+$/.test(mimeType)) return 'text/html';
+  return mimeType;
 }
 
 /**
@@ -1493,9 +1576,21 @@ export async function inspectServer(opts) {
       ...(projectRoot ? [{
         name: 'sunpeak-dist-serve',
         configureServer(server) {
+          const distRoot = resolve(projectRoot, 'dist');
           server.middlewares.use((req, res, next) => {
             if (!req.url?.startsWith('/dist/') || !req.url.endsWith('.html')) return next();
-            const filePath = join(projectRoot, req.url);
+            // Strip query/hash before joining to avoid `?` or `#` confusing path parsers.
+            const pathOnly = req.url.split('?')[0].split('#')[0];
+            // Resolve the target path and require it to stay inside `<projectRoot>/dist`.
+            // Without this, a request like `/dist/../../etc/anything.html` would resolve
+            // outside the project and serve arbitrary readable files as HTML.
+            const filePath = resolve(projectRoot, pathOnly.replace(/^\/+/, ''));
+            const distRootWithSep = distRoot.endsWith(sep) ? distRoot : distRoot + sep;
+            if (filePath !== distRoot && !filePath.startsWith(distRootWithSep)) {
+              res.writeHead(403);
+              res.end('Forbidden');
+              return;
+            }
             if (existsSync(filePath)) {
               const content = readFileSync(filePath, 'utf-8');
               res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
@@ -1574,15 +1669,17 @@ export async function inspectServer(opts) {
       // ERR_CONNECTION_REFUSED. When auto-discovered via getPort(), the port is
       // already free so this doesn't apply.
       ...(explicitPort ? { strictPort: true } : {}),
-      // Listen on all interfaces so both 127.0.0.1 (used by Playwright tests)
-      // and localhost (used by interactive browsing) connect successfully.
-      // Without this, Vite defaults to localhost which may resolve to IPv6-only
-      // (::1) on macOS, causing ECONNREFUSED for IPv4 clients.
-      host: '0.0.0.0',
-      // Allow any hostname so the inspector works behind tunnels, in containers,
-      // and with custom /etc/hosts entries. Without this, Vite 8's DNS rebinding
-      // protection blocks requests whose Host header isn't localhost/127.0.0.1.
-      allowedHosts: 'all',
+      // Bind to 127.0.0.1 by default so the inspector is not reachable from the
+      // LAN. The /__sunpeak/* endpoints can call the connected MCP server, so
+      // exposing them on 0.0.0.0 lets any device on the same network drive the
+      // developer's tools. Set SUNPEAK_HOST=0.0.0.0 (or another address) to opt in.
+      host: process.env.SUNPEAK_HOST || '127.0.0.1',
+      // Vite's DNS-rebinding protection rejects requests whose Host header
+      // isn't in this allowlist, which closes the residual rebinding attack
+      // even when the server is bound to 0.0.0.0. Set SUNPEAK_ALLOWED_HOSTS
+      // (comma-separated, or "all") to allow tunnels, containers, or custom
+      // /etc/hosts entries.
+      allowedHosts: parseAllowedHosts(process.env.SUNPEAK_ALLOWED_HOSTS),
       open: open ?? (!process.env.CI && !process.env.SUNPEAK_LIVE_TEST),
     },
     optimizeDeps: {

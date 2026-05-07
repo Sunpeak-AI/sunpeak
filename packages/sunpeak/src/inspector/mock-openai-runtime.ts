@@ -26,7 +26,11 @@ export const MOCK_OPENAI_RUNTIME_SCRIPT = [
   'requestDisplayMode:function(p){console.log("[Inspector] requestDisplayMode:",p.mode);',
   'return Promise.resolve()},',
   'sendFollowUpMessage:function(p){console.log("[Inspector] sendFollowUpMessage:",p.prompt)},',
-  'openExternal:function(p){console.log("[Inspector] openExternal:",p.href);window.open(p.href,"_blank")}',
+  // Reject anything that isn\'t http(s). javascript:/data:/file: URLs in
+  // window.open inherit the opener\'s origin in some browsers, which would
+  // let an untrusted app run script in the inspector\'s origin. Open with
+  // noopener so the popup cannot navigate this window via window.opener.
+  'openExternal:function(p){console.log("[Inspector] openExternal:",p.href);try{var u=new URL(p.href);if(u.protocol!=="http:"&&u.protocol!=="https:"){console.warn("[Inspector] openExternal blocked non-http(s) URL:",p.href);return}window.open(p.href,"_blank","noopener,noreferrer")}catch(e){console.warn("[Inspector] openExternal blocked invalid URL:",p.href)}}',
   '};',
 ].join('');
 
@@ -67,7 +71,16 @@ export function createMockOpenAIRuntime(): Record<string, (...args: never[]) => 
     },
     openExternal: (params: { href: string }) => {
       console.log('[Inspector] openExternal:', params.href);
-      window.open(params.href, '_blank');
+      try {
+        const url = new URL(params.href);
+        if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+          console.warn('[Inspector] openExternal blocked non-http(s) URL:', params.href);
+          return;
+        }
+        window.open(params.href, '_blank', 'noopener,noreferrer');
+      } catch {
+        console.warn('[Inspector] openExternal blocked invalid URL:', params.href);
+      }
     },
   };
 }

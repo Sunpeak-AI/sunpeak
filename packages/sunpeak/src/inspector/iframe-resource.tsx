@@ -36,6 +36,20 @@ function escapeHtml(str: string): string {
 }
 
 /**
+ * Returns true when the inspector itself is running on a loopback hostname.
+ * Used to decide whether to honor `localhost`/`127.0.0.1` script URLs supplied
+ * by the connected MCP server. When the inspector is hosted on a public domain,
+ * a remote MCP server should not be able to coerce the inspector into loading
+ * scripts from arbitrary services running on the visitor's machine
+ * (e.g. http://127.0.0.1:11434/...).
+ */
+function isInspectorOnLoopback(): boolean {
+  if (typeof window === 'undefined') return true;
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+}
+
+/**
  * Validates that a URL is from an allowed origin.
  * Allows same-origin URLs and URLs from whitelisted domains.
  */
@@ -54,8 +68,12 @@ function isAllowedUrl(src: string): boolean {
     // Allow same-origin
     if (url.origin === window.location.origin) return true;
 
-    // Allow localhost with any port for development
-    if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') return true;
+    // Allow localhost with any port — but only when the inspector itself is
+    // running on loopback. Otherwise a hosted inspector would happily load
+    // scripts from the visitor's local machine.
+    if ((url.hostname === 'localhost' || url.hostname === '127.0.0.1') && isInspectorOnLoopback()) {
+      return true;
+    }
 
     // Check against allowed origins (strict origin comparison only)
     return ALLOWED_SCRIPT_ORIGINS.some((allowed) => {

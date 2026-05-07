@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { useEffect, useRef, useCallback } from 'react';
 import { SCREEN_WIDTHS, type ScreenWidth } from '../inspector/inspector-types';
+import { isAllowedIconUrl } from '../lib/utils';
 import type { McpUiDisplayMode, McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
@@ -216,7 +217,7 @@ export function ClaudeConversation({
                 {!isFullscreen && (
                   <div className="flex items-center gap-2 mb-3">
                     {appIcon ? (
-                      appIcon.startsWith('data:') || appIcon.startsWith('http') ? (
+                      isAllowedIconUrl(appIcon) ? (
                         <img src={appIcon} alt="" className="size-6 rounded-full object-cover" />
                       ) : (
                         <div className="size-6 flex items-center justify-center text-base">

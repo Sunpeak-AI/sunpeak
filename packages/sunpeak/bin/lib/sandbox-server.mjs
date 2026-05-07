@@ -81,8 +81,14 @@ export async function startSandboxServer({ preferredPort = 24680 } = {}) {
     socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
   });
 
+  // Bind to loopback by default so the proxy server is not reachable from the
+  // LAN. The proxy serves iframe HTML that brokers PostMessage between host
+  // and app — exposing it on 0.0.0.0 lets any LAN device serve crafted
+  // postMessage relays into the developer's browser. Override with
+  // SUNPEAK_HOST when LAN access is intentional.
+  const bindHost = process.env.SUNPEAK_HOST || '127.0.0.1';
   await new Promise((resolve, reject) => {
-    server.listen(port, () => resolve());
+    server.listen(port, bindHost, () => resolve());
     server.on('error', reject);
   });
 
@@ -342,6 +348,6 @@ const MOCK_OPENAI_SCRIPT = [
   'requestDisplayMode:function(p){console.log("[Inspector] requestDisplayMode:",p.mode);',
   'return Promise.resolve()},',
   'sendFollowUpMessage:function(p){console.log("[Inspector] sendFollowUpMessage:",p.prompt)},',
-  'openExternal:function(p){console.log("[Inspector] openExternal:",p.href);window.open(p.href,"_blank")}',
+  'openExternal:function(p){console.log("[Inspector] openExternal:",p.href);try{var u=new URL(p.href);if(u.protocol!=="http:"&&u.protocol!=="https:"){console.warn("[Inspector] openExternal blocked non-http(s) URL:",p.href);return}window.open(p.href,"_blank","noopener,noreferrer")}catch(e){console.warn("[Inspector] openExternal blocked invalid URL:",p.href)}}',
   '};',
 ].join('');

@@ -119,7 +119,10 @@ export class McpAppHost {
           if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
             console.warn('[MCP App] openLink blocked non-http(s) URL:', url);
           } else {
-            window.open(url, '_blank');
+            // noopener+noreferrer prevents the new tab from reaching this
+            // window via window.opener (Safari does not auto-apply this for
+            // same-origin destinations).
+            window.open(url, '_blank', 'noopener,noreferrer');
           }
         } catch {
           console.warn('[MCP App] openLink blocked invalid URL:', url);
