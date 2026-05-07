@@ -5,7 +5,7 @@ description: "Learn how to build MCP Apps that render interactive UIs inside Cha
 keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app framework", "ChatGPT app framework", "Claude Connectors", "interactive UI"]
 ---
 
-<Note>This documentation covers MCP Apps SDK v1.7.0 (`@modelcontextprotocol/ext-apps`).</Note>
+<Note>This documentation covers MCP Apps SDK v1.7.1 (`@modelcontextprotocol/ext-apps`).</Note>
 
 ## What are MCP Apps?
 
@@ -80,6 +80,7 @@ Views communicate with Hosts using JSON-RPC over `postMessage`. From a View, you
 - **[Call server tools](/mcp-apps/app/requests/call-server-tool)** — Fetch fresh data or trigger server-side actions
 - **[Send messages](/mcp-apps/app/requests/send-message)** — Add messages to the conversation thread
 - **[Update model context](/mcp-apps/app/requests/update-model-context)** — Push structured data to the model's context
+- **[Request LLM completions](/mcp-apps/app/requests/create-sampling-message)** — Ask the host to run `sampling/createMessage`
 - **[Open links](/mcp-apps/app/requests/open-link)** — Request the host to open external URLs
 - **[Download files](/mcp-apps/app/requests/download-file)** — Trigger host-mediated file downloads
 - **[Request display modes](/mcp-apps/app/requests/request-display-mode)** — Switch between inline, fullscreen, and picture-in-picture

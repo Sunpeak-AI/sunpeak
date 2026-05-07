@@ -1,0 +1,248 @@
+---
+title: "MCP Apps createSamplingMessage - LLM Sampling from MCP Apps"
+sidebarTitle: "createSamplingMessage"
+description: "Request LLM completions from the host inside an MCP App. createSamplingMessage proxies to MCP sampling/createMessage so apps can run agentic loops, summaries, and tool-augmented generation without their own model key."
+keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "createSamplingMessage", "sampling/createMessage", "LLM completion", "MCP sampling", "agentic loop", "tool use"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+```
+
+## Overview
+
+`createSamplingMessage` lets the View ask the host to run an LLM completion via standard MCP [`sampling/createMessage`](https://modelcontextprotocol.io/specification/server/sampling). The host owns the model connection, so apps don't ship their own API keys and don't pick the model — the user's host does.
+
+Use it for:
+
+- **Summaries and rewrites** of content the user is looking at in the app
+- **Agentic loops** inside the View (planner → tool call → planner → answer)
+- **Tool-augmented generation** where the model picks among the View's own tools
+- **Structured extraction** from data the app already has loaded
+
+The host has full discretion. It MAY modify the request, downgrade the model, route to a cheaper one, prompt the user (human-in-the-loop), or reject the request entirely. Always check the [`sampling` host capability](/mcp-apps/types/core-types#mcpuihostcapabilities) before calling.
+
+## Signature
+
+```ts
+// Without tools
+async createSamplingMessage(
+  params: CreateMessageRequest["params"] & { tools?: undefined },
+  options?: RequestOptions,
+): Promise<CreateMessageResult>
+
+// With tools (overload)
+async createSamplingMessage(
+  params: CreateMessageRequest["params"],
+  options?: RequestOptions,
+): Promise<CreateMessageResultWithTools>
+```
+
+The two overloads differ only in result shape: when `params.tools` is set, the result is parsed with the extended schema that permits `stopReason: "toolUse"` and array content containing `tool_use` blocks.
+
+## Parameters
+
+<ResponseField name="params" type="CreateMessageRequest['params']" required>
+  Standard MCP sampling parameters.
+
+  <ResponseField name="messages" type="SamplingMessage[]" required>
+    Conversation messages to send to the model. Each has `role` (`"user"` or `"assistant"`) and `content` (a single content block, or an array when `tools` are in play).
+  </ResponseField>
+
+  <ResponseField name="maxTokens" type="number" required>
+    Maximum tokens to generate in the response.
+  </ResponseField>
+
+  <ResponseField name="systemPrompt" type="string">
+    Optional system prompt. The host may modify or ignore it.
+  </ResponseField>
+
+  <ResponseField name="temperature" type="number">
+    Sampling temperature.
+  </ResponseField>
+
+  <ResponseField name="stopSequences" type="string[]">
+    Stop sequences to halt generation.
+  </ResponseField>
+
+  <ResponseField name="modelPreferences" type="ModelPreferences">
+    Hints about cost, speed, and intelligence priorities, plus optional model name hints. The host MAY ignore these.
+  </ResponseField>
+
+  <ResponseField name="includeContext" type="'none' | 'thisServer' | 'allServers'">
+    Whether the host should include context from connected MCP servers in the prompt.
+  </ResponseField>
+
+  <ResponseField name="tools" type="Tool[]">
+    Tools the model is allowed to call during this completion. When set, the result may contain `tool_use` blocks. Requires the `sampling.tools` host capability.
+  </ResponseField>
+
+  <ResponseField name="toolChoice" type="ToolChoice">
+    How tools are selected (`"auto"`, `"any"`, `"none"`, or a named choice). Requires the `sampling.tools` host capability.
+  </ResponseField>
+</ResponseField>
+
+<ResponseField name="options" type="RequestOptions">
+  Optional request configuration.
+
+  <ResponseField name="signal" type="AbortSignal">
+    An `AbortSignal` to cancel the completion. Useful for letting the user stop a long generation.
+  </ResponseField>
+
+  <ResponseField name="timeout" type="number">
+    Override the default request timeout (ms).
+  </ResponseField>
+</ResponseField>
+
+## Returns
+
+<ResponseField name="CreateMessageResult | CreateMessageResultWithTools" type="object">
+  Standard MCP sampling result.
+
+  <ResponseField name="role" type="'assistant'">
+    Always `"assistant"` for completion responses.
+  </ResponseField>
+
+  <ResponseField name="content" type="ContentBlock | ContentBlock[]">
+    The model's response. A single content block when `tools` is omitted, an array (may include `tool_use` blocks) when `tools` is provided.
+  </ResponseField>
+
+  <ResponseField name="model" type="string">
+    Identifier for the model the host actually used. May not match `modelPreferences`.
+  </ResponseField>
+
+  <ResponseField name="stopReason" type="'endTurn' | 'maxTokens' | 'stopSequence' | 'toolUse'">
+    Why generation stopped. `"toolUse"` only appears with the `WithTools` overload.
+  </ResponseField>
+</ResponseField>
+
+## Capability detection
+
+Always gate `createSamplingMessage` on a host capability check. Hosts that don't advertise `sampling` will reject the request.
+
+```ts
+const caps = app.getHostCapabilities();
+if (!caps?.sampling) {
+  // Hide the "Summarize" button or fall back to a server-side path
+  return;
+}
+
+if (params.tools && !caps.sampling.tools) {
+  // Strip tools — this host can sample but not with tool use
+  delete params.tools;
+}
+```
+
+See [`McpUiHostCapabilities`](/mcp-apps/types/core-types#mcpuihostcapabilities) for the full capability shape.
+
+## Usage
+
+### Basic completion
+
+```ts
+const result = await app.createSamplingMessage({
+  messages: [
+    {
+      role: "user",
+      content: { type: "text", text: "Summarize this in one line." },
+    },
+  ],
+  maxTokens: 100,
+});
+console.log(result.content);
+```
+
+### Including app context
+
+Bake the View's current state into the prompt so the host can reason over it:
+
+```ts
+const result = await app.createSamplingMessage({
+  systemPrompt: "You are a helpful assistant inside a data dashboard.",
+  messages: [
+    {
+      role: "user",
+      content: {
+        type: "text",
+        text: `User is looking at chart ${chartId}.\n\nData:\n${JSON.stringify(rows)}\n\nQuestion: ${question}`,
+      },
+    },
+  ],
+  maxTokens: 500,
+  temperature: 0.2,
+});
+```
+
+### Agentic loop with tools
+
+```ts
+if (!app.getHostCapabilities()?.sampling?.tools) return;
+
+const result = await app.createSamplingMessage({
+  messages,
+  maxTokens: 1024,
+  tools: [
+    {
+      name: "get_weather",
+      description: "Get the current weather",
+      inputSchema: {
+        type: "object",
+        properties: { city: { type: "string" } },
+      },
+    },
+  ],
+});
+
+if (result.stopReason === "toolUse" && Array.isArray(result.content)) {
+  for (const block of result.content) {
+    if (block.type === "tool_use") {
+      const toolResult = await runLocalTool(block.name, block.input);
+      // Append `tool_result` to messages and call again to continue the loop
+    }
+  }
+}
+```
+
+### Cancelling a long generation
+
+```ts
+const controller = new AbortController();
+cancelButton.addEventListener("click", () => controller.abort());
+
+try {
+  const result = await app.createSamplingMessage(
+    { messages, maxTokens: 2048 },
+    { signal: controller.signal },
+  );
+  render(result.content);
+} catch (err) {
+  if ((err as Error).name === "AbortError") return;
+  throw err;
+}
+```
+
+<Warning>
+Hosts may apply rate limits, content filtering, or human-in-the-loop confirmation before forwarding the request to a model. Treat sampling as best-effort: design the UI so a rejected or modified response is still graceful.
+</Warning>
+
+## Sampling vs. callServerTool
+
+The two look similar but solve different problems:
+
+| | `callServerTool` | `createSamplingMessage` |
+|--|--|--|
+| Runs on | Your MCP server | The host's LLM |
+| Auth/keys | Server-side (yours) | Host-managed (user's plan) |
+| Determinism | Deterministic if your tool is | Non-deterministic |
+| Use for | Data fetches, mutations, server logic | Summaries, classifications, agentic reasoning |
+
+If the answer can be computed deterministically, prefer `callServerTool`. Use sampling when you genuinely need an LLM in the loop.
+
+## Related
+
+- [Requests overview](/mcp-apps/app/requests) — all View-to-host request methods
+- [`useCreateSamplingMessage`](/app-framework/hooks/use-create-sampling-message) — sunpeak React convenience hook
+- [`McpUiHostCapabilities`](/mcp-apps/types/core-types#mcpuihostcapabilities) — capability detection for `sampling` and `sampling.tools`
+- [MCP sampling specification](https://modelcontextprotocol.io/specification/server/sampling) — upstream protocol definition

@@ -83,6 +83,7 @@ interface McpUiHostCapabilities {
   };
   updateModelContext?: McpUiSupportedContentBlockModalities;
   message?: McpUiSupportedContentBlockModalities;
+  sampling?: { tools?: {} };
 }
 ```
 
@@ -96,6 +97,7 @@ interface McpUiHostCapabilities {
 | `sandbox` | Permissions and CSP applied by the host |
 | `updateModelContext` | Host accepts [`updateModelContext()`](/mcp-apps/app/requests/update-model-context) |
 | `message` | Host accepts [`sendMessage()`](/mcp-apps/app/requests/send-message) |
+| `sampling` | Host supports [`createSamplingMessage()`](/mcp-apps/app/requests/create-sampling-message) for LLM completions. `sampling.tools` indicates tool-augmented sampling support. |
 
 ## McpUiAppCapabilities
 

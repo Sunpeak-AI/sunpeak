@@ -312,6 +312,7 @@
                 "pages": [
                   "mcp-apps/app/requests",
                   "mcp-apps/app/requests/call-server-tool",
+                  "mcp-apps/app/requests/create-sampling-message",
                   "mcp-apps/app/requests/download-file",
                   "mcp-apps/app/requests/list-server-resources",
                   "mcp-apps/app/requests/open-link",

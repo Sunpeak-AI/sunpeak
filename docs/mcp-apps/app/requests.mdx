@@ -1,8 +1,8 @@
 ---
 title: "MCP Apps Requests - View-to-Host API"
 sidebarTitle: "Requests"
-description: "Make requests from an MCP App View to the host: call server tools, send messages, update model context, open links, download files, request display modes, and send logs."
-keywords: ["MCP Apps", "ChatGPT Apps", "app requests", "server tools", "send message", "model context"]
+description: "Make requests from an MCP App View to the host: call server tools, request LLM completions via sampling, send messages, update model context, open links, download files, request display modes, and send logs."
+keywords: ["MCP Apps", "ChatGPT Apps", "app requests", "server tools", "send message", "model context", "sampling", "createSamplingMessage"]
 ---
 
 <Badge color="green">MCP Apps SDK</Badge>
@@ -269,7 +269,7 @@ async requestTeardown(params?: {}): Promise<void>
 await app.requestTeardown();
 ```
 
-## createSamplingMessage
+## [createSamplingMessage](/mcp-apps/app/requests/create-sampling-message)
 
 Request an LLM completion from the host via standard MCP `sampling/createMessage`. The host has full discretion over model selection and may modify or reject the request. Check `app.getHostCapabilities()?.sampling` before calling.
 

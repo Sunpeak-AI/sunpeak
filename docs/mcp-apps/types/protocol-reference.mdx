@@ -7,7 +7,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "protocol reference", "request types", "n
 
 <Badge color="green">MCP Apps SDK</Badge>
 
-<Note>This documentation covers MCP Apps SDK v1.7.0 (`@modelcontextprotocol/ext-apps`).</Note>
+<Note>This documentation covers MCP Apps SDK v1.7.1 (`@modelcontextprotocol/ext-apps`).</Note>
 
 ```ts
 import type {
@@ -62,6 +62,21 @@ import type {
 | `McpUiRequestDisplayModeRequest` | `ui/request-display-mode` | Request mode: `{ mode: McpUiDisplayMode }` |
 | `McpUiRequestDisplayModeResult` | — | `{ mode: McpUiDisplayMode }` (actual mode set) |
 
+### Proxied Requests
+
+The host proxies select MCP requests between the View and the originating MCP server (or, for sampling, between the View and the host's LLM). These reuse standard MCP request/result types from `@modelcontextprotocol/sdk`.
+
+| Type | Method | Direction | Description |
+|------|--------|-----------|-------------|
+| `CallToolRequest` | `tools/call` | View → Server | Call a server tool. Used by [`callServerTool`](/mcp-apps/app/requests/call-server-tool). |
+| `CallToolResult` | — | Server → View | Tool execution result. |
+| `ReadResourceRequest` | `resources/read` | View → Server | Read a server resource. Used by [`readServerResource`](/mcp-apps/app/requests/read-server-resource). |
+| `ReadResourceResult` | — | Server → View | Resource contents. |
+| `ListResourcesRequest` | `resources/list` | View → Server | List server resources. Used by [`listServerResources`](/mcp-apps/app/requests/list-server-resources). |
+| `ListResourcesResult` | — | Server → View | Resource list with optional cursor. |
+| `CreateMessageRequest` | `sampling/createMessage` | View → Host | LLM completion. Used by [`createSamplingMessage`](/mcp-apps/app/requests/create-sampling-message). |
+| `CreateMessageResult` / `CreateMessageResultWithTools` | — | Host → View | Sampling result. The `WithTools` variant carries `tool_use` blocks when `params.tools` is provided. |
+
 ### Host → View Requests
 
 | Type | Method | Description |
@@ -87,7 +102,9 @@ import type {
 |------|--------|-------------|
 | `McpUiInitializedNotification` | `ui/notifications/initialized` | Initialization complete |
 | `McpUiSizeChangedNotification` | `ui/notifications/size-changed` | UI size change: `{ width?; height? }` |
-| `McpUiRequestTeardownNotification` | `ui/notifications/request-teardown` | App requests host to tear it down |
+| `McpUiRequestTeardownNotification` | `ui/notifications/request-teardown` | App requests host to tear it down. Sent by [`requestTeardown`](/mcp-apps/app/requests#requestteardown). |
+| `LoggingMessageNotification` | `notifications/message` | Diagnostic log message. Sent by [`sendLog`](/mcp-apps/app/requests/send-log). |
+| `ToolListChangedNotification` | `notifications/tools/list_changed` | App-side tool list changed. Sent by [`sendToolListChanged`](/mcp-apps/app/requests#sendtoollistchanged) after `registerTool`, `enable`, `disable`, or `remove`. |
 
 ## Union Types
 
@@ -95,9 +112,9 @@ These union types group all possible message types in the protocol. They are use
 
 | Type | Description |
 |------|-------------|
-| `AppRequest` | Union of all request types: initialization, View → Host requests (`openLink`, `downloadFile`, `sendMessage`, `updateModelContext`, `requestDisplayMode`, `sendLog`, `sendSizeChanged`), proxied MCP server requests (`callServerTool`, `readServerResource`, `listServerResources`), Host → View requests (`resourceTeardown`), and ping |
-| `AppNotification` | Union of all notification types in both directions: Host → View (`toolInput`, `toolInputPartial`, `toolResult`, `toolCancelled`, `hostContextChanged`) and View → Host (`initialized`, `sizeChanged`, `requestTeardown`) |
-| `AppResult` | Union of all result types corresponding to each request type |
+| `AppRequest` | Union of all request types: initialization, View → Host requests (`openLink`, `downloadFile`, `sendMessage`, `updateModelContext`, `requestDisplayMode`), proxied MCP server requests (`callServerTool`, `readServerResource`, `listServerResources`, `listResourceTemplates`, `listPrompts`, `listTools`), proxied LLM sampling (`createSamplingMessage`), Host → View requests (`resourceTeardown`), and `ping` |
+| `AppNotification` | Union of all notification types in both directions: Host → View (`toolInput`, `toolInputPartial`, `toolResult`, `toolCancelled`, `hostContextChanged`, `sandboxResourceReady`, `resourceListChanged`, `promptListChanged`) and View → Host (`initialized`, `sizeChanged`, `sandboxProxyReady`, `requestTeardown`, `toolListChanged`, `loggingMessage`) |
+| `AppResult` | Union of all result types corresponding to each request type, plus `EmptyResult` |
 
 ```ts
 import type { AppRequest, AppNotification, AppResult } from "@modelcontextprotocol/ext-apps";
