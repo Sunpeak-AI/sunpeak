@@ -399,21 +399,26 @@ const content = await readResource({ uri: 'videos://bunny-1mb' });
 
 ### `useAppTools` details
 
-Register tools the app provides to the host for bidirectional tool calling. Requires `tools` capability.
+Register tools the app provides to the host for bidirectional tool calling. Tool metadata goes in `tools[]`; a single `onCallTool` callback dispatches every invocation.
 
 ```tsx
 import { useAppTools } from 'sunpeak';
 
 function MyResource() {
   useAppTools({
-    tools: [{
-      name: 'get-selection',
-      description: 'Get current user selection',
-      inputSchema: { type: 'object', properties: {} },
-      handler: async () => ({
-        content: [{ type: 'text', text: selectedText }],
-      }),
-    }],
+    tools: [
+      {
+        name: 'get-selection',
+        description: 'Get current user selection',
+        inputSchema: { type: 'object', properties: {} },
+      },
+    ],
+    onCallTool: async ({ name, arguments: args }) => {
+      if (name === 'get-selection') {
+        return { content: [{ type: 'text', text: selectedText }] };
+      }
+      return { content: [], isError: true };
+    },
   });
 }
 ```
@@ -496,18 +501,17 @@ import { isChatGPT } from 'sunpeak/host';
 
 function MyResource() {
   // Only call these when on ChatGPT
-  const { upload } = useUploadFile();
-  const { open } = useRequestModal();
-  const { checkout } = useRequestCheckout();
+  const uploadFile = useUploadFile();
+  const requestModal = useRequestModal();
+  const requestCheckout = useRequestCheckout();
 }
 ```
 
 | Hook | Description |
 |------|-------------|
-| `useUploadFile()` | Upload a file to ChatGPT, returns file ID |
-| `useGetFileDownloadUrl(fileId)` | **Deprecated** — use `useDownloadFile()` from `sunpeak` instead |
-| `useRequestModal(params)` | Open a host-native modal dialog |
-| `useRequestCheckout(session)` | Trigger ChatGPT instant checkout |
+| `useUploadFile()` | Returns `(file: File) => Promise<{ fileId }>` to upload a file to ChatGPT |
+| `useRequestModal()` | Returns `(params) => Promise<void>` to open a host-native modal dialog |
+| `useRequestCheckout()` | Returns `(session) => Promise<...>` to trigger ChatGPT instant checkout |
 
 ## SafeArea Component
 
