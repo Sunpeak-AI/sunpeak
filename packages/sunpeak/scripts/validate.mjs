@@ -321,7 +321,7 @@ function runTestInitSmokeTest() {
 
       // Verify live config has server option for non-sunpeak projects
       const liveConfig = readFileSync(join(testDir, 'live/playwright.config.ts'), 'utf-8');
-      if (!liveConfig.includes("server: { url: 'http://localhost:8000/mcp' }")) {
+      if (!liveConfig.includes('server: { url: "http://localhost:8000/mcp" }')) {
         return { ok: false, step: 'test-init external: live config missing server option', output: allOutput.join('\n') };
       }
 
@@ -413,7 +413,7 @@ function runTestInitSmokeTest() {
 
       // JS project live config should have server option
       const liveConfig = readFileSync(join(dir, 'tests/live/playwright.config.ts'), 'utf-8');
-      if (!liveConfig.includes("server: { url: 'http://localhost:9000/mcp' }")) {
+      if (!liveConfig.includes('server: { url: "http://localhost:9000/mcp" }')) {
         return { ok: false, step: 'test-init js: live config missing server option', output: allOutput.join('\n') };
       }
 
@@ -495,7 +495,7 @@ function runTestInitSmokeTest() {
       if (!result.ok) return { ok: false, step: 'test-init command-server', output: allOutput.join('\n') };
 
       const config = readFileSync(join(dir, 'tests/sunpeak/playwright.config.ts'), 'utf-8');
-      if (!config.includes("command: 'python'") || !config.includes("'src/server.py'")) {
+      if (!config.includes('command: "python"') || !config.includes('"src/server.py"')) {
         return { ok: false, step: 'test-init command-server: config missing parsed command/args', output: allOutput.join('\n') };
       }
     }

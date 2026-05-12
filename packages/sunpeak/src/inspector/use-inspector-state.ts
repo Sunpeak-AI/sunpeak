@@ -183,8 +183,14 @@ function parseUrlParams(): {
       // Invalid JSON — ignore, simulation data will be used instead
     }
   }
-  const theme = params.get('theme') as McpUiTheme | null;
-  const displayMode = params.get('displayMode') as McpUiDisplayMode | null;
+  const themeRaw = params.get('theme');
+  const theme: McpUiTheme | null =
+    themeRaw && VALID_THEMES.has(themeRaw as McpUiTheme) ? (themeRaw as McpUiTheme) : null;
+  const displayModeRaw = params.get('displayMode');
+  const displayMode: McpUiDisplayMode | null =
+    displayModeRaw && VALID_DISPLAY_MODES.has(displayModeRaw as McpUiDisplayMode)
+      ? (displayModeRaw as McpUiDisplayMode)
+      : null;
   const locale = params.get('locale');
   const maxHeightParam = params.get('maxHeight');
   const containerMaxHeight = maxHeightParam ? Number(maxHeightParam) : undefined;

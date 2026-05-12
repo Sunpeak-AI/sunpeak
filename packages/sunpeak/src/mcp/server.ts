@@ -600,6 +600,40 @@ const CORS_HEADERS = {
   'Access-Control-Expose-Headers': 'mcp-session-id',
 } as const;
 
+// Cap on POST body size for MCP requests so unauthenticated clients cannot
+// stream arbitrary bytes into memory. Override via SUNPEAK_MAX_BODY_BYTES.
+const DEFAULT_MAX_BODY_BYTES = 4 * 1024 * 1024;
+function getMaxBodyBytes(): number {
+  const raw = process.env.SUNPEAK_MAX_BODY_BYTES;
+  if (!raw) return DEFAULT_MAX_BODY_BYTES;
+  const n = Number(raw);
+  return Number.isFinite(n) && n > 0 ? n : DEFAULT_MAX_BODY_BYTES;
+}
+
+async function readBodyWithLimit(req: IncomingMessage, maxBytes: number): Promise<string | null> {
+  return new Promise<string | null>((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let total = 0;
+    let aborted = false;
+    req.on('data', (chunk: Buffer | string) => {
+      if (aborted) return;
+      const buf = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string);
+      total += buf.length;
+      if (total > maxBytes) {
+        aborted = true;
+        resolve(null);
+        return;
+      }
+      chunks.push(buf);
+    });
+    req.on('end', () => {
+      if (aborted) return;
+      resolve(Buffer.concat(chunks).toString('utf8'));
+    });
+    req.on('error', reject);
+  });
+}
+
 /**
  * Wrap a ServerResponse to apply gzip compression for JSON responses.
  * The SDK's StreamableHTTPServerTransport writes directly to res, so we intercept
@@ -742,15 +776,11 @@ async function handleMcpRequest(
   // Parse body for POST requests
   let parsedBody: unknown;
   if (req.method === 'POST') {
-    const chunks: Buffer[] = [];
-    await new Promise<void>((resolve, reject) => {
-      req.on('data', (chunk: Buffer | string) => {
-        chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
-      });
-      req.on('end', resolve);
-      req.on('error', reject);
-    });
-    const rawBody = Buffer.concat(chunks).toString('utf8');
+    const rawBody = await readBodyWithLimit(req, getMaxBodyBytes());
+    if (rawBody === null) {
+      res.writeHead(413).end('Payload Too Large');
+      return;
+    }
     try {
       parsedBody = JSON.parse(rawBody);
       const parsed = parsedBody as { method?: string; params?: Record<string, unknown> };
@@ -1036,17 +1066,25 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
   };
 
   const requestedPort = port;
+  // Bind host: when SUNPEAK_HOST is set, honour it explicitly. Otherwise let
+  // Node pick the default (dual-stack `::`), which the dev server needs so
+  // tunnels (ngrok) and `localhost` resolution that prefers IPv6 both work.
+  // Operators that want to lock the dev server to the local machine can set
+  // SUNPEAK_HOST=127.0.0.1 (or 127.0.0.1,::1 manually).
+  const bindHost = process.env.SUNPEAK_HOST;
   httpServer.on('error', (err: NodeJS.ErrnoException) => {
     if (err.code === 'EADDRINUSE') {
       console.warn(`Port ${requestedPort} is in use, trying another port...`);
       // onListening is already registered as a .once('listening') from the first .listen() call
-      httpServer.listen(0);
+      if (bindHost) httpServer.listen(0, bindHost);
+      else httpServer.listen(0);
     } else {
       throw err;
     }
   });
 
-  httpServer.listen(port, onListening);
+  if (bindHost) httpServer.listen(port, bindHost, onListening);
+  else httpServer.listen(port, onListening);
 
   // Graceful shutdown handler
   const shutdown = async () => {

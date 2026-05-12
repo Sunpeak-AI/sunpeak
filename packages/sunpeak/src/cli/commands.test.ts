@@ -784,7 +784,7 @@ describe('CLI Commands', () => {
 
       // Live config has server option for non-sunpeak projects
       const liveConfig = getWrittenContent(writeFileSync, 'live/playwright.config.ts');
-      expect(liveConfig).toContain("server: { url: 'http://localhost:8000/mcp' }");
+      expect(liveConfig).toContain('server: { url: "http://localhost:8000/mcp" }');
       expect(liveConfig).toContain("from 'sunpeak/test/live/config'");
     });
 
@@ -917,8 +917,8 @@ describe('CLI Commands', () => {
       await testInit(['--server', 'python src/server.py'], createTestInitDeps({ writeFileSync }));
 
       const config = getWrittenContent(writeFileSync, 'sunpeak/playwright.config.ts');
-      expect(config).toContain("command: 'python'");
-      expect(config).toContain("'src/server.py'");
+      expect(config).toContain('command: "python"');
+      expect(config).toContain('"src/server.py"');
     });
 
     it('should not scaffold test bodies that would fail on missing tools', async () => {

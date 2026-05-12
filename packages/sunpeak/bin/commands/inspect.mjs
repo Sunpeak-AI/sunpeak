@@ -232,7 +232,8 @@ async function negotiateOAuth(serverUrl) {
   const interactiveCode = await waitForInteractiveOAuth(
     authUrl.toString(),
     callbackUrl,
-    callbackPort
+    callbackPort,
+    oauthState.stateParam
   );
 
   const tokenResult = await auth(provider, {
@@ -301,7 +302,7 @@ async function tryAnonymousOAuth(authUrl, callbackUrl) {
  * @param {number} callbackPort - Port for the callback server
  * @returns {Promise<string>}
  */
-async function waitForInteractiveOAuth(authUrl, callbackUrl, callbackPort) {
+async function waitForInteractiveOAuth(authUrl, callbackUrl, callbackPort, expectedState) {
   return new Promise((resolve, reject) => {
     let settled = false;
     const settle = (fn, value) => {
@@ -322,6 +323,18 @@ async function waitForInteractiveOAuth(authUrl, callbackUrl, callbackPort) {
 
       const code = reqUrl.searchParams.get('code');
       const error = reqUrl.searchParams.get('error');
+      const stateParam = reqUrl.searchParams.get('state');
+
+      // CSRF protection: the callback must echo back the state value that we
+      // generated for this authorization request. Without this check, any
+      // local process (or page the user visits while the flow is pending)
+      // could submit an attacker-controlled `code` to our callback server.
+      if (expectedState && stateParam !== expectedState) {
+        res.writeHead(400, { 'Content-Type': 'text/html' });
+        res.end('<!DOCTYPE html><html><body><p>Authorization rejected: state mismatch.</p></body></html>');
+        settle(reject, new Error('OAuth state mismatch — callback rejected'));
+        return;
+      }
 
       // Serve a simple page that tells the user they can close the tab.
       const escHtml = (s) => s.replace(/[<>&"']/g, (c) =>
@@ -727,6 +740,10 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
    */
   function requireSameOrigin(req, res) {
     const origin = req.headers.origin;
+    // Requests without an Origin header (curl, Node fetch, CLI test harnesses)
+    // are allowed because they cannot be triggered cross-origin from a
+    // browser. Browser-issued cross-origin requests always include Origin,
+    // which the host-match check below blocks.
     if (!origin) return true;
     let originHost;
     try {
@@ -985,6 +1002,14 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
         if (!serverUrl) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Missing url' }));
+          return;
+        }
+        // Only http(s) URLs are accepted. Without this check a stdio-like
+        // string (e.g. "node ./malicious.js") could later reach
+        // createMcpConnection's stdio branch via cached pending flow state.
+        if (typeof serverUrl !== 'string' || !/^https?:\/\//i.test(serverUrl)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Only http(s) URLs are allowed' }));
           return;
         }
 
@@ -1554,6 +1579,49 @@ export async function inspectServer(opts) {
     ...(resolveAlias ? { resolve: { alias: resolveAlias } } : {}),
     ...(viteCssConfig ? { css: { lightningcss: viteCssConfig } } : {}),
     plugins: [
+      // Security headers must run before any response is written so that
+      // setHeader() is in effect when downstream middlewares call writeHead().
+      // Node merges setHeader values with writeHead's headers argument; values
+      // explicitly passed to writeHead win, but our defaults stick for headers
+      // downstream code doesn't touch.
+      {
+        name: 'sunpeak-security-headers',
+        configureServer(server) {
+          // The inspector's top-level UI must not be framable by untrusted
+          // origins — clickjacking would let an attacker drive the privileged
+          // /__sunpeak/* endpoints in an authenticated session. Override via
+          // SUNPEAK_FRAME_ANCESTORS for legitimate embedding (e.g. demos).
+          //
+          // Resource content (/dist/*.html, /__sunpeak/read-resource) must
+          // stay framable so the inspector's own outer sandbox iframe (on
+          // port 24680) can load it as inner-iframe content. Those paths are
+          // not sensitive on their own; the iframe sandbox flags are the
+          // boundary, not these headers.
+          const frameAncestors = process.env.SUNPEAK_FRAME_ANCESTORS || "'none'";
+          const isFrameableContent = (url) =>
+            !!url && (
+              url.startsWith('/dist/') ||
+              url.startsWith('/__sunpeak/read-resource')
+            );
+          server.middlewares.use((req, res, next) => {
+            if (!isFrameableContent(req.url)) {
+              if (!res.hasHeader('X-Frame-Options') && frameAncestors === "'none'") {
+                res.setHeader('X-Frame-Options', 'DENY');
+              }
+              if (!res.hasHeader('Content-Security-Policy')) {
+                res.setHeader('Content-Security-Policy', `frame-ancestors ${frameAncestors}`);
+              }
+            }
+            if (!res.hasHeader('X-Content-Type-Options')) {
+              res.setHeader('X-Content-Type-Options', 'nosniff');
+            }
+            if (!res.hasHeader('Referrer-Policy')) {
+              res.setHeader('Referrer-Policy', 'no-referrer');
+            }
+            next();
+          });
+        },
+      },
       react(),
       ...extraVitePlugins,
       sunpeakInspectVirtualPlugin(

@@ -1,5 +1,5 @@
 import { createServer } from 'net';
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 
 /**
  * Synchronous version of getPort — safe to call at Playwright config load time.
@@ -9,6 +9,12 @@ import { execSync } from 'child_process';
  * @returns {number} The available port number
  */
 export function getPortSync(preferred) {
+  // The argument is interpolated into a small Node script; an invalid value
+  // (non-integer) would corrupt the script and could execute arbitrary code if
+  // a caller ever forwards user-controlled input here. Validate strictly.
+  if (!Number.isInteger(preferred) || preferred < 0 || preferred > 65535) {
+    throw new TypeError(`getPortSync: preferred must be an integer in [0, 65535], got ${preferred}`);
+  }
   const script = `
     const s = require("net").createServer();
     s.listen(${preferred}, () => {
@@ -23,7 +29,9 @@ export function getPortSync(preferred) {
       });
     });
   `;
-  return Number(execSync(`node -e '${script}'`, { encoding: 'utf-8' }).trim());
+  // execFileSync (not execSync) avoids invoking a shell, so the script body
+  // is passed as a literal arg without any quoting concerns.
+  return Number(execFileSync(process.execPath, ['-e', script], { encoding: 'utf-8' }).trim());
 }
 
 /**

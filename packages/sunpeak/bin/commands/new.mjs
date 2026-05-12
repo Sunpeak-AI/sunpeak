@@ -163,6 +163,16 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
     d.process.exit(1);
   }
 
+  // Reject path-traversal characters and leading dots so the project is always
+  // created as a direct child of the cwd. Without this, `sunpeak new ../foo`
+  // would resolve outside the intended directory.
+  if (/[\\/]/.test(projectName) || projectName.startsWith('.') || projectName.includes('\0')) {
+    d.console.error(
+      `Error: Invalid project name "${projectName}". The name must not contain path separators or start with a dot.`
+    );
+    d.process.exit(1);
+  }
+
   // Use resources from args or interactively select them
   let selectedResources;
   if (resourcesArg !== undefined) {
@@ -370,7 +380,9 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
           mask: '*',
         });
         if (!clack.isCancel(key) && key) {
-          envLines.push(`${p.envVar}=${key}`);
+          // Strip newlines so a pasted value can't inject extra .env entries.
+          const cleanKey = String(key).replace(/[\r\n]+/g, '').trim();
+          if (cleanKey) envLines.push(`${p.envVar}=${cleanKey}`);
         }
       }
       const envPath = join(targetDir, 'tests', 'evals', '.env');

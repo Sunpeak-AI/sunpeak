@@ -137,7 +137,11 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 
         if (existsSync(cssFile)) {
           const css = readFileSync(cssFile, 'utf-8');
-          const injectCss = `(function(){var s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s);})();`;
+          // Escape `<` so a literal `</script>` inside CSS can't break out
+          // of the surrounding <script> tag when the bundle is embedded into
+          // HTML downstream.
+          const cssLiteral = JSON.stringify(css).replace(/</g, '\\u003c');
+          const injectCss = `(function(){var s=document.createElement('style');s.textContent=${cssLiteral};document.head.appendChild(s);})();`;
 
           // Find all .js files in the dist directory and inject CSS
           const files = readdirSync(buildOutDir);
@@ -306,6 +310,9 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 
         if (existsSync(builtJsFile)) {
           const jsContents = readFileSync(builtJsFile, 'utf-8');
+          // Defensively escape any literal `</script` substring so a bundled
+          // string can't terminate the surrounding inline script tag.
+          const safeJsContents = jsContents.replace(/<\/(script)/gi, '<\\/$1');
           const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -315,7 +322,7 @@ export async function build(projectRoot = process.cwd(), { quiet = false } = {})
 <body>
   <div id="root"></div>
   <script>
-${jsContents}
+${safeJsContents}
   </script>
 </body>
 </html>`;

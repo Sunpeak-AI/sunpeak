@@ -138,7 +138,9 @@ export async function testInit(args = [], deps = defaultDeps) {
             mask: '*',
           });
           if (!d.isCancel(key) && key) {
-            envLines.push(`${prov.envVar}=${key}`);
+            // Strip newlines so a pasted value can't inject extra .env entries.
+            const cleanKey = String(key).replace(/[\r\n]+/g, '').trim();
+            if (cleanKey) envLines.push(`${prov.envVar}=${cleanKey}`);
           }
         }
         if (envLines.length > 0 && evalDir) {
@@ -267,7 +269,7 @@ function generateServerConfigBlock(server, relativeTo = '.') {
   }
   if (server.type === 'url') {
     return `  server: {
-    url: '${server.value}',
+    url: ${JSON.stringify(server.value)},
   },`;
   }
   // Parse command into command + args
@@ -277,11 +279,11 @@ function generateServerConfigBlock(server, relativeTo = '.') {
   // Make paths relative from test directory
   const relativeArgs = args.map((a) =>
     a.startsWith('/') || a.startsWith('./') || a.startsWith('../')
-      ? `'${relativeTo}/${a}'`
-      : `'${a}'`
+      ? JSON.stringify(`${relativeTo}/${a}`)
+      : JSON.stringify(a)
   );
   return `  server: {
-    command: '${cmd}',
+    command: ${JSON.stringify(cmd)},
     args: [${relativeArgs.join(', ')}],
   },`;
 }
@@ -305,9 +307,9 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
   if (isSunpeak) {
     serverLine = '  // Omit server for sunpeak projects (auto-detected).\n  // server: \'http://localhost:8000/mcp\',';
   } else if (server?.type === 'url') {
-    serverLine = `  server: '${server.value}',`;
+    serverLine = `  server: ${JSON.stringify(server.value)},`;
   } else if (server?.type === 'command') {
-    serverLine = `  server: '${server.value}',`;
+    serverLine = `  server: ${JSON.stringify(server.value)},`;
   }
 
   // Build the eval config content
@@ -478,14 +480,14 @@ function scaffoldLiveTests(liveDir, { isSunpeak, server, d } = {}) {
   // Build the server option for non-sunpeak projects
   let serverOption = '';
   if (!isSunpeak && server?.type === 'url') {
-    serverOption = `\n  server: { url: '${server.value}' },`;
+    serverOption = `\n  server: { url: ${JSON.stringify(server.value)} },`;
   } else if (!isSunpeak && server?.type === 'command') {
     const parts = server.value.split(/\s+/);
     const cmd = parts[0];
     const args = parts.slice(1);
     serverOption = args.length > 0
-      ? `\n  server: { command: '${cmd}', args: [${args.map(a => `'${a}'`).join(', ')}] },`
-      : `\n  server: { command: '${cmd}' },`;
+      ? `\n  server: { command: ${JSON.stringify(cmd)}, args: [${args.map(a => JSON.stringify(a)).join(', ')}] },`
+      : `\n  server: { command: ${JSON.stringify(cmd)} },`;
   }
 
   const configContent = `${liveConfigPreamble}
