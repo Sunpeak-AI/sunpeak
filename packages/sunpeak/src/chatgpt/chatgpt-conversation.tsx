@@ -137,7 +137,7 @@ export function Conversation({
                 backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
               }}
             />
-            <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
+            <div className="max-w-[40rem] min-[1280px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
               <div className="relative">
                 <input
                   type="text"
@@ -184,7 +184,7 @@ export function Conversation({
             <article className="w-full focus:outline-none" dir="auto" data-turn="user">
               <h5 className="sr-only">You said:</h5>
               <div className="text-base my-auto mx-auto md:pt-8 px-4">
-                <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
+                <div className="max-w-[40rem] min-[1280px]:max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                   <div className="flex max-w-full flex-col grow">
                     <div
                       data-message-author-role="user"
@@ -214,7 +214,7 @@ export function Conversation({
           <article className="w-full focus:outline-none flex-1" dir="auto" data-turn="assistant">
             <h6 className="sr-only">{appName} said:</h6>
             <div className="text-base my-auto mx-auto pb-10 px-4">
-              <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
+              <div className="max-w-[40rem] min-[1280px]:max-w-[48rem] mx-auto flex-1 relative flex w-full min-w-0 flex-col">
                 <div className="flex max-w-full flex-col grow">
                   {/* Assistant avatar and name - hidden in fullscreen */}
                   {!isFullscreen && (
@@ -327,7 +327,7 @@ export function Conversation({
                   backgroundColor: 'var(--sim-bg-conversation, var(--color-background-primary))',
                 }}
               />
-              <div className="max-w-[40rem] min-[1440px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
+              <div className="max-w-[40rem] min-[1280px]:max-w-[48rem] mx-auto px-4 pt-4 pb-4 pointer-events-auto">
                 <div className="relative">
                   <input
                     type="text"

@@ -5,7 +5,7 @@ import { ClaudeConversation } from './claude-conversation';
 
 /**
  * Claude host version info — matches what Claude reports via the MCP protocol.
- * Verified against production Claude on 2026-03-30.
+ * Verified against production Claude on 2026-05-13.
  */
 const CLAUDE_HOST_INFO = {
   name: 'Claude',
@@ -14,7 +14,7 @@ const CLAUDE_HOST_INFO = {
 
 /**
  * Claude host capabilities — matches what Claude reports via the MCP protocol.
- * Verified against production Claude on 2026-03-30.
+ * Verified against production Claude on 2026-05-13.
  *
  * Notable: Claude supports downloadFile, updateModelContext.image, and
  * message.text. serverTools and serverResources both report listChanged.
@@ -42,7 +42,7 @@ function applyClaudeTheme(theme: 'light' | 'dark'): void {
 
 /**
  * Claude style variable overrides — warm beige/cream palette with Anthropic Sans.
- * Verified against production Claude on 2026-03-30.
+ * Verified against production Claude on 2026-05-13.
  *
  * Only overrides values that differ from DEFAULT_STYLE_VARIABLES.
  * Claude sends all variables via styles.variables using light-dark(rgba()) format.
