@@ -43,10 +43,11 @@ sunpeak provides multi-platform React hooks that wrap the [MCP Apps protocol](/m
 
 | Hook | Description |
 |------|-------------|
-| [`useToolInput()`](/app-framework/hooks/use-tool-data) | Arguments passed to the tool by the model |
-| [`useToolResult()`](/app-framework/hooks/use-tool-data) | Structured content returned by the tool handler |
+| [`useToolData()`](/app-framework/hooks/use-tool-data) | Tool input arguments, structured output, streaming partials, error and cancellation state |
+| [`useToolInfo()`](/app-framework/hooks/use-tool-info) | The active tool's definition (name, description, schemas) |
 | [`useAppState()`](/app-framework/hooks/use-app-state) | Persistent state shared with the model via [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context) |
 | [`useHostContext()`](/app-framework/hooks/use-host-context) | Full host-provided context object |
+| [`useHostInfo()`](/app-framework/hooks/use-host-info) | Host name, version, and reported capabilities |
 
 ### Environment Hooks
 
@@ -66,10 +67,20 @@ sunpeak provides multi-platform React hooks that wrap the [MCP Apps protocol](/m
 | Hook | Description |
 |------|-------------|
 | [`useCallServerTool()`](/app-framework/hooks/use-call-server-tool) | Call another tool on your MCP server |
+| [`useReadServerResource()`](/app-framework/hooks/use-read-server-resource) | Read a resource from your MCP server |
+| [`useListServerResources()`](/app-framework/hooks/use-list-server-resources) | List resources on your MCP server |
+| [`useSendMessage()`](/app-framework/hooks/use-send-message) | Send a user message into the chat |
+| [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context) | Push structured data to the model's context |
+| [`useCreateSamplingMessage()`](/app-framework/hooks/use-create-sampling-message) | Request an LLM completion via the host |
 | [`useOpenLink()`](/app-framework/hooks/use-open-link) | Open a URL in the host browser |
 | [`useDownloadFile()`](/app-framework/hooks/use-download-file) | Trigger a file download |
 | [`useRequestDisplayMode()`](/app-framework/hooks/use-request-display-mode) | Request inline/PiP/fullscreen switch |
-| `useSetAutoScroll()` | Control host auto-scroll behavior |
+| [`useRequestTeardown()`](/app-framework/hooks/use-request-teardown) | Ask the host to unmount the View |
+| [`useSendLog()`](/app-framework/hooks/use-send-log) | Send a diagnostic log to the host |
+| [`useRegisterTool()`](/app-framework/hooks/use-register-tool) | Register a single app-side tool the host can call |
+| [`useAppTools()`](/app-framework/hooks/use-app-tools) | Declare a static set of app-side tools with a single `onCallTool` |
+| [`useSendToolListChanged()`](/app-framework/hooks/use-send-tool-list-changed) | Notify the host that app-side tools changed |
+| [`useTeardown()`](/app-framework/hooks/use-teardown) | Reactive flag set when the host requests teardown |
 
 See the [Hooks API Reference](/app-framework/hooks/use-tool-data) for complete documentation.
 

@@ -1,0 +1,248 @@
+---
+title: "MCP App Tools — Letting the Host Call Tools Inside Your View"
+sidebarTitle: "App Tools"
+description: "How to register tools inside an MCP App View so the host (and the model) can call them. Covers the tools capability, onlisttools, oncalltool, registerTool, and sendToolListChanged."
+keywords: ["MCP App tools", "ChatGPT App tools", "Claude App tools", "view-side tools", "bidirectional MCP tools", "app-side tools", "host calls app tool", "onlisttools", "oncalltool", "registerTool", "sendToolListChanged", "MCP Apps bidirectional"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+## Overview
+
+MCP Apps is bidirectional. In addition to the View calling tools on the originating MCP server (see [`callServerTool`](/mcp-apps/app/requests/call-server-tool)), the View itself can act like a tiny MCP server — registering tools that the host or model can call.
+
+App-side tools are useful when the answer lives inside the View and can't be answered by the server:
+
+- **DOM and selection state** — get the user's current selection, scroll position, or visible viewport
+- **Form state** — submit values from a multi-step wizard or pending edits
+- **Local computation** — derive values from data the View has already loaded
+- **User intent** — surface explicit UI actions (a "Save" button, a confirm dialog) to the model
+
+This page ties together the four pieces that make app-side tools work: the [`tools` capability](#1-declare-the-tools-capability), [`onlisttools`](#2-declare-which-tools-the-app-exposes), [`oncalltool`](#3-handle-tool-calls), and (optionally) [`sendToolListChanged`](#dynamic-tool-lists) for dynamic tool lists.
+
+## Two ways to register tools
+
+The SDK offers two equivalent patterns. Pick the one that matches the shape of your app.
+
+### Static list — `onlisttools` + `oncalltool`
+
+Declare a fixed list once. The host queries [`onlisttools`](/mcp-apps/app/event-handlers/onlisttools), then dispatches calls to [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool). Good for apps where the tool set never changes.
+
+### Dynamic registry — `app.registerTool()`
+
+Add, update, enable, disable, or remove tools at runtime. Each call returns a handle with `enable()`, `disable()`, `remove()`, and `update()`. The SDK builds the tool list and dispatches calls for you. Pair with [`sendToolListChanged`](/mcp-apps/app/requests#sendtoollistchanged) to notify the host that the list has changed.
+
+<Tip>
+In the [sunpeak framework](/quickstart), use [`useAppTools()`](/app-framework/hooks/use-app-tools) for the static pattern or [`useRegisterTool()`](/app-framework/hooks/use-register-tool) for the dynamic pattern.
+</Tip>
+
+## 1. Declare the `tools` capability
+
+The host only routes `tools/list` and `tools/call` to the View if the View declared support during initialization. Pass `tools` in the capabilities argument to the `App` constructor.
+
+```ts
+const app = new App(
+  { name: "MyApp", version: "1.0.0" },
+  { tools: { listChanged: true } }, // declares app-side tool support
+);
+```
+
+Set `listChanged: true` only if you plan to add or remove tools at runtime. The host will re-query `onlisttools` whenever you send a `notifications/tools/list_changed` notification.
+
+## 2. Declare which tools the app exposes
+
+### Static — `onlisttools`
+
+Return an array of [MCP `Tool`](/mcp-apps/mcp/tools) definitions. Each must have a `name` and an `inputSchema` (with `type: "object"`).
+
+```ts
+app.onlisttools = async () => ({
+  tools: [
+    {
+      name: "get-selection",
+      description: "Return the user's current text selection",
+      inputSchema: { type: "object" },
+    },
+    {
+      name: "insert-text",
+      description: "Insert text at the current cursor position",
+      inputSchema: {
+        type: "object",
+        properties: { text: { type: "string" } },
+        required: ["text"],
+      },
+    },
+  ],
+});
+```
+
+### Dynamic — `app.registerTool()`
+
+Define tools in code with [Standard Schema](https://standardschema.dev/) (Zod, ArkType, Valibot) for input validation. The SDK populates `onlisttools` and dispatches `oncalltool` automatically.
+
+```ts
+import { z } from "zod";
+
+const insertHandle = app.registerTool(
+  "insert-text",
+  {
+    description: "Insert text at the current cursor position",
+    inputSchema: z.object({ text: z.string() }),
+  },
+  ({ text }) => {
+    insertAtCursor(text);
+    return { content: [{ type: "text", text: "Inserted" }] };
+  },
+);
+```
+
+The returned handle exposes lifecycle methods:
+
+| Method | Effect |
+|--------|--------|
+| `update(config)` | Replace name, description, schemas, or annotations |
+| `enable()` | Re-list the tool after `disable()` |
+| `disable()` | Hide the tool from the host (still registered) |
+| `remove()` | Permanently remove the tool |
+
+<Warning>
+Register handlers and tools **before** calling [`connect()`](/mcp-apps/app/app-class#connect) — handlers registered after the initialization handshake will miss the first `tools/list` call from the host.
+</Warning>
+
+## 3. Handle tool calls
+
+When the host calls one of the View's tools, it arrives in [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool). Return a [`CallToolResult`](/mcp-apps/mcp/tools#results) with `content` (for the model) and optional `structuredContent` (for any UI that reads it).
+
+```ts
+app.oncalltool = async (params) => {
+  switch (params.name) {
+    case "get-selection":
+      return {
+        content: [{ type: "text", text: window.getSelection()?.toString() ?? "" }],
+      };
+
+    case "insert-text": {
+      const { text } = params.arguments as { text: string };
+      insertAtCursor(text);
+      return {
+        content: [{ type: "text", text: "Inserted" }],
+      };
+    }
+
+    default:
+      throw new Error(`Unknown tool: ${params.name}`);
+  }
+};
+```
+
+If you use `registerTool`, you skip this — each tool's callback runs automatically. The dispatcher checks the registry first, falling back to `oncalltool` for any unmatched name.
+
+### Returning errors
+
+Throw to fail the request at the transport level. Return `{ isError: true, content: [...] }` to surface a tool-level error that the model can see and recover from. Prefer the latter for anything the model could act on.
+
+```ts
+app.oncalltool = async (params) => {
+  if (params.name === "submit-form" && !formIsValid()) {
+    return {
+      isError: true,
+      content: [{ type: "text", text: "Form has validation errors" }],
+    };
+  }
+  // ...
+};
+```
+
+## Dynamic tool lists
+
+Notify the host whenever the tool list changes — after `registerTool`, `enable()`, `disable()`, or `remove()`. The host re-runs `tools/list` and updates the model's available tools for the next turn.
+
+```ts
+await app.sendToolListChanged();
+```
+
+This works only when the View declared `tools: { listChanged: true }` and the host also reported `tools.listChanged` support in its capabilities.
+
+A typical pattern: register tools eagerly, then enable or disable them as UI state changes.
+
+```ts
+const saveHandle = app.registerTool("save", { description: "Save changes" }, saveHandler);
+saveHandle.disable(); // hidden until there are unsaved changes
+
+editor.on("dirty", async () => {
+  saveHandle.enable();
+  await app.sendToolListChanged();
+});
+```
+
+## Tool visibility — model, app, or both
+
+The `_meta.ui.visibility` array on a tool controls who can call it: `"model"`, `"app"`, or both. App-side tools that are surfaced to the model should remain `["model", "app"]` (the default). Set `["app"]` for tools that are pure UI plumbing (refresh buttons, pagination) and shouldn't clutter the model's tool list. See [Tool `_meta`](/mcp-apps/server/tool-meta#visibility) for the full discussion.
+
+```ts
+app.registerTool(
+  "refresh",
+  {
+    description: "Reload data — UI only",
+    _meta: { ui: { visibility: ["app"] } },
+  },
+  refreshHandler,
+);
+```
+
+## End-to-end example
+
+```ts
+import { App } from "@modelcontextprotocol/ext-apps";
+import { z } from "zod";
+
+const app = new App(
+  { name: "DocEditor", version: "1.0.0" },
+  { tools: { listChanged: true } },
+);
+
+// Static handler for tools known up front
+app.oncalltool = async (params) => {
+  if (params.name === "get-selection") {
+    return {
+      content: [{ type: "text", text: window.getSelection()?.toString() ?? "" }],
+    };
+  }
+  throw new Error(`Unknown tool: ${params.name}`);
+};
+
+app.onlisttools = async () => ({
+  tools: [
+    {
+      name: "get-selection",
+      description: "Read the user's current selection",
+      inputSchema: { type: "object" },
+    },
+  ],
+});
+
+// Dynamic tool added later from UI state
+const insertHandle = app.registerTool(
+  "insert-text",
+  {
+    description: "Insert text at the cursor",
+    inputSchema: z.object({ text: z.string() }),
+  },
+  ({ text }) => {
+    insertAtCursor(text);
+    return { content: [{ type: "text", text: "Inserted" }] };
+  },
+);
+
+await app.connect();
+await app.sendToolListChanged(); // announce the dynamic tool
+```
+
+## Related
+
+- [`onlisttools`](/mcp-apps/app/event-handlers/onlisttools) — request handler for `tools/list`
+- [`oncalltool`](/mcp-apps/app/event-handlers/oncalltool) — request handler for `tools/call`
+- [`registerTool`](/mcp-apps/app/requests#registertool) — dynamic registry on the `App`
+- [`sendToolListChanged`](/mcp-apps/app/requests#sendtoollistchanged) — notify the host of changes
+- [Tool `_meta`](/mcp-apps/server/tool-meta) — visibility and resource linkage
+- [`useAppTools`](/app-framework/hooks/use-app-tools) and [`useRegisterTool`](/app-framework/hooks/use-register-tool) — sunpeak React wrappers

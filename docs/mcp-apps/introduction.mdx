@@ -93,6 +93,8 @@ Tools can be visible to the model, the app, or both. By default, tools are visib
 
 App-only tools (`visibility: ["app"]`) are useful for UI interactions that shouldn't clutter the agent's context — things like refresh buttons, pagination controls, or form submissions. The model never sees these tools; they exist purely for the View to call.
 
+Views can also register their **own** tools that the host (and the model) can call back into. See [App Tools](/mcp-apps/app/app-tools) for the full bidirectional pattern.
+
 ## What display modes are available?
 
 Views can be displayed in different modes:

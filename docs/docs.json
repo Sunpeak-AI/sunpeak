@@ -284,6 +284,7 @@
             "group": "App",
             "pages": [
               "mcp-apps/app/app-class",
+              "mcp-apps/app/app-tools",
               {
                 "group": "Accessors",
                 "pages": [
