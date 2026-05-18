@@ -39,6 +39,7 @@ sunpeak replicates the ChatGPT and Claude runtimes locally so you can:
 - Run e2e and visual tests in CI across every host, theme, and data combo, without accounts or API credits.
 - Iterate with HMR in ChatGPT and automatic rebuilds in Claude, instead of manual refreshes.
 - Pin tool states with simulation fixtures so UI regressions can't ship.
+- Automate the real-host loop with live tests: scripts that open your browser, prompt ChatGPT, and assert against the rendered app so you stop click-testing by hand.
 
 sunpeak also runs evals against your MCP server across multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model, so you can prove your tool descriptions and schemas hold up on cheaper models, not just the flagship ones.
 
@@ -90,7 +91,7 @@ sunpeak replicates these host runtimes and provides simulation fixtures (JSON fi
 npx sunpeak test init --server http://localhost:8000/mcp
 ```
 
-This scaffolds E2E tests, visual regression, live host tests, and multi-model evals. Then run them:
+This scaffolds E2E tests, visual regression, live tests, and multi-model evals. Then run them:
 
 ```bash
 npx sunpeak test
