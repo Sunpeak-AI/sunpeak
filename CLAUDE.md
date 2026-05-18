@@ -12,8 +12,9 @@ The value proposition of the sunpeak framework is to help developers and their a
    3. Cancel all the $20 per person per host per month testing accounts.
    4. Avoid burning host credits on every test and code change.
 2. Verify MCP tools work across multiple LLM models via the eval framework. Evals connect to the MCP server, discover tools, and send prompts to multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model and reports pass/fail counts, so developers can confirm that tool descriptions and schemas work reliably on smaller and cheaper models, not just flagship ones. Opt-in via `sunpeak test --eval` because evals cost money.
-3. Build multi-platform MCP Apps in a structured way that's easy to understand and get started.
-4. Test their MCPs in ChatGPT with HMR and Claude with automatic rebuilds and refresh notifications.
+3. Automate the real-host testing loop with **live tests** (`sunpeak test --live`): scripts that drive a real browser into ChatGPT (and other hosts as they're supported), send prompts that trigger MCP tool calls against the developer's server, and assert against the actually-rendered app via Playwright. Live tests catch what the inspector can't (real MCP connection behavior, real LLM tool invocation, host-specific iframe rendering, production resource loading) and replace the manual prompt-and-click loop. Opt-in because they hit real accounts.
+4. Build multi-platform MCP Apps in a structured way that's easy to understand and get started.
+5. Test their MCPs in ChatGPT with HMR and Claude with automatic rebuilds and refresh notifications.
 
 ## Quick Reference
 
