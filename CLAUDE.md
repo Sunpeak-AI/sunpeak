@@ -11,8 +11,9 @@ The value proposition of the sunpeak framework is to help developers and their a
    2. Protect developers from 4-click manual refreshes on every code change in each host.
    3. Cancel all the $20 per person per host per month testing accounts.
    4. Avoid burning host credits on every test and code change.
-2. Build multi-platform MCP Apps in a structured way that's easy to understand and get started.
-3. Test their MCPs in ChatGPT with HMR and Claude with automatic rebuilds and refresh notifications.
+2. Verify MCP tools work across multiple LLM models via the eval framework. Evals connect to the MCP server, discover tools, and send prompts to multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model and reports pass/fail counts, so developers can confirm that tool descriptions and schemas work reliably on smaller and cheaper models, not just flagship ones. Opt-in via `sunpeak test --eval` because evals cost money.
+3. Build multi-platform MCP Apps in a structured way that's easy to understand and get started.
+4. Test their MCPs in ChatGPT with HMR and Claude with automatic rebuilds and refresh notifications.
 
 ## Quick Reference
 
@@ -217,6 +218,8 @@ Convention-over-configuration for building MCP Apps. The inspector and testing a
 #### 2. Testing Framework
 
 Automated testing powered by the inspector. Works with any MCP server in any language. sunpeak's long-term goal is to be the generic testing framework for all MCP servers, not just MCP Apps. MCP Apps (interactive UIs in chat) are the current specialty, but the testing framework should work for any server that implements the MCP protocol. Keep MCP protocol primitives as a clean, 1:1 layer that can evolve with the spec. Layer sunpeak-specific functionality (inspector rendering, visual regression, simulations, MCP Apps features) on top without mixing it into the protocol layer.
+
+The framework covers two distinct testing needs: (1) **runtime correctness** via e2e, visual, and live tests that exercise the replicated ChatGPT and Claude runtimes, and (2) **model compatibility** via the eval framework (`sunpeak/eval`), which connects to your MCP server, discovers tools via MCP protocol, and sends prompts to multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model and reports pass/fail counts so developers can confirm tool descriptions and schemas work reliably on smaller and cheaper models, not just flagship ones. Evals are opt-in (`--eval`) because they cost money.
 
 **`mcp` fixture** (`sunpeak/test`) — protocol-only methods:
 - `callTool(name, input?)` — call a tool, return the MCP result

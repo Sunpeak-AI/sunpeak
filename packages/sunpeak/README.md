@@ -16,9 +16,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat&logo=typescript&label=ts&color=FFB800&logoColor=white&labelColor=000035)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-19-blue?style=flat&logo=react&label=react&color=FFB800&logoColor=white&labelColor=000035)](https://reactjs.org/)
 
-MCP App framework, MCP testing framework, and inspector for MCP servers and MCP Apps.
+Server-agnostic MCP testing framework and full-stack MCP App framework.
 
-Build cross-platform: sunpeak is a ChatGPT App framework, Claude Connector framework, and more.
+MCP Apps are cross-platform, meaning sunpeak is a ChatGPT App framework, Claude Connector framework, and more.
 
 ```bash
 npx sunpeak new
@@ -30,7 +30,29 @@ npx sunpeak new
 [Documentation](https://sunpeak.ai/docs) ~
 [GitHub](https://github.com/Sunpeak-AI/sunpeak)
 
-## sunpeak is three things
+## Why sunpeak
+
+Building an MCP App today means testing in ChatGPT and Claude by hand. Every code change costs a 4-click refresh in each host, every teammate needs a $20/month account per host, and every test burns credits.
+
+sunpeak replicates the ChatGPT and Claude runtimes locally so you can:
+
+- Run e2e and visual tests in CI across every host, theme, and data combo, without accounts or API credits.
+- Iterate with HMR in ChatGPT and automatic rebuilds in Claude, instead of manual refreshes.
+- Pin tool states with simulation fixtures so UI regressions can't ship.
+
+sunpeak also runs evals against your MCP server across multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model, so you can prove your tool descriptions and schemas hold up on cheaper models, not just the flagship ones.
+
+<div align="center">
+  <a href="https://sunpeak.ai/docs/testing/evals">
+    <picture>
+      <img alt="Sunpeak logo" src="https://cdn.sunpeak.ai/sunpeak-eval.png">
+    </picture>
+  </a>
+</div>
+
+The same foundation powers an app framework for multi-platform MCP Apps and a standalone inspector that works with any MCP server in any language.
+
+## sunpeak has three use cases
 
 ### 1. App Framework
 
@@ -75,6 +97,8 @@ npx sunpeak test
 ```
 
 Playwright fixtures handle inspector startup, MCP connection, iframe traversal, and host switching. Works with Python, Go, TypeScript, Rust, or any language.
+
+Evals add a second dimension: model compatibility. The eval framework connects to your MCP server via the MCP protocol, discovers its tools, and sends prompts to multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model and reports pass/fail counts, so you can measure whether your tool descriptions and schemas work reliably across smaller and cheaper models, not just the flagship ones.
 
 ```ts
 import { test, expect } from 'sunpeak/test';
