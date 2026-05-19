@@ -211,6 +211,13 @@ async function negotiateOAuth(serverUrl) {
   if (!authUrl) {
     throw new Error('OAuth flow returned REDIRECT but no authorization URL was captured');
   }
+  // A malicious MCP server can publish OAuth metadata whose
+  // `authorization_endpoint` is a `javascript:` (or other non-http) URL.
+  // Refuse to follow or open anything that isn't http(s) so we never feed a
+  // `javascript:` URL to the OS opener or assign it to a popup location.
+  if (authUrl.protocol !== 'http:' && authUrl.protocol !== 'https:') {
+    throw new Error(`OAuth authorization URL has unsupported scheme: ${authUrl.protocol}`);
+  }
 
   // Try the anonymous/auto-approved path first: follow the authorization URL
   // without a browser and see if it immediately redirects with a code.
@@ -1061,6 +1068,17 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             const authUrl = oauthState.getAuthUrl();
             if (!authUrl) {
               throw new Error('OAuth flow requested redirect but no authorization URL was generated');
+            }
+            // Reject non-http(s) authorization URLs. A malicious MCP server can
+            // publish OAuth metadata whose `authorization_endpoint` is a
+            // `javascript:` URL; if we forwarded that to the client, the popup
+            // navigation would execute attacker JS in the inspector's origin.
+            if (authUrl.protocol !== 'http:' && authUrl.protocol !== 'https:') {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(JSON.stringify({
+                error: `OAuth authorization URL has unsupported scheme: ${authUrl.protocol}`,
+              }));
+              return;
             }
             // Register the state parameter so the callback can find the right provider.
             // Clean up any stale pending flows for the same server URL first

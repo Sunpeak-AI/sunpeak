@@ -339,6 +339,25 @@ export function Inspector({
       }
 
       if (data.status === 'redirect' && data.authUrl) {
+        // Defense in depth: refuse to navigate the popup to anything that
+        // isn't a real http(s) URL. The server validates this too, but a
+        // `javascript:` URL slipping through here would execute attacker
+        // code in the inspector's origin (popup inherits opener origin).
+        let parsedAuthUrl: URL | null = null;
+        try {
+          parsedAuthUrl = new URL(data.authUrl);
+        } catch {
+          // fall through to error below
+        }
+        if (
+          !parsedAuthUrl ||
+          (parsedAuthUrl.protocol !== 'http:' && parsedAuthUrl.protocol !== 'https:')
+        ) {
+          popup?.close();
+          setOauthError('OAuth authorization URL is not a valid http(s) URL.');
+          setOauthStatus('error');
+          return;
+        }
         // Navigate the pre-opened popup to the authorization URL.
         // If the popup was blocked, show an error.
         if (!popup || popup.closed) {
@@ -346,7 +365,7 @@ export function Inspector({
           setOauthStatus('error');
           return;
         }
-        popup.location.href = data.authUrl;
+        popup.location.href = parsedAuthUrl.toString();
 
         // Listen for the popup's callback via two channels:
         // 1. postMessage — works when window.opener is available
