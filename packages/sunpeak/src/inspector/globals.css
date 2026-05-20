@@ -1,3 +1,13 @@
+/*
+ * Full Tailwind preflight + utilities. This is the CSS resources load into
+ * their iframe documents — they need preflight applied at `html`/`body`
+ * level to reset browser defaults (sans-serif body, list bullets, default
+ * border widths, transparent button backgrounds).
+ *
+ * Embedders who host the Inspector inside their own React app should
+ * import `sunpeak/embed.css` instead, which contains preflight scoped under
+ * `.sunpeak-inspector-root` so it doesn't bleed into host page styles.
+ */
 @import "tailwindcss";
 
 /* Scan simulator source files for Tailwind classes */
@@ -7,77 +17,13 @@
 @source "../chatgpt/**/*.{ts,tsx}";
 @source "../claude/**/*.{ts,tsx}";
 
-/* Configure dark mode to use data-theme attribute */
+/*
+ * Configure dark mode to use data-theme attribute. The selector matches when
+ * data-theme="dark" is on the element itself OR any ancestor — this lets the
+ * Inspector set the attribute on its own root (the embed-friendly model) while
+ * still working in older code paths where it's set on a parent.
+ */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Sidebar utility — host-overridable via --sim-bg-sidebar */
-@utility bg-sidebar {
-  background-color: var(--sim-bg-sidebar, var(--color-background-secondary));
-}
-
-/* Sidebar form elements — match SDK look */
-.sunpeak-inspector-root select,
-.sunpeak-inspector-root input:not([type="checkbox"]),
-.sunpeak-inspector-root textarea {
-  border: 0;
-  box-shadow: inset 0 0 0 1px var(--color-border-primary);
-  transition: box-shadow 150ms ease, color 150ms ease, background-color 150ms ease;
-}
-.sunpeak-inspector-root select:hover,
-.sunpeak-inspector-root input:not([type="checkbox"]):hover,
-.sunpeak-inspector-root textarea:hover {
-  box-shadow: inset 0 0 0 1px var(--color-border-secondary);
-}
-.sunpeak-inspector-root select:focus-visible,
-.sunpeak-inspector-root input:not([type="checkbox"]):focus-visible,
-.sunpeak-inspector-root textarea:focus-visible {
-  box-shadow: inset 0 0 0 1px var(--color-border-secondary);
-  outline: 2px solid var(--color-ring-primary);
-  outline-offset: -1px;
-}
-.sunpeak-inspector-root button:focus-visible {
-  outline: 2px solid var(--color-ring-primary);
-  outline-offset: -1px;
-}
-
-/* Custom checkbox */
-.sunpeak-inspector-root input[type="checkbox"] {
-  appearance: none;
-  -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  border: 1px solid var(--color-border-secondary);
-  background-color: transparent;
-  background-size: 10px;
-  background-position: center;
-  background-repeat: no-repeat;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: border-color 150ms ease, background-color 150ms ease;
-}
-.sunpeak-inspector-root input[type="checkbox"]:hover {
-  border-color: var(--color-text-tertiary);
-}
-.sunpeak-inspector-root input[type="checkbox"]:checked {
-  border-color: var(--color-background-inverse);
-  background-color: var(--color-background-inverse);
-  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 10 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M2 5L4.25 7L8 3' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
-}
-[data-theme="dark"] .sunpeak-inspector-root input[type="checkbox"]:checked {
-  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 10 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M2 5L4.25 7L8 3' stroke='%23111' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
-}
-.sunpeak-inspector-root input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--color-ring-primary);
-  outline-offset: 2px;
-}
-
-/* Hide native number input spinners */
-.sunpeak-inspector-root input[type="number"]::-webkit-inner-spin-button,
-.sunpeak-inspector-root input[type="number"]::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-.sunpeak-inspector-root input[type="number"] {
-  -moz-appearance: textfield;
-}
+/* Sidebar form + checkbox rules, shared with `embed.css` via this partial. */
+@import "./sidebar-chrome.css";

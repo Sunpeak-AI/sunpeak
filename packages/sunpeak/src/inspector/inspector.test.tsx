@@ -1009,6 +1009,12 @@ describe('Inspector', () => {
     });
   });
 
+  // Note: integration of the `app` prop with the iframe lifecycle is covered
+  // by the flattener unit tests (`app-flatten.test.ts`) and the e2e suite,
+  // not here. jsdom's iframe semantics differ enough from real browsers that
+  // rendering a populated app through the iframe stack adds noise without
+  // catching anything the unit + e2e layers don't already cover.
+
   // ── Story 3: Programmatic testing (URL params) ──
   // URL param tests are covered by E2E tests (inspector-modes.spec.ts) which
   // navigate to real URLs. Unit-testing URL params in jsdom is unreliable because
@@ -1044,6 +1050,98 @@ describe('Inspector', () => {
       // @ts-expect-error — prodTools was removed from the type
       const url = createInspectorUrl({ simulation: 'test', prodTools: true });
       expect(url).not.toContain('prodTools');
+    });
+  });
+
+  // ── Embedded mode: the `app` prop drives a self-contained instance ──
+  // These tests use an empty-tools app so the Inspector renders the empty
+  // state (no iframe lifecycle to drive in jsdom). Sidebar gating and root
+  // sizing are observable without rendering an actual resource.
+  describe('Embedded mode (`app` prop)', () => {
+    const emptyApp = { name: 'My Embed', resources: [], tools: [] };
+
+    it('hides the MCP Server URL input', () => {
+      render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      expect(screen.queryByTestId('server-url')).not.toBeInTheDocument();
+    });
+
+    it('hides the Authentication section', () => {
+      render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      expect(screen.queryByText('Authentication')).not.toBeInTheDocument();
+    });
+
+    it('hides the Prod Resources checkbox', () => {
+      render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      expect(
+        screen.queryByRole('checkbox', { name: /prod resources/i })
+      ).not.toBeInTheDocument();
+    });
+
+    it('does not call /__sunpeak/list-tools on mount', () => {
+      render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      expect(fetchSpy).not.toHaveBeenCalledWith('/__sunpeak/list-tools');
+    });
+
+    it('uses h-full w-full instead of viewport sizing on the root element', () => {
+      const { container } = render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      const root = container.querySelector('.sunpeak-inspector-root');
+      expect(root?.className).toMatch(/\bh-full\b/);
+      expect(root?.className).not.toMatch(/\bh-screen\b/);
+    });
+
+    it('shows the embedded-mode empty-state message when no tools exist', () => {
+      render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      expect(screen.getByText('No tools with UI resources in this app')).toBeInTheDocument();
+    });
+
+    it('reacts to a new `app` prop — swapping in a different app updates the tool list', async () => {
+      const appA = {
+        name: 'A',
+        resources: [],
+        tools: [],
+      };
+      const appB = {
+        name: 'B',
+        resources: [{ uri: 'ui://b', html: '<html><body>B</body></html>' }],
+        tools: [
+          {
+            tool: {
+              name: 'tool_b',
+              inputSchema: { type: 'object' as const, properties: {}, required: [] },
+              _meta: { openai: { outputTemplate: 'ui://b' } },
+            },
+          },
+        ],
+      };
+      const { rerender } = render(<Inspector app={appA} onCallTool={vi.fn()} />);
+      // No tools in appA — embedded empty state.
+      expect(screen.getByText('No tools with UI resources in this app')).toBeInTheDocument();
+      // Swap to appB. The Inspector should pick up the new tool without errors.
+      rerender(<Inspector app={appB} onCallTool={vi.fn()} />);
+      await waitFor(() => {
+        const opts = screen
+          .getAllByRole('option')
+          .filter((o) => o.textContent === 'tool_b');
+        expect(opts.length).toBe(1);
+      });
+    });
+
+    it('warns when both `app` and `simulations` are supplied', () => {
+      const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      try {
+        render(
+          <Inspector
+            app={emptyApp}
+            simulations={{ stray: createSim() }}
+            onCallTool={vi.fn()}
+          />
+        );
+        expect(warnSpy).toHaveBeenCalledWith(
+          expect.stringContaining('Both `app` and `simulations` were provided')
+        );
+      } finally {
+        warnSpy.mockRestore();
+      }
     });
   });
 });

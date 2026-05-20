@@ -3,6 +3,7 @@ import { useEffect, useRef, useMemo, useCallback } from 'react';
 import { McpAppHost, type McpAppHostOptions } from './mcp-app-host';
 import { MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
 import { generateSandboxProxyHtml } from './sandbox-proxy';
+import { SUNPEAK_INLINE_HELPER_SCRIPT } from './inline-helper-script';
 import type { McpUiHostContext, McpUiResourcePermissions } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
@@ -224,6 +225,37 @@ e.source.postMessage({jsonrpc:"2.0",method:"sunpeak/fence-ack",params:{fenceId:f
 });}});`;
 
 /**
+ * Inject the paint-fence responder and (optionally) a platform runtime script
+ * into a user-provided HTML document. Used for the `html` prop mode where the
+ * embedder hands us a complete document from `mcpClient.readResource(...)` and
+ * we need to splice in the same infrastructure that the `scriptSrc` wrapper
+ * provides. The injection is placed before `</head>` when present, falling
+ * back to the start of `<body>` or the document start.
+ */
+export function injectInfraScripts(html: string, platformScript?: string): string {
+  const fenceTag = `<script data-sunpeak-fence>${PAINT_FENCE_SCRIPT}</script>`;
+  const platformTag = platformScript ? `<script>${platformScript}</script>` : '';
+  // Inline MCP Apps SDK shim — completes the initialize handshake on behalf
+  // of plain-HTML resources and exposes window.sunpeak.{onToolInput,
+  // onToolResult, onHostContextChange}. The helper bails out if the real
+  // SDK is already loaded.
+  const helperTag = `<script data-sunpeak-helper>${SUNPEAK_INLINE_HELPER_SCRIPT}</script>`;
+  const injection = `${platformTag}${fenceTag}${helperTag}`;
+  // Tag matching is case-insensitive per the HTML spec. Most apps use the
+  // lowercase form, but be tolerant of `</HEAD>` / `<BODY>` so an upstream
+  // generator quirk doesn't silently skip the injection.
+  const headMatch = html.match(/<\/head\s*>/i);
+  if (headMatch) {
+    return html.replace(headMatch[0], `${injection}${headMatch[0]}`);
+  }
+  const bodyMatch = html.match(/<body([^>]*)>/i);
+  if (bodyMatch) {
+    return html.replace(bodyMatch[0], `${bodyMatch[0]}${injection}`);
+  }
+  return injection + html;
+}
+
+/**
  * Generates HTML wrapper for a script URL.
  * The MCP Apps SDK in the loaded script handles communication via PostMessageTransport.
  */
@@ -309,6 +341,15 @@ interface IframeResourceProps {
    * Mutually exclusive with src.
    */
   scriptSrc?: string;
+  /**
+   * Resource HTML to render directly — typically the string returned by
+   * `mcpClient.readResource(...)`. The Inspector hands the HTML to the
+   * sandbox proxy via PostMessage; the host page never hosts it at a URL.
+   * The Inspector injects its paint-fence responder and (when enabled) the
+   * platform runtime script before delivery.
+   * Mutually exclusive with src and scriptSrc.
+   */
+  html?: string;
   /** Initial host context for the MCP Apps bridge */
   hostContext?: McpUiHostContext;
   /** Tool input arguments to send after connection */
@@ -371,6 +412,7 @@ interface IframeResourceProps {
 export function IframeResource({
   src,
   scriptSrc,
+  html,
   hostContext,
   toolInput,
   toolInputPartial,
@@ -389,7 +431,8 @@ export function IframeResource({
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hostRef = useRef<McpAppHost | null>(null);
 
-  // Determine which URL to validate
+  // Determine which URL to validate (html mode has no URL — embedder supplies
+  // the document body directly).
   const resourceUrl = src ?? scriptSrc;
 
   // Refs for resource data so the stable onSandboxReady callback can access current values
@@ -399,6 +442,8 @@ export function IframeResource({
   srcRef.current = src;
   const scriptSrcRef = useRef(scriptSrc);
   scriptSrcRef.current = scriptSrc;
+  const htmlRef = useRef(html);
+  htmlRef.current = html;
   const cspRef = useRef(csp);
   cspRef.current = csp;
   const hostContextRef = useRef(hostContext);
@@ -479,10 +524,30 @@ export function IframeResource({
           // The sandbox proxy is ready. Deliver the app content.
           const currentSrc = srcRef.current;
           const currentScriptSrc = scriptSrcRef.current;
+          const currentHtml = htmlRef.current;
           const currentHost = hostRef.current;
           if (!currentHost) return;
 
-          if (currentScriptSrc) {
+          if (currentHtml) {
+            // html mode: the embedder handed us a complete HTML document
+            // (typically from mcpClient.readResource). Inject the paint-fence
+            // responder and (when enabled) the mock platform runtime, then
+            // hand the document to the proxy via the existing
+            // sandbox-resource-ready protocol.
+            const platformScriptStr = injectOpenAIRuntimeRef.current
+              ? MOCK_OPENAI_RUNTIME_SCRIPT
+              : undefined;
+            const finalHtml = injectInfraScripts(currentHtml, platformScriptStr);
+            currentHost.sendSandboxResourceReady({
+              html: finalHtml,
+              sandbox:
+                'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox',
+            });
+            if (iframeRef.current) {
+              iframeRef.current.style.opacity = '1';
+              iframeRef.current.style.transition = 'opacity 100ms';
+            }
+          } else if (currentScriptSrc) {
             // scriptSrc mode (prod): use the official sandbox-resource-ready protocol.
             // Generate the full app HTML and send it to the proxy.
             const absoluteScriptSrc = currentScriptSrc.startsWith('/')
@@ -648,7 +713,30 @@ export function IframeResource({
   // through PostMessage, not via iframe src/srcdoc.
   const sandboxSrc = useMemo(() => {
     if (!sandboxUrl) return undefined;
-    const url = new URL('/proxy', sandboxUrl);
+    // Two supported shapes for sandboxUrl:
+    //   1. Host root, e.g. "http://localhost:24680" — append "/proxy" (the
+    //      CLI dev server convention from `startSandboxServer`).
+    //   2. Full URL, e.g. "https://sandbox.example.com/sandbox-proxy.html"
+    //      — use as-is. Embedders hosting the static `dist/sandbox-proxy.html`
+    //      pass the file's full URL.
+    // We treat anything with a path beyond "/" as a full URL.
+    let url: URL;
+    try {
+      const parsed = new URL(sandboxUrl);
+      const hasPath = parsed.pathname && parsed.pathname !== '/';
+      url = hasPath ? parsed : new URL('/proxy', sandboxUrl);
+    } catch {
+      return undefined;
+    }
+    // Reject anything that isn't http(s). The URL constructor accepts
+    // `javascript:` and `data:` schemes; while modern browsers block
+    // `javascript:` in cross-origin iframe src, treating non-http(s) values
+    // here as invalid matches the precedent set by the OAuth flow and the
+    // mock `openExternal` runtime, and removes a class of footguns.
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      console.warn('[IframeResource] Ignoring non-http(s) sandboxUrl:', sandboxUrl);
+      return undefined;
+    }
     if (injectOpenAIRuntime) url.searchParams.set('platform', 'chatgpt');
     return url.toString();
   }, [sandboxUrl, injectOpenAIRuntime]);

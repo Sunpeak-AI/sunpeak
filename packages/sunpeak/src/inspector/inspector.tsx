@@ -23,6 +23,8 @@ import { getHostShell, getRegisteredHosts, type HostId } from './hosts';
 import { resolveServerToolResult } from '../types/simulation';
 import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './inspector-types';
+import type { InspectorApp } from './app-types';
+import { flattenAppToSimulations } from './app-flatten';
 
 // Register built-in host shells. These imports live here (in the component file)
 // rather than in the barrel index.ts because Rollup code-splitting can separate
@@ -36,6 +38,18 @@ const DOCS_BASE_URL = 'https://sunpeak.ai/docs';
 
 export interface InspectorProps {
   children?: React.ReactNode;
+  /**
+   * Hierarchical input for embedding: an MCP App with its resources, tools,
+   * and saved simulations. Mirrors the MCP App data model — resources are
+   * keyed by URI, and each tool's `_meta.openai.outputTemplate` selects the
+   * resource it renders. The Inspector flattens this internally; pass the
+   * shape you already have from `listTools` + `listResources` + your fixture
+   * store and the component renders it. See `InspectorApp`.
+   *
+   * Mutually exclusive with `simulations`. When both are provided, `app`
+   * wins — `simulations` stays for back-compat with the CLI codepath.
+   */
+  app?: InspectorApp;
   simulations?: Record<string, Simulation>;
   appName?: string;
   appIcon?: string;
@@ -94,11 +108,18 @@ function hasFixtureData(sim: Simulation): boolean {
   return sim.toolResult != null || sim.toolInput != null || sim.serverTools != null;
 }
 
+// Reference-stable empty default. A destructuring default of `= {}` creates a
+// fresh object on every render — when combined with `useMemo(..., [..., props])`
+// downstream that drives a `useEffect(setState(...), [memo])`, that produces
+// an infinite render loop. Don't reinline this.
+const EMPTY_SIMULATIONS: Readonly<Record<string, Simulation>> = Object.freeze({});
+
 export function Inspector({
   children,
-  simulations: initialSimulations = {},
-  appName = 'Sunpeak',
-  appIcon,
+  app,
+  simulations: initialSimulationsProp = EMPTY_SIMULATIONS,
+  appName: appNameProp,
+  appIcon: appIconProp,
   defaultHost = 'chatgpt',
   onCallTool,
   onCallToolDirect,
@@ -108,6 +129,43 @@ export function Inspector({
   sandboxUrl,
   mcpServerUrl,
 }: InspectorProps) {
+  // When `app` is provided it drives both the simulation map and the header
+  // name/icon. Falling back to the legacy props keeps existing callers working.
+  const initialSimulations = React.useMemo(
+    () => (app ? flattenAppToSimulations(app) : initialSimulationsProp),
+    [app, initialSimulationsProp]
+  );
+  const appName = app?.name ?? appNameProp ?? 'Sunpeak';
+  const appIcon = app?.icon ?? appIconProp;
+  // `!!app` (rather than `app !== undefined`) so a slipped-in `null` doesn't
+  // flip the inspector into embedded mode while delivering no actual app.
+  const isEmbedded = !!app;
+
+  // Warn at most once per component instance when both inputs are supplied.
+  // Without the ref guard the useEffect dep `initialSimulationsProp` changes
+  // reference each parent render (when `simulations` is passed inline), which
+  // would cause the warning to spam the console repeatedly.
+  const conflictWarnedRef = React.useRef(false);
+  React.useEffect(() => {
+    if (conflictWarnedRef.current) return;
+    if (
+      app &&
+      initialSimulationsProp &&
+      Object.keys(initialSimulationsProp).length > 0
+    ) {
+      conflictWarnedRef.current = true;
+      console.warn(
+        '[Inspector] Both `app` and `simulations` were provided. `app` takes precedence; `simulations` is ignored.'
+      );
+    }
+  }, [app, initialSimulationsProp]);
+  // Root element ref — host theming, CSS variables, and page-style overrides
+  // are applied here rather than on `document.documentElement`. This keeps the
+  // Inspector self-contained when embedded inside another React app: the host
+  // page's `<button>`/`<input>`/typography stay untouched, and the inspector's
+  // colors/fonts apply only to its own subtree.
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+
   // Simulations can be updated when the user reconnects to a different server.
   const [simulations, setSimulations] = React.useState(initialSimulations);
   // Sync with prop changes (e.g., HMR during development).
@@ -238,7 +296,9 @@ export function Inspector({
 
   // useMcpConnection does a mount-only health check for the initial URL.
   // URL changes are handled below via connection.reconnect().
-  const connection = useMcpConnection(mcpServerUrl || undefined);
+  // In embedded mode (`app` prop) the Inspector never talks to /__sunpeak/*
+  // endpoints — connection state lives in the embedding app's MCP client.
+  const connection = useMcpConnection(isEmbedded ? undefined : mcpServerUrl || undefined);
   const [prodResources, setProdResources] = React.useState(
     state.urlProdResources ?? defaultProdResources
   );
@@ -590,23 +650,48 @@ export function Inspector({
     }
   }, [activeShell, displayMode, setDisplayMode]);
 
-  // Apply host style variables to the document root.
-  // Uses useLayoutEffect so variables are set BEFORE paint, preventing a flash
-  // of stale colors when switching hosts and then toggling theme.
-  React.useLayoutEffect(() => {
-    const vars = activeShell?.styleVariables;
-    if (!vars) return;
-    const root = document.documentElement;
-    for (const [key, value] of Object.entries(vars)) {
-      if (value) root.style.setProperty(key, value);
-    }
-  }, [activeShell]);
-
-  // Apply host page styles. Cleans up old properties when switching hosts.
-  // Uses useLayoutEffect to stay in sync with style variables above.
+  // Apply host theming + CSS variables + page styles to the inspector root.
+  // Scoped to the root element (not document.documentElement) so the host page
+  // is unaffected when the Inspector is embedded inside another React app.
+  // Uses useLayoutEffect so values are set BEFORE paint, preventing a flash
+  // of stale colors when switching hosts or toggling theme.
+  //
+  // Both `styleVariables` (--color-* tokens) and `pageStyles` keys are tracked
+  // so they can be removed when switching to a host that doesn't define them.
+  // Necessary for third-party HostShells; the two built-in shells happen to
+  // define the same set of keys so this would otherwise look like it works
+  // by overwriting.
+  const prevStyleVarKeysRef = React.useRef<string[]>([]);
   const prevPageStyleKeysRef = React.useRef<string[]>([]);
   React.useLayoutEffect(() => {
-    const root = document.documentElement;
+    const root = rootRef.current;
+    if (!root) return;
+
+    // Data attributes — `data-theme` drives the Tailwind `dark` variant via
+    // the `@custom-variant` rule in globals.css. `color-scheme` is set so
+    // `light-dark()` CSS functions resolve correctly inside the subtree.
+    root.setAttribute('data-theme', state.theme);
+    root.style.colorScheme = state.theme;
+
+    // Style variables (e.g. host-specific --color-* tokens).
+    for (const key of prevStyleVarKeysRef.current) {
+      root.style.removeProperty(key);
+    }
+    const vars = activeShell?.styleVariables;
+    if (vars) {
+      const keys: string[] = [];
+      for (const [key, value] of Object.entries(vars)) {
+        if (value) {
+          root.style.setProperty(key, value);
+          keys.push(key);
+        }
+      }
+      prevStyleVarKeysRef.current = keys;
+    } else {
+      prevStyleVarKeysRef.current = [];
+    }
+
+    // Page-level style overrides.
     for (const key of prevPageStyleKeysRef.current) {
       root.style.removeProperty(key);
     }
@@ -621,10 +706,14 @@ export function Inspector({
     } else {
       prevPageStyleKeysRef.current = [];
     }
-  }, [activeShell]);
+  }, [activeShell, state.theme]);
 
-  // Inject host font CSS (@font-face rules) so the conversation chrome
-  // uses the same font as the real host (e.g., Anthropic Sans for Claude).
+  // Inject host font CSS (@font-face rules) so the conversation chrome uses
+  // the same font as the real host (e.g., Anthropic Sans for Claude).
+  // @font-face rules can't be scoped to a subtree, so this is the one
+  // document-level injection the Inspector makes. The font itself is only
+  // referenced by host shells inside the Inspector subtree, so the host page
+  // sees a defined-but-unused @font-face — harmless.
   React.useLayoutEffect(() => {
     const fontCss = activeShell?.fontCss;
     const id = 'sunpeak-host-fonts';
@@ -758,13 +847,15 @@ export function Inspector({
           className="text-sm text-center max-w-xs"
           style={{ color: 'var(--color-text-secondary)' }}
         >
-          {isError
-            ? 'Could not connect to MCP server'
-            : isConnected
-              ? 'No tools with UI resources found on this server'
-              : serverUrl
-                ? 'Connecting\u2026'
-                : 'Enter an MCP server URL to get started'}
+          {isEmbedded
+            ? 'No tools with UI resources in this app'
+            : isError
+              ? 'Could not connect to MCP server'
+              : isConnected
+                ? 'No tools with UI resources found on this server'
+                : serverUrl
+                  ? 'Connecting\u2026'
+                  : 'Enter an MCP server URL to get started'}
         </span>
       </div>
     );
@@ -788,6 +879,35 @@ export function Inspector({
         <span className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Building&hellip;
         </span>
+      </div>
+    );
+  } else if (state.resourceHtml) {
+    // Embedded path — caller supplied the resource HTML directly (e.g. from
+    // `mcpClient.readResource(...)`). The Inspector forwards it to the
+    // sandbox iframe via PostMessage; no URL hosting required.
+    content = (
+      <div className="h-full w-full" style={{ background: iframeBg }}>
+        <IframeResource
+          key={`${state.activeHost}-${state.selectedSimulationName}-html`}
+          html={state.resourceHtml}
+          hostContext={hostContext}
+          toolInput={state.toolInput}
+          toolResult={state.effectiveToolResult}
+          hostOptions={{
+            hostInfo: activeShell?.hostInfo,
+            hostCapabilities: activeShell?.hostCapabilities,
+            onDisplayModeChange: state.handleDisplayModeChange,
+            onUpdateModelContext: state.handleUpdateModelContext,
+            onCallTool: handleCallTool,
+          }}
+          permissions={state.permissions}
+          prefersBorder={state.prefersBorder}
+          onDisplayModeReady={state.handleDisplayModeReady}
+          debugInjectState={state.modelContext}
+          injectOpenAIRuntime={state.activeHost === 'chatgpt'}
+          sandboxUrl={sandboxUrl}
+          className="h-full w-full"
+        />
       </div>
     );
   } else if (effectiveResourceUrl) {
@@ -847,8 +967,14 @@ export function Inspector({
     content = children;
   }
 
-  // Use the active host's theme applier
-  const applyTheme = activeShell?.applyTheme;
+  // Theme is applied to rootRef directly via useLayoutEffect above. Override
+  // ThemeProvider's default (which would set data-theme on documentElement)
+  // with a no-op so the embed stays scoped to the Inspector's subtree. The
+  // ThemeProvider default behavior is preserved for callers using it outside
+  // the bundled Inspector.
+  const applyTheme = React.useCallback((_theme: 'light' | 'dark') => {
+    // intentionally empty — applied via rootRef useLayoutEffect above
+  }, []);
 
   // ── Run button (shown in conversation header when no simulation is active) ──
   // Visible when "None (call server)" is selected OR when no fixtures exist for the tool.
@@ -905,10 +1031,20 @@ export function Inspector({
     content
   );
 
+  // Embedded mode: fill the parent container instead of the viewport so the
+  // host React app can place the Inspector inside a sized region (a sidebar,
+  // a modal, a dashboard panel) without it escaping its container.
+  const rootSizing = isEmbedded ? 'h-full w-full' : 'h-screen w-screen';
+
   if (!showSidebar) {
     return (
       <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
-        <div className="flex h-screen w-screen">{conversationContent}</div>
+        <div
+          ref={rootRef}
+          className={`sunpeak-inspector-root flex ${rootSizing}`}
+        >
+          {conversationContent}
+        </div>
       </ThemeProvider>
     );
   }
@@ -916,9 +1052,17 @@ export function Inspector({
   return (
     <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
       <SimpleSidebar
+        rootRef={rootRef}
+        fillParent={isEmbedded}
         controls={
           <div className="space-y-1">
-            {/* ── MCP Server URL (always visible; read-only in demo mode) ── */}
+            {/*
+             * MCP Server URL + Authentication only appear in the CLI codepath.
+             * When `app` is provided (embedded mode), connection and auth are
+             * owned by the embedding application's MCP client.
+             */}
+            {!isEmbedded && (
+              <>
             <SidebarControl
               label={
                 <span className="flex items-center gap-1.5">
@@ -1050,9 +1194,11 @@ export function Inspector({
                 </div>
               </SidebarCollapsibleControl>
             )}
+              </>
+            )}
 
-            {/* ── Prod Resources (framework mode only, hidden in demo mode) ── */}
-            {!hideInspectorModes && !demoMode && (
+            {/* ── Prod Resources (framework mode only, hidden in demo + embedded modes) ── */}
+            {!hideInspectorModes && !demoMode && !isEmbedded && (
               <SidebarCheckbox
                 checked={prodResources}
                 onChange={setProdResources}
@@ -1132,7 +1278,9 @@ export function Inspector({
                           ]),
                       ...(selectedToolInfo?.fixtureSimNames ?? []).map((simName) => ({
                         value: simName,
-                        label: simName,
+                        // Prefer the user-facing displayName (set by the
+                        // `app` prop's flattener) over the internal key.
+                        label: simulations[simName]?.displayName ?? simName,
                       })),
                     ]}
                   />

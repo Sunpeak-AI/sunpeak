@@ -36,6 +36,7 @@
       }
     },
     "./style.css": "./dist/style.css",
+    "./embed.css": "./dist/embed.css",
     "./mcp": {
       "import": {
         "types": "./dist/mcp/index.d.ts",
@@ -131,7 +132,8 @@
     "**/claude-host.*"
   ],
   "scripts": {
-    "build": "vite build",
+    "build": "vite build && node scripts/generate-sandbox-html.mjs && pnpm run build:embed-css",
+    "build:embed-css": "tailwindcss -i src/embed.css -o dist/embed.css --minify && node scripts/scope-embed-theme.mjs",
     "dev": "pnpm -C template dev",
     "format": "prettier --write --list-different \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "lint": "eslint . --ext .ts,.tsx --fix",
@@ -194,6 +196,7 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.60.0",
+    "@tailwindcss/cli": "^4.3.0",
     "@tailwindcss/vite": "^4.3.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

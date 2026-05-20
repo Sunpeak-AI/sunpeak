@@ -16,7 +16,14 @@ type ThemeProviderState = {
 
 const ThemeProviderContext = React.createContext<ThemeProviderState | undefined>(undefined);
 
-/** Default theme applier: sets data-theme attribute on document.documentElement */
+/**
+ * Default theme applier: sets `data-theme` on `document.documentElement`.
+ * Kept for callers using `ThemeProvider` outside the bundled `<Inspector />`
+ * (e.g. custom-inspector builds composed from this package's primitives).
+ * The bundled Inspector overrides this with a no-op applier and applies
+ * theme to its own root element, so embedding it inside a host React app
+ * leaves the host's document attributes untouched.
+ */
 function defaultApplyTheme(theme: Theme): void {
   if (typeof document !== 'undefined') {
     document.documentElement.setAttribute('data-theme', theme);
