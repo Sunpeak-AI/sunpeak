@@ -26,9 +26,7 @@ function makeWindow(opts: { metaContent?: string } = {}) {
   // helper's `ev.source !== window.parent` guard needs.
   const sent: Array<Record<string, unknown>> = [];
   (w as unknown as { parent: unknown }).parent = w;
-  (w.parent as unknown as { postMessage: (d: unknown) => void }).postMessage = (
-    data: unknown
-  ) => {
+  (w.parent as unknown as { postMessage: (d: unknown) => void }).postMessage = (data: unknown) => {
     sent.push(data as Record<string, unknown>);
   };
   // Optional meta-tag opt-out
@@ -45,16 +43,13 @@ function makeWindow(opts: { metaContent?: string } = {}) {
   return { w, sent };
 }
 
-function fireIncoming(
-  w: Window & { parent: Window },
-  data: Record<string, unknown>
-): void {
+function fireIncoming(w: Window & { parent: Window }, data: Record<string, unknown>): void {
   // The helper checks `ev.source !== window.parent`. Use the window's own
   // MessageEvent constructor and dispatcher so happy-dom's types line up.
-  const ev = new (w as unknown as { MessageEvent: typeof MessageEvent }).MessageEvent(
-    'message',
-    { data, source: w.parent as unknown as MessageEventSource }
-  );
+  const ev = new (w as unknown as { MessageEvent: typeof MessageEvent }).MessageEvent('message', {
+    data,
+    source: w.parent as unknown as MessageEventSource,
+  });
   // Happy-dom's Window#dispatchEvent expects happy-dom's Event subtype, not
   // lib.dom's. Cast through unknown to satisfy strict TS.
   (w as unknown as { dispatchEvent: (e: unknown) => boolean }).dispatchEvent(ev);

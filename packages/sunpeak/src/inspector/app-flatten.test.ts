@@ -6,9 +6,7 @@ function makeTool(name: string, outputTemplate?: string) {
   return {
     name,
     inputSchema: { type: 'object' as const, properties: {}, required: [] },
-    ...(outputTemplate
-      ? { _meta: { openai: { outputTemplate } } }
-      : {}),
+    ...(outputTemplate ? { _meta: { openai: { outputTemplate } } } : {}),
   };
 }
 
@@ -31,10 +29,7 @@ describe('flattenAppToSimulations', () => {
       ],
     };
     const flat = flattenAppToSimulations(app);
-    expect(Object.keys(flat).sort()).toEqual([
-      'show_albums__no-albums',
-      'show_albums__two-albums',
-    ]);
+    expect(Object.keys(flat).sort()).toEqual(['show_albums__no-albums', 'show_albums__two-albums']);
     expect(flat['show_albums__two-albums'].resourceHtml).toBe('<html>albums</html>');
     expect(flat['show_albums__two-albums'].tool.name).toBe('show_albums');
     expect(flat['show_albums__two-albums'].toolInput).toEqual({ count: 2 });

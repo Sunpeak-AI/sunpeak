@@ -55,9 +55,7 @@ function toMcpResource(r: InspectorAppResource): Resource {
  * Flatten an `InspectorApp` to the `Record<string, Simulation>` shape the
  * Inspector consumes internally. Returns an empty map if `app` is missing.
  */
-export function flattenAppToSimulations(
-  app: InspectorApp | undefined
-): Record<string, Simulation> {
+export function flattenAppToSimulations(app: InspectorApp | undefined): Record<string, Simulation> {
   if (!app) return {};
   const result: Record<string, Simulation> = {};
 

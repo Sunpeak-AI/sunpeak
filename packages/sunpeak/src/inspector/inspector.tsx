@@ -148,11 +148,7 @@ export function Inspector({
   const conflictWarnedRef = React.useRef(false);
   React.useEffect(() => {
     if (conflictWarnedRef.current) return;
-    if (
-      app &&
-      initialSimulationsProp &&
-      Object.keys(initialSimulationsProp).length > 0
-    ) {
+    if (app && initialSimulationsProp && Object.keys(initialSimulationsProp).length > 0) {
       conflictWarnedRef.current = true;
       console.warn(
         '[Inspector] Both `app` and `simulations` were provided. `app` takes precedence; `simulations` is ignored.'
@@ -1039,10 +1035,7 @@ export function Inspector({
   if (!showSidebar) {
     return (
       <ThemeProvider theme={state.theme} applyTheme={applyTheme}>
-        <div
-          ref={rootRef}
-          className={`sunpeak-inspector-root flex ${rootSizing}`}
-        >
+        <div ref={rootRef} className={`sunpeak-inspector-root flex ${rootSizing}`}>
           {conversationContent}
         </div>
       </ThemeProvider>
@@ -1063,137 +1056,142 @@ export function Inspector({
              */}
             {!isEmbedded && (
               <>
-            <SidebarControl
-              label={
-                <span className="flex items-center gap-1.5">
-                  MCP Server
-                  {serverUrl && !demoMode && (
-                    <span
-                      className="inline-block w-2 h-2 rounded-full"
-                      data-testid="connection-status"
-                      style={{
-                        backgroundColor:
-                          connection.status === 'connected'
-                            ? '#22c55e'
-                            : connection.status === 'connecting'
-                              ? '#eab308'
-                              : connection.status === 'error'
-                                ? '#ef4444'
-                                : '#6b7280',
-                      }}
-                      title={connection.error ?? connection.status}
-                    />
-                  )}
-                </span>
-              }
-              tooltip="MCP server URL"
-              data-testid="server-url"
-            >
-              <SidebarInput
-                value={demoMode ? 'http://localhost:8000/mcp' : serverUrl}
-                onChange={demoMode ? () => {} : setServerUrl}
-                applyOnBlur
-                placeholder="http://localhost:8000/mcp"
-                disabled={demoMode}
-              />
-            </SidebarControl>
-
-            {/* ── Authentication (hidden in demo mode) ── */}
-            {!demoMode && (
-              <SidebarCollapsibleControl
-                key={`auth-${authType === 'none' ? 'none' : 'active'}`}
-                label="Authentication"
-                defaultCollapsed={authType === 'none'}
-              >
-                <div className="space-y-1">
-                  <SidebarSelect
-                    value={authType}
-                    onChange={(value) => {
-                      const newType = value as AuthType;
-                      setAuthType(newType);
-                      setOauthStatus('none');
-                      setOauthError(undefined);
-                      // Reconnect without auth when switching to "none"
-                      if (newType === 'none' && serverUrl) {
-                        connection.reconnect(serverUrl);
-                      }
-                    }}
-                    options={[
-                      { value: 'none', label: 'None' },
-                      { value: 'bearer', label: 'Bearer Token' },
-                      { value: 'oauth', label: 'OAuth' },
-                    ]}
-                  />
-
-                  {authType === 'bearer' && (
-                    <SidebarInput
-                      type="password"
-                      value={bearerToken}
-                      onChange={(value) => {
-                        setBearerToken(value);
-                        // Reconnect with the new token when applied
-                        if (serverUrl && value) {
-                          connection.reconnect(serverUrl, { type: 'bearer', bearerToken: value });
-                        }
-                      }}
-                      applyOnBlur
-                      placeholder="Paste your token"
-                    />
-                  )}
-
-                  {authType === 'oauth' && (
-                    <div className="space-y-1">
-                      <SidebarInput
-                        value={oauthClientId}
-                        onChange={setOauthClientId}
-                        applyOnBlur
-                        placeholder="Client ID (optional)"
-                      />
-                      {oauthClientId && (
-                        <SidebarInput
-                          type="password"
-                          value={oauthClientSecret}
-                          onChange={setOauthClientSecret}
-                          applyOnBlur
-                          placeholder="Client Secret (optional)"
+                <SidebarControl
+                  label={
+                    <span className="flex items-center gap-1.5">
+                      MCP Server
+                      {serverUrl && !demoMode && (
+                        <span
+                          className="inline-block w-2 h-2 rounded-full"
+                          data-testid="connection-status"
+                          style={{
+                            backgroundColor:
+                              connection.status === 'connected'
+                                ? '#22c55e'
+                                : connection.status === 'connecting'
+                                  ? '#eab308'
+                                  : connection.status === 'error'
+                                    ? '#ef4444'
+                                    : '#6b7280',
+                          }}
+                          title={connection.error ?? connection.status}
                         />
                       )}
-                      <SidebarInput
-                        value={oauthScopes}
-                        onChange={setOauthScopes}
-                        applyOnBlur
-                        placeholder="Scopes (optional)"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleStartOAuth}
-                        disabled={!serverUrl || oauthStatus === 'authorizing'}
-                        className="w-full h-7 text-xs rounded-md px-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                        style={{
-                          backgroundColor:
-                            oauthStatus === 'authorized' ? '#22c55e' : 'var(--color-text-primary)',
-                          color: 'var(--color-background-primary)',
+                    </span>
+                  }
+                  tooltip="MCP server URL"
+                  data-testid="server-url"
+                >
+                  <SidebarInput
+                    value={demoMode ? 'http://localhost:8000/mcp' : serverUrl}
+                    onChange={demoMode ? () => {} : setServerUrl}
+                    applyOnBlur
+                    placeholder="http://localhost:8000/mcp"
+                    disabled={demoMode}
+                  />
+                </SidebarControl>
+
+                {/* ── Authentication (hidden in demo mode) ── */}
+                {!demoMode && (
+                  <SidebarCollapsibleControl
+                    key={`auth-${authType === 'none' ? 'none' : 'active'}`}
+                    label="Authentication"
+                    defaultCollapsed={authType === 'none'}
+                  >
+                    <div className="space-y-1">
+                      <SidebarSelect
+                        value={authType}
+                        onChange={(value) => {
+                          const newType = value as AuthType;
+                          setAuthType(newType);
+                          setOauthStatus('none');
+                          setOauthError(undefined);
+                          // Reconnect without auth when switching to "none"
+                          if (newType === 'none' && serverUrl) {
+                            connection.reconnect(serverUrl);
+                          }
                         }}
-                      >
-                        {oauthStatus === 'authorizing'
-                          ? 'Authorizing\u2026'
-                          : oauthStatus === 'authorized'
-                            ? 'Authorized'
-                            : 'Authorize'}
-                      </button>
-                      {oauthError && (
-                        <div
-                          className="text-[9px]"
-                          style={{ color: 'var(--color-text-danger, #dc2626)' }}
-                        >
-                          {oauthError}
+                        options={[
+                          { value: 'none', label: 'None' },
+                          { value: 'bearer', label: 'Bearer Token' },
+                          { value: 'oauth', label: 'OAuth' },
+                        ]}
+                      />
+
+                      {authType === 'bearer' && (
+                        <SidebarInput
+                          type="password"
+                          value={bearerToken}
+                          onChange={(value) => {
+                            setBearerToken(value);
+                            // Reconnect with the new token when applied
+                            if (serverUrl && value) {
+                              connection.reconnect(serverUrl, {
+                                type: 'bearer',
+                                bearerToken: value,
+                              });
+                            }
+                          }}
+                          applyOnBlur
+                          placeholder="Paste your token"
+                        />
+                      )}
+
+                      {authType === 'oauth' && (
+                        <div className="space-y-1">
+                          <SidebarInput
+                            value={oauthClientId}
+                            onChange={setOauthClientId}
+                            applyOnBlur
+                            placeholder="Client ID (optional)"
+                          />
+                          {oauthClientId && (
+                            <SidebarInput
+                              type="password"
+                              value={oauthClientSecret}
+                              onChange={setOauthClientSecret}
+                              applyOnBlur
+                              placeholder="Client Secret (optional)"
+                            />
+                          )}
+                          <SidebarInput
+                            value={oauthScopes}
+                            onChange={setOauthScopes}
+                            applyOnBlur
+                            placeholder="Scopes (optional)"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleStartOAuth}
+                            disabled={!serverUrl || oauthStatus === 'authorizing'}
+                            className="w-full h-7 text-xs rounded-md px-2 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{
+                              backgroundColor:
+                                oauthStatus === 'authorized'
+                                  ? '#22c55e'
+                                  : 'var(--color-text-primary)',
+                              color: 'var(--color-background-primary)',
+                            }}
+                          >
+                            {oauthStatus === 'authorizing'
+                              ? 'Authorizing\u2026'
+                              : oauthStatus === 'authorized'
+                                ? 'Authorized'
+                                : 'Authorize'}
+                          </button>
+                          {oauthError && (
+                            <div
+                              className="text-[9px]"
+                              style={{ color: 'var(--color-text-danger, #dc2626)' }}
+                            >
+                              {oauthError}
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </SidebarCollapsibleControl>
-            )}
+                  </SidebarCollapsibleControl>
+                )}
               </>
             )}
 

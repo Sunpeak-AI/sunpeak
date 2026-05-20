@@ -1072,9 +1072,7 @@ describe('Inspector', () => {
 
     it('hides the Prod Resources checkbox', () => {
       render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
-      expect(
-        screen.queryByRole('checkbox', { name: /prod resources/i })
-      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('checkbox', { name: /prod resources/i })).not.toBeInTheDocument();
     });
 
     it('does not call /__sunpeak/list-tools on mount', () => {
@@ -1119,9 +1117,7 @@ describe('Inspector', () => {
       // Swap to appB. The Inspector should pick up the new tool without errors.
       rerender(<Inspector app={appB} onCallTool={vi.fn()} />);
       await waitFor(() => {
-        const opts = screen
-          .getAllByRole('option')
-          .filter((o) => o.textContent === 'tool_b');
+        const opts = screen.getAllByRole('option').filter((o) => o.textContent === 'tool_b');
         expect(opts.length).toBe(1);
       });
     });
@@ -1130,11 +1126,7 @@ describe('Inspector', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       try {
         render(
-          <Inspector
-            app={emptyApp}
-            simulations={{ stray: createSim() }}
-            onCallTool={vi.fn()}
-          />
+          <Inspector app={emptyApp} simulations={{ stray: createSim() }} onCallTool={vi.fn()} />
         );
         expect(warnSpy).toHaveBeenCalledWith(
           expect.stringContaining('Both `app` and `simulations` were provided')

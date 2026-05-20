@@ -26,18 +26,15 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST_HTML = resolve(__dirname, '..', '..', 'dist', 'sandbox-proxy.html');
 
 describe('static sandbox HTML drift guard', () => {
-  it.skipIf(!existsSync(DIST_HTML))(
-    'embeds the live MOCK_OPENAI_RUNTIME_SCRIPT verbatim',
-    () => {
-      const html = readFileSync(DIST_HTML, 'utf8');
-      // The script is emitted as a JSON-stringified JS string in the generated
-      // HTML (so it can be assigned to a JS variable safely). We check that
-      // the same literal source appears inside the file. If `MOCK_OPENAI_RUNTIME_SCRIPT`
-      // changes and the script doesn't get regenerated (or the duplicate copy
-      // inside `scripts/generate-sandbox-html.mjs` drifts), this fails.
-      expect(html).toContain(JSON.stringify(MOCK_OPENAI_RUNTIME_SCRIPT));
-    }
-  );
+  it.skipIf(!existsSync(DIST_HTML))('embeds the live MOCK_OPENAI_RUNTIME_SCRIPT verbatim', () => {
+    const html = readFileSync(DIST_HTML, 'utf8');
+    // The script is emitted as a JSON-stringified JS string in the generated
+    // HTML (so it can be assigned to a JS variable safely). We check that
+    // the same literal source appears inside the file. If `MOCK_OPENAI_RUNTIME_SCRIPT`
+    // changes and the script doesn't get regenerated (or the duplicate copy
+    // inside `scripts/generate-sandbox-html.mjs` drifts), this fails.
+    expect(html).toContain(JSON.stringify(MOCK_OPENAI_RUNTIME_SCRIPT));
+  });
 
   it.skipIf(!existsSync(DIST_HTML))(
     'declares the sandbox-proxy-ready notification (the proxy handshake)',
