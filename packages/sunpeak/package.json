@@ -183,7 +183,7 @@
   },
   "dependencies": {
     "@clack/prompts": "^1.4.0",
-    "@modelcontextprotocol/ext-apps": "^1.7.1",
+    "@modelcontextprotocol/ext-apps": "^1.7.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@vitejs/plugin-react": "^6.0.2",
     "clsx": "^2.1.1",
