@@ -1,0 +1,156 @@
+/*
+ * Embed-safe CSS for hosting the Inspector inside another React app.
+ *
+ * Same Tailwind utilities and theme variables as `sunpeak/style.css`, but
+ * with preflight scoped under `.sunpeak-inspector-root` so it doesn't
+ * collide with the host page's own button/input/h1/list/etc. styles.
+ *
+ * Use this file when you import `<Inspector app={…} />` into your own
+ * React app. For Inspector usage inside the sunpeak CLI / template (where
+ * resources need full Tailwind preflight applied to their iframe document),
+ * use `sunpeak/style.css` instead.
+ */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* Scan simulator source files for Tailwind classes */
+@source "./inspector/**/*.{ts,tsx}";
+@source "./chatgpt/**/*.{ts,tsx}";
+@source "./claude/**/*.{ts,tsx}";
+
+/*
+ * Dark-mode variant — same selector as `style.css` so utility classes like
+ * `dark:bg-…` resolve identically.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/*
+ * Scoped preflight — applies only inside `.sunpeak-inspector-root`. Trimmed
+ * equivalent of Tailwind's preflight that resets box-sizing, default
+ * margins, list bullets, and form-element typography so utility classes
+ * compose predictably without bleeding into the host page.
+ */
+@layer base {
+  .sunpeak-inspector-root,
+  .sunpeak-inspector-root *,
+  .sunpeak-inspector-root *::before,
+  .sunpeak-inspector-root *::after {
+    box-sizing: border-box;
+    border: 0 solid;
+  }
+
+  .sunpeak-inspector-root {
+    line-height: 1.5;
+    -webkit-text-size-adjust: 100%;
+    tab-size: 4;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+      Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+  }
+
+  .sunpeak-inspector-root h1,
+  .sunpeak-inspector-root h2,
+  .sunpeak-inspector-root h3,
+  .sunpeak-inspector-root h4,
+  .sunpeak-inspector-root h5,
+  .sunpeak-inspector-root h6 {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+  }
+
+  .sunpeak-inspector-root p,
+  .sunpeak-inspector-root pre,
+  .sunpeak-inspector-root blockquote,
+  .sunpeak-inspector-root figure,
+  .sunpeak-inspector-root hr {
+    margin: 0;
+  }
+
+  .sunpeak-inspector-root ul,
+  .sunpeak-inspector-root ol,
+  .sunpeak-inspector-root menu {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .sunpeak-inspector-root a {
+    color: inherit;
+    text-decoration: inherit;
+  }
+
+  .sunpeak-inspector-root button,
+  .sunpeak-inspector-root input,
+  .sunpeak-inspector-root select,
+  .sunpeak-inspector-root optgroup,
+  .sunpeak-inspector-root textarea {
+    font: inherit;
+    color: inherit;
+    margin: 0;
+    padding: 0;
+    background-color: transparent;
+  }
+
+  .sunpeak-inspector-root button,
+  .sunpeak-inspector-root [type="button"],
+  .sunpeak-inspector-root [type="reset"],
+  .sunpeak-inspector-root [type="submit"] {
+    -webkit-appearance: button;
+    background-image: none;
+  }
+
+  .sunpeak-inspector-root img,
+  .sunpeak-inspector-root svg,
+  .sunpeak-inspector-root video,
+  .sunpeak-inspector-root canvas,
+  .sunpeak-inspector-root audio,
+  .sunpeak-inspector-root iframe,
+  .sunpeak-inspector-root embed,
+  .sunpeak-inspector-root object {
+    display: block;
+    vertical-align: middle;
+  }
+
+  .sunpeak-inspector-root img,
+  .sunpeak-inspector-root video {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Monospace family for code-like elements, matching Tailwind preflight. */
+  .sunpeak-inspector-root code,
+  .sunpeak-inspector-root kbd,
+  .sunpeak-inspector-root samp,
+  .sunpeak-inspector-root pre {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+      "Liberation Mono", "Courier New", monospace;
+    font-size: 1em;
+  }
+
+  /* Disabled controls and interactive defaults. */
+  .sunpeak-inspector-root [disabled] {
+    cursor: default;
+  }
+  .sunpeak-inspector-root summary {
+    cursor: pointer;
+  }
+
+  /* Native dialog inherits arbitrary user agent margin/padding/borders. */
+  .sunpeak-inspector-root dialog {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background-color: inherit;
+    color: inherit;
+  }
+
+  /* Browser default focus rings are unscoped; let Tailwind/our explicit
+     focus styles drive interactive feedback inside the inspector. */
+  .sunpeak-inspector-root :focus-visible {
+    outline-color: currentColor;
+  }
+}
+
+/* Sidebar form + checkbox rules, shared with `globals.css` via this partial. */
+@import "./inspector/sidebar-chrome.css";

@@ -121,6 +121,7 @@ export interface InspectorState {
   // ── Content props (for IframeResource) ──
   resourceUrl: string | undefined;
   resourceScript: string | undefined;
+  resourceHtml: string | undefined;
   csp: ResourceCSP | undefined;
   permissions: McpUiResourcePermissions | undefined;
   prefersBorder: boolean;
@@ -712,6 +713,7 @@ export function useInspectorState({
 
   const resourceUrl = selectedSim?.resourceUrl;
   const resourceScript = selectedSim?.resourceScript;
+  const resourceHtml = selectedSim?.resourceHtml;
   const csp = selectedSim?.resource ? extractResourceCSP(selectedSim.resource) : undefined;
   const resourceMeta = (selectedSim?.resource?._meta as Record<string, unknown> | undefined)?.ui as
     | { permissions?: McpUiResourcePermissions; prefersBorder?: boolean; domain?: string }
@@ -795,6 +797,7 @@ export function useInspectorState({
 
     resourceUrl,
     resourceScript,
+    resourceHtml,
     csp,
     permissions,
     prefersBorder,

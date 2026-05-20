@@ -28,7 +28,15 @@ export type ServerToolMock =
  */
 export interface Simulation {
   // Unique identifier derived from the simulation filename (e.g., 'show-albums')
+  // or a flattener-composed key (`<tool>__<sim>`) in the embedded App path.
+  // Must be unique across the whole inspector instance.
   name: string;
+
+  // Optional pretty label shown in the sidebar's Simulation dropdown. When
+  // omitted, the Inspector falls back to `name`. Used by the embedded App
+  // path to show the user's chosen simulation name (e.g. `two-albums`) in
+  // place of the internal flattened key (`show_albums__two-albums`).
+  displayName?: string;
 
   // URL to an HTML page to load in an iframe (dev mode).
   // The page mounts the resource component and uses SDK's useApp().
@@ -36,6 +44,12 @@ export interface Simulation {
 
   // URL to a built resource for iframe rendering (production builds).
   resourceScript?: string;
+
+  // Resource HTML as a string — used by the embedding path where the caller
+  // hands the Inspector a complete document (typically from
+  // `mcpClient.readResource(...)`) and the Inspector forwards it to the
+  // sandbox iframe via PostMessage. Mutually exclusive with the URL fields.
+  resourceHtml?: string;
 
   userMessage?: string; // Decoration for the inspector, no functional purpose.
 
@@ -49,12 +63,10 @@ export interface Simulation {
   // Tool input arguments (the arguments object sent to CallTool).
   toolInput?: Record<string, unknown>;
 
-  // Tool result data (the response from CallTool).
-  toolResult?: {
-    content?: Array<{ type: string; text: string }>;
-    structuredContent?: unknown;
-    isError?: boolean;
-  };
+  // Tool result data (the response from CallTool). Matches the full MCP
+  // `CallToolResult` shape so structured content, image parts, isError, and
+  // _meta all flow through unchanged.
+  toolResult?: CallToolResult;
 
   // Initial host context overrides for the simulation.
   hostContext?: Partial<McpUiHostContext>;

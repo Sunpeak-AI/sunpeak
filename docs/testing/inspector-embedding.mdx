@@ -1,0 +1,493 @@
+---
+title: "Embedding the Inspector"
+description: "Drop the sunpeak Inspector into your own React app and point it at any MCP App."
+keywords: ["MCP Apps", "sunpeak", "Inspector", "React component", "embed"]
+---
+
+<Badge color="yellow">sunpeak API</Badge>
+
+The `Inspector` component is also shipped as a standalone React component. You
+can drop it into any React app and render any MCP App — the rest of the
+testing framework, the CLI dev server, and the simulation file layout are not
+required.
+
+This page covers the embedding path. For the CLI-driven usage that ships with
+the framework, see [Inspector](/testing/inspector).
+
+## Install
+
+```bash
+npm install sunpeak
+```
+
+`react` and `react-dom` are peer dependencies (`>=18`). The Inspector ships
+two stylesheets:
+
+- **`sunpeak/embed.css`** — what you want for embedded use. Same Tailwind
+  utilities and theme as the full stylesheet, but preflight is scoped under
+  `.sunpeak-inspector-root` so it doesn't reset your host page's `<button>`,
+  `<input>`, headings, or list defaults.
+- `sunpeak/style.css` — used internally by the sunpeak CLI / template path,
+  where resources need full Tailwind preflight applied to their iframe
+  documents. Importing this in a host React app will reset your own page's
+  element styles.
+
+Import the embed stylesheet once anywhere in your app.
+
+## Minimum integration
+
+Pass an `app` prop describing the MCP App and an `onCallTool` callback that
+forwards tool invocations to the MCP server. That's the whole API.
+
+```tsx
+import { Inspector } from 'sunpeak/inspector';
+import 'sunpeak/embed.css';
+
+<Inspector
+  app={{
+    name: 'Albums',
+    resources: [
+      { uri: 'ui://albums', html: '<html>…</html>' },
+    ],
+    tools: [
+      {
+        tool: {
+          name: 'show_albums',
+          inputSchema: { type: 'object', properties: {}, required: [] },
+          _meta: { openai: { outputTemplate: 'ui://albums' } },
+        },
+        simulations: [
+          { name: 'two-albums', toolInput: { count: 2 }, toolResult: {/*…*/} },
+        ],
+      },
+    ],
+  }}
+  onCallTool={({ name, arguments: args }) =>
+    mcpClient.callTool({ name, arguments: args })
+  }
+/>
+```
+
+The Inspector flattens the hierarchy internally and renders the resource in
+its double-iframe sandbox with the conversation chrome around it. Users get
+the tool/simulation pickers, theme + host-context controls, and the run
+button — everything the CLI inspector has.
+
+## Data model
+
+The `app` prop mirrors the MCP App data model:
+
+- One **App** with a name and icon.
+- One or more **resources**, each identified by a `uri` and carrying the
+  resource HTML as a string.
+- One or more **tools**. Each tool's `_meta.openai.outputTemplate` URI links
+  it to the resource it renders.
+- Each tool has zero or more **simulations** — saved input/output states for
+  testing UI variants.
+
+```ts
+interface InspectorApp {
+  name?: string;
+  icon?: string;
+  resources: InspectorAppResource[];
+  tools: InspectorAppTool[];
+}
+
+interface InspectorAppResource {
+  uri: string;
+  html: string;
+  mimeType?: string;
+  _meta?: Record<string, unknown>;
+}
+
+interface InspectorAppTool {
+  tool: Tool; // MCP Tool with _meta.openai.outputTemplate
+  simulations?: InspectorAppSimulation[];
+}
+
+interface InspectorAppSimulation {
+  name: string;
+  userMessage?: string;
+  toolInput?: Record<string, unknown>;
+  toolResult?: CallToolResult;
+  serverTools?: Record<string, ServerToolMock>;
+}
+```
+
+## Where your data comes from
+
+The Inspector doesn't care where the resource HTML, tool definitions, or
+results come from — it renders what you hand it via `app` and forwards
+interactions through `onCallTool`. Three patterns fall out of that:
+
+### Live MCP server
+
+Build `app` from `listTools` + `listResources` + `readResource` against a
+real MCP server. Forward `onCallTool` to the server. Clicking **Run** in the
+sidebar hits the real server and renders the real result.
+
+```tsx
+const tools = await mcpClient.listTools();
+const resources = await Promise.all(
+  (await mcpClient.listResources()).resources.map(async (r) => ({
+    uri: r.uri,
+    html: (await mcpClient.readResource({ uri: r.uri })).contents[0].text,
+  })),
+);
+
+<Inspector
+  app={{
+    name: 'Live',
+    resources,
+    tools: tools.tools.map((tool) => ({ tool })),
+  }}
+  onCallTool={({ name, arguments: args }) =>
+    mcpClient.callTool({ name, arguments: args })
+  }
+/>
+```
+
+### Static / no-server
+
+Inject any HTML you want and either supply pre-canned `toolResult`s on
+simulations (so no callback fires) or stub `onCallTool` to return canned
+responses. Useful for demos, prototypes, fixtures from your own database,
+or rendering an app whose server isn't running yet.
+
+```tsx
+<Inspector
+  app={{
+    name: 'Static',
+    resources: [{ uri: 'ui://x', html: '<html>…</html>' }],
+    tools: [{
+      tool: {
+        name: 'show_x',
+        inputSchema: { type: 'object', properties: {}, required: [] },
+        _meta: { openai: { outputTemplate: 'ui://x' } },
+      },
+      simulations: [{ name: 'demo', toolResult: { content: [], structuredContent: {} } }],
+    }],
+  }}
+  onCallTool={() => ({ content: [{ type: 'text', text: 'no server' }] })}
+/>
+```
+
+### Hybrid — live tools plus saved states
+
+The most common production pattern. Build the `app` shape from MCP discovery
+**and** attach saved fixtures to each tool. Users flip between "None" in the
+Simulation picker (which calls the live server) and saved states (which
+short-circuit to the canned result) for regression testing.
+
+```tsx
+const app = {
+  name: 'My App',
+  resources: liveResources,
+  tools: liveTools.tools.map((tool) => ({
+    tool,
+    simulations: savedFixturesByToolName[tool.name] ?? [],
+  })),
+};
+
+<Inspector
+  app={app}
+  onCallTool={({ name, arguments: args }) =>
+    mcpClient.callTool({ name, arguments: args })
+  }
+/>
+```
+
+Switching modes is a one-line change: where the HTML in `app.resources[].html`
+came from (a `readResource` call or a string literal), and what `onCallTool`
+actually does (call a server or return canned data). The Inspector renders
+identically in all three cases.
+
+### Receiving tool inputs and results inside the iframe
+
+Resource HTML can subscribe to tool updates two ways:
+
+**Option A — `window.sunpeak` (no bundle).** The Inspector auto-injects a
+small helper into every resource you pass via `app.resources[].html`. The
+helper performs the MCP Apps `ui/initialize` handshake on your behalf and
+exposes a callback API. Plain HTML resources can use it directly:
+
+```html
+<script>
+  window.sunpeak.onToolResult((result) => {
+    // result is the standard MCP CallToolResult
+    const albums = result.structuredContent?.albums ?? [];
+    document.getElementById('list').textContent = albums.join(', ');
+  });
+  window.sunpeak.onToolInput((args) => {
+    // args is the tool's arguments object
+  });
+  window.sunpeak.onHostContextChange((ctx) => {
+    // ctx contains theme, displayMode, locale, etc.
+  });
+</script>
+```
+
+The full callback surface:
+
+- `onToolInput(cb)` — fires when the user invokes a tool; `cb` receives the
+  arguments object.
+- `onToolInputPartial(cb)` — fires for streamed/partial argument updates.
+- `onToolResult(cb)` — fires when a tool returns; `cb` receives the
+  `CallToolResult`.
+- `onToolCancelled(cb)` — fires when tool execution is interrupted.
+- `onHostContextChange(cb)` — fires when the host context (theme,
+  displayMode, locale, viewport, etc.) updates.
+
+Each subscription returns an unsubscribe function. Late subscribers get the
+last delivered value replayed immediately, so registration order doesn't
+matter.
+
+**Option B — `@modelcontextprotocol/ext-apps` directly.** Real MCP Apps
+typically bundle the SDK and use the `useApp()` hook (or its vanilla
+equivalent) to drive the handshake. To suppress the auto-injected helper
+in this case, add this to your resource HTML's `<head>`:
+
+```html
+<meta name="sunpeak-helper" content="off" />
+```
+
+Without the opt-out, both the helper and the SDK send `ui/initialize`. The
+host bridge tolerates the double-init (logs a warning), so the resource
+still works — but the warning is noisy. The opt-out is the clean path.
+
+The Inspector's **sidebar** doesn't depend on the iframe handshake — the
+Tool Input, Tool Result, and Host Context panels show the simulation's data
+either way. You'll still see saved fixtures and tool results in the sidebar
+even if the resource HTML itself doesn't render them.
+
+### A note on the live-server case
+
+Browsers can't directly hit an arbitrary MCP server from a third-party
+origin — cross-origin requests are blocked unless the server explicitly
+allows them, and most MCP servers don't. The MCP client in your React app
+will typically point at a proxy route on your own backend
+(`/api/mcp/...`), which forwards to the upstream MCP server with whatever
+auth, routing, and rate-limiting your product needs. This isn't a sunpeak
+constraint — any browser-side MCP client hits the same wall. The Inspector
+itself doesn't care; it only sees whatever the MCP client returns.
+
+## Building `app` from MCP calls
+
+If your app already has an MCP SDK `Client`, build the `app` object from
+`listTools` + `listResources`:
+
+```ts
+const [tools, resources] = await Promise.all([
+  mcpClient.listTools(),
+  mcpClient.listResources(),
+]);
+
+const resolvedResources = await Promise.all(
+  resources.resources.map(async (r) => ({
+    uri: r.uri,
+    html: (await mcpClient.readResource({ uri: r.uri })).contents[0].text,
+  })),
+);
+
+const app = {
+  name: 'My App',
+  resources: resolvedResources,
+  tools: tools.tools.map((tool) => ({
+    tool,
+    simulations: fixturesByToolName[tool.name] ?? [],
+  })),
+};
+```
+
+Resource HTML is passed as a **string** — the Inspector forwards it to the
+sandbox iframe via PostMessage. You don't need to host the HTML at a URL.
+
+## Tool calls
+
+The `onCallTool` callback fires when the user clicks **Run** with no
+simulation selected, and when an app inside the iframe makes a
+`callServerTool` request without a matching `serverTools` mock. Return a
+`CallToolResult`; the Inspector renders it.
+
+```tsx
+<Inspector
+  app={app}
+  onCallTool={({ name, arguments: args }) =>
+    mcpClient.callTool({ name, arguments: args })
+  }
+/>
+```
+
+The MCP connection, authentication, and per-user routing all live in your
+code — sunpeak only sees the result of each call.
+
+## The sandbox proxy
+
+The Inspector renders apps inside a **double-iframe**: an outer sandbox proxy
+on a different origin from your host page, and an inner iframe loading the
+app HTML. The cross-origin boundary matches how production hosts (ChatGPT,
+Claude) render MCP Apps, so apps tested in the Inspector behave the same way
+they will in production.
+
+There are two ways to provide the sandbox proxy:
+
+### 1. Static file on a different origin (recommended)
+
+A self-contained proxy is shipped at `sunpeak/dist/sandbox-proxy.html`. Host
+this file on any CDN at a different origin from your main app — a subdomain
+works (`sandbox.example.com` if your app is on `app.example.com`) — and
+point the Inspector at it:
+
+```tsx
+<Inspector
+  app={app}
+  onCallTool={…}
+  sandboxUrl="https://sandbox.example.com/sandbox-proxy.html"
+/>
+```
+
+The file is ~7KB, fully static, and reads its configuration from URL query
+params at runtime. One copy serves all your users.
+
+### 2. `srcdoc` fallback (zero deployment)
+
+If you omit `sandboxUrl`, the Inspector embeds the proxy HTML via `srcdoc`
+on the same origin. This works out of the box but doesn't replicate the
+cross-origin isolation production hosts apply. Fine for trying things out;
+prefer option 1 for production.
+
+## Security considerations
+
+A few constraints to know before deploying. Most of these aren't sunpeak
+bugs — they're properties of how the Inspector renders untrusted HTML — but
+they shape what's safe to put in your `app` prop and how you set up the
+sandbox.
+
+<Warning>
+The `srcdoc` fallback is **not safe for untrusted resource HTML**. When
+`sandboxUrl` is omitted, the Inspector wraps the resource in a same-origin
+sandboxed iframe. The `allow-same-origin` flag combined with `srcdoc`
+means scripts inside the resource run in your host page's origin and can
+reach `window.parent.parent`, read cookies for that origin, and walk the
+DOM. Use srcdoc only for resources you fully control (your own HTML, your
+own SDK builds). For anything else — anything that came from a user or
+through a network boundary — serve the static
+`sandbox-proxy.html` from a separate origin (a subdomain you own) and
+pass it via `sandboxUrl`.
+</Warning>
+
+### Trust boundaries
+
+- **`sandboxUrl` is part of your trust boundary.** The Inspector loads
+  whatever URL you supply (http(s) only, validated). Code running in the
+  outer sandbox iframe can `postMessage` arbitrary JSON-RPC to the host
+  page, and the host will dispatch it. Host the sandbox file on
+  infrastructure you control with the same care as the rest of your
+  static assets.
+- **`app.resources[].html` is rendered as-is.** sunpeak does no
+  sanitization on the document you pass — it's the resource's HTML
+  exactly. Inside the sandboxed iframe this is contained, but the
+  resource can still show phishing UI to its own users, link out to
+  malicious URLs, etc. If you're rendering content from one user to
+  another, treat it like any other UGC.
+- **`html`-mode resources don't get a sunpeak-supplied Content-Security
+  Policy.** Production builds via `scriptSrc` get a strict CSP `<meta>`
+  injected. If you want a CSP on your `html`-mode resources, include one
+  in the document yourself.
+- **`onCallTool` receives user-edited arguments.** The user can edit the
+  Tool Input JSON in the sidebar and click Run. The arguments handed to
+  your callback come straight from that textarea — anyone with access to
+  your Inspector can issue any tool call with any payload. Enforce
+  authorization in your backend; the Inspector does not gate calls.
+
+### What's safe by default
+
+- Cross-origin isolation when `sandboxUrl` is set: the resource iframe
+  cannot reach the host page's window or storage.
+- The inline `window.sunpeak` helper only accepts messages from its actual
+  parent — sibling iframes and extension content scripts can't forge tool
+  results.
+- The mock `openExternal` runtime rejects non-http(s) URLs and opens links
+  with `noopener,noreferrer`.
+- Tool result JSON is escaped before injection into the host page's
+  `<script id="__tool-result">` data island; `<` is encoded so resource
+  output can't break out of the tag.
+- The host shells discriminate `appIcon` between safe image URLs and text
+  via an allowlist; user-supplied icon strings can't load arbitrary
+  scripts via `<img onerror>` attribute injection (React handles attribute
+  escaping; the allowlist limits which origins can be referenced).
+
+## Styling and CSS isolation
+
+`sunpeak/embed.css` scopes preflight, form-element resets, and the
+inspector's color variables under a `.sunpeak-inspector-root` class. They
+apply only inside the Inspector's subtree — your host page's `<button>`,
+`<input>`, headings, and typography are untouched. Don't import
+`sunpeak/style.css` in a host React app; it ships full Tailwind preflight
+intended for resource iframe documents and will reset your page's defaults.
+
+Two caveats:
+
+- **Host fonts** (`@font-face` rules for ChatGPT/Claude conversation chrome)
+  are injected at document level. `@font-face` can't be scoped to a subtree
+  per the CSS spec. The font is only referenced inside the Inspector, so
+  your host page sees a defined-but-unused face — harmless.
+- **Theme variables** (`--color-text-primary`, etc.) are written onto the
+  Inspector's root element, not `document.documentElement`. If your host
+  app defines variables with the same names elsewhere, they coexist
+  without conflict.
+
+## Performance: memoize `app` if you construct it inline
+
+The Inspector flattens the `app` prop into its internal simulation map via
+`useMemo` on the `app` reference. If your parent component constructs `app`
+inline on every render (`<Inspector app={{ resources, tools }} />`), each
+parent render produces a new object identity, the memo recomputes, and the
+Inspector goes through one extra render to sync. The component eventually
+stabilizes (no infinite loop), but you're paying for a re-render per parent
+update.
+
+For production embeds, memoize:
+
+```tsx
+const app = useMemo(
+  () => ({ name: 'My App', resources, tools }),
+  [resources, tools],
+);
+
+<Inspector app={app} onCallTool={…} />
+```
+
+If you're constructing `app` from async data (the typical case — `listTools`
+plus `readResource`), it's already stable across renders and nothing extra
+is needed.
+
+## Reference
+
+### `<Inspector>` props
+
+<ResponseField name="app" type="InspectorApp">
+  The MCP App to render — its resources, tools, and saved simulations.
+  When provided, the Inspector switches to embedded mode: the MCP Server URL
+  input, Authentication section, and Prod Resources checkbox are hidden, and
+  no `/__sunpeak/*` requests are made.
+</ResponseField>
+
+<ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
+  Called when the user clicks **Run** with no simulation selected, and when
+  apps inside the iframe call `callServerTool` without a matching
+  `serverTools` mock. Return a `CallToolResult`.
+</ResponseField>
+
+<ResponseField name="sandboxUrl" type="string">
+  URL of the sandbox proxy on a different origin. Pass the full URL to your
+  hosted `sandbox-proxy.html` (e.g. `https://sandbox.example.com/sandbox-proxy.html`).
+  When omitted, the Inspector falls back to a same-origin `srcdoc` proxy.
+</ResponseField>
+
+<ResponseField name="defaultHost" type="'chatgpt' | 'claude'" default="'chatgpt'">
+  Which host shell to render initially. The user can switch from the sidebar.
+</ResponseField>
+
+See [Inspector](/testing/inspector) for the rest of the props — they all
+work in embedded mode too (with the noted exceptions above).

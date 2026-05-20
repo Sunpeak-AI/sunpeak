@@ -12,6 +12,12 @@ import InspectorSnippet from '/snippets/inspector.mdx';
 
 The `Inspector` component provides a local development environment that replicates the MCP App runtime used by hosts like ChatGPT and Claude. It renders your resources inside iframes, matching the production hosting behavior. The inspector supports multiple host shells — switch between ChatGPT and Claude conversation chrome, theming, and reported capabilities from the sidebar or via URL parameters.
 
+<Note>
+Dropping the Inspector into your own React app? See [Embedding the
+Inspector](/testing/inspector-embedding) for the `app` prop, the static
+sandbox file you host on your CDN, and the CSS isolation story.
+</Note>
+
 ## CLI Usage
 
 ```bash
@@ -59,9 +65,19 @@ import { Inspector } from 'sunpeak/inspector';
 
 ## Props
 
+<ResponseField name="app" type="InspectorApp">
+  Hierarchical input for [embedding the Inspector](/testing/inspector-embedding)
+  in your own React app: an MCP App with its resources, tools, and saved
+  simulations. When provided, the Inspector switches to embedded mode — the
+  MCP Server URL input, Authentication section, and Prod Resources checkbox
+  are hidden, and no `/__sunpeak/*` network calls are made. Mutually exclusive
+  with `simulations`.
+</ResponseField>
+
 <ResponseField name="simulations" type="Record<string, Simulation>">
-  Object mapping simulation names to their definitions. See
-  [Simulation API Reference](/testing/simulations) for details.
+  Flat simulation map (the CLI codepath's input). Object mapping simulation
+  names to their definitions. See [Simulation API Reference](/testing/simulations)
+  for details.
 </ResponseField>
 
 <ResponseField name="appName" type="string" default="Sunpeak App">

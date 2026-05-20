@@ -6,6 +6,18 @@ interface SimpleSidebarProps {
   controls: React.ReactNode;
   /** Optional element rendered right-aligned in the Controls header row */
   headerRight?: React.ReactNode;
+  /**
+   * Optional ref attached to the outer `.sunpeak-inspector-root` element.
+   * The Inspector uses this to scope host theming, CSS variables, and page
+   * styles to its own subtree rather than `document.documentElement`.
+   */
+  rootRef?: React.Ref<HTMLDivElement>;
+  /**
+   * When true, the sidebar's outer root sizes to its parent (`h-full w-full`)
+   * instead of the viewport (`h-screen w-full`). Used by embedders who place
+   * the Inspector inside a sized container.
+   */
+  fillParent?: boolean;
 }
 
 const DEFAULT_SIDEBAR_WIDTH = 260; // ChatGPT sidebar: 260px (extracted 2026-03-21)
@@ -22,7 +34,13 @@ function ChevronRightIcon() {
   );
 }
 
-export function SimpleSidebar({ children, controls, headerRight }: SimpleSidebarProps) {
+export function SimpleSidebar({
+  children,
+  controls,
+  headerRight,
+  rootRef,
+  fillParent = false,
+}: SimpleSidebarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
   const [sidebarWidth, setSidebarWidth] = React.useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = React.useState(false);
@@ -55,7 +73,12 @@ export function SimpleSidebar({ children, controls, headerRight }: SimpleSidebar
   }, [isResizing]);
 
   return (
-    <div className="sunpeak-inspector-root flex h-screen w-full overflow-hidden relative">
+    <div
+      ref={rootRef}
+      className={`sunpeak-inspector-root flex ${
+        fillParent ? 'h-full w-full' : 'h-screen w-full'
+      } overflow-hidden relative`}
+    >
       {/* Resize overlay to capture mouse events during drag */}
       {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
 

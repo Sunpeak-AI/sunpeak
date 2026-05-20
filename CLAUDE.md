@@ -15,6 +15,28 @@ The value proposition of the sunpeak framework is to help developers and their a
 3. Automate the real-host testing loop with **live tests** (`sunpeak test --live`): scripts that drive a real browser into ChatGPT (and other hosts as they're supported), send prompts that trigger MCP tool calls against the developer's server, and assert against the actually-rendered app via Playwright. Live tests catch what the inspector can't (real MCP connection behavior, real LLM tool invocation, host-specific iframe rendering, production resource loading) and replace the manual prompt-and-click loop. Opt-in because they hit real accounts.
 4. Build multi-platform MCP Apps in a structured way that's easy to understand and get started.
 5. Test their MCPs in ChatGPT with HMR and Claude with automatic rebuilds and refresh notifications.
+6. **Embed the Inspector as a React component** inside any third-party React app to render arbitrary MCP Apps. The `<Inspector app={...} onCallTool={...} />` shape exposes the same double-iframe runtime, host shells, and conversation chrome as the CLI inspector, but without any sunpeak-owned servers or `/__sunpeak/*` runtime dependencies. Tool calls flow through a callback the embedder owns; resource HTML is passed as a string. Embedders host the static sandbox proxy (`dist/sandbox-proxy.html`) on a separate origin from their own app — or fall back to the same-origin `srcdoc` variant for zero deployment. This is a first-class use case; treat it as load-bearing when designing changes.
+
+## Embedded Inspector — design constraints
+
+Maintain these properties when changing the Inspector or its supporting code:
+
+- **Public hierarchical API**: the `app` prop on `<Inspector />` is the public input shape for embedders (`InspectorApp` → resources + tools → simulations). Flatten internally; never require embedders to learn the legacy flat `simulations` map.
+- **No `/__sunpeak/*` runtime dependencies in the React component**: the bundled Inspector must not assume any sunpeak-owned HTTP endpoints exist in the embedder's origin. Health checks, tool calls, simulation discovery, and OAuth all flow through props (`onCallTool`, `app.resources[].html`) or are gated off in embedded mode.
+- **Two CSS entries — keep them aligned**: `sunpeak/style.css` ships full Tailwind preflight (used by resources loading into iframe documents — `pnpm dev` and the CLI / template path). `sunpeak/embed.css` ships the same Tailwind utilities + theme, but with preflight scoped under `.sunpeak-inspector-root` (used by embedders hosting the Inspector inside another React app). When changing the scoped preflight rules, update both files — `src/inspector/globals.css` (for style.css, full preflight via `@import "tailwindcss"`) and `src/embed.css` (scoped preflight, theme + utilities only). Embed mode invariant: the host page's `<button>`, `<input>`, typography, and `data-theme` attribute must be untouched. The one acknowledged document-level injection is host `@font-face` (inert to host pages).
+- **Theme + host-context application stays root-scoped**: variables, color-scheme, `data-theme` go on the Inspector's root ref, not `document.documentElement`. The `ThemeProvider` default still targets the document for callers using it outside the bundled Inspector — the Inspector overrides with a no-op.
+- **Sizing follows the parent in embedded mode**: when `app` is provided, the root uses `h-full w-full` (fills the container the embedder gives it) instead of `h-screen w-screen` (fills the viewport). Don't reintroduce viewport-relative sizing in the embedded path.
+- **Sandbox proxy is delivered three ways**: hosted static file (`dist/sandbox-proxy.html`, ~7KB, runtime-configurable via URL params), CLI dev server (`startSandboxServer`), and `srcdoc` fallback (same-origin, lower fidelity). All three must stay behaviorally identical — see `src/inspector/sandbox-static.test.ts` for the drift guard.
+- **Mutually exclusive props**: `app` and `simulations` are mutually exclusive; `app` wins and emits a one-time `console.warn`. Don't add a third way in.
+- **Simulation `name` vs `displayName`**: `Simulation.name` is the unique internal key (`<toolName>__<userSimName>` for the embed path); `Simulation.displayName` is the user-facing sidebar label (the embedder's raw `sim.name`). Don't collapse them — `name` is what URL deep-links and state indexing rely on; `displayName` is purely cosmetic. Sidebar code falls back to `name` when `displayName` is absent.
+- **Security invariants (don't regress these)**:
+  - The inline helper script (`src/inspector/inline-helper-script.ts`) must keep its `ev.source === window.parent` guard on incoming messages. Sibling iframes and extension content scripts could otherwise forge `ui/notifications/tool-result` and drive the embedder's callbacks with attacker-controlled data.
+  - `sandboxUrl` validation rejects non-http(s) URLs — match this precedent if adding any new URL-accepting prop.
+  - The Inspector does **no** sanitization of `app.resources[].html`. Don't add accidental innerHTML paths that read from resources, tool results, or other embedder-supplied strings — React's text-node escaping is the only XSS defense.
+  - Tool result JSON is escaped (`<` → `<`) when injected into the `<script id="__tool-result">` data island. Don't switch to a less-escaped serialization.
+  - The mock `openExternal` runtime in `mock-openai-runtime.ts` rejects non-http(s) URLs and uses `noopener,noreferrer`. Preserve both when changing the runtime.
+  - The `srcdoc` fallback is documented as **not safe for untrusted HTML** (runs in the host's origin via `allow-same-origin` + same-origin srcdoc). Keep the separate-origin sandbox file as the recommended production path.
+- **Data-source agnostic**: the same `app` + `onCallTool` API covers three patterns and the Inspector renders identically in all of them. (a) Live MCP server — `app.resources[].html` comes from `mcpClient.readResource(...)` and `onCallTool` forwards to `mcpClient.callTool(...)`. (b) Static / no-server — HTML is a string literal and `onCallTool` returns canned responses (or simulations carry pre-canned `toolResult`s so it's never called). (c) Hybrid — live MCP discovery plus saved simulations per tool, letting users flip between "None" (live call) and saved states (canned result). Don't add branches that assume one mode over the others; the Inspector should never know which it's in. Embedders proxying live MCP through their own backend (typical: `/api/mcp/...`) is the embedder's concern, not sunpeak's — the React component never makes outbound MCP calls itself.
 
 ## Quick Reference
 
@@ -114,7 +136,8 @@ packages/sunpeak/
 - `sunpeak/test/live/chatgpt/config` — ChatGPT-specific Playwright config factory
 - `sunpeak/test/inspect/config` — Inspect config factory for external MCP servers (`defineInspectConfig`; supports `env`, `cwd`, `timeout`, `visual` options)
 - `sunpeak/inspect` — Programmatic inspector server (`inspectServer` — start the inspector from code instead of CLI; accepts `server`, `port`, `env`, `cwd`, etc.)
-- `sunpeak/style.css` — Main stylesheet
+- `sunpeak/style.css` — Full-preflight stylesheet for resources rendered inside iframe documents (CLI dev / template path)
+- `sunpeak/embed.css` — Scoped-preflight stylesheet for embedders hosting the Inspector inside their own React app
 
 ## Key Types
 

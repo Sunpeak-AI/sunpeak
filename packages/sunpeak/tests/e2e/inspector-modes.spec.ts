@@ -164,14 +164,19 @@ for (const host of hosts) {
   });
 
   test.describe(`Theme Switching [${host}]`, () => {
-    test('switching theme to light updates the document', async ({ page }) => {
+    test('switching theme to light updates the inspector root', async ({ page }) => {
       await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
 
       // Click "Light" button in Theme toggle
       await page.locator('button[aria-pressed]:has-text("Light")').click();
 
-      // The color-scheme should change to light
-      const colorScheme = await page.evaluate(() => document.documentElement.style.colorScheme);
+      // Theme (data-theme + color-scheme) is applied to the inspector root
+      // ref rather than `document.documentElement` — keeps the Inspector
+      // self-contained when embedded inside another React app.
+      const colorScheme = await page
+        .locator('.sunpeak-inspector-root')
+        .first()
+        .evaluate((el) => (el as HTMLElement).style.colorScheme);
       expect(colorScheme).toContain('light');
     });
   });

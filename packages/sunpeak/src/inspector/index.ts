@@ -23,6 +23,15 @@ import '../claude/claude-host';
 export { Inspector } from './inspector';
 export type { InspectorProps } from './inspector';
 
+// Public input shape for embedding (App → resources + tools → simulations).
+export type {
+  InspectorApp,
+  InspectorAppResource,
+  InspectorAppTool,
+  InspectorAppSimulation,
+} from './app-types';
+export { flattenAppToSimulations } from './app-flatten';
+
 // State hook (for custom inspector builds)
 export { useInspectorState } from './use-inspector-state';
 export type { UseInspectorStateOptions, InspectorState } from './use-inspector-state';
