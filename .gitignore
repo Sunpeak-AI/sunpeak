@@ -57,4 +57,3 @@ examples/*/playwright-report
 .temp
 .tmp
 tmp
-.gstack/
