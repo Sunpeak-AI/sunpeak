@@ -278,7 +278,8 @@
             "group": "Overview",
             "pages": [
               "mcp-apps/introduction",
-              "mcp-apps/lifecycle"
+              "mcp-apps/lifecycle",
+              "mcp-apps/faq"
             ]
           },
           {

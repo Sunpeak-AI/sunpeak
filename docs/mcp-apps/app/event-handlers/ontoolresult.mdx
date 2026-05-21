@@ -46,7 +46,7 @@ app.ontoolresult = (params) => void;
 </ResponseField>
 
 <ResponseField name="params._meta" type="object">
-  Metadata object. Contains `viewUUID` which can be used for state persistence across tool calls.
+  Optional metadata attached to the result (for example a `progressToken` or a related-task reference). Fields here are protocol-level and host-defined; do not assume application fields unless your server sets them.
 </ResponseField>
 
 ## Usage
@@ -91,30 +91,12 @@ app.ontoolresult = (params) => {
 };
 ```
 
-### Using viewUUID for state persistence
-
-```ts
-app.ontoolresult = (params) => {
-  const viewUUID = params._meta?.viewUUID as string | undefined;
-
-  if (viewUUID) {
-    // Restore previous state for this view
-    const savedState = stateStore.get(viewUUID);
-    if (savedState) {
-      restoreState(savedState);
-    }
-  }
-
-  renderResult(params);
-};
-```
-
 ### Using with the sunpeak framework
 
 The sunpeak framework provides the [`useToolData`](/app-framework/hooks/use-tool-data) hook, which wraps `ontoolresult` (along with related handlers) into a reactive value for React components.
 
 ```ts
-import { useToolData } from "sunpeak/hooks";
+import { useToolData } from "sunpeak";
 
 function MyComponent() {
   const toolData = useToolData();

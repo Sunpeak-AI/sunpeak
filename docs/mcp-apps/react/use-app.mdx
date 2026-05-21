@@ -74,7 +74,7 @@ function MyApp() {
   if (error) return <div>Error: {error.message}</div>;
   if (!isConnected) return <div>Connecting...</div>;
 
-  return <div>Connected to {app?.getHostContext()?.hostInfo?.name}</div>;
+  return <div>Connected to {app?.getHostVersion()?.name}</div>;
 }
 ```
 

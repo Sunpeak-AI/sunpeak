@@ -1,6 +1,6 @@
 ---
 title: "useAppState"
-description: "Persistent state synced with the host."
+description: "UI state synced to the host and made visible to the model."
 keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "app state", "persistent state"]
 ---
 
@@ -8,7 +8,7 @@ keywords: ["MCP Apps", "ChatGPT Apps", "React hooks", "app state", "persistent s
 
 ## Overview
 
-Manages persistent UI state that is automatically synced to the host via [`updateModelContext`](/mcp-apps/app/requests/update-model-context). Works like React's `useState` but the state survives across conversations and is available to the AI model. Use this for user decisions, selections, or any state that should persist.
+Manages UI state that is automatically synced to the host via [`updateModelContext`](/mcp-apps/app/requests/update-model-context). Works like React's `useState`, but each update is pushed to the host so the AI model can see it on the next message. Use this for user decisions, selections, or any state the model should be aware of.
 
 <Card horizontal title="Wraps updateModelContext" icon="cube" href="/mcp-apps/app/requests/update-model-context">
   MCP Apps SDK reference

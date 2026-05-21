@@ -32,8 +32,8 @@ app.onhostcontextchanged = (params: McpUiHostContext) => void;
     The host's current color scheme.
   </ResponseField>
 
-  <ResponseField name="displayMode" type="string">
-    The current display mode (e.g., `"default"`, `"fullscreen"`).
+  <ResponseField name="displayMode" type='"inline" | "fullscreen" | "pip"'>
+    The current display mode.
   </ResponseField>
 
   <ResponseField name="availableDisplayModes" type="string[]">

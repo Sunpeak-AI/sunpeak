@@ -69,7 +69,7 @@ app.ontoolinput = (params) => {
 The sunpeak framework provides the [`useToolData`](/app-framework/hooks/use-tool-data) hook, which wraps `ontoolinput` (along with related handlers) into a reactive value for React components. This is the recommended approach when building with sunpeak.
 
 ```ts
-import { useToolData } from "sunpeak/hooks";
+import { useToolData } from "sunpeak";
 
 function MyComponent() {
   const toolData = useToolData();

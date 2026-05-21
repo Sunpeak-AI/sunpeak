@@ -23,7 +23,7 @@ For sunpeak framework projects, the dev server starts automatically and no serve
 
 ### 1. E2E Tests
 
-Playwright specs that call your MCP tools and render them in simulated ChatGPT and Claude runtimes. The `mcp` fixture from `sunpeak/test` handles inspector navigation, iframe traversal, and host switching. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states so you can test every combination of host, theme, display mode, and device without deploying or burning API credits.
+Playwright specs that call your MCP tools and render them in simulated ChatGPT and Claude runtimes. The `mcp` fixture from `sunpeak/test` covers protocol calls (`callTool`, `listTools`, `listResources`, `readResource`), while the `inspector` fixture handles rendering: inspector navigation, double-iframe traversal, and host switching via `renderTool`. [Simulations](/testing/simulations) (JSON fixtures) define reproducible tool states so you can test every combination of host, theme, display mode, and device without deploying or burning API credits.
 
 Visual regression is built in. Pass `--visual` to compare screenshots against baselines, or `--visual --update` to regenerate them.
 

@@ -58,6 +58,7 @@ No manual configuration or entry point files needed!
 | `--port <number>` | `-p` | Port for the inspector (default: 3000, also respects `PORT` env var) |
 | `--prod-tools` | | Call real tool handlers instead of simulation mock data |
 | `--prod-resources` | | Serve production-built HTML from `dist/` instead of Vite HMR |
+| `--no-begging` | | Suppress the GitHub star message on startup |
 
 ### Tool and Simulation selection
 
@@ -133,7 +134,7 @@ The dev server runs multiple services on different ports:
 | Port | Service | Purpose | Configurable |
 |------|---------|---------|-------------|
 | `3000` | Inspector UI | Main dev server with HMR | `--port` flag or `PORT` env |
-| `8000` | MCP server | Tool execution endpoint (tunnel this for ChatGPT/Claude) | Auto-allocated |
+| `8000` | MCP server | Tool execution endpoint (tunnel this for ChatGPT/Claude) | `SUNPEAK_MCP_PORT` env |
 | `24679` | HMR WebSocket | Vite HMR for MCP resource bundles | `SUNPEAK_HMR_PORT` env |
 | `24680` | Sandbox proxy | Cross-origin iframe isolation (local only, not tunneled) | `SUNPEAK_SANDBOX_PORT` env |
 

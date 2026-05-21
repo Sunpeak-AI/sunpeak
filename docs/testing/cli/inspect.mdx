@@ -20,6 +20,8 @@ sunpeak inspect --server <url-or-command>
 | `--simulations <dir>` | | Directory of simulation JSON fixtures (optional) |
 | `--port <number>` | `-p` | Inspector port (default: 3000) |
 | `--name <string>` | | App name displayed in inspector chrome |
+| `--env <KEY=VALUE>` | | Environment variable for stdio servers (repeatable) |
+| `--cwd <path>` | | Working directory for stdio servers |
 
 ## Examples
 
@@ -29,6 +31,9 @@ sunpeak inspect --server http://localhost:8000/mcp
 
 # Connect to a stdio MCP server
 sunpeak inspect --server "python my_server.py"
+
+# Pass env vars and a working directory to a stdio server
+sunpeak inspect --server "python server.py" --env API_KEY=sk-123 --cwd ./backend
 
 # With simulation fixtures for mock data
 sunpeak inspect --server http://localhost:8000/mcp --simulations tests/simulations

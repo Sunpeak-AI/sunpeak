@@ -1,0 +1,66 @@
+---
+title: "MCP Apps FAQ - Common Questions About Building MCP Apps"
+sidebarTitle: "FAQ"
+description: "Answers to common questions about MCP Apps: how they work, which hosts support them, how UIs are delivered and secured, how the iframe talks to the host, display modes, theming, and how to test apps locally."
+keywords: ["MCP Apps", "MCP Apps FAQ", "ChatGPT Apps", "Claude Apps", "MCP app framework", "ui:// resource", "MCP Apps SDK", "how to build an MCP App", "MCP App iframe", "MCP App display modes"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+Common questions about building MCP Apps with the [MCP Apps SDK](/mcp-apps/introduction) (`@modelcontextprotocol/ext-apps`). For the conceptual overview, start with [What are MCP Apps?](/mcp-apps/introduction).
+
+<AccordionGroup>
+
+<Accordion title="What is an MCP App?">
+An MCP App is an interactive UI that an MCP server delivers and an AI chat host renders inside the conversation. MCP Apps is an extension to the [Model Context Protocol](/mcp-apps/mcp/overview) that defines how a server declares UI resources, how a host renders them in a sandboxed iframe, and how the UI and host communicate. A tool returns its data as usual; the host pairs that data with the app's HTML to show a chart, form, map, or any other interface. See the [introduction](/mcp-apps/introduction).
+</Accordion>
+
+<Accordion title="How is an MCP App different from a regular MCP tool?">
+A regular [tool](/mcp-apps/mcp/tools) returns text and structured data that the model reads. An MCP App links a tool to an HTML [UI resource](/mcp-apps/mcp/resources), so when the tool runs the host renders that UI and passes it the tool result. The tool still returns text for the model, so the same tool works whether or not the host can render UI. See [register an app tool](/mcp-apps/server/register-app-tool).
+</Accordion>
+
+<Accordion title="Which AI hosts support MCP Apps?">
+ChatGPT and Claude render MCP Apps today. The protocol is host-agnostic, so other hosts can adopt it without changes to your server. Hosts advertise their UI support when they connect, and your server checks those capabilities before registering UI-enabled tools. See [capability detection](/mcp-apps/server/capability-detection).
+</Accordion>
+
+<Accordion title="What happens if a host doesn't support MCP Apps?">
+Tools still work. MCP Apps is built for graceful degradation: a host that can't render UI receives the tool's text and structured content as normal, and never sees the UI resource. Because your server checks host capabilities at connection time, you can register the same tools everywhere and let UI-capable hosts render the app. See [capability detection](/mcp-apps/server/capability-detection).
+</Accordion>
+
+<Accordion title="How does a server deliver a UI to the host?">
+The server declares UI resources as HTML templates under the `ui://` URI scheme with the `text/html;profile=mcp-app` MIME type, then links a tool to its template through [resource metadata](/mcp-apps/server/register-app-resource). Declaring templates upfront lets hosts prefetch and cache them, keeps presentation separate from data, and lets hosts review the UI during connection setup. See [MCP resources](/mcp-apps/mcp/resources) and [resource metadata](/mcp-apps/server/resource-meta).
+</Accordion>
+
+<Accordion title="How does the UI communicate with the host?">
+The app runs in a sandboxed iframe and exchanges JSON-RPC messages with the host over `postMessage`. From the app you can [call server tools](/mcp-apps/app/requests/call-server-tool), [send messages](/mcp-apps/app/requests/send-message) to the thread, [update model context](/mcp-apps/app/requests/update-model-context), [request a display mode](/mcp-apps/app/requests/request-display-mode), [open links](/mcp-apps/app/requests/open-link), and more. The full set lives in the [Requests API](/mcp-apps/app/requests), and the connection sequence is covered in the [lifecycle](/mcp-apps/lifecycle).
+</Accordion>
+
+<Accordion title="Can an MCP App fetch fresh data or trigger server actions?">
+Yes. Call back into your server's tools from the app with [`callServerTool`](/mcp-apps/app/requests/call-server-tool). This is how a refresh button reloads data, a form submits, or a control paginates without leaving the conversation. Tools can also be marked app-only (`visibility: ["app"]`) so the model never sees interaction-only tools. See [tool visibility](/mcp-apps/introduction#how-does-tool-visibility-work) and [app tools](/mcp-apps/app/app-tools).
+</Accordion>
+
+<Accordion title="Can an MCP App make network requests to my own API?">
+Only to the domains your server declares. The server lists allowed network domains in the resource's [CSP metadata](/mcp-apps/server/resource-meta#csp--content-security-policy), and the host enforces them. If no domains are declared, the app makes no external connections. See [CSP and CORS](/mcp-apps/server/csp-cors).
+</Accordion>
+
+<Accordion title="What display modes can an MCP App use?">
+Three: `inline` (embedded in the chat flow), `fullscreen` (takes over the window), and `pip` (a picture-in-picture overlay). The app declares which modes it supports and the host declares which it can provide; the host has final say. Switch modes from the app with [`requestDisplayMode`](/mcp-apps/app/requests/request-display-mode).
+</Accordion>
+
+<Accordion title="How does an MCP App match the host's light or dark theme?">
+The host injects its theme as CSS variables and reports the current theme in the [host context](/mcp-apps/app/accessors/get-host-context), updating it through [`onhostcontextchanged`](/mcp-apps/app/event-handlers/onhostcontextchanged). Style your app with the host's [CSS variables](/mcp-apps/styling/css-variables) so it follows the host's colors, fonts, and spacing automatically. See [theming](/mcp-apps/styling/theme).
+</Accordion>
+
+<Accordion title="What language or framework do I build an MCP App in?">
+The app is plain HTML and JavaScript running in an iframe, so any frontend stack works. The MCP Apps SDK ships TypeScript helpers and React hooks for the host connection (see the [App class](/mcp-apps/app/app-class) and [React hooks](/mcp-apps/react/use-app)). The [sunpeak](/quickstart) framework layers a React-first, convention-over-configuration project structure on top.
+</Accordion>
+
+<Accordion title="How do I test an MCP App without deploying to a host?">
+Run it in the [inspector](/testing/inspector), a local replica of the ChatGPT and Claude runtimes. `sunpeak inspect --server <url>` works against any MCP server in any language, and `sunpeak dev` adds hot reload for sunpeak projects. You can also automate the loop with [e2e](/testing/e2e), [visual regression](/testing/visual), [eval](/testing/evals), and [live](/testing/live) tests. See the [testing overview](/testing/overview).
+</Accordion>
+
+<Accordion title="How are MCP Apps kept secure?">
+Apps run in sandboxed iframes with no access to the host's DOM, cookies, or storage, and all communication flows through `postMessage`, which makes it auditable. Network access is limited to the domains the server declares through [CSP metadata](/mcp-apps/server/resource-meta#csp--content-security-policy), enforced by the host. See [CSP and CORS](/mcp-apps/server/csp-cors).
+</Accordion>
+
+</AccordionGroup>
