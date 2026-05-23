@@ -19,6 +19,8 @@ const { existsSync, readdirSync, readFileSync } = fs;
 const { join, resolve, dirname, sep } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
 import { createServer as createHttpServer } from 'http';
+import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js';
+import { OAuthProtectedResourceMetadataSchema } from '@modelcontextprotocol/sdk/shared/auth.js';
 import { getPort } from '../lib/get-port.mjs';
 import { startSandboxServer } from '../lib/sandbox-server.mjs';
 import { getDevOverlayScript } from '../lib/dev-overlay.mjs';
@@ -177,6 +179,82 @@ function createInMemoryOAuthProvider(redirectUrl, opts = {}) {
 }
 
 /**
+ * @param {URL} serverUrl
+ * @returns {{ pathMetadataUrl: URL, rootMetadataUrl: URL } | undefined}
+ */
+function getMcpResourceMetadataUrls(serverUrl) {
+  if (serverUrl.protocol !== 'http:' && serverUrl.protocol !== 'https:') return undefined;
+  if (serverUrl.pathname === '/' || serverUrl.pathname === '') return undefined;
+
+  const pathname = serverUrl.pathname.endsWith('/')
+    ? serverUrl.pathname.slice(0, -1)
+    : serverUrl.pathname;
+
+  const pathMetadataUrl = new URL(`/.well-known/oauth-protected-resource${pathname}`, serverUrl);
+  pathMetadataUrl.search = serverUrl.search;
+
+  const rootMetadataUrl = new URL('/.well-known/oauth-protected-resource', serverUrl.origin);
+  return { pathMetadataUrl, rootMetadataUrl };
+}
+
+/**
+ * MCP auth discovery supports both endpoint-path and root protected-resource
+ * metadata. When no WWW-Authenticate resource_metadata URL is available, the
+ * current MCP authorization draft says clients must try the endpoint path
+ * first, then the root well-known URI.
+ *
+ * The SDK already falls back from endpoint-path to root on 4xx responses. This
+ * helper detects the remaining common invalid-endpoint case before OAuth starts:
+ * the endpoint-path URL returns 200 but serves a text/html or text/plain landing
+ * page instead of protected-resource metadata JSON. In that case, start OAuth
+ * directly with the root metadata URL so no partial provider state is carried
+ * across a failed SDK auth attempt.
+ *
+ * @param {string | URL} serverUrl
+ * @param {typeof fetch} [fetchFn]
+ * @returns {Promise<string | undefined>}
+ */
+export async function resolveMcpResourceMetadataUrl(serverUrl, fetchFn = fetch) {
+  let parsed;
+  try {
+    parsed = serverUrl instanceof URL ? serverUrl : new URL(serverUrl);
+  } catch {
+    return undefined;
+  }
+
+  const urls = getMcpResourceMetadataUrls(parsed);
+  if (!urls) return undefined;
+
+  let response;
+  try {
+    response = await fetchFn(urls.pathMetadataUrl, {
+      headers: { 'MCP-Protocol-Version': LATEST_PROTOCOL_VERSION },
+    });
+  } catch {
+    return undefined;
+  }
+
+  if (!response.ok) {
+    await response.body?.cancel();
+    return undefined;
+  }
+
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.toLowerCase().includes('application/json')) {
+    await response.body?.cancel();
+    return urls.rootMetadataUrl.toString();
+  }
+
+  try {
+    OAuthProtectedResourceMetadataSchema.parse(await response.json());
+  } catch {
+    return urls.rootMetadataUrl.toString();
+  }
+
+  return undefined;
+}
+
+/**
  * Negotiate OAuth with an MCP server and return an authenticated provider.
  *
  * Handles two cases:
@@ -197,10 +275,14 @@ async function negotiateOAuth(serverUrl) {
 
   const oauthState = createInMemoryOAuthProvider(callbackUrl);
   const { provider } = oauthState;
+  const resourceMetadataUrl = await resolveMcpResourceMetadataUrl(serverUrl);
 
   // First call to auth() — discovers metadata, registers client, and either
   // returns AUTHORIZED (client_credentials) or REDIRECT (authorization_code).
-  const result = await auth(provider, { serverUrl: new URL(serverUrl) });
+  const result = await auth(provider, {
+    serverUrl: new URL(serverUrl),
+    ...(resourceMetadataUrl ? { resourceMetadataUrl: new URL(resourceMetadataUrl) } : {}),
+  });
 
   if (result === 'AUTHORIZED') {
     return provider;
@@ -1054,6 +1136,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           // Always create a fresh provider for an explicit Authorize click.
           // This ensures the user's current credentials (or lack thereof) are
           // used, not stale ones from a previous attempt.
+          const resourceMetadataUrl = await resolveMcpResourceMetadataUrl(serverUrl);
           const oauthState = createInMemoryOAuthProvider(callbackUrl, { clientId, clientSecret });
           oauthProviders.set(serverUrl, oauthState);
 
@@ -1062,6 +1145,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           const result = await auth(oauthState.provider, {
             serverUrl,
             scope,
+            ...(resourceMetadataUrl ? { resourceMetadataUrl: new URL(resourceMetadataUrl) } : {}),
           });
 
           if (result === 'REDIRECT') {
