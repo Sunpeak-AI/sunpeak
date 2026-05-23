@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck - CLI command modules are .mjs files without TypeScript declarations
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -284,6 +284,94 @@ describe('isAuthError', () => {
   it('does not false-positive on URLs containing 401', () => {
     const err = new Error('Failed to fetch http://example.com/path/4014');
     expect(isAuthError(err)).toBe(false);
+  });
+});
+
+describe('resolveMcpResourceMetadataUrl', () => {
+  const importInspectCommand = () => import('../../bin/commands/inspect.mjs');
+
+  it('uses root protected-resource metadata when endpoint-path metadata returns text', async () => {
+    const { resolveMcpResourceMetadataUrl } = await importInspectCommand();
+    const calls: Array<{ url: string; init?: RequestInit }> = [];
+    const fetchFn = async (url: URL, init?: RequestInit) => {
+      calls.push({ url: url.toString(), init });
+      return new Response('Fractal ChatGPT App MCP Server. Connect to /mcp', {
+        status: 200,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    };
+
+    await expect(
+      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
+    ).resolves.toBe('https://example.com/.well-known/oauth-protected-resource');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe('https://example.com/.well-known/oauth-protected-resource/mcp');
+    expect(calls[0].init?.headers).toHaveProperty('MCP-Protocol-Version');
+  });
+
+  it('does not override when endpoint-path metadata is valid JSON', async () => {
+    const { resolveMcpResourceMetadataUrl } = await importInspectCommand();
+    const calls: string[] = [];
+    const fetchFn = async (url: URL) => {
+      calls.push(url.toString());
+      return new Response(
+        JSON.stringify({
+          resource: 'https://example.com/mcp',
+          authorization_servers: ['https://auth.example.com'],
+        }),
+        { status: 200, headers: { 'Content-Type': 'application/json' } }
+      );
+    };
+
+    await expect(
+      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
+    ).resolves.toBeUndefined();
+    expect(calls).toEqual(['https://example.com/.well-known/oauth-protected-resource/mcp']);
+  });
+
+  it('leaves 4xx endpoint-path responses to the SDK fallback', async () => {
+    const { resolveMcpResourceMetadataUrl } = await importInspectCommand();
+    const fetchFn = async () => new Response('Not found', { status: 404 });
+
+    await expect(
+      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
+    ).resolves.toBeUndefined();
+  });
+
+  it('does not preflight root MCP server URLs', async () => {
+    const { resolveMcpResourceMetadataUrl } = await importInspectCommand();
+    const fetchFn = vi.fn();
+
+    await expect(resolveMcpResourceMetadataUrl('https://example.com', fetchFn)).resolves.toBe(
+      undefined
+    );
+    expect(fetchFn).not.toHaveBeenCalled();
+  });
+
+  it('uses root protected-resource metadata when endpoint-path JSON is malformed', async () => {
+    const { resolveMcpResourceMetadataUrl } = await importInspectCommand();
+    const fetchFn = async () =>
+      new Response('{not json', {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    await expect(
+      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
+    ).resolves.toBe('https://example.com/.well-known/oauth-protected-resource');
+  });
+
+  it('uses root protected-resource metadata when endpoint-path JSON is not metadata', async () => {
+    const { resolveMcpResourceMetadataUrl } = await importInspectCommand();
+    const fetchFn = async () =>
+      new Response(JSON.stringify({ message: 'Connect to /mcp' }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+    await expect(
+      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
+    ).resolves.toBe('https://example.com/.well-known/oauth-protected-resource');
   });
 });
 
