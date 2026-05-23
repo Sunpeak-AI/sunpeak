@@ -416,6 +416,82 @@ describe('Inspector', () => {
       expect(screen.getByPlaceholderText('Scopes (optional)')).toBeInTheDocument();
     });
 
+    it('surfaces a clear error when OAuth start returns non-JSON', async () => {
+      const user = userEvent.setup();
+      const popup = { close: vi.fn(), closed: false, location: { href: '' } };
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+
+      fetchSpy
+        .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response('Fractal ChatGPT App MCP Server. Connect to /mcp', {
+            status: 200,
+            headers: { 'Content-Type': 'text/plain' },
+          })
+        );
+
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          mcpServerUrl="http://localhost:8000/mcp"
+          onCallTool={vi.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Authentication'));
+
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      await user.selectOptions(authSelect, 'oauth');
+      await user.click(screen.getByRole('button', { name: 'Authorize' }));
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(/Expected JSON from \/__sunpeak\/oauth\/start/)
+        ).toBeInTheDocument();
+      });
+      expect(popup.close).toHaveBeenCalled();
+
+      openSpy.mockRestore();
+    });
+
+    it('uses inspectorApiBaseUrl for OAuth start requests', async () => {
+      const user = userEvent.setup();
+      const popup = { close: vi.fn(), closed: false, location: { href: '' } };
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+
+      fetchSpy
+        .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ error: 'No auth configured' }), { status: 400 })
+        );
+
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          mcpServerUrl="http://localhost:8000/mcp"
+          inspectorApiBaseUrl="https://preview.example/api"
+          onCallTool={vi.fn()}
+        />
+      );
+
+      await user.click(screen.getByText('Authentication'));
+
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      await user.selectOptions(authSelect, 'oauth');
+      await user.click(screen.getByRole('button', { name: 'Authorize' }));
+
+      await waitFor(() => {
+        expect(fetchSpy).toHaveBeenCalledWith(
+          'https://preview.example/api/__sunpeak/oauth/start',
+          expect.objectContaining({ method: 'POST' })
+        );
+      });
+
+      openSpy.mockRestore();
+    });
+
     it('reconnects with bearer token when token is entered', async () => {
       const user = userEvent.setup();
 

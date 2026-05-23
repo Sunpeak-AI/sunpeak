@@ -79,6 +79,48 @@ describe('useMcpConnection', () => {
     );
   });
 
+  it('uses the configured inspector API base URL and resolves resource URLs', async () => {
+    fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
+
+    const { result } = renderHook(() =>
+      useMcpConnection('http://localhost:8000/mcp', 'https://preview.example/api')
+    );
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('connected');
+    });
+
+    expect(fetchSpy).toHaveBeenCalledWith('https://preview.example/api/__sunpeak/list-tools');
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          status: 'ok',
+          simulations: {
+            tool: {
+              name: 'tool',
+              resourceUrl: '/__sunpeak/read-resource?uri=ui%3A%2F%2Ftool',
+            },
+          },
+        }),
+        { status: 200 }
+      )
+    );
+
+    await act(() => result.current.reconnect('http://localhost:9000/mcp'));
+
+    expect(fetchSpy).toHaveBeenCalledWith(
+      'https://preview.example/api/__sunpeak/connect',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ url: 'http://localhost:9000/mcp' }),
+      })
+    );
+    expect(result.current.simulations?.tool).toMatchObject({
+      resourceUrl: 'https://preview.example/api/__sunpeak/read-resource?uri=ui%3A%2F%2Ftool',
+    });
+  });
+
   it('reconnect sends auth config in the request body', async () => {
     // Initial health check succeeds
     fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
@@ -144,6 +186,23 @@ describe('useMcpConnection', () => {
     expect(result.current.simulations).toBe(sims);
     expect(result.current.hasReconnected).toBe(true);
     expect(result.current.error).toBeUndefined();
+  });
+
+  it('setConnected resolves resource URLs with the configured inspector API base URL', () => {
+    const { result } = renderHook(() => useMcpConnection(undefined, 'https://preview.example/api'));
+
+    act(() =>
+      result.current.setConnected({
+        tool: {
+          name: 'tool',
+          resourceUrl: '/__sunpeak/read-resource?uri=ui%3A%2F%2Ftool',
+        },
+      })
+    );
+
+    expect(result.current.simulations?.tool).toMatchObject({
+      resourceUrl: 'https://preview.example/api/__sunpeak/read-resource?uri=ui%3A%2F%2Ftool',
+    });
   });
 
   it('reconnect transitions to error on failure', async () => {
