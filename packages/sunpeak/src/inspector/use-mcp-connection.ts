@@ -1,4 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import {
+  inspectorApiEndpoint,
+  readInspectorJson,
+  resolveInspectorResourceUrls,
+} from './inspector-api';
 
 export type AuthType = 'none' | 'bearer' | 'oauth';
 
@@ -34,7 +39,10 @@ export interface McpConnectionState {
  * once (or safely twice with cancellation), while explicit `reconnect()` calls
  * are triggered by the Inspector's URL-change effect.
  */
-export function useMcpConnection(initialServerUrl: string | undefined): McpConnectionState {
+export function useMcpConnection(
+  initialServerUrl: string | undefined,
+  inspectorApiBaseUrl?: string
+): McpConnectionState {
   const [status, setStatus] = useState<McpConnectionState['status']>(
     initialServerUrl ? 'connecting' : 'disconnected'
   );
@@ -42,61 +50,71 @@ export function useMcpConnection(initialServerUrl: string | undefined): McpConne
   const [simulations, setSimulations] = useState<Record<string, unknown> | undefined>();
   const [hasReconnected, setHasReconnected] = useState(false);
 
-  const reconnect = useCallback(async (url: string, auth?: AuthConfig) => {
-    setHasReconnected(true);
-    setStatus('connecting');
-    setError(undefined);
-    try {
-      const body: Record<string, unknown> = { url };
-      if (auth && auth.type !== 'none') {
-        body.auth = auth;
-      }
-      const res = await fetch('/__sunpeak/connect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) {
-        let message: string | undefined;
-        try {
-          const json = await res.json();
-          if (json.error) message = json.error;
-        } catch {
-          // Response wasn't JSON — fall through to status-based message
+  const reconnect = useCallback(
+    async (url: string, auth?: AuthConfig) => {
+      setHasReconnected(true);
+      setStatus('connecting');
+      setError(undefined);
+      try {
+        const body: Record<string, unknown> = { url };
+        if (auth && auth.type !== 'none') {
+          body.auth = auth;
         }
-        if (!message) {
-          if (res.status === 404) {
-            message =
-              'Server not found at this URL. Check the URL and make sure the server is running.';
-          } else if (res.status >= 500) {
-            message = `Server error (${res.status}). Check the MCP server logs for details.`;
-          } else {
-            message = `Connection failed (${res.status})`;
+        const endpoint = inspectorApiEndpoint('/__sunpeak/connect', inspectorApiBaseUrl);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!res.ok) {
+          let message: string | undefined;
+          try {
+            const json = await readInspectorJson<{ error?: string }>(res, endpoint);
+            if (json.error) message = json.error;
+          } catch {
+            // Response wasn't JSON — fall through to status-based message
           }
+          if (!message) {
+            if (res.status === 404) {
+              message =
+                'Server not found at this URL. Check the URL and make sure the server is running.';
+            } else if (res.status >= 500) {
+              message = `Server error (${res.status}). Check the MCP server logs for details.`;
+            } else {
+              message = `Connection failed (${res.status})`;
+            }
+          }
+          throw new Error(message);
         }
-        throw new Error(message);
+        const data = await readInspectorJson<{ simulations?: Record<string, unknown> }>(
+          res,
+          endpoint
+        );
+        setStatus('connected');
+        setSimulations(resolveInspectorResourceUrls(data.simulations, inspectorApiBaseUrl));
+      } catch (err) {
+        let message = err instanceof Error ? err.message : String(err);
+        // fetch throws TypeError on network failure (server not running, DNS, etc.)
+        if (err instanceof TypeError && message === 'Failed to fetch') {
+          message = 'Cannot reach MCP server. Is it running?';
+        }
+        setError(message);
+        setStatus('error');
+        setSimulations(undefined);
       }
-      const data = await res.json();
-      setStatus('connected');
-      setSimulations(data.simulations ?? undefined);
-    } catch (err) {
-      let message = err instanceof Error ? err.message : String(err);
-      // fetch throws TypeError on network failure (server not running, DNS, etc.)
-      if (err instanceof TypeError && message === 'Failed to fetch') {
-        message = 'Cannot reach MCP server. Is it running?';
-      }
-      setError(message);
-      setStatus('error');
-      setSimulations(undefined);
-    }
-  }, []);
+    },
+    [inspectorApiBaseUrl]
+  );
 
-  const setConnected = useCallback((sims?: Record<string, unknown>) => {
-    setHasReconnected(true);
-    setStatus('connected');
-    setError(undefined);
-    setSimulations(sims);
-  }, []);
+  const setConnected = useCallback(
+    (sims?: Record<string, unknown>) => {
+      setHasReconnected(true);
+      setStatus('connected');
+      setError(undefined);
+      setSimulations(resolveInspectorResourceUrls(sims, inspectorApiBaseUrl));
+    },
+    [inspectorApiBaseUrl]
+  );
 
   // Initial health check (mount-only). Verifies the connection is alive
   // when the component mounts with a pre-configured server URL.
@@ -107,7 +125,8 @@ export function useMcpConnection(initialServerUrl: string | undefined): McpConne
     setStatus('connecting');
     (async () => {
       try {
-        const res = await fetch('/__sunpeak/list-tools');
+        const endpoint = inspectorApiEndpoint('/__sunpeak/list-tools', inspectorApiBaseUrl);
+        const res = await fetch(endpoint);
         if (cancelled) return;
         if (!res.ok) {
           const msg =

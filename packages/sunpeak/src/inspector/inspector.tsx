@@ -25,6 +25,7 @@ import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './inspector-types';
 import type { InspectorApp } from './app-types';
 import { flattenAppToSimulations } from './app-flatten';
+import { inspectorApiEndpoint, readInspectorJson } from './inspector-api';
 
 // Register built-in host shells. These imports live here (in the component file)
 // rather than in the barrel index.ts because Rollup code-splitting can separate
@@ -89,6 +90,13 @@ export interface InspectorProps {
    * to a different server.
    */
   mcpServerUrl?: string;
+  /**
+   * Base URL for the sunpeak inspector backend endpoints (`/__sunpeak/*`).
+   * Defaults to same-origin. Embedders that serve the React Inspector from
+   * their own app can point this at a same-origin proxy or hosted inspector
+   * backend, for example `/api/sunpeak`.
+   */
+  inspectorApiBaseUrl?: string;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
@@ -128,6 +136,7 @@ export function Inspector({
   demoMode = false,
   sandboxUrl,
   mcpServerUrl,
+  inspectorApiBaseUrl,
 }: InspectorProps) {
   // When `app` is provided it drives both the simulation map and the header
   // name/icon. Falling back to the legacy props keeps existing callers working.
@@ -294,7 +303,10 @@ export function Inspector({
   // URL changes are handled below via connection.reconnect().
   // In embedded mode (`app` prop) the Inspector never talks to /__sunpeak/*
   // endpoints — connection state lives in the embedding app's MCP client.
-  const connection = useMcpConnection(isEmbedded ? undefined : mcpServerUrl || undefined);
+  const connection = useMcpConnection(
+    isEmbedded ? undefined : mcpServerUrl || undefined,
+    inspectorApiBaseUrl
+  );
   const [prodResources, setProdResources] = React.useState(
     state.urlProdResources ?? defaultProdResources
   );
@@ -303,6 +315,7 @@ export function Inspector({
   const [isRunning, setIsRunning] = React.useState(false);
   const [hasRun, setHasRun] = React.useState(false);
   const [showCheck, setShowCheck] = React.useState(false);
+  const [serverPreviewGeneration, setServerPreviewGeneration] = React.useState(0);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const oauthCleanupRef = React.useRef<(() => void) | undefined>(undefined);
 
@@ -357,7 +370,8 @@ export function Inspector({
     );
 
     try {
-      const res = await fetch('/__sunpeak/oauth/start', {
+      const endpoint = inspectorApiEndpoint('/__sunpeak/oauth/start', inspectorApiBaseUrl);
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -367,17 +381,17 @@ export function Inspector({
           clientSecret: oauthClientSecret || undefined,
         }),
       });
+      const data = await readInspectorJson<{
+        error?: string;
+        status?: string;
+        authUrl?: string;
+        simulations?: Record<string, unknown>;
+      }>(res, endpoint);
       if (!res.ok) {
         let message = `OAuth start failed (${res.status})`;
-        try {
-          const json = await res.json();
-          if (json.error) message = json.error;
-        } catch {
-          // Response wasn't JSON
-        }
+        if (data.error) message = data.error;
         throw new Error(message);
       }
-      const data = await res.json();
 
       if (data.error) {
         popup?.close();
@@ -478,7 +492,15 @@ export function Inspector({
       setOauthError(err instanceof Error ? err.message : String(err));
       setOauthStatus('error');
     }
-  }, [serverUrl, oauthScopes, oauthClientId, oauthClientSecret, demoMode, connection]);
+  }, [
+    serverUrl,
+    oauthScopes,
+    oauthClientId,
+    oauthClientSecret,
+    demoMode,
+    connection,
+    inspectorApiBaseUrl,
+  ]);
 
   // When reconnecting to a new server succeeds, update simulations.
   // Only clear on error after a user-initiated reconnect (URL change), not on the
@@ -487,6 +509,7 @@ export function Inspector({
   React.useEffect(() => {
     if (connection.simulations) {
       setSimulations(connection.simulations as Record<string, Simulation>);
+      setServerPreviewGeneration((generation) => generation + 1);
     } else if (connection.status === 'error' && connection.hasReconnected) {
       setSimulations({});
     }
@@ -910,7 +933,7 @@ export function Inspector({
     content = (
       <div className="h-full w-full" style={{ background: iframeBg }}>
         <IframeResource
-          key={`${state.activeHost}-${state.selectedSimulationName}-${effectiveResourceUrl}-${prodResources}-${prodResourcesGeneration}`}
+          key={`${state.activeHost}-${state.selectedSimulationName}-${effectiveResourceUrl}-${prodResources}-${prodResourcesGeneration}-${serverPreviewGeneration}`}
           src={effectiveResourceUrl}
           hostContext={hostContext}
           toolInput={state.toolInput}
