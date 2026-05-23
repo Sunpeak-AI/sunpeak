@@ -191,7 +191,7 @@
     "clsx": "^2.1.1",
     "esbuild": "^0.28.0",
     "tailwind-merge": "^3.6.0",
-    "vite": "8.0.12",
+    "vite": "8.0.14",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -201,11 +201,11 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
-    "@types/node": "^25.8.0",
-    "@types/react": "^19.2.14",
+    "@types/node": "^25.9.1",
+    "@types/react": "^19.2.15",
     "@types/react-dom": "^19.2.3",
-    "@typescript-eslint/eslint-plugin": "^8.59.3",
-    "@typescript-eslint/parser": "^8.59.3",
+    "@typescript-eslint/eslint-plugin": "^8.59.4",
+    "@typescript-eslint/parser": "^8.59.4",
     "eslint": "^9.39.4",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react": "^7.37.5",
@@ -216,10 +216,10 @@
     "react-dom": "^19.2.6",
     "tailwindcss": "^4.3.0",
     "ts-node": "^10.9.2",
-    "tsx": "^4.22.0",
+    "tsx": "^4.22.3",
     "typescript": "^5.9.3",
-    "vite-plugin-dts": "^5.0.0",
-    "vitest": "^4.1.6"
+    "vite-plugin-dts": "^5.0.1",
+    "vitest": "^4.1.7"
   },
   "repository": {
     "type": "git",

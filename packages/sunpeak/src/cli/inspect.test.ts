@@ -301,9 +301,9 @@ describe('resolveMcpResourceMetadataUrl', () => {
       });
     };
 
-    await expect(
-      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
-    ).resolves.toBe('https://example.com/.well-known/oauth-protected-resource');
+    await expect(resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)).resolves.toBe(
+      'https://example.com/.well-known/oauth-protected-resource'
+    );
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe('https://example.com/.well-known/oauth-protected-resource/mcp');
     expect(calls[0].init?.headers).toHaveProperty('MCP-Protocol-Version');
@@ -356,9 +356,9 @@ describe('resolveMcpResourceMetadataUrl', () => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-    await expect(
-      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
-    ).resolves.toBe('https://example.com/.well-known/oauth-protected-resource');
+    await expect(resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)).resolves.toBe(
+      'https://example.com/.well-known/oauth-protected-resource'
+    );
   });
 
   it('uses root protected-resource metadata when endpoint-path JSON is not metadata', async () => {
@@ -369,9 +369,9 @@ describe('resolveMcpResourceMetadataUrl', () => {
         headers: { 'Content-Type': 'application/json' },
       });
 
-    await expect(
-      resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)
-    ).resolves.toBe('https://example.com/.well-known/oauth-protected-resource');
+    await expect(resolveMcpResourceMetadataUrl('https://example.com/mcp', fetchFn)).resolves.toBe(
+      'https://example.com/.well-known/oauth-protected-resource'
+    );
   });
 });
 
