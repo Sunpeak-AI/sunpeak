@@ -271,6 +271,27 @@ auth, routing, and rate-limiting your product needs. This isn't a sunpeak
 constraint — any browser-side MCP client hits the same wall. The Inspector
 itself doesn't care; it only sees whatever the MCP client returns.
 
+### Letting the Inspector connect to MCP URLs
+
+You can also let the Inspector own the live MCP connection. Omit the `app`
+prop, pass an optional `mcpServerUrl`, and run or proxy the sunpeak inspector
+backend routes (`/__sunpeak/*`) from your own backend:
+
+```tsx
+<Inspector
+  mcpServerUrl="https://mcp.example.com/mcp"
+  inspectorApiBaseUrl="/api/sunpeak"
+  sandboxUrl="https://sandbox.example.com/sandbox-proxy.html"
+/>
+```
+
+The Inspector uses those backend routes for MCP discovery, tool calls, OAuth,
+and dynamic client registration when the upstream server supports it. By
+default it calls same-origin `/__sunpeak` routes; set `inspectorApiBaseUrl`
+when your embedded React app needs to talk to a different origin or a proxy
+path. Users can edit the MCP Server URL in the sidebar, and the preview
+reconnects to the new server without rerunning the original command.
+
 ## Building `app` from MCP calls
 
 If your app already has an MCP SDK `Client`, build the `app` object from
@@ -471,6 +492,18 @@ is needed.
   When provided, the Inspector switches to embedded mode: the MCP Server URL
   input, Authentication section, and Prod Resources checkbox are hidden, and
   no `/__sunpeak/*` requests are made.
+</ResponseField>
+
+<ResponseField name="mcpServerUrl" type="string">
+  Initial MCP server URL for the Inspector's built-in live connection flow.
+  Omit `app` when using this mode. Users can edit the URL in the sidebar; the
+  Inspector reconnects and refreshes the preview.
+</ResponseField>
+
+<ResponseField name="inspectorApiBaseUrl" type="string">
+  Base URL for the sunpeak inspector backend endpoints (`/__sunpeak/*`).
+  Defaults to same-origin. Set this when your embedded Inspector is served
+  from a different app or needs to call a proxy path such as `/api/sunpeak`.
 </ResponseField>
 
 <ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
