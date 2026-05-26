@@ -287,6 +287,77 @@ describe('isAuthError', () => {
   });
 });
 
+describe('inspect endpoint security helpers', () => {
+  const importInspectCommand = () => import('../../bin/commands/inspect.mjs');
+
+  it('detects private and loopback IP ranges', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.isPrivateNetworkAddress('127.0.0.1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('10.2.3.4')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('172.20.0.1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('192.168.1.10')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('169.254.169.254')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('::1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('fd00::1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('93.184.216.34')).toBe(false);
+    expect(_securityTestExports.isPrivateNetworkAddress('2606:2800:220:1:248:1893:25c8:1946')).toBe(
+      false
+    );
+  });
+
+  it('blocks private MCP URLs for hosted inspector sessions', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    await expect(
+      _securityTestExports.assertHttpServerUrlAllowed('http://127.0.0.1:8000/mcp')
+    ).rejects.toThrow('Private-network MCP server URLs are blocked');
+    await expect(
+      _securityTestExports.assertHttpServerUrlAllowed('http://169.254.169.254/latest')
+    ).rejects.toThrow('Private-network MCP server URLs are blocked');
+    await expect(
+      _securityTestExports.assertHttpServerUrlAllowed('file:///tmp/server')
+    ).rejects.toThrow('Only http(s) URLs are allowed');
+  });
+
+  it('allows private MCP URLs for loopback inspector sessions', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    await expect(
+      _securityTestExports.assertHttpServerUrlAllowed('http://localhost:8000/mcp', {
+        allowPrivateNetwork: true,
+      })
+    ).resolves.toMatchObject({ hostname: 'localhost' });
+  });
+
+  it('blocks hostnames that resolve to private network addresses', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const lookupFn = vi.fn(async () => [{ address: '10.0.0.8', family: 4 }]);
+
+    await expect(
+      _securityTestExports.assertHttpServerUrlAllowed('https://mcp.example.com/mcp', { lookupFn })
+    ).rejects.toThrow('Private-network MCP server URLs are blocked');
+    expect(lookupFn).toHaveBeenCalledWith('mcp.example.com', { all: true });
+  });
+
+  it('allows public hostnames after DNS resolution', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const lookupFn = vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]);
+
+    await expect(
+      _securityTestExports.assertHttpServerUrlAllowed('https://mcp.example.com/mcp', { lookupFn })
+    ).resolves.toMatchObject({ hostname: 'mcp.example.com' });
+  });
+
+  it('parses loopback Host headers with ports', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.hostnameFromHostHeader('127.0.0.1:3000')).toBe('127.0.0.1');
+    expect(_securityTestExports.hostnameFromHostHeader('[::1]:3000')).toBe('::1');
+    expect(_securityTestExports.isLoopbackHostname('[::1]')).toBe(true);
+  });
+});
+
 describe('resolveMcpResourceMetadataUrl', () => {
   const importInspectCommand = () => import('../../bin/commands/inspect.mjs');
 
@@ -307,6 +378,7 @@ describe('resolveMcpResourceMetadataUrl', () => {
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toBe('https://example.com/.well-known/oauth-protected-resource/mcp');
     expect(calls[0].init?.headers).toHaveProperty('MCP-Protocol-Version');
+    expect(calls[0].init?.redirect).toBe('manual');
   });
 
   it('does not override when endpoint-path metadata is valid JSON', async () => {

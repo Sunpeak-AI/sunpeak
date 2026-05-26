@@ -18,7 +18,9 @@ import * as path from 'path';
 const { existsSync, readdirSync, readFileSync } = fs;
 const { join, resolve, dirname, sep } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
+import { lookup as dnsLookup } from 'node:dns/promises';
 import { createServer as createHttpServer } from 'http';
+import { isIP } from 'node:net';
 import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js';
 import { OAuthProtectedResourceMetadataSchema } from '@modelcontextprotocol/sdk/shared/auth.js';
 import { getPort } from '../lib/get-port.mjs';
@@ -229,6 +231,7 @@ export async function resolveMcpResourceMetadataUrl(serverUrl, fetchFn = fetch) 
   try {
     response = await fetchFn(urls.pathMetadataUrl, {
       headers: { 'MCP-Protocol-Version': LATEST_PROTOCOL_VERSION },
+      redirect: 'manual',
     });
   } catch {
     return undefined;
@@ -486,10 +489,123 @@ function isAuthError(err) {
   return false;
 }
 
+function normalizeHostname(hostname) {
+  return String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+}
+
+function hostnameFromHostHeader(hostHeader) {
+  if (!hostHeader) return '';
+  const host = Array.isArray(hostHeader) ? hostHeader[0] : hostHeader;
+  if (host.startsWith('[')) {
+    const end = host.indexOf(']');
+    return end >= 0 ? host.slice(1, end) : host;
+  }
+  return host.split(':')[0];
+}
+
+function isLoopbackHostname(hostname) {
+  const host = normalizeHostname(hostname);
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function isPrivateNetworkAddress(address) {
+  const host = normalizeHostname(address);
+
+  if (host.startsWith('::ffff:')) {
+    return isPrivateNetworkAddress(host.slice('::ffff:'.length));
+  }
+
+  if (isIP(host) === 4) {
+    const parts = host.split('.').map((part) => Number(part));
+    const [a, b, c] = parts;
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 192 && b === 0 && c === 0) ||
+      (a === 192 && b === 0 && c === 2) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      (a === 198 && b === 51 && c === 100) ||
+      (a === 203 && b === 0 && c === 113) ||
+      a >= 224
+    );
+  }
+
+  if (isIP(host) === 6) {
+    return (
+      host === '::' ||
+      host === '::1' ||
+      host.startsWith('fc') ||
+      host.startsWith('fd') ||
+      host.startsWith('fe8') ||
+      host.startsWith('fe9') ||
+      host.startsWith('fea') ||
+      host.startsWith('feb') ||
+      host.startsWith('ff') ||
+      host.startsWith('2001:db8:')
+    );
+  }
+
+  return false;
+}
+
+function shouldAllowPrivateServerUrls(req) {
+  if (process.env.SUNPEAK_ALLOW_PRIVATE_SERVER_URLS === 'true') return true;
+  return isLoopbackHostname(hostnameFromHostHeader(req.headers.host));
+}
+
+async function assertHttpServerUrlAllowed(urlValue, { allowPrivateNetwork = false, lookupFn = dnsLookup } = {}) {
+  if (typeof urlValue !== 'string' || !/^https?:\/\//i.test(urlValue)) {
+    throw new Error('Only http(s) URLs are allowed');
+  }
+
+  let parsed;
+  try {
+    parsed = new URL(urlValue);
+  } catch {
+    throw new Error('Invalid server URL');
+  }
+
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Only http(s) URLs are allowed');
+  }
+
+  if (allowPrivateNetwork) return parsed;
+
+  const hostname = normalizeHostname(parsed.hostname);
+  if (hostname === 'localhost' || hostname.endsWith('.localhost')) {
+    throw new Error('Private-network MCP server URLs are blocked for hosted inspector sessions');
+  }
+
+  if (isIP(hostname)) {
+    if (isPrivateNetworkAddress(hostname)) {
+      throw new Error('Private-network MCP server URLs are blocked for hosted inspector sessions');
+    }
+    return parsed;
+  }
+
+  let addresses;
+  try {
+    addresses = await lookupFn(hostname, { all: true });
+  } catch {
+    throw new Error('Could not resolve MCP server host');
+  }
+
+  if (addresses.some((entry) => isPrivateNetworkAddress(entry.address))) {
+    throw new Error('Private-network MCP server URLs are blocked for hosted inspector sessions');
+  }
+
+  return parsed;
+}
+
 /**
  * Create an MCP client connection.
  * @param {string} serverArg - URL or command string
- * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, env?: Record<string, string>, cwd?: string }} [authConfig]
+ * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, env?: Record<string, string>, cwd?: string, enforcePublicHttpUrl?: boolean }} [authConfig]
  * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport, serverUrl?: string, stderrOutput?: string[] }>}
  */
 async function createMcpConnection(serverArg, authConfig) {
@@ -497,6 +613,10 @@ async function createMcpConnection(serverArg, authConfig) {
   const client = new Client({ name: 'sunpeak-inspector', version: '1.0.0' });
 
   if (serverArg.startsWith('http://') || serverArg.startsWith('https://')) {
+    if (authConfig?.enforcePublicHttpUrl) {
+      await assertHttpServerUrlAllowed(serverArg);
+    }
+
     // HTTP/SSE transport
     const { StreamableHTTPClientTransport } = await import(
       '@modelcontextprotocol/sdk/client/streamableHttp.js'
@@ -513,6 +633,10 @@ async function createMcpConnection(serverArg, authConfig) {
     } catch {
       // Probe failed (server down, network error) — use original URL and let
       // the transport handle the error with its own diagnostics.
+    }
+
+    if (authConfig?.enforcePublicHttpUrl) {
+      await assertHttpServerUrlAllowed(finalUrl);
     }
 
     const transportOpts = {};
@@ -816,23 +940,34 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   // oauthProviders[serverUrl] is overwritten by a concurrent flow, the callback
   // still completes with the correct provider (which holds the right codeVerifier
   // and clientInformation).
-  /** @type {Map<string, { serverUrl: string, oauthState: any }>} */
+  /** @type {Map<string, { serverUrl: string, oauthState: any, allowPrivateNetwork: boolean }>} */
   const pendingOAuthFlows = new Map();
   /**
-   * Reject requests where the Origin header doesn't match the Host header.
-   * This blocks browser-issued cross-origin requests (CSRF) and DNS rebinding
-   * attacks that would otherwise reach the privileged /__sunpeak/* endpoints.
-   * Requests without an Origin header (curl, Node fetch without origin) are
-   * allowed because they cannot be triggered cross-origin from a browser.
+   * Reject browser requests that are not same-origin with the inspector.
+   * This blocks CSRF, cross-site image/script GETs, and DNS rebinding attacks
+   * that would otherwise reach the privileged /__sunpeak/* endpoints.
+   * Requests from non-browser clients usually omit Origin and Fetch Metadata
+   * headers, so local CLI/test callers continue to work.
    * @param {import('http').IncomingMessage} req
    * @param {import('http').ServerResponse} res
    */
-  function requireSameOrigin(req, res) {
+  function requireSameOrigin(req, res, { allowCrossSiteIframeNavigation = false } = {}) {
+    const fetchSiteHeader = req.headers['sec-fetch-site'];
+    const fetchSite = Array.isArray(fetchSiteHeader) ? fetchSiteHeader[0] : fetchSiteHeader;
+    if (fetchSite === 'cross-site') {
+      const fetchDestHeader = req.headers['sec-fetch-dest'];
+      const fetchModeHeader = req.headers['sec-fetch-mode'];
+      const fetchDest = Array.isArray(fetchDestHeader) ? fetchDestHeader[0] : fetchDestHeader;
+      const fetchMode = Array.isArray(fetchModeHeader) ? fetchModeHeader[0] : fetchModeHeader;
+      if (allowCrossSiteIframeNavigation && fetchDest === 'iframe' && fetchMode === 'navigate') {
+        return true;
+      }
+      res.writeHead(403, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ error: 'Forbidden: cross-site request blocked' }));
+      return false;
+    }
+
     const origin = req.headers.origin;
-    // Requests without an Origin header (curl, Node fetch, CLI test harnesses)
-    // are allowed because they cannot be triggered cross-origin from a
-    // browser. Browser-issued cross-origin requests always include Origin,
-    // which the host-match check below blocks.
     if (!origin) return true;
     let originHost;
     try {
@@ -1027,9 +1162,12 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
         // `inspectServer()`, never by an HTTP client — otherwise a malicious
         // page or untrusted app iframe could trigger arbitrary command
         // execution via this endpoint.
-        if (typeof url !== 'string' || !/^https?:\/\//i.test(url)) {
+        const allowPrivateNetwork = shouldAllowPrivateServerUrls(req);
+        try {
+          await assertHttpServerUrlAllowed(url, { allowPrivateNetwork });
+        } catch (err) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Only http(s) URLs are allowed' }));
+          res.end(JSON.stringify({ error: err.message }));
           return;
         }
 
@@ -1051,8 +1189,16 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           }
 
           // Create new connection
-          const newConnection = await createMcpConnection(url, connectionAuth);
+          const newConnection = await createMcpConnection(url, {
+            ...connectionAuth,
+            enforcePublicHttpUrl: !allowPrivateNetwork,
+          });
           setClient(newConnection.client);
+          _serverUrl = newConnection.serverUrl || url;
+          _connectionOpts = { enforcePublicHttpUrl: !allowPrivateNetwork };
+          if (connectionAuth) {
+            _connectionOpts = { ..._connectionOpts, ...connectionAuth };
+          }
 
           // Discover tools and resources from the new server
           const simulations = await discoverSimulations(newConnection.client);
@@ -1096,9 +1242,22 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
         // Only http(s) URLs are accepted. Without this check a stdio-like
         // string (e.g. "node ./malicious.js") could later reach
         // createMcpConnection's stdio branch via cached pending flow state.
-        if (typeof serverUrl !== 'string' || !/^https?:\/\//i.test(serverUrl)) {
+        const allowPrivateNetwork = shouldAllowPrivateServerUrls(req);
+        try {
+          await assertHttpServerUrlAllowed(serverUrl, { allowPrivateNetwork });
+        } catch (err) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Only http(s) URLs are allowed' }));
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
+        if (!allowPrivateNetwork && process.env.SUNPEAK_ALLOW_HOSTED_OAUTH !== 'true') {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              error:
+                'OAuth is disabled for hosted inspector sessions. Set SUNPEAK_ALLOW_HOSTED_OAUTH=true only on trusted deployments.',
+            })
+          );
           return;
         }
 
@@ -1119,8 +1278,15 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               const newConnection = await createMcpConnection(serverUrl, {
                 type: 'oauth',
                 authProvider: existingState.provider,
+                enforcePublicHttpUrl: !allowPrivateNetwork,
               });
               setClient(newConnection.client);
+              _serverUrl = newConnection.serverUrl || serverUrl;
+              _connectionOpts = {
+                type: 'oauth',
+                authProvider: existingState.provider,
+                enforcePublicHttpUrl: !allowPrivateNetwork,
+              };
               const simulations = await discoverSimulations(newConnection.client);
               if (pluginOpts.simulationsDir) {
                 mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
@@ -1170,7 +1336,11 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             for (const [key, val] of pendingOAuthFlows) {
               if (val.serverUrl === serverUrl) pendingOAuthFlows.delete(key);
             }
-            pendingOAuthFlows.set(oauthState.stateParam, { serverUrl, oauthState });
+            pendingOAuthFlows.set(oauthState.stateParam, {
+              serverUrl,
+              oauthState,
+              allowPrivateNetwork,
+            });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ status: 'redirect', authUrl: authUrl.toString() }));
           } else {
@@ -1179,8 +1349,15 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             const newConnection = await createMcpConnection(serverUrl, {
               type: 'oauth',
               authProvider: oauthState.provider,
+              enforcePublicHttpUrl: !allowPrivateNetwork,
             });
             setClient(newConnection.client);
+            _serverUrl = newConnection.serverUrl || serverUrl;
+            _connectionOpts = {
+              type: 'oauth',
+              authProvider: oauthState.provider,
+              enforcePublicHttpUrl: !allowPrivateNetwork,
+            };
             const simulations = await discoverSimulations(newConnection.client);
             if (pluginOpts.simulationsDir) {
               mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
@@ -1320,7 +1497,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           return;
         }
 
-        const { serverUrl, oauthState } = pending;
+        const { serverUrl, oauthState, allowPrivateNetwork } = pending;
 
         try {
           // Exchange the code for tokens
@@ -1342,8 +1519,15 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           const newConnection = await createMcpConnection(serverUrl, {
             type: 'oauth',
             authProvider: oauthState.provider,
+            enforcePublicHttpUrl: !allowPrivateNetwork,
           });
           setClient(newConnection.client);
+          _serverUrl = newConnection.serverUrl || serverUrl;
+          _connectionOpts = {
+            type: 'oauth',
+            authProvider: oauthState.provider,
+            enforcePublicHttpUrl: !allowPrivateNetwork,
+          };
 
           const simulations = await discoverSimulations(newConnection.client);
           if (pluginOpts.simulationsDir) {
@@ -1360,7 +1544,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
       // Read resource from connected server
       server.middlewares.use('/__sunpeak/read-resource', async (req, res) => {
-        if (!requireSameOrigin(req, res)) return;
+        if (!requireSameOrigin(req, res, { allowCrossSiteIframeNavigation: true })) return;
         const url = new URL(req.url, 'http://localhost');
         const uri = url.searchParams.get('uri');
         if (!uri) {
@@ -1462,6 +1646,13 @@ function sanitizeMimeType(mimeType) {
   if (!/^[\w.+-]+\/[\w.+-]+$/.test(mimeType)) return 'text/html';
   return mimeType;
 }
+
+export const _securityTestExports = {
+  assertHttpServerUrlAllowed,
+  hostnameFromHostHeader,
+  isLoopbackHostname,
+  isPrivateNetworkAddress,
+};
 
 /**
  * Read the full body of an HTTP request.
