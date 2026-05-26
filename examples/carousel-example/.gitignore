@@ -29,12 +29,12 @@ pnpm-debug.log*
 lerna-debug.log*
 
 # Editor directories and files
-.claude/*
+.agents/*
 .vscode/*
 .playwright-mcp/*
 !.vscode/extensions.json
 .idea
-CLAUDE.md
+AGENTS.md
 .DS_Store
 *.suo
 *.ntvs*
