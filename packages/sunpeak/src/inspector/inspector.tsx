@@ -57,6 +57,11 @@ export interface InspectorModelChatToolCall {
   isError?: boolean;
 }
 
+export interface InspectorModelAppContext {
+  content?: unknown[];
+  structuredContent?: unknown;
+}
+
 export interface InspectorModelChatResponse {
   text?: string;
   toolCalls?: InspectorModelChatToolCall[];
@@ -74,6 +79,7 @@ export interface InspectorModelChatRequest {
   modelId: string;
   messages: InspectorModelChatMessage[];
   tools: Simulation['tool'][];
+  appContext?: InspectorModelAppContext;
 }
 
 export interface InspectorModelApiKeyController {
@@ -988,6 +994,7 @@ export function Inspector({
           modelId,
           messages,
           tools: modelCallableTools,
+          appContext: state.modelAppContext ?? undefined,
         });
       } else {
         const endpoint = inspectorApiEndpoint('/__sunpeak/model-chat', inspectorApiBaseUrl);
@@ -998,6 +1005,7 @@ export function Inspector({
             provider: modelProvider,
             modelId,
             messages,
+            appContext: state.modelAppContext ?? undefined,
           }),
         });
         data = await readInspectorJson<InspectorModelChatResponse>(res, endpoint);
@@ -2267,7 +2275,14 @@ export function Inspector({
                 onFocus={() => state.setEditingField('modelContext')}
                 onBlur={() =>
                   state.commitJSON(state.modelContextJson, state.setModelContextError, (parsed) => {
-                    state.setModelContext(parsed as Record<string, unknown> | null);
+                    state.setModelContext(
+                      parsed != null && typeof parsed === 'object' && !Array.isArray(parsed)
+                        ? (parsed as Record<string, unknown>)
+                        : null
+                    );
+                    state.setModelAppContext(
+                      parsed == null ? null : { content: [], structuredContent: parsed }
+                    );
                   })
                 }
                 error={state.modelContextError}

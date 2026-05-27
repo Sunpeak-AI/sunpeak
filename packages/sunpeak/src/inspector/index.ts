@@ -23,6 +23,7 @@ import '../claude/claude-host';
 export { Inspector } from './inspector';
 export type {
   InspectorModelApiKeyController,
+  InspectorModelAppContext,
   InspectorModelChatMessage,
   InspectorModelChatOptions,
   InspectorModelChatRequest,

@@ -14,6 +14,11 @@ import { extractResourceCSP, type ResourceCSP } from './iframe-resource';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
 
+interface ModelAppContext {
+  content?: unknown[];
+  structuredContent?: unknown;
+}
+
 const DEFAULT_THEME: McpUiTheme = 'dark';
 const DEFAULT_DISPLAY_MODE: McpUiDisplayMode = 'inline';
 const DEFAULT_PLATFORM: Platform = 'desktop';
@@ -82,6 +87,8 @@ export interface InspectorState {
   // ── Model context ──
   modelContext: Record<string, unknown> | null;
   setModelContext: (ctx: Record<string, unknown> | null) => void;
+  modelAppContext: ModelAppContext | null;
+  setModelAppContext: (ctx: ModelAppContext | null) => void;
 
   // ── JSON editing state (for sidebar) ──
   toolInputJson: string;
@@ -624,6 +631,7 @@ export function useInspectorState({
   // Model context
   const [modelContextJson, setModelContextJson] = useState<string>('null');
   const [modelContext, setModelContext] = useState<Record<string, unknown> | null>(null);
+  const [modelAppContext, setModelAppContext] = useState<ModelAppContext | null>(null);
 
   // Track which field is being edited
   const [editingField, setEditingField] = useState<string | null>(null);
@@ -651,7 +659,6 @@ export function useInspectorState({
       setToolResultError('');
     }
     if (editingField !== 'modelContext') {
-      setModelContextJson('null');
       setModelContext(null);
       setModelContextError('');
     }
@@ -687,6 +694,14 @@ export function useInspectorState({
 
   const handleUpdateModelContext = (content: unknown[], structuredContent?: unknown) => {
     setModelContextJson(JSON.stringify(structuredContent ?? content, null, 2));
+    setModelAppContext(
+      structuredContent === undefined && content.length === 0
+        ? null
+        : {
+            content,
+            ...(structuredContent !== undefined ? { structuredContent } : {}),
+          }
+    );
   };
 
   // ── JSON helpers ──
@@ -794,6 +809,8 @@ export function useInspectorState({
 
     modelContext,
     setModelContext,
+    modelAppContext,
+    setModelAppContext,
 
     toolInputJson,
     setToolInputJson,

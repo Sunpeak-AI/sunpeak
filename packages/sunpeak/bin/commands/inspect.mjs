@@ -1402,6 +1402,32 @@ async function createModelInstance(provider, modelId, apiKey) {
   return createAnthropic({ apiKey })(normalizedModelId);
 }
 
+const MODEL_VISIBLE_JSON_LIMIT_BYTES = 20000;
+
+function formatJsonForModel(value) {
+  const json = JSON.stringify(value);
+  if (json.length <= MODEL_VISIBLE_JSON_LIMIT_BYTES) return json;
+  return `${json.slice(0, MODEL_VISIBLE_JSON_LIMIT_BYTES)}...`;
+}
+
+function normalizeModelAppContext(appContext) {
+  if (!appContext || typeof appContext !== 'object') return undefined;
+  const normalized = {};
+  if (Array.isArray(appContext.content) && appContext.content.length > 0) {
+    normalized.content = appContext.content;
+  }
+  if (appContext.structuredContent !== undefined) {
+    normalized.structuredContent = appContext.structuredContent;
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+function formatSharedAppContextForModel(appContext) {
+  const normalized = normalizeModelAppContext(appContext);
+  if (!normalized) return '';
+  return formatJsonForModel(normalized);
+}
+
 function formatModelVisibleToolResult(tool, result) {
   const toolName = tool?.name || 'MCP tool';
   if (result?.isError) {
@@ -1412,7 +1438,21 @@ function formatModelVisibleToolResult(tool, result) {
       .trim();
     return text || `${toolName} returned an error.`;
   }
-  return `${toolName} completed. The MCP App is ready to render.`;
+
+  const visibleResult = {};
+  if (Array.isArray(result?.content)) {
+    visibleResult.content = result.content;
+  }
+  if (result && 'structuredContent' in result) {
+    visibleResult.structuredContent = result.structuredContent;
+  }
+  if (result?.isError != null) {
+    visibleResult.isError = result.isError;
+  }
+
+  return Object.keys(visibleResult).length > 0
+    ? formatJsonForModel(visibleResult)
+    : `${toolName} completed. The MCP App is ready to render.`;
 }
 
 async function executeModelChatToolCall({ client, name, arguments: args }) {
@@ -1424,7 +1464,7 @@ async function executeModelChatToolCall({ client, name, arguments: args }) {
   };
 }
 
-async function runModelChat({ client, provider, modelId, messages, apiKey }) {
+async function runModelChat({ client, provider, modelId, messages, apiKey, appContext }) {
   assertModelProvider(provider);
   const { generateText, tool: aiTool, jsonSchema } = await import('ai');
   const model = await createModelInstance(provider, modelId, apiKey);
@@ -1451,11 +1491,19 @@ async function runModelChat({ client, provider, modelId, messages, apiKey }) {
     });
   }
 
+  const sharedAppContext = formatSharedAppContextForModel(appContext);
+
   const result = await generateText({
     model,
     tools,
-    system:
+    system: [
       'You are chatting inside the Sunpeak Inspector. When you call an MCP tool that renders an app, the host will render the app below your message. Do not repeat raw tool output, JSON, image URLs, markdown image lists, or full item inventories. Keep any narration brief and let the app carry the visual result.',
+      sharedAppContext
+        ? `Shared MCP App context from the currently rendered app, available for this turn:\n${sharedAppContext}`
+        : '',
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
     messages: messages.map((message) => ({
       role: message.role,
       content: String(message.content ?? ''),
@@ -2485,6 +2533,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               modelId: parsed.modelId,
               messages: safeMessages,
               apiKey,
+              appContext: normalizeModelAppContext(parsed.appContext),
             })
           );
           res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -2625,7 +2674,9 @@ export const _securityTestExports = {
   isToolVisibleToModel,
   executeModelChatToolCall,
   formatModelVisibleToolResult,
+  formatSharedAppContextForModel,
   normalizeApiKey,
+  normalizeModelAppContext,
   normalizeModelId,
   quoteSecurityInteractiveArg,
   readRequestBody,

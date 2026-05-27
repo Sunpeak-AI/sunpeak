@@ -603,6 +603,7 @@ async function runScaffoldSmokeTest() {
     // This is the first command users run after `sunpeak new`. Verify the dev
     // server starts, discovers tools, and serves resource HTML.
     const devPort = await getPort(19100);
+    const devMcpPort = await getPort(19110);
     const devSandboxPort = await getPort(24700);
     const devHmrPort = await getPort(24701);
     {
@@ -611,7 +612,12 @@ async function runScaffoldSmokeTest() {
         devServer = await startServerProcess(
           'node', [SUNPEAK_BIN, 'dev', '--port', String(devPort), '--no-begging'],
           projectDir,
-          { CI: '1', SUNPEAK_SANDBOX_PORT: String(devSandboxPort), SUNPEAK_HMR_PORT: String(devHmrPort) },
+          {
+            CI: '1',
+            SUNPEAK_MCP_PORT: String(devMcpPort),
+            SUNPEAK_SANDBOX_PORT: String(devSandboxPort),
+            SUNPEAK_HMR_PORT: String(devHmrPort),
+          },
           'scaffold dev', 30000
         );
 
@@ -632,12 +638,14 @@ async function runScaffoldSmokeTest() {
     // Vite dep cache, so this catches flaky first-run issues (port mismatches,
     // slow Vite optimization, etc.). We explicitly delete the cache before running.
     const testPort = await getPort(19200);
+    const testMcpPort = await getPort(19210);
     const testHmrPort = await getPort(24712);
     const testSandboxPort = await getPort(24710);
     const viteCacheDir = join(projectDir, 'node_modules', '.vite-mcp');
     if (existsSync(viteCacheDir)) rmSync(viteCacheDir, { recursive: true });
     const testResult = runCommandCapture('pnpm test', projectDir, {
       SUNPEAK_TEST_PORT: String(testPort),
+      SUNPEAK_MCP_PORT: String(testMcpPort),
       SUNPEAK_HMR_PORT: String(testHmrPort),
       SUNPEAK_SANDBOX_PORT: String(testSandboxPort),
     });
@@ -830,10 +838,12 @@ async function testExample(resource, index) {
   // Find available ports for parallel execution.
   // Each parallel example gets its own preferred port range to minimize contention.
   const testPort = await getPort(6776 + index);
+  const mcpPort = await getPort(18700 + index);
   const hmrPort = await getPort(24679 + index * 2);
   const sandboxPort = await getPort(24680 + index * 2);
   const env = {
     SUNPEAK_TEST_PORT: String(testPort),
+    SUNPEAK_MCP_PORT: String(mcpPort),
     SUNPEAK_HMR_PORT: String(hmrPort),
     SUNPEAK_SANDBOX_PORT: String(sandboxPort),
   };

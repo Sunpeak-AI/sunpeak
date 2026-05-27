@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { Inspector } from './inspector';
@@ -1384,6 +1384,39 @@ describe('Inspector', () => {
       await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
       expect(screen.getByDisplayValue('fractal-careful')).toBeInTheDocument();
       expect(screen.queryByDisplayValue('fractal-deprecated')).not.toBeInTheDocument();
+    });
+
+    it('passes app context to model chat handlers', async () => {
+      const onChat = vi.fn(async () => ({ text: 'ok' }));
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          onCallTool={vi.fn()}
+          modelChat={{
+            providers: [{ id: 'fractal', label: 'Fractal', defaultModel: 'fractal-careful' }],
+            onChat,
+          }}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /App Context/ }));
+      const appContext = screen.getByDisplayValue('null');
+      fireEvent.change(appContext, { target: { value: '{"selectedAlbum":"Pizza Tour"}' } });
+      fireEvent.blur(appContext);
+
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+      const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;
+      await userEvent.type(composer, 'What is selected?{enter}');
+
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(1));
+      expect(onChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appContext: {
+            content: [],
+            structuredContent: { selectedAlbum: 'Pizza Tour' },
+          },
+        })
+      );
     });
 
     it('prefers provider-specific default models over the global model default', async () => {
