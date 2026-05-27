@@ -533,7 +533,7 @@ describe('inspect endpoint security helpers', () => {
     ).toBe(false);
   });
 
-  it('keeps app-rendering tool payloads out of model-visible tool results', async () => {
+  it('exposes model-visible MCP tool result fields without component-only _meta', async () => {
     const { _securityTestExports } = await importInspectCommand();
 
     const result = _securityTestExports.formatModelVisibleToolResult(
@@ -546,15 +546,51 @@ describe('inspect endpoint security helpers', () => {
               photos: [{ url: 'https://cdn.sunpeak.ai/demo/pizza1.jpeg' }],
             },
           ],
+          _meta: { modelVisible: true },
         },
         content: [{ type: 'text', text: 'Pizza Tour raw text' }],
+        _meta: { token: 'hidden' },
       }
     );
 
-    expect(result).toContain('show-albums completed');
-    expect(result).not.toContain('Pizza Tour');
-    expect(result).not.toContain('cdn.sunpeak.ai');
-    expect(result).not.toContain('structuredContent');
+    expect(result).toContain('Pizza Tour');
+    expect(result).toContain('Pizza Tour raw text');
+    expect(result).toContain('structuredContent');
+    expect(result).toContain('modelVisible');
+    expect(result).not.toContain('hidden');
+  });
+
+  it('formats shared MCP App context for model chat', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    const result = _securityTestExports.formatSharedAppContextForModel({
+      content: [{ type: 'text', text: 'Selected album changed' }],
+      structuredContent: { selectedAlbum: 'Pizza Tour', _meta: { modelVisible: true } },
+    });
+
+    expect(result).toContain('Selected album changed');
+    expect(result).toContain('Pizza Tour');
+    expect(result).toContain('modelVisible');
+  });
+
+  it('formats text-only shared MCP App context for model chat', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    const result = _securityTestExports.formatSharedAppContextForModel({
+      content: [{ type: 'text', text: 'Viewing page 2 of 4' }],
+    });
+
+    expect(result).toContain('Viewing page 2 of 4');
+  });
+
+  it('treats empty content-only MCP App context as cleared', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.normalizeModelAppContext({ content: [] })).toBeUndefined();
+    expect(
+      _securityTestExports.normalizeModelAppContext({ structuredContent: undefined })
+    ).toBeUndefined();
+    expect(_securityTestExports.formatSharedAppContextForModel({ content: [] })).toBe('');
   });
 
   it('uses MCP tool calls for model chat', async () => {

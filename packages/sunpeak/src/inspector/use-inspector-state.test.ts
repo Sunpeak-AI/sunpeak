@@ -1,4 +1,4 @@
-import { renderHook } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { deriveContainerDimensions, useInspectorState } from './use-inspector-state';
 import type { Simulation } from '../types/simulation';
@@ -53,6 +53,71 @@ describe('useInspectorState', () => {
         viewportWidth: 1440,
       })
     ).toEqual({ height: 848, width: 1440 });
+  });
+
+  it('stores structured model context for future model turns without changing resource state', () => {
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.handleUpdateModelContext([], { selectedAlbum: 'Pizza Tour' });
+    });
+
+    expect(result.current.modelContext).toBeNull();
+    expect(result.current.modelAppContext).toEqual({
+      content: [],
+      structuredContent: { selectedAlbum: 'Pizza Tour' },
+    });
+  });
+
+  it('stores text-only model context without injecting it as resource state', () => {
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.handleUpdateModelContext([{ type: 'text', text: 'Viewing page 2 of 4' }]);
+    });
+
+    expect(result.current.modelContext).toBeNull();
+    expect(result.current.modelAppContext).toEqual({
+      content: [{ type: 'text', text: 'Viewing page 2 of 4' }],
+    });
+  });
+
+  it('clears model context when the app writes empty content', () => {
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.handleUpdateModelContext([], { selectedAlbum: 'Pizza Tour' });
+    });
+    act(() => {
+      result.current.handleUpdateModelContext([]);
+    });
+
+    expect(result.current.modelContext).toBeNull();
+    expect(result.current.modelAppContext).toBeNull();
+  });
+
+  it('keeps app-written model context across simulation changes', () => {
+    const simulations = {
+      first: createSim('first', true),
+      second: createSim('second', true),
+    };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.handleUpdateModelContext([], { selectedAlbum: 'Pizza Tour' });
+    });
+    act(() => {
+      result.current.setSelectedSimulationName('second');
+    });
+
+    expect(result.current.modelAppContext).toEqual({
+      content: [],
+      structuredContent: { selectedAlbum: 'Pizza Tour' },
+    });
+    expect(result.current.modelContextJson).toBe('{\n  "selectedAlbum": "Pizza Tour"\n}');
   });
 
   describe('preference persistence', () => {
