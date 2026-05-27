@@ -29,6 +29,22 @@ export interface HostConversationProps {
   appIcon?: string;
   /** User message to show in the conversation (decorative) */
   userMessage?: string;
+  /** Optional live chat transcript rendered instead of the static fixture turn */
+  chatMessages?: HostChatMessage[];
+  /** Current composer value */
+  chatInput?: string;
+  /** Update composer value */
+  onChatInputChange?: (value: string) => void;
+  /** Submit composer value */
+  onChatSubmit?: () => void;
+  /** Whether the composer is temporarily disabled */
+  chatDisabled?: boolean;
+  /** Composer placeholder */
+  chatPlaceholder?: string;
+  /** Short status line shown near the composer */
+  chatStatus?: string;
+  /** Hide the conversation composer entirely. Used by embedded inspectors. */
+  hideChatComposer?: boolean;
   /** Optional action element rendered in the conversation header (e.g., Run button in Prod Tools mode) */
   headerAction?: React.ReactNode;
   /**
@@ -37,6 +53,18 @@ export interface HostConversationProps {
    * matching what real hosts report to apps.
    */
   onContentWidthChange?: (width: number) => void;
+}
+
+export interface HostChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  toolCalls?: Array<{
+    name: string;
+    arguments?: Record<string, unknown>;
+    isError?: boolean;
+  }>;
+  rendersApp?: boolean;
 }
 
 /** Unique identifier for a host */

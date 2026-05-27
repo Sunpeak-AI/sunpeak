@@ -162,32 +162,23 @@
   "author": "Sunpeak AI",
   "license": "MIT",
   "peerDependencies": {
-    "@ai-sdk/anthropic": "^1.0.0 || ^2.0.0 || ^3.0.0",
     "@ai-sdk/google": "^1.0.0 || ^2.0.0 || ^3.0.0",
-    "@ai-sdk/openai": "^1.0.0 || ^2.0.0 || ^3.0.0",
-    "ai": "^4.0.0 || ^5.0.0 || ^6.0.0",
     "react": "^18.0.0 || ^19.0.0",
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
-    "ai": {
-      "optional": true
-    },
-    "@ai-sdk/openai": {
-      "optional": true
-    },
-    "@ai-sdk/anthropic": {
-      "optional": true
-    },
     "@ai-sdk/google": {
       "optional": true
     }
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^1.0.0 || ^2.0.0 || ^3.0.0",
+    "@ai-sdk/openai": "^1.0.0 || ^2.0.0 || ^3.0.0",
     "@clack/prompts": "^1.4.0",
     "@modelcontextprotocol/ext-apps": "^1.7.2",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@vitejs/plugin-react": "^6.0.2",
+    "ai": "^4.0.0 || ^5.0.0 || ^6.0.0",
     "clsx": "^2.1.1",
     "esbuild": "^0.28.0",
     "tailwind-merge": "^3.6.0",

@@ -4,7 +4,7 @@ import { useState } from 'react';
 interface SimpleSidebarProps {
   children: React.ReactNode;
   controls: React.ReactNode;
-  /** Optional element rendered right-aligned in the Controls header row */
+  /** Optional element rendered above the sidebar controls. */
   headerRight?: React.ReactNode;
   /**
    * Optional ref attached to the outer `.sunpeak-inspector-root` element.
@@ -111,40 +111,36 @@ export function SimpleSidebar({
         <div className="flex-1 overflow-y-auto min-h-0 px-3 pb-3 pt-0">
           <div className="space-y-3">
             <div>
-              <div className="flex items-center justify-between sticky top-0 bg-sidebar z-10 py-2">
-                <h2
-                  className="text-xs font-semibold"
-                  style={{ color: 'var(--color-text-primary)' }}
-                >
-                  Controls
-                </h2>
-                <div className="flex items-center gap-2">
-                  {headerRight}
-                  {/* Close button for mobile */}
-                  <button
-                    onClick={() => setIsDrawerOpen(false)}
-                    className="md:hidden p-1 transition-colors"
-                    style={{ color: 'var(--color-text-secondary)' }}
-                    type="button"
-                    aria-label="Close sidebar"
-                  >
-                    <svg
-                      width="16"
-                      height="16"
-                      viewBox="0 0 16 16"
-                      fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
+              {(headerRight || isDrawerOpen) && (
+                <div className="flex items-center justify-end sticky top-0 bg-sidebar z-10 py-2">
+                  <div className="flex items-center gap-2">
+                    {headerRight}
+                    {/* Close button for mobile */}
+                    <button
+                      onClick={() => setIsDrawerOpen(false)}
+                      className="md:hidden p-1 transition-colors"
+                      style={{ color: 'var(--color-text-secondary)' }}
+                      type="button"
+                      aria-label="Close sidebar"
                     >
-                      <path
-                        d="M12 4L4 12M4 4L12 12"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
+                      <svg
+                        width="16"
+                        height="16"
+                        viewBox="0 0 16 16"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path
+                          d="M12 4L4 12M4 4L12 12"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
               {controls}
             </div>
           </div>
@@ -158,7 +154,7 @@ export function SimpleSidebar({
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-auto relative">
+      <main className="flex-1 min-w-0 overflow-auto relative">
         {/* Mobile drawer toggle button */}
         <button
           onClick={() => setIsDrawerOpen(true)}
@@ -188,30 +184,18 @@ interface HelpIconProps {
   docsPath: string;
 }
 
-function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
-  const [pos, setPos] = React.useState<{ top: number; left: number } | null>(null);
-  const ref = React.useRef<HTMLAnchorElement>(null);
-
-  const showTooltip = () => {
-    const rect = ref.current?.getBoundingClientRect();
-    if (rect) {
-      setPos({ top: rect.top + rect.height / 2, left: rect.right + 6 });
-    }
-  };
-
+export function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
   return (
     <a
-      ref={ref}
       href={`${DOCS_BASE_URL}/${docsPath}`}
       target="_blank"
       rel="noopener noreferrer"
-      className="inline-flex items-center justify-center no-underline flex-shrink-0 transition-colors"
+      aria-label={tooltip}
+      className="group relative inline-flex items-center justify-center no-underline flex-shrink-0 transition-colors"
       style={{
         color: 'var(--color-text-tertiary, var(--color-text-secondary))',
       }}
       onClick={(e) => e.stopPropagation()}
-      onMouseEnter={showTooltip}
-      onMouseLeave={() => setPos(null)}
     >
       <svg
         width="12"
@@ -233,20 +217,16 @@ function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
           ?
         </text>
       </svg>
-      {pos && (
-        <span
-          className="pointer-events-none fixed whitespace-nowrap rounded px-2 py-1 text-[11px] font-normal leading-tight z-[200]"
-          style={{
-            top: pos.top,
-            left: pos.left,
-            transform: 'translateY(-50%)',
-            backgroundColor: 'var(--color-text-primary)',
-            color: 'var(--color-background-primary)',
-          }}
-        >
-          {tooltip}
-        </span>
-      )}
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute left-full top-1/2 z-[200] ml-1.5 hidden -translate-y-1/2 whitespace-nowrap rounded px-2 py-1 text-[11px] font-normal leading-tight group-hover:block group-focus-within:block"
+        style={{
+          backgroundColor: 'var(--color-text-primary)',
+          color: 'var(--color-background-primary)',
+        }}
+      >
+        {tooltip}
+      </span>
     </a>
   );
 }
@@ -368,6 +348,7 @@ interface SidebarInputProps {
   onChange: (value: string) => void;
   /** When provided, onChange is only called on blur instead of on every keystroke. */
   applyOnBlur?: boolean;
+  autoComplete?: string;
   placeholder?: string;
   type?: 'text' | 'number' | 'password';
   disabled?: boolean;
@@ -377,6 +358,7 @@ export function SidebarInput({
   value,
   onChange,
   applyOnBlur = false,
+  autoComplete,
   placeholder,
   type = 'text',
   disabled = false,
@@ -411,6 +393,7 @@ export function SidebarInput({
           }
         }}
         placeholder={placeholder}
+        autoComplete={autoComplete}
         disabled={disabled}
         className="w-full h-7 text-xs rounded-md px-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
         style={{ ...formElementStyle, cursor: disabled ? undefined : 'text' }}
@@ -424,6 +407,7 @@ export function SidebarInput({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
+      autoComplete={autoComplete}
       disabled={disabled}
       className="w-full h-7 text-xs rounded-md px-2 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
       style={{ ...formElementStyle, cursor: disabled ? undefined : 'text' }}
@@ -460,12 +444,12 @@ export function SidebarCheckbox({
       />
       <label
         htmlFor={id}
-        className="text-[11px] select-none cursor-pointer leading-tight inline-flex items-center gap-1"
+        className="text-[11px] select-none cursor-pointer leading-tight"
         style={{ color: 'var(--color-text-primary)' }}
       >
         {label}
-        {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
       </label>
+      {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
     </div>
   );
 }

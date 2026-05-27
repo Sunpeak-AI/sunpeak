@@ -18,9 +18,11 @@ import * as path from 'path';
 const { existsSync, readdirSync, readFileSync } = fs;
 const { join, resolve, dirname, sep } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
+import { execFile, spawn } from 'node:child_process';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { createServer as createHttpServer } from 'http';
 import { isIP } from 'node:net';
+import { homedir } from 'node:os';
 import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js';
 import { OAuthProtectedResourceMetadataSchema } from '@modelcontextprotocol/sdk/shared/auth.js';
 import { getPort } from '../lib/get-port.mjs';
@@ -373,7 +375,9 @@ async function tryAnonymousOAuth(authUrl, callbackUrl) {
       if (code) return code;
       const error = params.get('error');
       if (error) {
-        throw new Error(`OAuth authorization failed: ${error} — ${params.get('error_description') || ''}`);
+        throw new Error(
+          `OAuth authorization failed: ${error} — ${params.get('error_description') || ''}`
+        );
       }
       return null;
     }
@@ -423,15 +427,19 @@ async function waitForInteractiveOAuth(authUrl, callbackUrl, callbackPort, expec
       // could submit an attacker-controlled `code` to our callback server.
       if (expectedState && stateParam !== expectedState) {
         res.writeHead(400, { 'Content-Type': 'text/html' });
-        res.end('<!DOCTYPE html><html><body><p>Authorization rejected: state mismatch.</p></body></html>');
+        res.end(
+          '<!DOCTYPE html><html><body><p>Authorization rejected: state mismatch.</p></body></html>'
+        );
         settle(reject, new Error('OAuth state mismatch — callback rejected'));
         return;
       }
 
       // Serve a simple page that tells the user they can close the tab.
-      const escHtml = (s) => s.replace(/[<>&"']/g, (c) =>
-        ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c]
-      );
+      const escHtml = (s) =>
+        s.replace(
+          /[<>&"']/g,
+          (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c]
+        );
       const message = code
         ? 'Authorization complete. You can close this tab.'
         : `Authorization failed: ${escHtml(error || 'unknown error')}`;
@@ -453,8 +461,12 @@ async function waitForInteractiveOAuth(authUrl, callbackUrl, callbackPort, expec
       console.log('Opening browser for OAuth authorization...');
       // Use execFile with array args to avoid shell injection from the auth URL.
       const { execFile } = await import('child_process');
-      const cmd = process.platform === 'darwin' ? 'open' :
-                  process.platform === 'win32' ? 'start' : 'xdg-open';
+      const cmd =
+        process.platform === 'darwin'
+          ? 'open'
+          : process.platform === 'win32'
+            ? 'start'
+            : 'xdg-open';
       execFile(cmd, [authUrl], (err) => {
         if (err) console.error(`Failed to open browser: ${err.message}`);
       });
@@ -490,7 +502,10 @@ function isAuthError(err) {
 }
 
 function normalizeHostname(hostname) {
-  return String(hostname || '').toLowerCase().replace(/^\[|\]$/g, '').replace(/\.$/, '');
+  return String(hostname || '')
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.$/, '');
 }
 
 function hostnameFromHostHeader(hostHeader) {
@@ -508,11 +523,65 @@ function isLoopbackHostname(hostname) {
   return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
+function expandIpv6Hextets(address) {
+  const host = normalizeHostname(address);
+  if (isIP(host) !== 6) return undefined;
+  if ((host.match(/::/g) || []).length > 1) return undefined;
+
+  const [left = '', right = ''] = host.split('::');
+  const leftParts = left ? left.split(':') : [];
+  const rightParts = right ? right.split(':') : [];
+  const missing = 8 - leftParts.length - rightParts.length;
+  if (missing < 0) return undefined;
+  const parts = [...leftParts, ...Array(missing).fill('0'), ...rightParts].map((part) =>
+    Number.parseInt(part || '0', 16)
+  );
+  if (
+    parts.length !== 8 ||
+    parts.some((part) => !Number.isInteger(part) || part < 0 || part > 0xffff)
+  ) {
+    return undefined;
+  }
+  return parts;
+}
+
+function embeddedIpv4FromIpv6(address) {
+  const parts = expandIpv6Hextets(address);
+  if (!parts) return undefined;
+  const firstFiveZero = parts.slice(0, 5).every((part) => part === 0);
+  const firstSixZero = firstFiveZero && parts[5] === 0;
+  const hasEmbedded = (firstFiveZero && parts[5] === 0xffff) || firstSixZero;
+  if (!hasEmbedded || (parts[6] === 0 && parts[7] === 0)) return undefined;
+  return `${parts[6] >> 8}.${parts[6] & 0xff}.${parts[7] >> 8}.${parts[7] & 0xff}`;
+}
+
+function isLoopbackRemoteAddress(address) {
+  const host = normalizeHostname(address);
+  if (host === '::1') return true;
+  const dottedMappedIpv4 = host.startsWith('::ffff:') ? host.slice('::ffff:'.length) : undefined;
+  if (dottedMappedIpv4 && isIP(dottedMappedIpv4) === 4) {
+    return isLoopbackRemoteAddress(dottedMappedIpv4);
+  }
+  const embeddedIpv4 = embeddedIpv4FromIpv6(host);
+  if (embeddedIpv4) {
+    return isLoopbackRemoteAddress(embeddedIpv4);
+  }
+  if (isIP(host) === 4) {
+    return host.split('.')[0] === '127';
+  }
+  return host === '::1';
+}
+
 function isPrivateNetworkAddress(address) {
   const host = normalizeHostname(address);
 
-  if (host.startsWith('::ffff:')) {
-    return isPrivateNetworkAddress(host.slice('::ffff:'.length));
+  const dottedMappedIpv4 = host.startsWith('::ffff:') ? host.slice('::ffff:'.length) : undefined;
+  if (dottedMappedIpv4 && isIP(dottedMappedIpv4) === 4) {
+    return isPrivateNetworkAddress(dottedMappedIpv4);
+  }
+  const embeddedIpv4 = embeddedIpv4FromIpv6(host);
+  if (embeddedIpv4) {
+    return isPrivateNetworkAddress(embeddedIpv4);
   }
 
   if (isIP(host) === 4) {
@@ -536,6 +605,7 @@ function isPrivateNetworkAddress(address) {
   }
 
   if (isIP(host) === 6) {
+    const parts = expandIpv6Hextets(host);
     return (
       host === '::' ||
       host === '::1' ||
@@ -546,7 +616,8 @@ function isPrivateNetworkAddress(address) {
       host.startsWith('fea') ||
       host.startsWith('feb') ||
       host.startsWith('ff') ||
-      host.startsWith('2001:db8:')
+      host.startsWith('2001:db8:') ||
+      parts?.[0] === 0x2002
     );
   }
 
@@ -555,10 +626,16 @@ function isPrivateNetworkAddress(address) {
 
 function shouldAllowPrivateServerUrls(req) {
   if (process.env.SUNPEAK_ALLOW_PRIVATE_SERVER_URLS === 'true') return true;
-  return isLoopbackHostname(hostnameFromHostHeader(req.headers.host));
+  return (
+    isLoopbackHostname(hostnameFromHostHeader(req.headers.host)) &&
+    isLoopbackRemoteAddress(req.socket?.remoteAddress)
+  );
 }
 
-async function assertHttpServerUrlAllowed(urlValue, { allowPrivateNetwork = false, lookupFn = dnsLookup } = {}) {
+async function assertHttpServerUrlAllowed(
+  urlValue,
+  { allowPrivateNetwork = false, lookupFn = dnsLookup } = {}
+) {
   if (typeof urlValue !== 'string' || !/^https?:\/\//i.test(urlValue)) {
     throw new Error('Only http(s) URLs are allowed');
   }
@@ -602,6 +679,45 @@ async function assertHttpServerUrlAllowed(urlValue, { allowPrivateNetwork = fals
   return parsed;
 }
 
+async function resolveHttpRedirectsForMcp(
+  serverArg,
+  { enforcePublicHttpUrl = false, fetchFn = fetch, lookupFn = dnsLookup } = {}
+) {
+  if (!enforcePublicHttpUrl) {
+    try {
+      const probeResponse = await fetchFn(serverArg, { method: 'HEAD', redirect: 'follow' });
+      await probeResponse.body?.cancel?.();
+      return probeResponse.url && probeResponse.url !== serverArg ? probeResponse.url : serverArg;
+    } catch {
+      return serverArg;
+    }
+  }
+
+  let currentUrl = serverArg;
+  const maxRedirects = 5;
+  for (let i = 0; i < maxRedirects; i++) {
+    let probeResponse;
+    try {
+      probeResponse = await fetchFn(currentUrl, { method: 'HEAD', redirect: 'manual' });
+    } catch {
+      return currentUrl;
+    }
+    await probeResponse.body?.cancel?.();
+
+    const status = probeResponse.status;
+    const location = probeResponse.headers.get('location');
+    if (status < 300 || status >= 400 || !location) {
+      return currentUrl;
+    }
+
+    const nextUrl = new URL(location, currentUrl).toString();
+    await assertHttpServerUrlAllowed(nextUrl, { lookupFn });
+    currentUrl = nextUrl;
+  }
+
+  return currentUrl;
+}
+
 /**
  * Create an MCP client connection.
  * @param {string} serverArg - URL or command string
@@ -618,34 +734,39 @@ async function createMcpConnection(serverArg, authConfig) {
     }
 
     // HTTP/SSE transport
-    const { StreamableHTTPClientTransport } = await import(
-      '@modelcontextprotocol/sdk/client/streamableHttp.js'
-    );
+    const { StreamableHTTPClientTransport } =
+      await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
 
     // Follow redirects (e.g. /mcp → /mcp/) before creating the transport.
     // The MCP SDK transport doesn't follow redirects on its own.
-    let finalUrl = serverArg;
-    try {
-      const probeResponse = await fetch(serverArg, { method: 'HEAD', redirect: 'follow' });
-      if (probeResponse.url && probeResponse.url !== serverArg) {
-        finalUrl = probeResponse.url;
-      }
-    } catch {
-      // Probe failed (server down, network error) — use original URL and let
-      // the transport handle the error with its own diagnostics.
-    }
+    const finalUrl = await resolveHttpRedirectsForMcp(serverArg, {
+      enforcePublicHttpUrl: !!authConfig?.enforcePublicHttpUrl,
+    });
 
     if (authConfig?.enforcePublicHttpUrl) {
       await assertHttpServerUrlAllowed(finalUrl);
     }
 
     const transportOpts = {};
+    if (authConfig?.enforcePublicHttpUrl) {
+      transportOpts.requestInit = { redirect: 'manual' };
+    }
 
+    const requestHeaders = {};
     if (authConfig?.type === 'bearer' && authConfig.bearerToken) {
+      requestHeaders.Authorization = `Bearer ${authConfig.bearerToken}`;
+    }
+    if (Object.keys(requestHeaders).length > 0) {
       transportOpts.requestInit = {
-        headers: { Authorization: `Bearer ${authConfig.bearerToken}` },
+        ...(transportOpts.requestInit ?? {}),
+        headers: {
+          ...(transportOpts.requestInit?.headers ?? {}),
+          ...requestHeaders,
+        },
       };
-    } else if (authConfig?.type === 'oauth' && authConfig.authProvider) {
+    }
+
+    if (authConfig?.type === 'oauth' && authConfig.authProvider) {
       transportOpts.authProvider = authConfig.authProvider;
     }
 
@@ -657,9 +778,7 @@ async function createMcpConnection(serverArg, authConfig) {
     const parts = serverArg.split(/\s+/);
     const command = parts[0];
     const cmdArgs = parts.slice(1);
-    const { StdioClientTransport } = await import(
-      '@modelcontextprotocol/sdk/client/stdio.js'
-    );
+    const { StdioClientTransport } = await import('@modelcontextprotocol/sdk/client/stdio.js');
 
     const transportOpts = {
       command,
@@ -697,10 +816,26 @@ async function createMcpConnection(serverArg, authConfig) {
       // Attach captured stderr so callers can surface it for diagnostics.
       err._stderrOutput = stderrOutput;
       // Clean up the spawned process so it doesn't linger.
-      try { await transport.close(); } catch { /* best-effort */ }
+      try {
+        await transport.close();
+      } catch {
+        /* best-effort */
+      }
       throw err;
     }
     return { client, transport, stderrOutput };
+  }
+}
+
+function defaultLiveMcpServerUrl(serverUrl) {
+  try {
+    const url = new URL(serverUrl);
+    const mcpPath = url.pathname.replace(/\/$/, '');
+    if (!mcpPath.endsWith('/mcp')) return undefined;
+    url.pathname = `${mcpPath}/live`;
+    return url.toString();
+  } catch {
+    return undefined;
   }
 }
 
@@ -812,6 +947,531 @@ function mergeSimulationFixtures(dir, simulations) {
   }
 }
 
+const MODEL_PROVIDERS = new Set(['openai', 'anthropic']);
+const CREDENTIAL_SERVICE = 'sunpeak.inspector.api-key';
+const CREDENTIAL_COMMAND_TIMEOUT_MS = 5000;
+const MODEL_KEY_BODY_LIMIT_BYTES = 64 * 1024;
+const MODEL_CHAT_BODY_LIMIT_BYTES = 512 * 1024;
+const RESOURCE_SANDBOX_CSP = 'sandbox allow-scripts allow-forms allow-popups allow-downloads';
+const memoryApiKeys = new Map();
+
+function assertModelProvider(provider) {
+  if (!MODEL_PROVIDERS.has(provider)) {
+    throw new Error('Unsupported provider. Expected "openai" or "anthropic".');
+  }
+}
+
+function keychainAccount(provider) {
+  return `sunpeak-inspector-${provider}`;
+}
+
+function quoteSecurityInteractiveArg(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
+}
+
+function isMissingCredentialError(err) {
+  const text = `${err?.message ?? ''}\n${err?.stderr ?? ''}`.toLowerCase();
+  return (
+    err?.code === 3 ||
+    err?.code === 44 ||
+    text.includes('could not be found') ||
+    text.includes('no such secret') ||
+    text.includes('no matching items')
+  );
+}
+
+function credentialAccessError(storage, operation) {
+  return new Error(`Failed to ${operation} API key in ${storage}.`);
+}
+
+async function runCredentialCommand(
+  command,
+  args,
+  { input, timeout = CREDENTIAL_COMMAND_TIMEOUT_MS } = {}
+) {
+  return await new Promise((resolvePromise, rejectPromise) => {
+    const child = spawn(command, args, {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill('SIGTERM');
+      rejectPromise(new Error(`${path.basename(command)} timed out`));
+    }, timeout);
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      rejectPromise(err);
+    });
+    child.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) {
+        resolvePromise({ stdout, stderr });
+      } else {
+        const err = new Error(
+          stderr.trim() || `${path.basename(command)} exited with code ${code}`
+        );
+        err.code = code;
+        err.stdout = stdout;
+        err.stderr = stderr;
+        rejectPromise(err);
+      }
+    });
+    if (typeof input === 'string') child.stdin.end(input);
+    else child.stdin.end();
+  });
+}
+
+async function commandExists(command) {
+  return await new Promise((resolvePromise) => {
+    const child = execFile(
+      process.platform === 'win32' ? 'where.exe' : 'which',
+      [command],
+      { windowsHide: true },
+      (err) => resolvePromise(!err)
+    );
+    child.stdin?.end();
+  });
+}
+
+async function getPowerShellCommand() {
+  if (await commandExists('powershell.exe')) return 'powershell.exe';
+  if (await commandExists('pwsh.exe')) return 'pwsh.exe';
+  if (await commandExists('pwsh')) return 'pwsh';
+  return undefined;
+}
+
+function getWindowsCredentialPath(provider) {
+  const baseDir =
+    process.env.LOCALAPPDATA || process.env.APPDATA || path.join(homedir(), 'AppData', 'Local');
+  return path.join(baseDir, 'Sunpeak', 'inspector-api-keys', `${provider}.txt`);
+}
+
+async function readMacOSKeychain(provider) {
+  let stdout;
+  try {
+    ({ stdout } = await runCredentialCommand('/usr/bin/security', [
+      'find-generic-password',
+      '-a',
+      keychainAccount(provider),
+      '-s',
+      CREDENTIAL_SERVICE,
+      '-w',
+    ]));
+  } catch (err) {
+    if (isMissingCredentialError(err)) return undefined;
+    throw err;
+  }
+  const value = stdout.replace(/\r?\n$/, '');
+  return value || undefined;
+}
+
+async function writeMacOSKeychain(provider, apiKey) {
+  if (!apiKey) {
+    try {
+      await runCredentialCommand('/usr/bin/security', [
+        'delete-generic-password',
+        '-a',
+        keychainAccount(provider),
+        '-s',
+        CREDENTIAL_SERVICE,
+      ]);
+    } catch (err) {
+      if (!isMissingCredentialError(err)) throw err;
+    }
+    return;
+  }
+
+  const command = [
+    'add-generic-password',
+    '-a',
+    quoteSecurityInteractiveArg(keychainAccount(provider)),
+    '-s',
+    quoteSecurityInteractiveArg(CREDENTIAL_SERVICE),
+    '-U',
+    '-w',
+    quoteSecurityInteractiveArg(apiKey),
+  ].join(' ');
+  await runCredentialCommand('/usr/bin/security', ['-i'], { input: `${command}\n` });
+}
+
+async function readLinuxSecretService(provider) {
+  let stdout;
+  try {
+    ({ stdout } = await runCredentialCommand('secret-tool', [
+      'lookup',
+      'service',
+      CREDENTIAL_SERVICE,
+      'account',
+      keychainAccount(provider),
+    ]));
+  } catch (err) {
+    if (isMissingCredentialError(err)) return undefined;
+    throw err;
+  }
+  const value = stdout.replace(/\r?\n$/, '');
+  return value || undefined;
+}
+
+async function writeLinuxSecretService(provider, apiKey) {
+  if (!apiKey) {
+    try {
+      await runCredentialCommand('secret-tool', [
+        'clear',
+        'service',
+        CREDENTIAL_SERVICE,
+        'account',
+        keychainAccount(provider),
+      ]);
+    } catch (err) {
+      if (!isMissingCredentialError(err)) throw err;
+    }
+    return;
+  }
+
+  await runCredentialCommand(
+    'secret-tool',
+    [
+      'store',
+      '--label',
+      `Sunpeak inspector ${provider} API key`,
+      'service',
+      CREDENTIAL_SERVICE,
+      'account',
+      keychainAccount(provider),
+    ],
+    { input: apiKey }
+  );
+}
+
+async function readWindowsDpapiSecret(provider) {
+  const powershell = await getPowerShellCommand();
+  if (!powershell) throw new Error('PowerShell is not available');
+  const script = `
+$ErrorActionPreference = 'Stop'
+$file = $args[0]
+if (-not (Test-Path -LiteralPath $file)) { exit 3 }
+$encrypted = Get-Content -LiteralPath $file -Raw
+$secure = ConvertTo-SecureString $encrypted
+$bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+try {
+  [Console]::Out.Write([Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr))
+} finally {
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
+}
+`;
+  const { stdout } = await runCredentialCommand(
+    powershell,
+    ['-NoProfile', '-NonInteractive', '-Command', script, getWindowsCredentialPath(provider)],
+    { timeout: 10000 }
+  ).catch((err) => {
+    if (isMissingCredentialError(err)) return { stdout: '' };
+    throw err;
+  });
+  return stdout || undefined;
+}
+
+async function writeWindowsDpapiSecret(provider, apiKey) {
+  const file = getWindowsCredentialPath(provider);
+  if (!apiKey) {
+    try {
+      fs.unlinkSync(file);
+    } catch (err) {
+      if (err?.code !== 'ENOENT') throw err;
+    }
+    return;
+  }
+
+  const powershell = await getPowerShellCommand();
+  if (!powershell) throw new Error('PowerShell is not available');
+  const script = `
+$ErrorActionPreference = 'Stop'
+$file = $args[0]
+$secret = [Console]::In.ReadToEnd()
+$secure = ConvertTo-SecureString $secret -AsPlainText -Force
+$encrypted = ConvertFrom-SecureString $secure
+[System.IO.Directory]::CreateDirectory((Split-Path -Parent $file)) | Out-Null
+Set-Content -LiteralPath $file -Value $encrypted -NoNewline
+`;
+  await runCredentialCommand(
+    powershell,
+    ['-NoProfile', '-NonInteractive', '-Command', script, file],
+    { input: apiKey, timeout: 10000 }
+  );
+}
+
+async function getOsCredentialAdapter() {
+  if (process.platform === 'darwin' && existsSync('/usr/bin/security')) {
+    return {
+      storage: 'macOS Keychain',
+      read: readMacOSKeychain,
+      write: writeMacOSKeychain,
+    };
+  }
+
+  if (process.platform === 'linux' && (await commandExists('secret-tool'))) {
+    return {
+      storage: 'Linux Secret Service',
+      read: readLinuxSecretService,
+      write: writeLinuxSecretService,
+    };
+  }
+
+  if (process.platform === 'win32' && (await getPowerShellCommand())) {
+    return {
+      storage: 'Windows DPAPI file',
+      read: readWindowsDpapiSecret,
+      write: writeWindowsDpapiSecret,
+    };
+  }
+
+  return undefined;
+}
+
+function getFallbackKeyPath() {
+  return path.join(homedir(), '.sunpeak', 'inspector-api-keys.json');
+}
+
+function readFallbackKeys() {
+  const file = getFallbackKeyPath();
+  if (!existsSync(file)) return {};
+  try {
+    return JSON.parse(readFileSync(file, 'utf-8'));
+  } catch {
+    return {};
+  }
+}
+
+function writeFallbackKeys(keys) {
+  const file = getFallbackKeyPath();
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
+  fs.writeFileSync(file, JSON.stringify(keys), { mode: 0o600 });
+  try {
+    fs.chmodSync(file, 0o600);
+  } catch {
+    /* best effort */
+  }
+}
+
+function clearFallbackStoredApiKey(provider) {
+  memoryApiKeys.delete(provider);
+  if (process.env.SUNPEAK_INSECURE_FILE_KEY_STORE !== 'true') return;
+  const keys = readFallbackKeys();
+  if (Object.prototype.hasOwnProperty.call(keys, provider)) {
+    delete keys[provider];
+    writeFallbackKeys(keys);
+  }
+}
+
+async function readStoredApiKey(provider) {
+  assertModelProvider(provider);
+  const adapter = await getOsCredentialAdapter();
+  if (adapter) {
+    try {
+      const apiKey = await adapter.read(provider);
+      if (apiKey) return apiKey;
+    } catch {
+      throw credentialAccessError(adapter.storage, 'read');
+    }
+    return undefined;
+  }
+
+  if (process.env.SUNPEAK_INSECURE_FILE_KEY_STORE === 'true') {
+    const keys = readFallbackKeys();
+    return typeof keys[provider] === 'string' ? keys[provider] : undefined;
+  }
+
+  return memoryApiKeys.get(provider);
+}
+
+function normalizeApiKey(apiKey) {
+  const trimmed = typeof apiKey === 'string' ? apiKey.trim() : '';
+  if (/[\u0000-\u001f\u007f-\u009f]/.test(trimmed)) {
+    throw new Error('API key cannot contain control characters.');
+  }
+  return trimmed;
+}
+
+async function writeStoredApiKey(provider, apiKey) {
+  assertModelProvider(provider);
+  const trimmed = normalizeApiKey(apiKey);
+
+  const adapter = await getOsCredentialAdapter();
+  if (adapter) {
+    try {
+      await adapter.write(provider, trimmed);
+      clearFallbackStoredApiKey(provider);
+      return { hasKey: !!trimmed, storage: adapter.storage };
+    } catch {
+      throw credentialAccessError(adapter.storage, trimmed ? 'save' : 'clear');
+    }
+  }
+
+  if (process.env.SUNPEAK_INSECURE_FILE_KEY_STORE === 'true') {
+    const keys = readFallbackKeys();
+    if (trimmed) keys[provider] = trimmed;
+    else delete keys[provider];
+    writeFallbackKeys(keys);
+    return { hasKey: !!trimmed, storage: '0600 file' };
+  }
+
+  if (trimmed) memoryApiKeys.set(provider, trimmed);
+  else memoryApiKeys.delete(provider);
+  return { hasKey: !!trimmed, storage: 'this process' };
+}
+
+async function getApiKeyStatus(provider) {
+  assertModelProvider(provider);
+  const adapter = await getOsCredentialAdapter();
+  const storage =
+    adapter?.storage ||
+    (process.env.SUNPEAK_INSECURE_FILE_KEY_STORE === 'true' ? '0600 file' : 'this process');
+  return {
+    hasKey: !!(await readStoredApiKey(provider)),
+    storage,
+  };
+}
+
+function toolResourceUri(tool) {
+  return tool?._meta?.ui?.resourceUri ?? tool?._meta?.['ui/resourceUri'];
+}
+
+function isToolVisibleToModel(tool) {
+  const visibility = tool?._meta?.ui?.visibility ?? tool?._meta?.['ui/visibility'];
+  if (visibility == null) return true;
+  return Array.isArray(visibility) && visibility.includes('model');
+}
+
+function sanitizeAiSdkSchema(schema) {
+  const clean = { ...(schema || { type: 'object', properties: {} }) };
+  delete clean.$schema;
+  if (
+    clean.additionalProperties != null &&
+    typeof clean.additionalProperties === 'object' &&
+    Object.keys(clean.additionalProperties).length === 0
+  ) {
+    delete clean.additionalProperties;
+  }
+  if (!clean.type) clean.type = 'object';
+  if (!clean.properties) clean.properties = {};
+  return clean;
+}
+
+function normalizeModelId(modelId) {
+  if (typeof modelId !== 'string') {
+    throw new Error('Missing model ID.');
+  }
+  const trimmed = modelId.trim();
+  if (!trimmed) {
+    throw new Error('Missing model ID.');
+  }
+  if (trimmed.length > 200 || /[\u0000-\u001f\u007f]/.test(trimmed)) {
+    throw new Error('Invalid model ID.');
+  }
+  return trimmed;
+}
+
+async function createModelInstance(provider, modelId, apiKey) {
+  assertModelProvider(provider);
+  const normalizedModelId = normalizeModelId(modelId);
+  if (provider === 'openai') {
+    const { createOpenAI } = await import('@ai-sdk/openai');
+    const openai = createOpenAI({ apiKey });
+    return typeof openai.chat === 'function'
+      ? openai.chat(normalizedModelId)
+      : openai(normalizedModelId);
+  }
+  const { createAnthropic } = await import('@ai-sdk/anthropic');
+  return createAnthropic({ apiKey })(normalizedModelId);
+}
+
+function formatModelVisibleToolResult(tool, result) {
+  const toolName = tool?.name || 'MCP tool';
+  if (result?.isError) {
+    const text = (result.content || [])
+      .filter((part) => part.type === 'text')
+      .map((part) => part.text)
+      .join('\n')
+      .trim();
+    return text || `${toolName} returned an error.`;
+  }
+  return `${toolName} completed. The MCP App is ready to render.`;
+}
+
+async function executeModelChatToolCall({ client, name, arguments: args }) {
+  const safeArgs = args && typeof args === 'object' ? args : {};
+  return {
+    arguments: safeArgs,
+    result: await client.callTool({ name, arguments: safeArgs }),
+    source: 'mcp',
+  };
+}
+
+async function runModelChat({ client, provider, modelId, messages, apiKey }) {
+  assertModelProvider(provider);
+  const { generateText, tool: aiTool, jsonSchema } = await import('ai');
+  const model = await createModelInstance(provider, modelId, apiKey);
+  const { tools: mcpTools } = await client.listTools();
+  const capturedToolCalls = [];
+  const tools = {};
+
+  for (const mcpTool of mcpTools.filter(
+    (tool) => !!toolResourceUri(tool) && isToolVisibleToModel(tool)
+  )) {
+    tools[mcpTool.name] = aiTool({
+      description: mcpTool.description || mcpTool.title || '',
+      inputSchema: jsonSchema(sanitizeAiSdkSchema(mcpTool.inputSchema)),
+      parameters: jsonSchema(sanitizeAiSdkSchema(mcpTool.inputSchema)),
+      execute: async (args) => {
+        const { arguments: safeArgs, result } = await executeModelChatToolCall({
+          client,
+          name: mcpTool.name,
+          arguments: args,
+        });
+        capturedToolCalls.push({ name: mcpTool.name, arguments: safeArgs, result });
+        return formatModelVisibleToolResult(mcpTool, result);
+      },
+    });
+  }
+
+  const result = await generateText({
+    model,
+    tools,
+    system:
+      'You are chatting inside the Sunpeak Inspector. When you call an MCP tool that renders an app, the host will render the app below your message. Do not repeat raw tool output, JSON, image URLs, markdown image lists, or full item inventories. Keep any narration brief and let the app carry the visual result.',
+    messages: messages.map((message) => ({
+      role: message.role,
+      content: String(message.content ?? ''),
+    })),
+    maxSteps: 5,
+    maxRetries: 0,
+  });
+
+  return {
+    text: result.text || '',
+    toolCalls: capturedToolCalls,
+    finishReason: result.finishReason,
+    usage: result.usage,
+  };
+}
+
 /**
  * Vite plugin that serves virtual modules for the inspect entry point.
  *
@@ -822,7 +1482,14 @@ function mergeSimulationFixtures(dir, simulations) {
  * @param {string} sandboxUrl - Sandbox server URL
  * @param {{ defaultProdResources?: boolean, hideInspectorModes?: boolean }} [modeFlags] - Mode toggles
  */
-function sunpeakInspectVirtualPlugin(simulations, serverUrl, appName, appIcon, sandboxUrl, modeFlags = {}) {
+function sunpeakInspectVirtualPlugin(
+  simulations,
+  serverUrl,
+  appName,
+  appIcon,
+  sandboxUrl,
+  modeFlags = {}
+) {
   const ENTRY_ID = 'virtual:sunpeak-inspect-entry';
   const RESOLVED_ENTRY_ID = '\0' + ENTRY_ID;
 
@@ -865,6 +1532,15 @@ const onCallToolDirect = async (params) => {
   return res.json();
 };
 
+const onCallToolLive = async (params) => {
+  const res = await fetch('/__sunpeak/call-tool-live', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+  return res.json();
+};
+
 const root = createRoot(document.getElementById('root'));
 root.render(
   createElement(StrictMode, null,
@@ -876,6 +1552,7 @@ root.render(
       sandboxUrl,
       onCallTool,
       onCallToolDirect,
+      onCallToolLive,
       defaultProdResources,
       hideInspectorModes,
     })
@@ -890,12 +1567,13 @@ root.render(
  * Vite plugin for MCP server proxy endpoints.
  * @param {() => import('@modelcontextprotocol/sdk/client/index.js').Client} getClient
  * @param {(client: import('@modelcontextprotocol/sdk/client/index.js').Client) => void} setClient
- * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null }} [pluginOpts]
+ * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null, serverUrl?: string, liveServerUrl?: string }} [pluginOpts]
  */
 function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   // Server URL and options for automatic session recovery.
   // Set by inspectServer() after creating the initial connection.
   let _serverUrl = '';
+  let _liveServerUrl = '';
   /** @type {Record<string, unknown>} */
   let _connectionOpts = {};
 
@@ -930,7 +1608,27 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
   // Initialize reconnection state from plugin options.
   if (pluginOpts.serverUrl) _serverUrl = pluginOpts.serverUrl;
+  if (pluginOpts.liveServerUrl) _liveServerUrl = pluginOpts.liveServerUrl;
   if (pluginOpts.connectionOpts) _connectionOpts = pluginOpts.connectionOpts;
+
+  async function withModelChatClient(callback) {
+    const targetUrl = _liveServerUrl || _serverUrl;
+    if (!targetUrl?.startsWith('http://') && !targetUrl?.startsWith('https://')) {
+      return await callback(getClient());
+    }
+
+    let connection;
+    try {
+      connection = await createMcpConnection(targetUrl, _connectionOpts);
+      return await callback(connection.client);
+    } finally {
+      try {
+        await connection?.transport?.close?.();
+      } catch {
+        /* best-effort cleanup */
+      }
+    }
+  }
 
   // In-memory OAuth state keyed by server URL, persisted across reconnects.
   /** @type {Map<string, { provider: any, getAuthUrl: () => URL | undefined, hasTokens: () => boolean, stateParam: string }>} */
@@ -998,13 +1696,15 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           res.end(JSON.stringify(result));
         } catch (err) {
           // If the session died (server restarted, timeout, etc.), try to reconnect once.
-          if (isDeadSession(err) && await tryReconnect()) {
+          if (isDeadSession(err) && (await tryReconnect())) {
             try {
               const result = await getClient().listTools();
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify(result));
               return;
-            } catch { /* fall through to error response */ }
+            } catch {
+              /* fall through to error response */
+            }
           }
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
@@ -1035,7 +1735,14 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           return;
         }
 
-        const body = await readRequestBody(req);
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_KEY_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
         let parsed;
         try {
           parsed = JSON.parse(body);
@@ -1053,14 +1760,16 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           res.end(JSON.stringify(result));
         } catch (err) {
           // Try reconnecting on dead session before returning error
-          if (isDeadSession(err) && await tryReconnect()) {
+          if (isDeadSession(err) && (await tryReconnect())) {
             try {
               const { name, arguments: args } = parsed;
               const result = await getClient().callTool({ name, arguments: args });
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify(result));
               return;
-            } catch { /* fall through */ }
+            } catch {
+              /* fall through */
+            }
           }
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(
@@ -1085,28 +1794,54 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
         if (!pluginOpts.callToolDirect) {
           // No direct handler available (pure inspect mode) — fall back to MCP
-          const body = await readRequestBody(req);
+          let body;
+          try {
+            body = await readRequestBody(req, { maxBytes: MODEL_CHAT_BODY_LIMIT_BYTES });
+          } catch (err) {
+            res.writeHead(413, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: err.message }));
+            return;
+          }
           let parsed;
-          try { parsed = JSON.parse(body); } catch {
+          try {
+            parsed = JSON.parse(body);
+          } catch {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Invalid JSON' }));
             return;
           }
           try {
             const client = getClient();
-            const result = await client.callTool({ name: parsed.name, arguments: parsed.arguments });
+            const result = await client.callTool({
+              name: parsed.name,
+              arguments: parsed.arguments,
+            });
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify(result));
           } catch (err) {
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ content: [{ type: 'text', text: `Error: ${err.message}` }], isError: true }));
+            res.end(
+              JSON.stringify({
+                content: [{ type: 'text', text: `Error: ${err.message}` }],
+                isError: true,
+              })
+            );
           }
           return;
         }
 
-        const body = await readRequestBody(req);
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_CHAT_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
         let parsed;
-        try { parsed = JSON.parse(body); } catch {
+        try {
+          parsed = JSON.parse(body);
+        } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
           return;
@@ -1118,7 +1853,57 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           res.end(JSON.stringify(result));
         } catch (err) {
           res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ content: [{ type: 'text', text: `Error: ${err.message}` }], isError: true }));
+          res.end(
+            JSON.stringify({
+              content: [{ type: 'text', text: `Error: ${err.message}` }],
+              isError: true,
+            })
+          );
+        }
+      });
+
+      // Call a tool through the live MCP execution plane. In sunpeak dev this
+      // points at /mcp/live, where UI tools execute real handlers even when
+      // normal /mcp still serves simulation fixture data.
+      server.middlewares.use('/__sunpeak/call-tool-live', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
+        if (req.method !== 'POST') {
+          res.writeHead(405);
+          res.end('Method not allowed');
+          return;
+        }
+
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_CHAT_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          return;
+        }
+
+        try {
+          const result = await withModelChatClient((client) =>
+            client.callTool({ name: parsed.name, arguments: parsed.arguments ?? {} })
+          );
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
+        } catch (err) {
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(
+            JSON.stringify({
+              content: [{ type: 'text', text: `Error: ${err.message}` }],
+              isError: true,
+            })
+          );
         }
       });
 
@@ -1132,7 +1917,14 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           return;
         }
 
-        const body = await readRequestBody(req);
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_KEY_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
         let parsed;
         try {
           parsed = JSON.parse(body);
@@ -1173,7 +1965,11 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
         try {
           // Close old connection (best effort)
-          try { await getClient().close(); } catch { /* ignore */ }
+          try {
+            await getClient().close();
+          } catch {
+            /* ignore */
+          }
 
           // Build auth config from request
           const authConfig = parsed.auth;
@@ -1195,6 +1991,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           });
           setClient(newConnection.client);
           _serverUrl = newConnection.serverUrl || url;
+          _liveServerUrl = '';
           _connectionOpts = { enforcePublicHttpUrl: !allowPrivateNetwork };
           if (connectionAuth) {
             _connectionOpts = { ..._connectionOpts, ...connectionAuth };
@@ -1225,9 +2022,18 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           return;
         }
 
-        const body = await readRequestBody(req);
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_KEY_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
         let parsed;
-        try { parsed = JSON.parse(body); } catch {
+        try {
+          parsed = JSON.parse(body);
+        } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
           return;
@@ -1273,7 +2079,11 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           if (existingState?.hasTokens()) {
             try {
               // Close old connection (best effort)
-              try { await getClient().close(); } catch { /* ignore */ }
+              try {
+                await getClient().close();
+              } catch {
+                /* ignore */
+              }
 
               const newConnection = await createMcpConnection(serverUrl, {
                 type: 'oauth',
@@ -1282,6 +2092,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               });
               setClient(newConnection.client);
               _serverUrl = newConnection.serverUrl || serverUrl;
+              _liveServerUrl = '';
               _connectionOpts = {
                 type: 'oauth',
                 authProvider: existingState.provider,
@@ -1317,7 +2128,9 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           if (result === 'REDIRECT') {
             const authUrl = oauthState.getAuthUrl();
             if (!authUrl) {
-              throw new Error('OAuth flow requested redirect but no authorization URL was generated');
+              throw new Error(
+                'OAuth flow requested redirect but no authorization URL was generated'
+              );
             }
             // Reject non-http(s) authorization URLs. A malicious MCP server can
             // publish OAuth metadata whose `authorization_endpoint` is a
@@ -1325,9 +2138,11 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             // navigation would execute attacker JS in the inspector's origin.
             if (authUrl.protocol !== 'http:' && authUrl.protocol !== 'https:') {
               res.writeHead(400, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({
-                error: `OAuth authorization URL has unsupported scheme: ${authUrl.protocol}`,
-              }));
+              res.end(
+                JSON.stringify({
+                  error: `OAuth authorization URL has unsupported scheme: ${authUrl.protocol}`,
+                })
+              );
               return;
             }
             // Register the state parameter so the callback can find the right provider.
@@ -1345,7 +2160,11 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             res.end(JSON.stringify({ status: 'redirect', authUrl: authUrl.toString() }));
           } else {
             // AUTHORIZED — tokens were already available (shouldn't normally happen on first call)
-            try { await getClient().close(); } catch { /* ignore */ }
+            try {
+              await getClient().close();
+            } catch {
+              /* ignore */
+            }
             const newConnection = await createMcpConnection(serverUrl, {
               type: 'oauth',
               authProvider: oauthState.provider,
@@ -1353,6 +2172,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             });
             setClient(newConnection.client);
             _serverUrl = newConnection.serverUrl || serverUrl;
+            _liveServerUrl = '';
             _connectionOpts = {
               type: 'oauth',
               authProvider: oauthState.provider,
@@ -1464,9 +2284,18 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           return;
         }
 
-        const body = await readRequestBody(req);
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_KEY_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
         let parsed;
-        try { parsed = JSON.parse(body); } catch {
+        try {
+          parsed = JSON.parse(body);
+        } catch {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: 'Invalid JSON' }));
           return;
@@ -1493,7 +2322,9 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
         if (!pending) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ error: 'Invalid or expired OAuth state. Start the flow again.' }));
+          res.end(
+            JSON.stringify({ error: 'Invalid or expired OAuth state. Start the flow again.' })
+          );
           return;
         }
 
@@ -1515,7 +2346,11 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           oauthProviders.set(serverUrl, oauthState);
 
           // Create MCP connection with the authorized provider
-          try { await getClient().close(); } catch { /* ignore */ }
+          try {
+            await getClient().close();
+          } catch {
+            /* ignore */
+          }
           const newConnection = await createMcpConnection(serverUrl, {
             type: 'oauth',
             authProvider: oauthState.provider,
@@ -1523,6 +2358,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           });
           setClient(newConnection.client);
           _serverUrl = newConnection.serverUrl || serverUrl;
+          _liveServerUrl = '';
           _connectionOpts = {
             type: 'oauth',
             authProvider: oauthState.provider,
@@ -1536,6 +2372,123 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ status: 'ok', simulations }));
+        } catch (err) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+
+      // Store and inspect local model API keys. Keys are never returned to the
+      // browser; the UI only receives whether a key exists and where it is kept.
+      server.middlewares.use('/__sunpeak/model-key', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
+
+        if (req.method === 'GET') {
+          const url = new URL(req.url, 'http://localhost');
+          const provider = url.searchParams.get('provider') || 'openai';
+          try {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify(await getApiKeyStatus(provider)));
+          } catch (err) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ hasKey: false, error: err.message }));
+          }
+          return;
+        }
+
+        if (req.method !== 'POST') {
+          res.writeHead(405);
+          res.end('Method not allowed');
+          return;
+        }
+
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_KEY_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          return;
+        }
+
+        try {
+          const status = await writeStoredApiKey(parsed.provider || 'openai', parsed.apiKey || '');
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(status));
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+        }
+      });
+
+      // Ask a ChatGPT/OpenAI or Claude/Anthropic model to converse with the
+      // connected MCP server. API keys stay on the local inspect server.
+      server.middlewares.use('/__sunpeak/model-chat', async (req, res) => {
+        if (!requireSameOrigin(req, res)) return;
+        if (req.method !== 'POST') {
+          res.writeHead(405);
+          res.end('Method not allowed');
+          return;
+        }
+
+        let body;
+        try {
+          body = await readRequestBody(req, { maxBytes: MODEL_CHAT_BODY_LIMIT_BYTES });
+        } catch (err) {
+          res.writeHead(413, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: err.message }));
+          return;
+        }
+        let parsed;
+        try {
+          parsed = JSON.parse(body);
+        } catch {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ error: 'Invalid JSON' }));
+          return;
+        }
+
+        try {
+          const provider = parsed.provider || 'openai';
+          assertModelProvider(provider);
+          const apiKey = await readStoredApiKey(provider);
+          if (!apiKey) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: `No ${provider} API key saved.` }));
+            return;
+          }
+          const messages = Array.isArray(parsed.messages) ? parsed.messages : [];
+          const safeMessages = messages
+            .filter((message) => message?.role === 'user' || message?.role === 'assistant')
+            .map((message) => ({
+              role: message.role,
+              content: String(message.content ?? '').slice(0, 20000),
+            }));
+          if (safeMessages.length === 0) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: 'Missing chat messages.' }));
+            return;
+          }
+
+          const result = await withModelChatClient((client) =>
+            runModelChat({
+              client,
+              provider,
+              modelId: parsed.modelId,
+              messages: safeMessages,
+              apiKey,
+            })
+          );
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(result));
         } catch (err) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
@@ -1567,14 +2520,22 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           res.writeHead(200, {
             'Content-Type': `${mimeType}; charset=utf-8`,
             'X-Content-Type-Options': 'nosniff',
+            'Content-Security-Policy': RESOURCE_SANDBOX_CSP,
           });
           if (typeof content.text === 'string') {
             const stripOverlay = url.searchParams.get('devOverlay') === 'false';
             let text = content.text;
             if (stripOverlay) {
               // Strip dev overlay (e.g., for e2e tests)
-              text = text.replace(/<script>(?:(?!<\/script>)[\s\S])*?__sunpeak-dev-timing(?:(?!<\/script>)[\s\S])*?<\/script>/g, '');
-            } else if (process.env.SUNPEAK_DEV_OVERLAY !== 'false' && !text.includes('__sunpeak-dev-timing') && text.includes('</body>')) {
+              text = text.replace(
+                /<script>(?:(?!<\/script>)[\s\S])*?__sunpeak-dev-timing(?:(?!<\/script>)[\s\S])*?<\/script>/g,
+                ''
+              );
+            } else if (
+              process.env.SUNPEAK_DEV_OVERLAY !== 'false' &&
+              !text.includes('__sunpeak-dev-timing') &&
+              text.includes('</body>')
+            ) {
               // Inject dev overlay into resources from non-sunpeak servers.
               // The overlay shows resource served timestamp and tool timing (from
               // _meta._sunpeak.requestTimeMs on the PostMessage tool-result notification).
@@ -1588,7 +2549,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           }
         } catch (err) {
           // Try reconnecting on dead session before returning error
-          if (isDeadSession(err) && await tryReconnect()) {
+          if (isDeadSession(err) && (await tryReconnect())) {
             try {
               const retryResult = await getClient().readResource({ uri });
               const retryContent = retryResult.contents?.[0];
@@ -1597,11 +2558,14 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
                 res.writeHead(200, {
                   'Content-Type': `${mimeType}; charset=utf-8`,
                   'X-Content-Type-Options': 'nosniff',
+                  'Content-Security-Policy': RESOURCE_SANDBOX_CSP,
                 });
                 res.end(typeof retryContent.text === 'string' ? retryContent.text : '');
                 return;
               }
-            } catch { /* fall through */ }
+            } catch {
+              /* fall through */
+            }
           }
           res.writeHead(500, { 'Content-Type': 'text/plain' });
           res.end(`Error reading resource: ${err.message}`);
@@ -1625,7 +2589,10 @@ function parseAllowedHosts(raw) {
   const trimmed = raw.trim();
   if (!trimmed) return undefined;
   if (trimmed === 'all') return 'all';
-  return trimmed.split(',').map((s) => s.trim()).filter(Boolean);
+  return trimmed
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -1649,20 +2616,52 @@ function sanitizeMimeType(mimeType) {
 
 export const _securityTestExports = {
   assertHttpServerUrlAllowed,
+  defaultLiveMcpServerUrl,
   hostnameFromHostHeader,
+  isMissingCredentialError,
   isLoopbackHostname,
+  isLoopbackRemoteAddress,
   isPrivateNetworkAddress,
+  isToolVisibleToModel,
+  executeModelChatToolCall,
+  formatModelVisibleToolResult,
+  normalizeApiKey,
+  normalizeModelId,
+  quoteSecurityInteractiveArg,
+  readRequestBody,
+  resolveHttpRedirectsForMcp,
+  shouldAllowPrivateServerUrls,
 };
 
 /**
  * Read the full body of an HTTP request.
  */
-function readRequestBody(req) {
+function readRequestBody(req, { maxBytes = Infinity } = {}) {
   return new Promise((resolve, reject) => {
     let data = '';
-    req.on('data', (chunk) => (data += chunk));
-    req.on('end', () => resolve(data));
-    req.on('error', reject);
+    let bytes = 0;
+    let settled = false;
+    req.on('data', (chunk) => {
+      if (settled) return;
+      bytes += Buffer.byteLength(chunk);
+      if (bytes > maxBytes) {
+        settled = true;
+        reject(new Error('Request body is too large.'));
+        req.pause();
+        return;
+      }
+      data += chunk;
+    });
+    req.on('end', () => {
+      if (settled) return;
+      settled = true;
+      resolve(data);
+    });
+    req.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    });
   });
 }
 
@@ -1674,6 +2673,7 @@ function readRequestBody(req) {
  *
  * @param {object} opts
  * @param {string} opts.server - MCP server URL or stdio command
+ * @param {string} [opts.liveServer] - MCP server URL for live AI/eval tool calls
  * @param {string|null} [opts.simulationsDir] - Path to simulation fixtures directory
  * @param {number} [opts.port] - Dev server port (default: 3000)
  * @param {string} [opts.name] - App name override
@@ -1694,6 +2694,7 @@ function readRequestBody(req) {
 export async function inspectServer(opts) {
   const {
     server: serverArg,
+    liveServer: liveServerArg,
     simulationsDir = null,
     port: preferredPort,
     name: nameOverride,
@@ -1777,7 +2778,7 @@ export async function inspectServer(opts) {
         process.exit(1);
       }
       console.log(`Connection attempt ${attempt}/${maxRetries} failed, retrying...`);
-      await new Promise(r => setTimeout(r, 500));
+      await new Promise((r) => setTimeout(r, 500));
     }
   }
 
@@ -1816,7 +2817,6 @@ export async function inspectServer(opts) {
     mergeSimulationFixtures(simulationsDir, simulations);
   }
 
-
   // Start or reuse sandbox server
   let sandbox;
   let ownsSandbox = false;
@@ -1844,8 +2844,9 @@ export async function inspectServer(opts) {
   const react = (await import('@vitejs/plugin-react')).default;
 
   // Build the virtual index.html
-  const appTitle = (serverAppName ?? 'MCP Inspector').replace(/[<>&"']/g, (c) =>
-    ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c]
+  const appTitle = (serverAppName ?? 'MCP Inspector').replace(
+    /[<>&"']/g,
+    (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' })[c]
   );
   const indexHtml = `<!DOCTYPE html>
 <html lang="en">
@@ -1862,6 +2863,8 @@ export async function inspectServer(opts) {
 </html>`;
 
   const inspectorServerUrl = resolvedServerUrl;
+  const liveInspectorServerUrl =
+    liveServerArg ?? defaultLiveMcpServerUrl(resolvedServerUrl) ?? resolvedServerUrl;
 
   // Create the Vite server.
   // Use the sunpeak package dir as root to avoid scanning the user's project
@@ -1892,10 +2895,7 @@ export async function inspectServer(opts) {
           // boundary, not these headers.
           const frameAncestors = process.env.SUNPEAK_FRAME_ANCESTORS || "'none'";
           const isFrameableContent = (url) =>
-            !!url && (
-              url.startsWith('/dist/') ||
-              url.startsWith('/__sunpeak/read-resource')
-            );
+            !!url && (url.startsWith('/dist/') || url.startsWith('/__sunpeak/read-resource'));
           server.middlewares.use((req, res, next) => {
             if (!isFrameableContent(req.url)) {
               if (!res.hasHeader('X-Frame-Options') && frameAncestors === "'none'") {
@@ -1927,42 +2927,58 @@ export async function inspectServer(opts) {
       ),
       sunpeakInspectEndpointsPlugin(
         () => mcpConnection.client,
-        (newClient) => { mcpConnection.client = newClient; },
-        { callToolDirect: opts.callToolDirect, simulationsDir, serverUrl: resolvedServerUrl, connectionOpts }
+        (newClient) => {
+          mcpConnection.client = newClient;
+        },
+        {
+          callToolDirect: opts.callToolDirect,
+          simulationsDir,
+          serverUrl: resolvedServerUrl,
+          liveServerUrl: liveInspectorServerUrl,
+          connectionOpts,
+        }
       ),
       // Serve /dist/{name}/{name}.html from the project directory (for Prod Resources mode).
       // The Inspector polls these paths via HEAD to check if built resources exist.
       // Only intercepts .html files under /dist/ — other /dist/ paths (like sunpeak's
       // own dist/inspector/index.js) must fall through to Vite's module resolution.
-      ...(projectRoot ? [{
-        name: 'sunpeak-dist-serve',
-        configureServer(server) {
-          const distRoot = resolve(projectRoot, 'dist');
-          server.middlewares.use((req, res, next) => {
-            if (!req.url?.startsWith('/dist/') || !req.url.endsWith('.html')) return next();
-            // Strip query/hash before joining to avoid `?` or `#` confusing path parsers.
-            const pathOnly = req.url.split('?')[0].split('#')[0];
-            // Resolve the target path and require it to stay inside `<projectRoot>/dist`.
-            // Without this, a request like `/dist/../../etc/anything.html` would resolve
-            // outside the project and serve arbitrary readable files as HTML.
-            const filePath = resolve(projectRoot, pathOnly.replace(/^\/+/, ''));
-            const distRootWithSep = distRoot.endsWith(sep) ? distRoot : distRoot + sep;
-            if (filePath !== distRoot && !filePath.startsWith(distRootWithSep)) {
-              res.writeHead(403);
-              res.end('Forbidden');
-              return;
-            }
-            if (existsSync(filePath)) {
-              const content = readFileSync(filePath, 'utf-8');
-              res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-              res.end(content);
-            } else {
-              res.writeHead(404);
-              res.end('Not found');
-            }
-          });
-        },
-      }] : []),
+      ...(projectRoot
+        ? [
+            {
+              name: 'sunpeak-dist-serve',
+              configureServer(server) {
+                const distRoot = resolve(projectRoot, 'dist');
+                server.middlewares.use((req, res, next) => {
+                  if (!req.url?.startsWith('/dist/') || !req.url.endsWith('.html')) return next();
+                  // Strip query/hash before joining to avoid `?` or `#` confusing path parsers.
+                  const pathOnly = req.url.split('?')[0].split('#')[0];
+                  // Resolve the target path and require it to stay inside `<projectRoot>/dist`.
+                  // Without this, a request like `/dist/../../etc/anything.html` would resolve
+                  // outside the project and serve arbitrary readable files as HTML.
+                  const filePath = resolve(projectRoot, pathOnly.replace(/^\/+/, ''));
+                  const distRootWithSep = distRoot.endsWith(sep) ? distRoot : distRoot + sep;
+                  if (filePath !== distRoot && !filePath.startsWith(distRootWithSep)) {
+                    res.writeHead(403);
+                    res.end('Forbidden');
+                    return;
+                  }
+                  if (existsSync(filePath)) {
+                    const content = readFileSync(filePath, 'utf-8');
+                    res.writeHead(200, {
+                      'Content-Type': 'text/html; charset=utf-8',
+                      'X-Content-Type-Options': 'nosniff',
+                      'Content-Security-Policy': RESOURCE_SANDBOX_CSP,
+                    });
+                    res.end(content);
+                  } else {
+                    res.writeHead(404);
+                    res.end('Not found');
+                  }
+                });
+              },
+            },
+          ]
+        : []),
       // Serve virtual index.html
       {
         name: 'sunpeak-inspect-index-html',
@@ -1979,10 +2995,13 @@ export async function inspectServer(opts) {
                 !req.url.includes('.'))
             ) {
               // Transform through Vite to resolve module imports
-              server.transformIndexHtml(req.url, indexHtml).then((html) => {
-                res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-                res.end(html);
-              }).catch(next);
+              server
+                .transformIndexHtml(req.url, indexHtml)
+                .then((html) => {
+                  res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+                  res.end(html);
+                })
+                .catch(next);
               return;
             }
             next();
@@ -1998,19 +3017,23 @@ export async function inspectServer(opts) {
         },
       },
       // Favicon
-      ...(faviconBuffer ? [{
-        name: 'sunpeak-favicon',
-        configureServer(server) {
-          server.middlewares.use('/favicon.ico', (_req, res) => {
-            res.writeHead(200, {
-              'Content-Type': 'image/png',
-              'Content-Length': faviconBuffer.length,
-              'Cache-Control': 'public, max-age=86400',
-            });
-            res.end(faviconBuffer);
-          });
-        },
-      }] : []),
+      ...(faviconBuffer
+        ? [
+            {
+              name: 'sunpeak-favicon',
+              configureServer(server) {
+                server.middlewares.use('/favicon.ico', (_req, res) => {
+                  res.writeHead(200, {
+                    'Content-Type': 'image/png',
+                    'Content-Length': faviconBuffer.length,
+                    'Cache-Control': 'public, max-age=86400',
+                  });
+                  res.end(faviconBuffer);
+                });
+              },
+            },
+          ]
+        : []),
       // Health endpoint
       {
         name: 'sunpeak-health',
@@ -2057,12 +3080,16 @@ export async function inspectServer(opts) {
   server.bindCLIShortcuts({ print: true });
 
   // Print troubleshooting link (dimmed)
-  console.log('\n  \x1b[2mApp not loading? \u2192 https://sunpeak.ai/docs/app-framework/guides/troubleshooting\x1b[0m');
+  console.log(
+    '\n  \x1b[2mApp not loading? \u2192 https://sunpeak.ai/docs/app-framework/guides/troubleshooting\x1b[0m'
+  );
 
   // Print star-begging message unless suppressed
   if (!noBegging) {
     // #FFB800 in 24-bit ANSI color
-    console.log('\n\x1b[38;2;255;184;0m\u2b50\ufe0f \u2192 \u2764\ufe0f  https://github.com/Sunpeak-AI/sunpeak\x1b[0m\n');
+    console.log(
+      '\n\x1b[38;2;255;184;0m\u2b50\ufe0f \u2192 \u2764\ufe0f  https://github.com/Sunpeak-AI/sunpeak\x1b[0m\n'
+    );
   }
 
   // Cleanup on exit

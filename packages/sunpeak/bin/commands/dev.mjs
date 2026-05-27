@@ -560,8 +560,10 @@ if (import.meta.hot) {
   // In framework mode, the inspector shows prod-tools/prod-resources toggles instead
   // of the server URL input.
   const mcpUrl = `http://localhost:${mcpPort}/mcp`;
+  const liveMcpUrl = `http://localhost:${mcpPort}/mcp/live`;
   await inspectServer({
     server: mcpUrl,
+    liveServer: liveMcpUrl,
     simulationsDir,
     port,
     name: serverDisplayName,

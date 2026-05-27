@@ -429,10 +429,10 @@ function createAppServer(
           const argKeys = Object.keys(args);
           const argsStr = argKeys.length > 0 ? `{${argKeys.join(', ')}}` : '{}';
 
-          // When prodTools is enabled (--prod-tools flag), always use the real
-          // handler so ChatGPT/Claude get live results. Otherwise, prefer simulation
-          // mock data for UI tools so external hosts get predictable fixture results.
-          // Backend-only tools (no structuredContent) always use real handlers.
+          // When prodTools is enabled (--prod-tools flag or /mcp/live), use the
+          // real handler. Otherwise, prefer simulation mock data for UI tools so
+          // external hosts get predictable fixture results. Backend-only tools
+          // always use handlers.
           const hasMockResult = toolResult?.structuredContent != null;
           const realHandler = simulation.handler;
           const useLiveHandler = realHandler && (config.prodTools || !hasMockResult);
@@ -591,6 +591,7 @@ function isLocalConnection(req: IncomingMessage): boolean {
 const sessions = new Map<string, SessionRecord>();
 
 const MCP_PATH = '/mcp';
+const LIVE_MCP_PATH = '/mcp/live';
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -989,6 +990,14 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       return;
     }
 
+    // Live MCP endpoint for AI/eval execution inside the inspector. It uses
+    // the same protocol and resources as /mcp, but always executes real tool
+    // handlers instead of fixture structuredContent.
+    if (url.pathname === LIVE_MCP_PATH) {
+      await handleMcpRequest(req, res, { ...config, prodTools: true }, simulations, viteMode);
+      return;
+    }
+
     // If Vite server is available, delegate all other requests to it
     if (viteServer) {
       // Add CORS headers for Vite-served content (needed for cross-origin widget loading)
@@ -1059,6 +1068,7 @@ export function runMCPServer(config: MCPServerConfig): MCPServerHandle {
       console.log(`Sunpeak MCP server listening on http://localhost:${actualPort}`);
     }
     console.log(`  MCP endpoint: http://localhost:${actualPort}${MCP_PATH}`);
+    console.log(`  Live MCP endpoint: http://localhost:${actualPort}${LIVE_MCP_PATH}`);
     if (viteMode) {
       console.log(`  Vite HMR: enabled (source files served with hot reload)`);
     }
