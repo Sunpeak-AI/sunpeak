@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { createInspectorUrl } from 'sunpeak/inspector';
 
 /**
@@ -10,6 +11,80 @@ import { createInspectorUrl } from 'sunpeak/inspector';
  * sunpeak package behavior.
  */
 const hosts = ['chatgpt', 'claude'] as const;
+
+const modelAlbumResult = {
+  structuredContent: {
+    albums: [
+      {
+        id: 'model-tasting-menu',
+        title: 'Model Tasting Menu',
+        cover: 'https://cdn.sunpeak.ai/demo/pizza1.jpeg',
+        photos: [
+          {
+            id: 'model-tasting-menu-1',
+            title: 'Corner slice',
+            url: 'https://cdn.sunpeak.ai/demo/pizza2.jpeg',
+          },
+          {
+            id: 'model-tasting-menu-2',
+            title: 'Table spread',
+            url: 'https://cdn.sunpeak.ai/demo/pizza3.jpeg',
+          },
+        ],
+      },
+    ],
+  },
+};
+
+const modelCarouselResult = {
+  structuredContent: {
+    places: [
+      {
+        id: 'model-austin-landmark',
+        name: 'Austin Landmark',
+        rating: 4.7,
+        category: 'landmark',
+        location: 'Austin',
+        image: 'https://cdn.sunpeak.ai/demo/austin1.jpeg',
+        description: 'A popular landmark in Austin',
+      },
+    ],
+  },
+};
+
+async function submitModelMessage(page: Page, message: string) {
+  const composer = page.locator('input[name="userInput"]').last();
+  await expect(composer).toBeEnabled();
+  await composer.fill(message);
+  await expect(composer).toHaveValue(message);
+  await composer.press('Enter');
+}
+
+async function routeSavedModelKey(page: Page) {
+  await page.route('**/__sunpeak/model-key?*', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        hasKey: true,
+        storage: 'test credential store',
+      }),
+    });
+  });
+}
+
+async function expectNoHorizontalOverflow(page: Page) {
+  await expect
+    .poll(() =>
+      page
+        .locator('.sunpeak-inspector-root > main')
+        .evaluate((el) => el.scrollWidth - el.clientWidth)
+    )
+    .toBeLessThanOrEqual(1);
+  await expect
+    .poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth))
+    .toBeLessThanOrEqual(1);
+}
 
 for (const host of hosts) {
   test.describe(`Tool Result Visibility [${host}]`, () => {
@@ -76,6 +151,37 @@ for (const host of hosts) {
   });
 
   test.describe(`Run with Real Handlers [${host}]`, () => {
+    test('live MCP endpoint calls real handler instead of fixture data', async ({ page }) => {
+      const response = await page.request.post('/__sunpeak/call-tool-live', {
+        data: {
+          name: 'show-albums',
+          arguments: { category: 'model', limit: 1 },
+        },
+      });
+      await expect(response).toBeOK();
+
+      const result = await response.json();
+      const serialized = JSON.stringify(result);
+      expect(serialized).toContain('Model Photos');
+      expect(serialized).not.toContain('Summer Slice');
+    });
+
+    test('live MCP endpoint calls carousel handler instead of fixture data', async ({ page }) => {
+      const response = await page.request.post('/__sunpeak/call-tool-live', {
+        data: {
+          name: 'show-carousel',
+          arguments: { city: 'Austin', categories: ['landmark'], limit: 1 },
+        },
+      });
+      await expect(response).toBeOK();
+
+      const result = await response.json();
+      const places = result?.structuredContent?.places ?? [];
+      expect(places).toHaveLength(1);
+      expect(places[0]?.name).toBe('Austin Landmark');
+      expect(JSON.stringify(result)).not.toContain('Lady Bird Lake');
+    });
+
     test('Run button calls real handler and renders real output', async ({ page }) => {
       await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
 
@@ -121,6 +227,22 @@ for (const host of hosts) {
       await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible({
         timeout: 30000,
       });
+
+      const response = await page.request.get('/dist/albums/albums.html');
+      await expect(response).toBeOK();
+      expect(response.headers()['content-security-policy']).toContain('sandbox');
+      expect(response.headers()['content-security-policy']).not.toContain('allow-same-origin');
+
+      const prodResourcesHelp = page.getByRole('link', {
+        name: 'Load resources from dist/ builds instead of HMR',
+      });
+      await prodResourcesHelp.hover();
+      const helpBox = await prodResourcesHelp.boundingBox();
+      const tooltipBox = await prodResourcesHelp.locator('span[aria-hidden="true"]').boundingBox();
+      expect(helpBox).not.toBeNull();
+      expect(tooltipBox).not.toBeNull();
+      expect(Math.round(tooltipBox!.x - helpBox!.x - helpBox!.width)).toBeLessThanOrEqual(8);
+      expect(Math.round(tooltipBox!.x - helpBox!.x - helpBox!.width)).toBeGreaterThanOrEqual(4);
     });
   });
 
@@ -160,6 +282,16 @@ for (const host of hosts) {
       await expect(iframe.locator('button:has-text("Summer Slice")')).toBeVisible({
         timeout: 5000,
       });
+
+      const viewport = page.viewportSize();
+      if (!viewport) throw new Error('Expected Playwright viewport');
+      await expect
+        .poll(async () => {
+          const box = await page.locator('iframe[title="Resource Preview"]').first().boundingBox();
+          return Math.round(box?.width ?? 0);
+        })
+        .toBeGreaterThan(Math.round(viewport.width * 0.75));
+      await expectNoHorizontalOverflow(page);
     });
   });
 
@@ -180,7 +312,367 @@ for (const host of hosts) {
       expect(colorScheme).toContain('light');
     });
   });
+
+  test.describe(`Model Chat [${host}]`, () => {
+    test('submits a prompt, renders model text, tool call JSON, and the MCP App', async ({
+      page,
+    }) => {
+      const prompt = 'Show me an album from the model';
+      let requestBody: Record<string, unknown> | undefined;
+      let responseIndex = 0;
+      let releaseFirstResponse: (() => void) | undefined;
+      const firstResponseGate = new Promise<void>((resolve) => {
+        releaseFirstResponse = resolve;
+      });
+
+      await routeSavedModelKey(page);
+
+      await page.route('**/__sunpeak/model-chat', async (route) => {
+        responseIndex += 1;
+        requestBody = JSON.parse(route.request().postData() ?? '{}');
+        const title = responseIndex === 1 ? 'Model Tasting Menu' : 'Second Model Menu';
+        if (responseIndex === 1) {
+          await firstResponseGate;
+        }
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            text:
+              responseIndex === 1
+                ? 'I found one album from the model.'
+                : 'I found a second album from the model.',
+            toolCalls: [
+              {
+                name: 'show-albums',
+                arguments: {
+                  category: 'model',
+                  limit: 1,
+                },
+                result: {
+                  structuredContent: {
+                    albums: [
+                      {
+                        ...modelAlbumResult.structuredContent.albums[0],
+                        id: `model-tasting-menu-${responseIndex}`,
+                        title,
+                      },
+                    ],
+                  },
+                },
+              },
+            ],
+          }),
+        });
+      });
+
+      await page.goto(createInspectorUrl({ simulation: 'show-albums', theme: 'dark', host }));
+
+      await expect(page.getByText('Model Chat')).toBeVisible();
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue(/Summer Slice/);
+      await submitModelMessage(page, prompt);
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue('');
+      await expect(page.getByTestId('tool-result-textarea')).not.toHaveValue(/Summer Slice/);
+      releaseFirstResponse?.();
+
+      await expect(page.locator('[data-turn="user"]').filter({ hasText: prompt })).toBeVisible();
+      await expect(
+        page.locator('[data-turn="assistant"]').filter({
+          hasText: 'I found one album from the model.',
+        })
+      ).toBeVisible();
+      await expect(page.getByText('Tool call: show-albums')).toBeVisible();
+      await expect(
+        page.locator('[data-turn="assistant"] pre').filter({ hasText: '"category": "model"' })
+      ).toBeVisible();
+
+      await expect(page.getByTestId('tool-input-textarea')).toHaveValue(/"category": "model"/);
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue(/Model Tasting Menu/);
+      await expect(page.getByTestId('tool-result-textarea')).not.toHaveValue(/Summer Slice/);
+
+      const iframe = page.frameLocator('iframe').frameLocator('iframe');
+      await expect(iframe.locator('button:has-text("Model Tasting Menu")')).toBeVisible({
+        timeout: 10000,
+      });
+
+      await page.locator('button[aria-pressed]:has-text("Full")').click();
+      await expect(iframe.locator('button:has-text("Model Tasting Menu")')).toBeVisible({
+        timeout: 5000,
+      });
+      await expectNoHorizontalOverflow(page);
+      await page.getByRole('button', { name: host === 'chatgpt' ? /^Close$/ : /^Back$/ }).click();
+
+      expect(requestBody).toMatchObject({
+        provider: 'openai',
+        modelId: 'gpt-4o',
+        messages: [{ role: 'user', content: prompt }],
+      });
+
+      await submitModelMessage(page, 'Show me another album from the model');
+
+      const firstAssistant = page
+        .locator('[data-turn="assistant"]')
+        .filter({ hasText: 'I found one album from the model.' });
+      const secondAssistant = page
+        .locator('[data-turn="assistant"]')
+        .filter({ hasText: 'I found a second album from the model.' });
+      await expect(firstAssistant.locator('iframe')).toHaveCount(0);
+      await expect(secondAssistant.locator('iframe')).toHaveCount(1);
+      await expect(iframe.locator('button:has-text("Second Model Menu")')).toBeVisible();
+    });
+
+    test('renders carousel from model tool result without restoring the fixture', async ({
+      page,
+    }) => {
+      const prompt = 'sunpeak-app show carousel make it up';
+
+      await routeSavedModelKey(page);
+
+      await page.route('**/__sunpeak/model-chat', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            text: 'I called the carousel tool and rendered the app.',
+            toolCalls: [
+              {
+                name: 'show-carousel',
+                arguments: {
+                  city: 'Austin',
+                  categories: ['landmark'],
+                  limit: 1,
+                },
+                result: modelCarouselResult,
+              },
+            ],
+          }),
+        });
+      });
+
+      await page.goto(createInspectorUrl({ simulation: 'show-carousel', theme: 'dark', host }));
+
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue(/Lady Bird Lake/);
+      await submitModelMessage(page, prompt);
+
+      await expect(page.getByTestId('tool-input-textarea')).toHaveValue(/"city": "Austin"/);
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue(/Austin Landmark/);
+      await expect(page.getByTestId('tool-result-textarea')).not.toHaveValue(/Lady Bird Lake/);
+      await expect(page.getByTestId('tool-result-textarea')).not.toHaveValue(
+        /South Congress Avenue/
+      );
+
+      await expect
+        .poll(async () =>
+          page.evaluate(() => {
+            const text = document.getElementById('__tool-result')?.textContent;
+            return text ? JSON.parse(text) : null;
+          })
+        )
+        .toMatchObject({
+          source: 'live-mcp',
+          structuredContent: {
+            places: [{ name: 'Austin Landmark' }],
+          },
+        });
+
+      const iframe = page.frameLocator('iframe').frameLocator('iframe');
+      await expect(iframe.getByRole('heading', { name: 'Austin Landmark' })).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(iframe.getByRole('heading', { name: 'Lady Bird Lake' })).not.toBeVisible();
+    });
+
+    test('preserves model tool data when switching from the default tool to carousel', async ({
+      page,
+    }) => {
+      await routeSavedModelKey(page);
+
+      await page.route('**/__sunpeak/model-chat', async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            text: 'I called the carousel tool and rendered the app.',
+            toolCalls: [
+              {
+                name: 'show-carousel',
+                arguments: {
+                  city: 'Austin',
+                  categories: ['landmark'],
+                  limit: 1,
+                },
+                result: modelCarouselResult,
+              },
+            ],
+          }),
+        });
+      });
+
+      await page.goto(createInspectorUrl({ theme: 'dark', host }));
+      await submitModelMessage(page, 'sunpeak-app show carousel make it up');
+
+      await expect(page.getByTestId('simulation-selector').locator('select')).toHaveValue(
+        '__live__'
+      );
+
+      await expect(page.getByTestId('tool-input-textarea')).toHaveValue(/"city": "Austin"/);
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue(/Austin Landmark/);
+      await expect(page.getByTestId('tool-result-textarea')).not.toHaveValue(/Lady Bird Lake/);
+      await expect(page.getByTestId('tool-result-textarea')).not.toHaveValue(
+        /South Congress Avenue/
+      );
+
+      const iframe = page.frameLocator('iframe').frameLocator('iframe');
+      await expect(iframe.getByRole('heading', { name: 'Austin Landmark' })).toBeVisible({
+        timeout: 10000,
+      });
+      await expect(iframe.getByRole('heading', { name: 'Lady Bird Lake' })).not.toBeVisible();
+
+      const toolResultTextarea = page.getByTestId('tool-result-textarea');
+      await toolResultTextarea.fill(
+        (await toolResultTextarea.inputValue()).replace('Austin Landmark', 'Austin Observatory')
+      );
+      await toolResultTextarea.blur();
+      await expect(iframe.getByRole('heading', { name: 'Austin Observatory' })).toBeVisible();
+      await expect(iframe.getByRole('heading', { name: 'Austin Landmark' })).not.toBeVisible();
+    });
+
+    test('supports Anthropic provider selection and text-only model responses', async ({
+      page,
+    }) => {
+      const prompt = 'Answer without opening the app';
+      let requestBody: Record<string, unknown> | undefined;
+
+      await routeSavedModelKey(page);
+
+      await page.route('**/__sunpeak/model-chat', async (route) => {
+        requestBody = JSON.parse(route.request().postData() ?? '{}');
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            text: 'Plain model answer, no MCP tool call needed.',
+            toolCalls: [],
+          }),
+        });
+      });
+
+      await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
+      await page.getByRole('button', { name: /Model Chat/ }).click();
+
+      await page
+        .locator('select')
+        .filter({ has: page.locator('option[value="anthropic"]') })
+        .selectOption('anthropic');
+      const modelInput = page.locator('input[placeholder="claude-3-5-sonnet-20241022"]');
+      await modelInput.fill('claude-test-model');
+      await modelInput.press('Enter');
+
+      await submitModelMessage(page, prompt);
+
+      await expect(
+        page.locator('[data-turn="assistant"]').filter({
+          hasText: 'Plain model answer, no MCP tool call needed.',
+        })
+      ).toBeVisible();
+      await expect(page.getByText('Tool call:')).not.toBeVisible();
+      await expect(page.getByTestId('tool-result-textarea')).toHaveValue('');
+
+      expect(requestBody).toMatchObject({
+        provider: 'anthropic',
+        modelId: 'claude-test-model',
+        messages: [{ role: 'user', content: prompt }],
+      });
+    });
+
+    test('shows model errors and re-enables the composer for another message', async ({ page }) => {
+      await routeSavedModelKey(page);
+
+      await page.route('**/__sunpeak/model-chat', async (route) => {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            error: 'No API key stored for openai.',
+          }),
+        });
+      });
+
+      await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
+
+      await submitModelMessage(page, 'Try a request without a saved key');
+
+      await expect(
+        page.locator('[data-turn="assistant"]').filter({ hasText: 'Error:' })
+      ).toContainText('No API key stored for openai.');
+      const composer = page.locator('input[name="userInput"]').last();
+      await expect(composer).toBeEnabled();
+      await composer.fill('I can type again');
+      await expect(composer).toHaveValue('I can type again');
+    });
+  });
 }
+
+test.describe('Model Chat API Keys', () => {
+  test('saves and clears a local API key without echoing the secret into the UI', async ({
+    page,
+  }) => {
+    const secret = 'sk-test-secret-that-must-not-render';
+    const keyRequests: Array<Record<string, unknown>> = [];
+
+    await page.route('**/__sunpeak/model-key**', async (route) => {
+      if (route.request().method() === 'GET') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            hasKey: false,
+            storage: 'test key store',
+          }),
+        });
+        return;
+      }
+      const body = JSON.parse(route.request().postData() ?? '{}');
+      keyRequests.push(body);
+      const hasKey = Boolean(body.apiKey);
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          provider: body.provider,
+          hasKey,
+          storage: hasKey ? 'test key store' : null,
+        }),
+      });
+    });
+
+    await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host: 'chatgpt' }));
+    await page.getByRole('button', { name: /Model Chat/ }).click();
+
+    const passwordInput = page.locator('input[type="password"]').first();
+    await expect(passwordInput).toHaveAttribute('placeholder', 'Paste openai key');
+    await expect(page.getByText('Key saved test key store')).not.toBeVisible();
+    await passwordInput.fill(secret);
+    await page.getByRole('button', { name: 'Save' }).click();
+
+    await expect(page.getByText('Saved test key store')).toBeVisible();
+    await expect(passwordInput).toHaveValue('');
+    await expect(page.locator('body')).not.toContainText(secret);
+
+    await page.getByRole('button', { name: 'Clear' }).click();
+    await expect(page.getByText('Cleared')).toBeVisible();
+    await expect(page.locator('input[name="userInput"]').last()).toBeDisabled();
+    await expect(page.locator('input[name="userInput"]').last()).toHaveAttribute(
+      'placeholder',
+      'Add an API key to chat with gpt-4o'
+    );
+
+    expect(keyRequests).toEqual([
+      { provider: 'openai', apiKey: secret },
+      { provider: 'openai', apiKey: '' },
+    ]);
+  });
+});
 
 test.describe('Host Switching', () => {
   test('switching from ChatGPT to Claude changes conversation chrome', async ({ page }) => {
@@ -213,5 +705,13 @@ test.describe('Resource Rendering', () => {
     // Content should be in the inner iframe
     await expect(innerIframe.locator('#root')).toBeAttached();
     await expect(innerIframe.locator('button:has-text("Summer Slice")')).toBeVisible();
+
+    const innerFrameElement = outerIframe.locator('iframe').first();
+    const src = await innerFrameElement.getAttribute('src');
+    expect(src).toContain('/__sunpeak/read-resource');
+    const response = await page.request.get(src!);
+    await expect(response).toBeOK();
+    expect(response.headers()['content-security-policy']).toContain('sandbox');
+    expect(response.headers()['content-security-policy']).not.toContain('allow-same-origin');
   });
 });

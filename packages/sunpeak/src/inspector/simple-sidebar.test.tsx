@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import {
+  HelpIcon,
   SimpleSidebar,
   SidebarControl,
   SidebarCollapsibleControl,
@@ -24,13 +25,12 @@ describe('SimpleSidebar', () => {
     expect(screen.getByTestId('main-content')).toBeInTheDocument();
     expect(screen.getByText('Main Content')).toBeInTheDocument();
 
-    // Verify controls section exists with the Controls heading
-    expect(screen.getByText('Controls')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Controls' })).not.toBeInTheDocument();
     expect(screen.getByTestId('controls-content')).toBeInTheDocument();
     expect(screen.getByText('Control Panel')).toBeInTheDocument();
   });
 
-  it('renders headerRight content in the Controls header row', () => {
+  it('renders headerRight content in the sidebar header row', () => {
     render(
       <SimpleSidebar
         controls={<div>Controls</div>}
@@ -52,6 +52,16 @@ describe('SimpleSidebar', () => {
     );
 
     expect(screen.queryByTestId('header-right')).not.toBeInTheDocument();
+  });
+});
+
+describe('HelpIcon', () => {
+  it('positions the tooltip immediately to the right of the icon', () => {
+    render(<HelpIcon tooltip="Helpful context" docsPath="testing/evals" />);
+
+    const link = screen.getByRole('link', { name: 'Helpful context' });
+    expect(link).toHaveAttribute('href', 'https://sunpeak.ai/docs/testing/evals');
+    expect(screen.getByText('Helpful context')).toHaveClass('left-full', 'ml-1.5');
   });
 });
 
@@ -214,6 +224,24 @@ describe('SidebarCheckbox', () => {
 
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).toBeChecked();
+  });
+
+  it('keeps the help link outside the checkbox label', () => {
+    const handleChange = vi.fn();
+    render(
+      <SidebarCheckbox
+        checked={false}
+        onChange={handleChange}
+        label="Prod Resources"
+        tooltip="Load resources from dist/ builds instead of HMR"
+        docsPath="app-framework/cli/dev#prod-tools-and-prod-resources-flags"
+      />
+    );
+
+    const helpLink = screen.getByRole('link', {
+      name: /Load resources from dist\/ builds instead of HMR/i,
+    });
+    expect(helpLink.closest('label')).not.toBeInTheDocument();
   });
 });
 

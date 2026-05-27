@@ -15,6 +15,10 @@ beforeEach(() => {
 
 afterEach(() => {
   fetchSpy.mockRestore();
+  window.history.replaceState(null, '', '/');
+  document.documentElement.style.backgroundColor = '';
+  document.documentElement.style.colorScheme = '';
+  document.body.style.backgroundColor = '';
 });
 
 /**
@@ -31,6 +35,19 @@ function createSim(overrides: Partial<Simulation> = {}): Simulation {
 }
 
 describe('Inspector', () => {
+  describe('Standalone page chrome', () => {
+    it('sets the document background to the conversation background in dark mode', () => {
+      window.history.replaceState(null, '', '/?theme=dark');
+
+      const { unmount } = render(<Inspector simulations={{ test: createSim() }} />);
+
+      expect(document.documentElement.style.backgroundColor).toBe('#212121');
+      expect(document.body.style.backgroundColor).toBe('#212121');
+
+      unmount();
+    });
+  });
+
   describe('Tool dropdown', () => {
     it('shows Tool dropdown when tools exist', () => {
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
@@ -284,7 +301,19 @@ describe('Inspector', () => {
     it('shows Prod Resources checkbox when hideInspectorModes is false', () => {
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
-      expect(screen.getByRole('checkbox', { name: /prod resources/i })).toBeInTheDocument();
+      const prodResourcesCheckbox = screen.getByRole('checkbox', { name: /prod resources/i });
+      expect(prodResourcesCheckbox).toBeInTheDocument();
+      expect(prodResourcesCheckbox.closest('header')).toBeInTheDocument();
+      expect(
+        screen
+          .getByRole('link', { name: /Load resources from dist\/ builds instead of HMR/i })
+          .closest('header')
+      ).toBeInTheDocument();
+      expect(
+        screen
+          .getByRole('link', { name: /Load resources from dist\/ builds instead of HMR/i })
+          .closest('label')
+      ).not.toBeInTheDocument();
     });
 
     it('hides Prod Resources checkbox when hideInspectorModes is true', () => {
@@ -424,6 +453,12 @@ describe('Inspector', () => {
       fetchSpy
         .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
         .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+        .mockResolvedValueOnce(
           new Response('Fractal ChatGPT App MCP Server. Connect to /mcp', {
             status: 200,
             headers: { 'Content-Type': 'text/plain' },
@@ -462,6 +497,12 @@ describe('Inspector', () => {
 
       fetchSpy
         .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ error: 'No auth configured' }), { status: 400 })
         );
@@ -537,7 +578,9 @@ describe('Inspector', () => {
     it('always shows MCP Server URL input', () => {
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
-      expect(screen.getByTestId('server-url')).toBeInTheDocument();
+      const serverUrlControl = screen.getByTestId('server-url');
+      expect(serverUrlControl).toBeInTheDocument();
+      expect(serverUrlControl.closest('header')).not.toBeInTheDocument();
     });
 
     it('pre-populates server URL from mcpServerUrl prop', async () => {
@@ -588,6 +631,12 @@ describe('Inspector', () => {
       fetchSpy
         .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
         .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+        .mockResolvedValueOnce(
           new Response(JSON.stringify({ status: 'ok', simulations: newSimulations }), {
             status: 200,
           })
@@ -621,6 +670,12 @@ describe('Inspector', () => {
 
       fetchSpy
         .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
         .mockResolvedValueOnce(
           new Response(JSON.stringify({ error: 'Connection refused' }), { status: 500 })
         );
@@ -1014,11 +1069,18 @@ describe('Inspector', () => {
       };
 
       // No initial health check — starts without URL
-      fetchSpy.mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: 'ok', simulations: serverSimulations }), {
-          status: 200,
-        })
-      );
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status: 'ok', simulations: serverSimulations }), {
+            status: 200,
+          })
+        );
 
       render(<Inspector simulations={{}} onCallTool={vi.fn()} />);
 
@@ -1048,11 +1110,18 @@ describe('Inspector', () => {
         }),
       };
 
-      fetchSpy.mockResolvedValueOnce(
-        new Response(JSON.stringify({ status: 'ok', simulations: discoveredSims }), {
-          status: 200,
-        })
-      );
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ status: 'ok', simulations: discoveredSims }), {
+            status: 200,
+          })
+        );
 
       render(<Inspector simulations={{}} onCallTool={vi.fn()} />);
 
@@ -1072,7 +1141,14 @@ describe('Inspector', () => {
       const user = userEvent.setup();
 
       // Network-level failure (fetch throws, not HTTP error)
-      fetchSpy.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+      fetchSpy
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+        .mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
       render(<Inspector simulations={{}} onCallTool={vi.fn()} />);
 
@@ -1135,6 +1211,29 @@ describe('Inspector', () => {
   // sizing are observable without rendering an actual resource.
   describe('Embedded mode (`app` prop)', () => {
     const emptyApp = { name: 'My Embed', resources: [], tools: [] };
+    const modelApp = {
+      name: 'Model Embed',
+      resources: [{ uri: 'ui://albums', html: '<html><body>albums</body></html>' }],
+      tools: [
+        {
+          tool: {
+            name: 'show-albums',
+            inputSchema: { type: 'object' as const, properties: {}, required: [] },
+            _meta: { openai: { outputTemplate: 'ui://albums' } },
+          },
+        },
+        {
+          tool: {
+            name: 'app-only-action',
+            inputSchema: { type: 'object' as const, properties: {}, required: [] },
+            _meta: {
+              openai: { outputTemplate: 'ui://albums' },
+              ui: { visibility: ['app'] },
+            },
+          },
+        },
+      ],
+    };
 
     it('hides the MCP Server URL input', () => {
       render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
@@ -1166,6 +1265,176 @@ describe('Inspector', () => {
     it('shows the embedded-mode empty-state message when no tools exist', () => {
       render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
       expect(screen.getByText('No tools with UI resources in this app')).toBeInTheDocument();
+    });
+
+    it('keeps model chat and the bottom composer hidden in embedded mode', () => {
+      render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
+      expect(screen.queryByText('Model Chat')).not.toBeInTheDocument();
+      expect(document.querySelector('input[name="userInput"]')).not.toBeInTheDocument();
+      expect(screen.queryByPlaceholderText('Message sunpeak.ai')).not.toBeInTheDocument();
+    });
+
+    it('keeps embedded model chat UI hidden even when modelChat is configured', () => {
+      const onChat = vi.fn(async () => ({
+        text: 'Custom model response from embedder.',
+        toolCalls: [],
+      }));
+      const getStatus = vi.fn(async () => ({ hasKey: false, storage: 'Fractal vault' }));
+      render(
+        <Inspector
+          app={modelApp}
+          onCallTool={vi.fn()}
+          modelChat={{
+            providers: [
+              {
+                id: 'fractal',
+                label: 'Fractal Models',
+                models: ['fractal-fast', 'fractal-careful'],
+                defaultModel: 'fractal-careful',
+              },
+            ],
+            apiKey: { getStatus },
+            onChat,
+          }}
+        />
+      );
+
+      expect(screen.queryByText('Model Chat')).not.toBeInTheDocument();
+      expect(screen.queryByText('API Key')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('Fractal Models')).not.toBeInTheDocument();
+      expect(screen.queryByDisplayValue('fractal-careful')).not.toBeInTheDocument();
+      expect(document.querySelector('input[name="userInput"]')).not.toBeInTheDocument();
+      expect(onChat).not.toHaveBeenCalled();
+      expect(getStatus).not.toHaveBeenCalled();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('lets testing embedders explicitly opt into model chat with their own handler', async () => {
+      const onChat = vi.fn(async () => ({
+        text: 'Custom model response from embedder.',
+        toolCalls: [],
+      }));
+      render(
+        <Inspector
+          app={modelApp}
+          onCallTool={vi.fn()}
+          modelChat={{
+            enabled: true,
+            providers: [
+              {
+                id: 'fractal',
+                label: 'Fractal Models',
+                models: ['fractal-fast', 'fractal-careful'],
+                defaultModel: 'fractal-careful',
+              },
+            ],
+            onChat,
+          }}
+        />
+      );
+
+      expect(screen.getByText('Model Chat')).toBeInTheDocument();
+      expect(screen.queryByText('API Key')).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+
+      expect(screen.getByDisplayValue('Fractal Models')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('fractal-careful')).toBeInTheDocument();
+
+      const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;
+      await userEvent.type(composer, 'Render this app{enter}');
+
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(1));
+      expect(onChat).toHaveBeenCalledWith(
+        expect.objectContaining({
+          provider: 'fractal',
+          modelId: 'fractal-careful',
+          messages: [{ role: 'user', content: 'Render this app' }],
+          tools: [expect.objectContaining({ name: 'show-albums' })],
+        })
+      );
+      const [chatRequest] = (
+        onChat.mock.calls as unknown as Array<[{ tools: Array<{ name: string }> }]>
+      )[0]!;
+      expect(chatRequest.tools.map((tool) => tool.name)).not.toContain('app-only-action');
+      expect(screen.getByText('Custom model response from embedder.')).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('keeps selected models inside the configured provider model list outside embedded mode', async () => {
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          onCallTool={vi.fn()}
+          modelChat={{
+            defaultModel: 'fractal-deprecated',
+            providers: [
+              {
+                id: 'fractal',
+                label: 'Fractal Models',
+                models: ['fractal-fast', 'fractal-careful'],
+                defaultModel: 'fractal-careful',
+              },
+            ],
+            onChat: vi.fn(async () => ({ text: 'ok' })),
+          }}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+      expect(screen.getByDisplayValue('fractal-careful')).toBeInTheDocument();
+      expect(screen.queryByDisplayValue('fractal-deprecated')).not.toBeInTheDocument();
+    });
+
+    it('prefers provider-specific default models over the global model default', async () => {
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          onCallTool={vi.fn()}
+          modelChat={{
+            defaultModel: 'global-default',
+            providers: [
+              { id: 'fractal-fast', label: 'Fractal Fast', defaultModel: 'fractal-small' },
+              { id: 'fractal-careful', label: 'Fractal Careful', defaultModel: 'fractal-large' },
+            ],
+            onChat: vi.fn(async () => ({ text: 'ok' })),
+          }}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+      expect(screen.getByDisplayValue('fractal-small')).toBeInTheDocument();
+      await userEvent.selectOptions(screen.getByDisplayValue('Fractal Fast'), 'fractal-careful');
+      expect(screen.getByDisplayValue('fractal-large')).toBeInTheDocument();
+    });
+
+    it('lets host pages own API key status and save behavior for model chat outside embedded mode', async () => {
+      const getStatus = vi.fn(async () => ({ hasKey: false, storage: 'Fractal vault' }));
+      const save = vi.fn(async () => ({ hasKey: true, storage: 'Fractal vault' }));
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          onCallTool={vi.fn()}
+          modelChat={{
+            providers: [{ id: 'openai', label: 'OpenAI', defaultModel: 'gpt-test' }],
+            apiKey: { getStatus, save },
+            onChat: vi.fn(async () => ({ text: 'ok' })),
+          }}
+        />
+      );
+
+      await waitFor(() => expect(getStatus).toHaveBeenCalledWith('openai'));
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+      const keyInput = screen.getByPlaceholderText('Paste openai key');
+      expect(keyInput).toHaveAttribute('autocomplete', 'new-password');
+      await userEvent.type(keyInput, 'sk-fractal-test');
+      await userEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+      await waitFor(() =>
+        expect(save).toHaveBeenCalledWith({ provider: 'openai', apiKey: 'sk-fractal-test' })
+      );
+      expect(screen.getByText('Saved Fractal vault')).toBeInTheDocument();
+      expect(fetchSpy).not.toHaveBeenCalled();
     });
 
     it('reacts to a new `app` prop — swapping in a different app updates the tool list', async () => {
@@ -1210,6 +1479,38 @@ describe('Inspector', () => {
       } finally {
         warnSpy.mockRestore();
       }
+    });
+  });
+
+  describe('Model chat API key status', () => {
+    it('defaults Model Chat to collapsed', () => {
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+
+      expect(screen.getByText('Model Chat')).toBeInTheDocument();
+      expect(screen.queryByText('Provider')).not.toBeInTheDocument();
+    });
+
+    it('surfaces local API key status errors in the sidebar', async () => {
+      fetchSpy.mockResolvedValueOnce(
+        new Response(JSON.stringify({ hasKey: false, error: 'macOS Keychain is locked' }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      );
+
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+
+      await expect(screen.findByText('macOS Keychain is locked')).resolves.toBeInTheDocument();
+    });
+
+    it('surfaces API key status fetch failures in the sidebar', async () => {
+      fetchSpy.mockRejectedValueOnce(new TypeError('Key status request failed'));
+
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
+
+      await expect(screen.findByText('Key status request failed')).resolves.toBeInTheDocument();
     });
   });
 });

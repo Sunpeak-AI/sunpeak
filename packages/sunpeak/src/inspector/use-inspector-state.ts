@@ -21,6 +21,7 @@ const DEFAULT_PLATFORM: Platform = 'desktop';
 export interface UseInspectorStateOptions {
   simulations: Record<string, Simulation>;
   defaultHost?: HostId;
+  preserveToolDataOnSimulationChange?: boolean;
 }
 
 export interface InspectorState {
@@ -363,9 +364,63 @@ function readStoredPrefs(): StoredPrefs {
   }
 }
 
+type ContainerDimensions = NonNullable<McpUiHostContext['containerDimensions']>;
+
+export function deriveContainerDimensions({
+  displayMode,
+  containerHeight,
+  containerWidth,
+  containerMaxHeight,
+  containerMaxWidth,
+  measuredContentWidth,
+  viewportHeight = 800,
+  viewportWidth = 1280,
+}: {
+  displayMode: McpUiDisplayMode;
+  containerHeight?: number;
+  containerWidth?: number;
+  containerMaxHeight?: number;
+  containerMaxWidth?: number;
+  measuredContentWidth?: number;
+  viewportHeight?: number;
+  viewportWidth?: number;
+}): ContainerDimensions | undefined {
+  if (
+    containerHeight != null ||
+    containerWidth != null ||
+    containerMaxHeight != null ||
+    containerMaxWidth != null
+  ) {
+    return {
+      ...(containerHeight != null ? { height: containerHeight } : {}),
+      ...(containerWidth != null ? { width: containerWidth } : {}),
+      ...(containerMaxHeight != null ? { maxHeight: containerMaxHeight } : {}),
+      ...(containerMaxWidth != null ? { maxWidth: containerMaxWidth } : {}),
+    };
+  }
+
+  if (displayMode === 'fullscreen') {
+    return { height: viewportHeight - 52, width: measuredContentWidth ?? viewportWidth };
+  }
+
+  if (displayMode === 'pip') {
+    return {
+      maxHeight: Math.round(viewportHeight * 0.5 - 38),
+      ...(measuredContentWidth != null ? { maxWidth: measuredContentWidth } : {}),
+    };
+  }
+
+  if (measuredContentWidth != null) {
+    return { maxWidth: measuredContentWidth };
+  }
+
+  return undefined;
+}
+
 export function useInspectorState({
   simulations,
   defaultHost = 'chatgpt',
+  preserveToolDataOnSimulationChange = false,
 }: UseInspectorStateOptions): InspectorState {
   // Only list simulations with a UI resource — backend-only tools have nothing to render.
   const simulationNames = Object.keys(simulations)
@@ -507,48 +562,16 @@ export function useInspectorState({
   // values from the measured content width (ResizeObserver) and the
   // browser viewport for fullscreen mode.
   const containerDimensions = useMemo(() => {
-    // User-set values always take priority
-    if (
-      containerHeight != null ||
-      containerWidth != null ||
-      containerMaxHeight != null ||
-      containerMaxWidth != null
-    ) {
-      return {
-        ...(containerHeight != null ? { height: containerHeight } : {}),
-        ...(containerWidth != null ? { width: containerWidth } : {}),
-        ...(containerMaxHeight != null ? { maxHeight: containerMaxHeight } : {}),
-        ...(containerMaxWidth != null ? { maxWidth: containerMaxWidth } : {}),
-      };
-    }
-
-    // Auto-derived dimensions based on display mode
-    if (displayMode === 'fullscreen') {
-      // Fullscreen: report actual viewport dimensions (width + height, no maxWidth).
-      // Use window.innerHeight minus the fullscreen chrome header (52px).
-      const h = typeof window !== 'undefined' ? window.innerHeight - 52 : 800;
-      const w = measuredContentWidth ?? (typeof window !== 'undefined' ? window.innerWidth : 1280);
-      return { height: h, width: w };
-    }
-
-    if (displayMode === 'pip') {
-      // PiP: report maxHeight (not fixed height) — content determines actual height.
-      // ChatGPT uses calc(50dvh - 38px): half the viewport minus chrome.
-      // Confirmed by extraction at 7 viewport sizes (2026-03-21).
-      const viewportH = typeof window !== 'undefined' ? window.innerHeight : 800;
-      const pipMaxHeight = Math.round(viewportH * 0.5 - 38);
-      return {
-        maxHeight: pipMaxHeight,
-        ...(measuredContentWidth != null ? { maxWidth: measuredContentWidth } : {}),
-      };
-    }
-
-    // Inline: report maxWidth from the measured content container.
-    if (measuredContentWidth != null) {
-      return { maxWidth: measuredContentWidth };
-    }
-
-    return undefined;
+    return deriveContainerDimensions({
+      displayMode,
+      containerHeight,
+      containerWidth,
+      containerMaxHeight,
+      containerMaxWidth,
+      measuredContentWidth,
+      viewportHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
+      viewportWidth: typeof window !== 'undefined' ? window.innerWidth : undefined,
+    });
   }, [
     containerHeight,
     containerWidth,
@@ -614,6 +637,7 @@ export function useInspectorState({
   // precedence over the simulation fixture data, allowing tests to pass
   // dynamic arguments to the server.
   useEffect(() => {
+    if (preserveToolDataOnSimulationChange) return;
     const newInput = urlParams.toolInput ?? selectedSim?.toolInput ?? {};
     const newResult = (selectedSim?.toolResult as CallToolResult | undefined) ?? undefined;
     setToolInput(newInput);
@@ -632,7 +656,7 @@ export function useInspectorState({
       setModelContextError('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSimulationName, selectedSim]);
+  }, [selectedSimulationName, selectedSim, preserveToolDataOnSimulationChange]);
 
   // Disallow PiP on mobile widths
   useEffect(() => {

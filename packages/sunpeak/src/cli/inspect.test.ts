@@ -3,6 +3,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
+import { PassThrough } from 'stream';
 
 // Import the inspect module to test parseArgs and mergeSimulationFixtures
 // We'll test the exported helpers by re-implementing the logic since they're
@@ -299,8 +300,12 @@ describe('inspect endpoint security helpers', () => {
     expect(_securityTestExports.isPrivateNetworkAddress('192.168.1.10')).toBe(true);
     expect(_securityTestExports.isPrivateNetworkAddress('169.254.169.254')).toBe(true);
     expect(_securityTestExports.isPrivateNetworkAddress('::1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('::ffff:7f00:1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('::7f00:1')).toBe(true);
+    expect(_securityTestExports.isPrivateNetworkAddress('2002:7f00:1::')).toBe(true);
     expect(_securityTestExports.isPrivateNetworkAddress('fd00::1')).toBe(true);
     expect(_securityTestExports.isPrivateNetworkAddress('93.184.216.34')).toBe(false);
+    expect(_securityTestExports.isPrivateNetworkAddress('::5db8:d822')).toBe(false);
     expect(_securityTestExports.isPrivateNetworkAddress('2606:2800:220:1:248:1893:25c8:1946')).toBe(
       false
     );
@@ -355,6 +360,248 @@ describe('inspect endpoint security helpers', () => {
     expect(_securityTestExports.hostnameFromHostHeader('127.0.0.1:3000')).toBe('127.0.0.1');
     expect(_securityTestExports.hostnameFromHostHeader('[::1]:3000')).toBe('::1');
     expect(_securityTestExports.isLoopbackHostname('[::1]')).toBe(true);
+    expect(_securityTestExports.isLoopbackRemoteAddress('::1')).toBe(true);
+    expect(_securityTestExports.isLoopbackRemoteAddress('::ffff:127.0.0.1')).toBe(true);
+    expect(_securityTestExports.isLoopbackRemoteAddress('::ffff:7f00:1')).toBe(true);
+    expect(_securityTestExports.isLoopbackRemoteAddress('192.168.1.12')).toBe(false);
+  });
+
+  it('allows private MCP URLs only for loopback inspector requests by default', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const previous = process.env.SUNPEAK_ALLOW_PRIVATE_SERVER_URLS;
+    delete process.env.SUNPEAK_ALLOW_PRIVATE_SERVER_URLS;
+    try {
+      expect(
+        _securityTestExports.shouldAllowPrivateServerUrls({
+          headers: { host: '127.0.0.1:3000' },
+          socket: { remoteAddress: '127.0.0.1' },
+        })
+      ).toBe(true);
+      expect(
+        _securityTestExports.shouldAllowPrivateServerUrls({
+          headers: { host: '127.0.0.1:3000' },
+          socket: { remoteAddress: '192.168.1.12' },
+        })
+      ).toBe(false);
+      expect(
+        _securityTestExports.shouldAllowPrivateServerUrls({
+          headers: { host: '192.168.1.20:3000' },
+          socket: { remoteAddress: '127.0.0.1' },
+        })
+      ).toBe(false);
+    } finally {
+      if (previous === undefined) delete process.env.SUNPEAK_ALLOW_PRIVATE_SERVER_URLS;
+      else process.env.SUNPEAK_ALLOW_PRIVATE_SERVER_URLS = previous;
+    }
+  });
+
+  it('validates hosted-mode redirects before following them', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url === 'https://mcp.example.com/mcp') {
+        return new Response(null, {
+          status: 302,
+          headers: { Location: 'http://127.0.0.1:8000/mcp' },
+        });
+      }
+      throw new Error(`unexpected fetch to ${url}`);
+    });
+
+    await expect(
+      _securityTestExports.resolveHttpRedirectsForMcp('https://mcp.example.com/mcp', {
+        enforcePublicHttpUrl: true,
+        fetchFn,
+        lookupFn: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]),
+      })
+    ).rejects.toThrow('Private-network MCP server URLs are blocked');
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows hosted-mode redirects to public URLs', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const fetchFn = vi.fn(async (url: string) => {
+      if (url === 'https://mcp.example.com/mcp') {
+        return new Response(null, {
+          status: 307,
+          headers: { Location: 'https://api.example.com/mcp/' },
+        });
+      }
+      return new Response(null, { status: 200 });
+    });
+
+    await expect(
+      _securityTestExports.resolveHttpRedirectsForMcp('https://mcp.example.com/mcp', {
+        enforcePublicHttpUrl: true,
+        fetchFn,
+        lookupFn: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]),
+      })
+    ).resolves.toBe('https://api.example.com/mcp/');
+    expect(fetchFn).toHaveBeenCalledTimes(2);
+  });
+
+  it('quotes macOS Keychain interactive arguments without allowing command injection', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.quoteSecurityInteractiveArg("abc' def")).toBe("'abc'\\'' def'");
+    expect(_securityTestExports.quoteSecurityInteractiveArg('$(security dump-keychain)')).toBe(
+      "'$(security dump-keychain)'"
+    );
+  });
+
+  it('recognizes missing credential errors separately from backend failures', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.isMissingCredentialError(Object.assign(new Error(), { code: 44 }))
+    ).toBe(true);
+    expect(
+      _securityTestExports.isMissingCredentialError(
+        Object.assign(new Error('User interaction is not allowed.'), { code: 51 })
+      )
+    ).toBe(false);
+  });
+
+  it('caps request body reads when a limit is provided', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const req = new PassThrough();
+    const read = _securityTestExports.readRequestBody(req, { maxBytes: 4 });
+
+    req.write('abcd');
+    req.end('e');
+
+    await expect(read).rejects.toThrow('Request body is too large');
+  });
+
+  it('keeps inspect POST endpoint body reads bounded', () => {
+    const source = fs.readFileSync(path.join(process.cwd(), 'bin/commands/inspect.mjs'), 'utf-8');
+    const unboundedCallSites = [
+      ...source.matchAll(/readRequestBody\(req(?!,\s*\{\s*maxBytes:)/g),
+    ].filter((match) => !source.slice(match.index - 30, match.index).includes('function '));
+
+    expect(unboundedCallSites).toHaveLength(0);
+  });
+
+  it('rejects unsafe model IDs before provider SDK calls', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.normalizeModelId(' gpt-4o ')).toBe('gpt-4o');
+    expect(() => _securityTestExports.normalizeModelId('')).toThrow('Missing model ID');
+    expect(() => _securityTestExports.normalizeModelId(`gpt-4o\nsecret`)).toThrow(
+      'Invalid model ID'
+    );
+    expect(() => _securityTestExports.normalizeModelId('a'.repeat(201))).toThrow(
+      'Invalid model ID'
+    );
+  });
+
+  it('rejects API keys with control characters before credential storage', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.normalizeApiKey(' sk-test ')).toBe('sk-test');
+    expect(_securityTestExports.normalizeApiKey('')).toBe('');
+    expect(() => _securityTestExports.normalizeApiKey('sk-test\nnext')).toThrow(
+      'API key cannot contain control characters'
+    );
+    expect(() => _securityTestExports.normalizeApiKey('sk-test\u0000')).toThrow(
+      'API key cannot contain control characters'
+    );
+  });
+
+  it('does not expose app-only MCP App tools to model chat', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.isToolVisibleToModel({ _meta: {} })).toBe(true);
+    expect(
+      _securityTestExports.isToolVisibleToModel({
+        _meta: { ui: { visibility: ['model', 'app'] } },
+      })
+    ).toBe(true);
+    expect(
+      _securityTestExports.isToolVisibleToModel({
+        _meta: { ui: { visibility: ['app'] } },
+      })
+    ).toBe(false);
+    expect(
+      _securityTestExports.isToolVisibleToModel({
+        _meta: { 'ui/visibility': ['model'] },
+      })
+    ).toBe(true);
+    expect(
+      _securityTestExports.isToolVisibleToModel({
+        _meta: { ui: { visibility: 'app' } },
+      })
+    ).toBe(false);
+  });
+
+  it('keeps app-rendering tool payloads out of model-visible tool results', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    const result = _securityTestExports.formatModelVisibleToolResult(
+      { name: 'show-albums' },
+      {
+        structuredContent: {
+          albums: [
+            {
+              title: 'Pizza Tour',
+              photos: [{ url: 'https://cdn.sunpeak.ai/demo/pizza1.jpeg' }],
+            },
+          ],
+        },
+        content: [{ type: 'text', text: 'Pizza Tour raw text' }],
+      }
+    );
+
+    expect(result).toContain('show-albums completed');
+    expect(result).not.toContain('Pizza Tour');
+    expect(result).not.toContain('cdn.sunpeak.ai');
+    expect(result).not.toContain('structuredContent');
+  });
+
+  it('uses MCP tool calls for model chat', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const client = {
+      callTool: vi.fn(async () => ({
+        structuredContent: { source: 'mcp-server' },
+      })),
+    };
+
+    const result = await _securityTestExports.executeModelChatToolCall({
+      client,
+      name: 'show-albums',
+      arguments: { category: 'model' },
+    });
+
+    expect(client.callTool).toHaveBeenCalledWith({
+      name: 'show-albums',
+      arguments: { category: 'model' },
+    });
+    expect(result).toMatchObject({
+      arguments: { category: 'model' },
+      result: { structuredContent: { source: 'mcp-server' } },
+      source: 'mcp',
+    });
+  });
+
+  it('derives a live MCP endpoint for sunpeak-style /mcp URLs', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.defaultLiveMcpServerUrl('http://localhost:8000/mcp')).toBe(
+      'http://localhost:8000/mcp/live'
+    );
+    expect(_securityTestExports.defaultLiveMcpServerUrl('http://localhost:8000/custom')).toBe(
+      undefined
+    );
+  });
+
+  it('preserves app-rendering tool errors for model-visible results', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'show-albums' },
+        { isError: true, content: [{ type: 'text', text: 'Album service failed' }] }
+      )
+    ).toBe('Album service failed');
   });
 });
 

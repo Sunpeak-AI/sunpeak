@@ -21,7 +21,17 @@ import '../claude/claude-host';
 
 // Core inspector component
 export { Inspector } from './inspector';
-export type { InspectorProps } from './inspector';
+export type {
+  InspectorModelApiKeyController,
+  InspectorModelChatMessage,
+  InspectorModelChatOptions,
+  InspectorModelChatRequest,
+  InspectorModelChatResponse,
+  InspectorModelChatToolCall,
+  InspectorModelKeyStatus,
+  InspectorModelProvider,
+  InspectorProps,
+} from './inspector';
 
 // Public input shape for embedding (App → resources + tools → simulations).
 export type {

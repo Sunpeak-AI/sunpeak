@@ -1,6 +1,6 @@
 import { renderHook } from '@testing-library/react';
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useInspectorState } from './use-inspector-state';
+import { deriveContainerDimensions, useInspectorState } from './use-inspector-state';
 import type { Simulation } from '../types/simulation';
 
 function createSim(name: string, hasResource: boolean): Simulation {
@@ -32,6 +32,27 @@ describe('useInspectorState', () => {
 
     expect(result.current.simulationNames).toContain('ui-tool');
     expect(result.current.simulationNames).not.toContain('backend-tool');
+  });
+
+  it('uses the viewport width for fullscreen container dimensions', () => {
+    expect(
+      deriveContainerDimensions({
+        displayMode: 'fullscreen',
+        measuredContentWidth: 512,
+        viewportHeight: 900,
+        viewportWidth: 1440,
+      })
+    ).toEqual({ height: 848, width: 512 });
+  });
+
+  it('falls back to viewport width for fullscreen container dimensions before measuring', () => {
+    expect(
+      deriveContainerDimensions({
+        displayMode: 'fullscreen',
+        viewportHeight: 900,
+        viewportWidth: 1440,
+      })
+    ).toEqual({ height: 848, width: 1440 });
   });
 
   describe('preference persistence', () => {

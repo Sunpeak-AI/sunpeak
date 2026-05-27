@@ -10,6 +10,7 @@ import { useMcpConnection, type AuthType, type AuthConfig } from './use-mcp-conn
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
 import {
+  HelpIcon,
   SimpleSidebar,
   SidebarControl,
   SidebarCollapsibleControl,
@@ -19,7 +20,7 @@ import {
   SidebarTextarea,
   SidebarToggle,
 } from './simple-sidebar';
-import { getHostShell, getRegisteredHosts, type HostId } from './hosts';
+import { getHostShell, getRegisteredHosts, type HostChatMessage, type HostId } from './hosts';
 import { resolveServerToolResult } from '../types/simulation';
 import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './inspector-types';
@@ -36,6 +37,71 @@ import '../chatgpt/chatgpt-host';
 import '../claude/claude-host';
 
 const DOCS_BASE_URL = 'https://sunpeak.ai/docs';
+
+export interface InspectorModelProvider {
+  id: string;
+  label?: string;
+  models?: string[];
+  defaultModel?: string;
+}
+
+export interface InspectorModelChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface InspectorModelChatToolCall {
+  name: string;
+  arguments?: Record<string, unknown>;
+  result?: CallToolResult;
+  isError?: boolean;
+}
+
+export interface InspectorModelChatResponse {
+  text?: string;
+  toolCalls?: InspectorModelChatToolCall[];
+  error?: string;
+}
+
+export interface InspectorModelKeyStatus {
+  hasKey: boolean;
+  storage?: string;
+  error?: string;
+}
+
+export interface InspectorModelChatRequest {
+  provider: string;
+  modelId: string;
+  messages: InspectorModelChatMessage[];
+  tools: Simulation['tool'][];
+}
+
+export interface InspectorModelApiKeyController {
+  /**
+   * Whether chat submission should require a saved API key before enabling the
+   * composer. Defaults to true when an apiKey controller is provided.
+   */
+  required?: boolean;
+  /** Load whether this provider has a usable key in the embedder's backend. */
+  getStatus?: (provider: string) => Promise<InspectorModelKeyStatus> | InspectorModelKeyStatus;
+  /**
+   * Save or clear a key in the embedder's backend. The Inspector never stores
+   * this value when a custom controller is provided.
+   */
+  save?: (params: {
+    provider: string;
+    apiKey: string;
+  }) => Promise<InspectorModelKeyStatus> | InspectorModelKeyStatus;
+}
+
+export interface InspectorModelChatOptions {
+  enabled?: boolean;
+  providers?: InspectorModelProvider[];
+  defaultProvider?: string;
+  defaultModel?: string;
+  apiKey?: InspectorModelApiKeyController;
+  onChat?: (request: InspectorModelChatRequest) => Promise<InspectorModelChatResponse>;
+}
 
 export interface InspectorProps {
   children?: React.ReactNode;
@@ -66,13 +132,18 @@ export interface InspectorProps {
     name: string;
     arguments?: Record<string, unknown>;
   }) => Promise<CallToolResult> | CallToolResult;
+  /** Live MCP tool calls used by AI/eval renders. Bypasses simulation fixtures. */
+  onCallToolLive?: (params: {
+    name: string;
+    arguments?: Record<string, unknown>;
+  }) => Promise<CallToolResult> | CallToolResult;
   /** Initial prod-resources mode state. When true, resources load from dist/ instead of HMR. Defaults to false. */
   defaultProdResources?: boolean;
-  /** Hide framework-only controls (Prod Resources) in the sidebar. */
+  /** Hide framework-only controls (Prod Resources) in the inspector chrome. */
   hideInspectorModes?: boolean;
   /**
    * Demo mode for embedding on marketing sites. When true:
-   * - Hides Prod Resources checkbox
+   * - Hides Prod Resources control
    * - Disables the MCP Server URL input (shows a static example URL)
    * - Hides the Run button (prevents sending real MCP requests)
    * - Hides connection status indicator
@@ -97,6 +168,14 @@ export interface InspectorProps {
    * backend, for example `/api/sunpeak`.
    */
   inspectorApiBaseUrl?: string;
+  /**
+   * Programmatic model-chat integration. Embedders can provide their own
+   * backend-backed `onChat` handler, provider/model list, and optional API-key
+   * status/save callbacks. When omitted, the CLI inspector uses its local
+   * `/__sunpeak/model-*` endpoints. Embedded inspectors enable model chat only
+   * when this prop supplies `onChat`.
+   */
+  modelChat?: InspectorModelChatOptions;
 }
 
 type Platform = 'mobile' | 'desktop' | 'web';
@@ -111,9 +190,51 @@ interface ToolInfo {
   fixtureSimNames: string[];
 }
 
+const DEFAULT_MODEL_PROVIDERS: InspectorModelProvider[] = [
+  { id: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o' },
+  { id: 'anthropic', label: 'Anthropic', defaultModel: 'claude-3-5-sonnet-20241022' },
+];
+
+function splitCssArgs(value: string): string[] {
+  const args: string[] = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < value.length; i++) {
+    const char = value[i];
+    if (char === '(') depth++;
+    else if (char === ')') depth = Math.max(0, depth - 1);
+    else if (char === ',' && depth === 0) {
+      args.push(value.slice(start, i).trim());
+      start = i + 1;
+    }
+  }
+  args.push(value.slice(start).trim());
+  return args;
+}
+
+function resolveLightDarkValue(value: string, theme: 'light' | 'dark'): string {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('light-dark(') || !trimmed.endsWith(')')) return value;
+  const args = splitCssArgs(trimmed.slice('light-dark('.length, -1));
+  if (args.length !== 2) return value;
+  return theme === 'dark' ? args[1] : args[0];
+}
+
 /** Check whether a simulation has user-authored fixture data. */
 function hasFixtureData(sim: Simulation): boolean {
   return sim.toolResult != null || sim.toolInput != null || sim.serverTools != null;
+}
+
+function isToolVisibleToModel(tool: Simulation['tool']): boolean {
+  const meta = tool._meta as
+    | {
+        ui?: { visibility?: unknown };
+        'ui/visibility'?: unknown;
+      }
+    | undefined;
+  const visibility = meta?.ui?.visibility ?? meta?.['ui/visibility'];
+  if (visibility == null) return true;
+  return Array.isArray(visibility) && visibility.includes('model');
 }
 
 // Reference-stable empty default. A destructuring default of `= {}` creates a
@@ -131,12 +252,14 @@ export function Inspector({
   defaultHost = 'chatgpt',
   onCallTool,
   onCallToolDirect,
+  onCallToolLive,
   defaultProdResources = false,
   hideInspectorModes = false,
   demoMode = false,
   sandboxUrl,
   mcpServerUrl,
   inspectorApiBaseUrl,
+  modelChat,
 }: InspectorProps) {
   // When `app` is provided it drives both the simulation map and the header
   // name/icon. Falling back to the legacy props keeps existing callers working.
@@ -269,13 +392,14 @@ export function Inspector({
     }
     return selectedToolInfo.fixtureSimNames[0] ?? null;
   });
+  const [isLiveMcpRender, setIsLiveMcpRender] = React.useState(false);
 
   // When tool changes, auto-select first fixture simulation (or null)
   const prevToolNameRef = React.useRef(selectedToolName);
   if (prevToolNameRef.current !== selectedToolName) {
     prevToolNameRef.current = selectedToolName;
     const newInfo = toolMap.get(selectedToolName);
-    setActiveSimulationName(newInfo?.fixtureSimNames[0] ?? null);
+    setActiveSimulationName(isLiveMcpRender ? null : (newInfo?.fixtureSimNames[0] ?? null));
   }
 
   // The effective simulation name for useInspectorState:
@@ -287,7 +411,11 @@ export function Inspector({
   // This avoids the one-render lag from the useEffect sync to state.selectedSimulationName.
   const currentSim = simulations[effectiveSimulationName];
 
-  const state = useInspectorState({ simulations, defaultHost });
+  const state = useInspectorState({
+    simulations,
+    defaultHost,
+    preserveToolDataOnSimulationChange: isLiveMcpRender,
+  });
   const [serverUrl, setServerUrl] = React.useState(mcpServerUrl ?? '');
   const [authType, setAuthType] = React.useState<AuthType>('none');
   const [bearerToken, setBearerToken] = React.useState('');
@@ -315,9 +443,201 @@ export function Inspector({
   const [isRunning, setIsRunning] = React.useState(false);
   const [hasRun, setHasRun] = React.useState(false);
   const [showCheck, setShowCheck] = React.useState(false);
+  const prodResourcesId = React.useId();
   const [serverPreviewGeneration, setServerPreviewGeneration] = React.useState(0);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const oauthCleanupRef = React.useRef<(() => void) | undefined>(undefined);
+  const modelProviderOptions = React.useMemo(
+    () => (modelChat?.providers?.length ? modelChat.providers : DEFAULT_MODEL_PROVIDERS),
+    [modelChat?.providers]
+  );
+  const modelChatHandler = modelChat?.onChat;
+  const customApiKey = modelChat?.apiKey;
+  const modelChatRequested = modelChat?.enabled ?? true;
+  const canUseModelChat =
+    !demoMode &&
+    (isEmbedded
+      ? modelChat?.enabled === true && typeof modelChatHandler === 'function'
+      : modelChatRequested);
+  const usesLocalModelEndpoints = canUseModelChat && typeof modelChatHandler !== 'function';
+  const usesApiKeyUi = canUseModelChat && (usesLocalModelEndpoints || !!customApiKey);
+  const requiresModelApiKey = usesApiKeyUi && (customApiKey?.required ?? true);
+  const defaultModelProvider = React.useMemo(() => {
+    const requested = modelChat?.defaultProvider;
+    if (requested && modelProviderOptions.some((provider) => provider.id === requested)) {
+      return requested;
+    }
+    return modelProviderOptions[0]?.id ?? 'openai';
+  }, [modelChat?.defaultProvider, modelProviderOptions]);
+  const getDefaultModelId = React.useCallback(
+    (provider: string) => {
+      const option = modelProviderOptions.find((item) => item.id === provider);
+      const candidates = [
+        option?.defaultModel,
+        modelChat?.defaultModel,
+        DEFAULT_MODEL_PROVIDERS.find((item) => item.id === provider)?.defaultModel,
+      ];
+      const providerModels = option?.models ?? [];
+      if (providerModels.length === 0) {
+        return candidates.find(Boolean) ?? '';
+      }
+      return (
+        candidates.find((model) => model && providerModels.includes(model)) ?? providerModels[0]
+      );
+    },
+    [modelChat?.defaultModel, modelProviderOptions]
+  );
+  const [modelProvider, setModelProvider] = React.useState(defaultModelProvider);
+  const [modelId, setModelId] = React.useState(() => getDefaultModelId(defaultModelProvider));
+  const [apiKeyDraft, setApiKeyDraft] = React.useState('');
+  const [keyStatus, setKeyStatus] = React.useState<InspectorModelKeyStatus>({ hasKey: false });
+  const [isKeyStatusLoading, setIsKeyStatusLoading] = React.useState(usesApiKeyUi);
+  const [keyMessage, setKeyMessage] = React.useState('');
+  const [chatMessages, setChatMessages] = React.useState<HostChatMessage[]>([]);
+  const [chatInput, setChatInput] = React.useState('');
+  const [isChatting, setIsChatting] = React.useState(false);
+  const [chatStatus, setChatStatus] = React.useState('');
+  const currentModelProvider = React.useMemo(
+    () => modelProviderOptions.find((provider) => provider.id === modelProvider),
+    [modelProvider, modelProviderOptions]
+  );
+  const selectedProviderModelOptions = React.useMemo(
+    () => currentModelProvider?.models ?? [],
+    [currentModelProvider?.models]
+  );
+  const modelCallableTools = React.useMemo(
+    () =>
+      Array.from(toolMap.values())
+        .filter((info) => !!info.resource && isToolVisibleToModel(info.tool))
+        .map((info) => info.tool),
+    [toolMap]
+  );
+
+  React.useEffect(() => {
+    const nextServerUrl = mcpServerUrl ?? '';
+    setServerUrl(nextServerUrl);
+  }, [mcpServerUrl]);
+
+  const handleModelProviderChange = React.useCallback(
+    (provider: string) => {
+      setModelProvider(provider);
+      setApiKeyDraft('');
+      setKeyMessage('');
+      setKeyStatus({ hasKey: false });
+      setIsKeyStatusLoading(usesApiKeyUi);
+      setModelId(getDefaultModelId(provider));
+    },
+    [getDefaultModelId, usesApiKeyUi]
+  );
+
+  React.useEffect(() => {
+    if (modelProviderOptions.some((provider) => provider.id === modelProvider)) return;
+    handleModelProviderChange(defaultModelProvider);
+  }, [defaultModelProvider, handleModelProviderChange, modelProvider, modelProviderOptions]);
+
+  React.useEffect(() => {
+    if (
+      selectedProviderModelOptions.length === 0 ||
+      selectedProviderModelOptions.includes(modelId)
+    ) {
+      return;
+    }
+    setModelId(getDefaultModelId(modelProvider));
+  }, [getDefaultModelId, modelId, modelProvider, selectedProviderModelOptions]);
+
+  React.useEffect(() => {
+    if (!canUseModelChat || !usesApiKeyUi) {
+      setIsKeyStatusLoading(false);
+      setKeyStatus({ hasKey: false });
+      setKeyMessage('');
+      return;
+    }
+    let cancelled = false;
+    setIsKeyStatusLoading(true);
+    const loadStatus = async () => {
+      if (customApiKey?.getStatus) {
+        return await customApiKey.getStatus(modelProvider);
+      }
+      if (!usesLocalModelEndpoints) {
+        return { hasKey: false };
+      }
+      const endpoint = inspectorApiEndpoint(
+        `/__sunpeak/model-key?provider=${encodeURIComponent(modelProvider)}`,
+        inspectorApiBaseUrl
+      );
+      const res = await fetch(endpoint);
+      return await readInspectorJson<InspectorModelKeyStatus>(res, endpoint);
+    };
+    loadStatus()
+      .then((data) => {
+        if (cancelled) return;
+        setKeyStatus(data);
+        setKeyMessage(data.error ?? '');
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : String(err);
+        setKeyStatus({
+          hasKey: false,
+          error: message,
+        });
+        setKeyMessage(message);
+      })
+      .finally(() => {
+        if (!cancelled) setIsKeyStatusLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    canUseModelChat,
+    customApiKey,
+    inspectorApiBaseUrl,
+    modelProvider,
+    usesApiKeyUi,
+    usesLocalModelEndpoints,
+  ]);
+
+  const handleSaveApiKey = React.useCallback(async () => {
+    if (!canUseModelChat || !usesApiKeyUi) return;
+    setKeyMessage('Saving...');
+    try {
+      let data: InspectorModelKeyStatus;
+      if (customApiKey?.save) {
+        data = await customApiKey.save({ provider: modelProvider, apiKey: apiKeyDraft });
+      } else if (usesLocalModelEndpoints) {
+        const endpoint = inspectorApiEndpoint('/__sunpeak/model-key', inspectorApiBaseUrl);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider: modelProvider, apiKey: apiKeyDraft }),
+        });
+        data = await readInspectorJson<InspectorModelKeyStatus>(res, endpoint);
+        if (!res.ok || data.error) {
+          throw new Error(data.error ?? `Save failed (${res.status})`);
+        }
+      } else {
+        throw new Error('No API key save handler is configured.');
+      }
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      setKeyStatus(data);
+      setIsKeyStatusLoading(false);
+      setApiKeyDraft('');
+      setKeyMessage(data.hasKey ? `Saved ${data.storage ?? 'locally'}` : 'Cleared');
+    } catch (err) {
+      setKeyMessage(err instanceof Error ? err.message : String(err));
+    }
+  }, [
+    apiKeyDraft,
+    canUseModelChat,
+    customApiKey,
+    inspectorApiBaseUrl,
+    modelProvider,
+    usesApiKeyUi,
+    usesLocalModelEndpoints,
+  ]);
 
   // Keep useInspectorState's selection in sync with our tool/simulation selection.
   React.useEffect(() => {
@@ -523,10 +843,12 @@ export function Inspector({
   const { setToolResult, setToolResultJson, setToolResultError } = state;
   React.useEffect(() => {
     if (activeSimulationName === null) {
+      if (isLiveMcpRender) return;
       setToolResult(undefined);
       setToolResultJson('');
       setToolResultError('');
     } else {
+      setIsLiveMcpRender(false);
       const sim = simulations[activeSimulationName];
       const result = (sim?.toolResult as CallToolResult | undefined) ?? undefined;
       setToolResult(result);
@@ -536,6 +858,7 @@ export function Inspector({
   }, [
     activeSimulationName,
     effectiveSimulationName,
+    isLiveMcpRender,
     simulations,
     setToolResult,
     setToolResultJson,
@@ -544,8 +867,9 @@ export function Inspector({
 
   // Reset hasRun and timing when tool or simulation changes.
   React.useEffect(() => {
+    if (isLiveMcpRender) return;
     setHasRun(false);
-  }, [effectiveSimulationName]);
+  }, [effectiveSimulationName, isLiveMcpRender]);
 
   // Cleanup timers and OAuth listeners on unmount
   React.useEffect(
@@ -566,6 +890,7 @@ export function Inspector({
     if (!caller || !sim) return;
     const toolName = sim.tool.name;
     setIsRunning(true);
+    setIsLiveMcpRender(false);
     const startTime = performance.now();
     try {
       const result = await caller({ name: toolName, arguments: state.toolInput });
@@ -620,6 +945,144 @@ export function Inspector({
       setIsRunning(false);
     }
   }, [onCallTool, onCallToolDirect, simulations, effectiveSimulationName, state]);
+
+  const handleChatSubmit = React.useCallback(async () => {
+    const prompt = chatInput.trim();
+    if (
+      !prompt ||
+      isChatting ||
+      isKeyStatusLoading ||
+      !canUseModelChat ||
+      (requiresModelApiKey && !keyStatus.hasKey) ||
+      !modelId.trim()
+    ) {
+      return;
+    }
+
+    const userMessage: HostChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: prompt,
+    };
+    const nextMessages = [...chatMessages, userMessage];
+    setChatMessages(nextMessages);
+    setChatInput('');
+    setIsChatting(true);
+    setChatStatus('Thinking...');
+    setIsLiveMcpRender(false);
+    setActiveSimulationName(null);
+    state.setToolResult(undefined);
+    state.setToolResultJson('');
+    state.setToolResultError('');
+    setHasRun(false);
+
+    try {
+      const messages = nextMessages.map((message) => ({
+        role: message.role,
+        content: message.content,
+      }));
+      let data: InspectorModelChatResponse;
+      if (modelChatHandler) {
+        data = await modelChatHandler({
+          provider: modelProvider,
+          modelId,
+          messages,
+          tools: modelCallableTools,
+        });
+      } else {
+        const endpoint = inspectorApiEndpoint('/__sunpeak/model-chat', inspectorApiBaseUrl);
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            provider: modelProvider,
+            modelId,
+            messages,
+          }),
+        });
+        data = await readInspectorJson<InspectorModelChatResponse>(res, endpoint);
+        if (!res.ok || data.error) {
+          throw new Error(data.error ?? `Model request failed (${res.status})`);
+        }
+      }
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      let rendersApp = false;
+      const toolCalls = data.toolCalls ?? [];
+      for (let index = toolCalls.length - 1; index >= 0; index--) {
+        const call = toolCalls[index];
+        const info = toolMap.get(call.name);
+        if (!info?.resource || !call.result) continue;
+        setSelectedToolName(call.name);
+        setActiveSimulationName(null);
+        setIsLiveMcpRender(true);
+        state.setToolInput(call.arguments ?? {});
+        state.setToolInputJson(JSON.stringify(call.arguments ?? {}, null, 2));
+        state.setToolInputError('');
+        state.setToolResult(call.result);
+        state.setToolResultJson(JSON.stringify(call.result, null, 2));
+        state.setToolResultError('');
+        setHasRun(true);
+        rendersApp = true;
+        break;
+      }
+
+      const assistantMessage: HostChatMessage = {
+        id: `assistant-${Date.now()}`,
+        role: 'assistant',
+        content:
+          data.text ??
+          (toolCalls.length > 0
+            ? 'I called the MCP tool and rendered the app below.'
+            : 'The model returned an empty response.'),
+        toolCalls: toolCalls.map((call) => ({
+          name: call.name,
+          arguments: call.arguments,
+          isError: call.isError || call.result?.isError,
+        })),
+        rendersApp,
+      };
+      setChatMessages((messages) => {
+        const base = rendersApp
+          ? messages.map((message) =>
+              message.rendersApp ? { ...message, rendersApp: false } : message
+            )
+          : messages;
+        return [...base, assistantMessage];
+      });
+      setChatStatus('');
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setChatMessages((messages) => [
+        ...messages,
+        {
+          id: `assistant-error-${Date.now()}`,
+          role: 'assistant',
+          content: `Error: ${message}`,
+        },
+      ]);
+      setChatStatus(message);
+    } finally {
+      setIsChatting(false);
+    }
+  }, [
+    canUseModelChat,
+    chatInput,
+    chatMessages,
+    inspectorApiBaseUrl,
+    isChatting,
+    isKeyStatusLoading,
+    keyStatus.hasKey,
+    modelCallableTools,
+    modelChatHandler,
+    modelId,
+    modelProvider,
+    requiresModelApiKey,
+    state,
+    toolMap,
+  ]);
 
   // Auto-run: when ?autoRun=true is set (by test fixtures) and no fixture data
   // is active, call the tool immediately with the current toolInput. Interactive
@@ -727,6 +1190,38 @@ export function Inspector({
     }
   }, [activeShell, state.theme]);
 
+  // In standalone inspector pages, the browser overscroll area comes from the
+  // document canvas rather than the Inspector root. Match it to the active
+  // conversation surface so dark-mode overscroll never flashes white. Embedded
+  // inspectors stay scoped to their root and do not mutate the host document.
+  React.useLayoutEffect(() => {
+    if (isEmbedded) return;
+
+    const html = document.documentElement;
+    const body = document.body;
+    const previous = {
+      htmlBackground: html.style.backgroundColor,
+      bodyBackground: body.style.backgroundColor,
+      htmlColorScheme: html.style.colorScheme,
+    };
+    const background = resolveLightDarkValue(
+      activeShell?.pageStyles?.['--sim-bg-conversation'] ??
+        activeShell?.styleVariables?.['--color-background-primary'] ??
+        (state.theme === 'dark' ? '#212121' : '#ffffff'),
+      state.theme
+    );
+
+    html.style.colorScheme = state.theme;
+    html.style.backgroundColor = background;
+    body.style.backgroundColor = background;
+
+    return () => {
+      html.style.backgroundColor = previous.htmlBackground;
+      body.style.backgroundColor = previous.bodyBackground;
+      html.style.colorScheme = previous.htmlColorScheme;
+    };
+  }, [activeShell, isEmbedded, state.theme]);
+
   // Inject host font CSS (@font-face rules) so the conversation chrome uses
   // the same font as the real host (e.g., Anthropic Sans for Claude).
   // @font-face rules can't be scoped to a subtree, so this is the one
@@ -761,6 +1256,9 @@ export function Inspector({
       name: string;
       arguments?: Record<string, unknown>;
     }): CallToolResult | Promise<CallToolResult> => {
+      if (isLiveMcpRender && onCallToolLive) {
+        return onCallToolLive(params);
+      }
       if (activeSimulationName) {
         const activeSim = simulations[activeSimulationName];
         const mock = activeSim?.serverTools?.[params.name];
@@ -781,7 +1279,14 @@ export function Inspector({
         ],
       };
     },
-    [onCallTool, activeSimulationName, simulations, effectiveSimulationName]
+    [
+      onCallTool,
+      onCallToolLive,
+      isLiveMcpRender,
+      activeSimulationName,
+      simulations,
+      effectiveSimulationName,
+    ]
   );
 
   // Derive user message for the conversation shell
@@ -1032,6 +1537,37 @@ export function Inspector({
       </button>
     ) : undefined;
 
+  const headerProdResourcesControl =
+    !hideInspectorModes && !demoMode && !isEmbedded ? (
+      <div
+        className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium"
+        style={{ color: 'var(--color-text-secondary)' }}
+      >
+        <input
+          id={prodResourcesId}
+          type="checkbox"
+          checked={prodResources}
+          onChange={(event) => setProdResources(event.currentTarget.checked)}
+          className="h-3.5 w-3.5 accent-[var(--color-text-primary)]"
+        />
+        <label htmlFor={prodResourcesId} className="cursor-pointer select-none">
+          Prod Resources
+        </label>
+        <HelpIcon
+          tooltip="Load resources from dist/ builds instead of HMR"
+          docsPath="app-framework/cli/dev#prod-tools-and-prod-resources-flags"
+        />
+      </div>
+    ) : null;
+
+  const headerAction =
+    runButton || headerProdResourcesControl ? (
+      <div className="flex min-w-0 items-center gap-2">
+        {runButton}
+        {headerProdResourcesControl}
+      </div>
+    ) : undefined;
+
   const conversationContent = ShellConversation ? (
     <ShellConversation
       screenWidth={state.screenWidth}
@@ -1041,8 +1577,29 @@ export function Inspector({
       appName={appName}
       appIcon={appIcon}
       userMessage={userMessage}
+      chatMessages={canUseModelChat ? chatMessages : undefined}
+      chatInput={canUseModelChat ? chatInput : undefined}
+      onChatInputChange={canUseModelChat ? setChatInput : undefined}
+      onChatSubmit={canUseModelChat ? handleChatSubmit : undefined}
+      chatDisabled={
+        isChatting ||
+        isKeyStatusLoading ||
+        (requiresModelApiKey && !keyStatus.hasKey) ||
+        !modelId.trim()
+      }
+      chatPlaceholder={
+        canUseModelChat
+          ? isKeyStatusLoading
+            ? `Checking ${modelProvider} key...`
+            : !requiresModelApiKey || keyStatus.hasKey
+              ? `Message ${modelId}`
+              : `Add an API key to chat with ${modelId}`
+          : undefined
+      }
+      chatStatus={canUseModelChat ? chatStatus : undefined}
+      hideChatComposer={isEmbedded && !canUseModelChat}
       onContentWidthChange={state.handleContentWidthChange}
-      headerAction={runButton}
+      headerAction={headerAction}
     >
       {content}
     </ShellConversation>
@@ -1085,7 +1642,7 @@ export function Inspector({
                       MCP Server
                       {serverUrl && !demoMode && (
                         <span
-                          className="inline-block w-2 h-2 rounded-full"
+                          className="inline-block h-2 w-2 rounded-full"
                           data-testid="connection-status"
                           style={{
                             backgroundColor:
@@ -1218,15 +1775,85 @@ export function Inspector({
               </>
             )}
 
-            {/* ── Prod Resources (framework mode only, hidden in demo + embedded modes) ── */}
-            {!hideInspectorModes && !demoMode && !isEmbedded && (
-              <SidebarCheckbox
-                checked={prodResources}
-                onChange={setProdResources}
-                label="Prod Resources"
-                tooltip="Load resources from dist/ builds instead of HMR"
-                docsPath="app-framework/cli/dev#prod-tools-and-prod-resources-flags"
-              />
+            {canUseModelChat && (
+              <SidebarCollapsibleControl
+                label="Model Chat"
+                defaultCollapsed={true}
+                tooltip="Talk to this MCP server through a model"
+                docsPath="testing/evals"
+              >
+                <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <SidebarControl label="Provider">
+                      <SidebarSelect
+                        value={modelProvider}
+                        onChange={handleModelProviderChange}
+                        options={modelProviderOptions.map((provider) => ({
+                          value: provider.id,
+                          label: provider.label ?? provider.id,
+                        }))}
+                      />
+                    </SidebarControl>
+                    <SidebarControl label="Model">
+                      {selectedProviderModelOptions.length > 0 ? (
+                        <SidebarSelect
+                          value={modelId}
+                          onChange={setModelId}
+                          options={selectedProviderModelOptions.map((model) => ({
+                            value: model,
+                            label: model,
+                          }))}
+                        />
+                      ) : (
+                        <SidebarInput
+                          value={modelId}
+                          onChange={setModelId}
+                          applyOnBlur
+                          placeholder={getDefaultModelId(modelProvider)}
+                        />
+                      )}
+                    </SidebarControl>
+                  </div>
+                  {usesApiKeyUi && (
+                    <SidebarControl label="API Key">
+                      <div className="flex gap-1">
+                        <SidebarInput
+                          type="password"
+                          autoComplete="new-password"
+                          value={apiKeyDraft}
+                          onChange={setApiKeyDraft}
+                          placeholder={
+                            keyStatus.hasKey ? 'Saved locally' : `Paste ${modelProvider} key`
+                          }
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveApiKey}
+                          disabled={isKeyStatusLoading || (!apiKeyDraft && !keyStatus.hasKey)}
+                          className="h-7 rounded-md px-2 text-xs font-medium transition-opacity disabled:opacity-40"
+                          style={{
+                            backgroundColor: 'var(--color-text-primary)',
+                            color: 'var(--color-background-primary)',
+                          }}
+                        >
+                          {apiKeyDraft ? 'Save' : 'Clear'}
+                        </button>
+                      </div>
+                      <div
+                        className="mt-1 text-[9px]"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                      >
+                        {keyMessage ||
+                          (isKeyStatusLoading
+                            ? 'Checking saved key...'
+                            : keyStatus.hasKey
+                              ? `Key saved ${keyStatus.storage ?? 'locally'}`
+                              : 'Paste a key or use one already saved on this machine')}
+                      </div>
+                    </SidebarControl>
+                  )}
+                </div>
+              </SidebarCollapsibleControl>
             )}
 
             {/* ── Tool + Simulation row ── */}
@@ -1240,7 +1867,10 @@ export function Inspector({
                 >
                   <SidebarSelect
                     value={selectedToolName}
-                    onChange={(value) => setSelectedToolName(value)}
+                    onChange={(value) => {
+                      setIsLiveMcpRender(false);
+                      setSelectedToolName(value);
+                    }}
                     options={toolNames.map((name) => {
                       const info = toolMap.get(name)!;
                       return {
@@ -1281,11 +1911,21 @@ export function Inspector({
                   data-testid="simulation-selector"
                 >
                   <SidebarSelect
-                    value={activeSimulationName ?? '__none__'}
-                    onChange={(value) =>
-                      setActiveSimulationName(value === '__none__' ? null : value)
-                    }
+                    value={isLiveMcpRender ? '__live__' : (activeSimulationName ?? '__none__')}
+                    onChange={(value) => {
+                      if (value === '__live__') return;
+                      setIsLiveMcpRender(false);
+                      setActiveSimulationName(value === '__none__' ? null : value);
+                    }}
                     options={[
+                      ...(isLiveMcpRender
+                        ? [
+                            {
+                              value: '__live__',
+                              label: 'Live MCP (model)',
+                            },
+                          ]
+                        : []),
                       ...(demoMode
                         ? []
                         : [
@@ -1643,6 +2283,7 @@ export function Inspector({
             >
               <SidebarTextarea
                 value={state.toolInputJson}
+                data-testid="tool-input-textarea"
                 onChange={(json) =>
                   state.validateJSON(json, state.setToolInputJson, state.setToolInputError)
                 }
@@ -1706,7 +2347,14 @@ export function Inspector({
         dangerouslySetInnerHTML={{
           __html: JSON.stringify(
             state.toolResult
-              ? { ...state.toolResult, source: activeSimulationName ? 'fixture' : 'server' }
+              ? {
+                  ...state.toolResult,
+                  source: isLiveMcpRender
+                    ? 'live-mcp'
+                    : activeSimulationName
+                      ? 'fixture'
+                      : 'server',
+                }
               : null
           ).replace(/</g, '\\u003c'),
         }}
