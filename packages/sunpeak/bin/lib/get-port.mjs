@@ -17,13 +17,13 @@ export function getPortSync(preferred) {
   }
   const script = `
     const s = require("net").createServer();
-    s.listen(${preferred}, () => {
+    s.listen(${preferred}, "127.0.0.1", () => {
       process.stdout.write(String(s.address().port));
       s.close();
     });
     s.on("error", () => {
       const f = require("net").createServer();
-      f.listen(0, () => {
+      f.listen(0, "127.0.0.1", () => {
         process.stdout.write(String(f.address().port));
         f.close();
       });
@@ -38,8 +38,9 @@ export function getPortSync(preferred) {
  * Find an available TCP port, preferring the given port.
  * If the preferred port is in use, returns a random available port.
  *
- * Listens without specifying a host so Node.js uses dual-stack `::`,
- * which detects conflicts on both IPv4 and IPv6 interfaces.
+ * Probes 127.0.0.1 because sunpeak dev/test servers bind there. Binding to
+ * the platform default can miss conflicts from processes already bound to
+ * 127.0.0.1 on macOS.
  *
  * @param {number} preferred - Port to try first (default: 0 = any available)
  * @returns {Promise<number>} The available port number
@@ -47,7 +48,7 @@ export function getPortSync(preferred) {
 export function getPort(preferred = 0) {
   return new Promise((resolve, reject) => {
     const server = createServer();
-    server.listen(preferred, () => {
+    server.listen(preferred, '127.0.0.1', () => {
       const { port } = server.address();
       server.close(() => resolve(port));
     });
@@ -55,7 +56,7 @@ export function getPort(preferred = 0) {
       if (err.code === 'EADDRINUSE' && preferred !== 0) {
         // Preferred port is busy — get any available port
         const fallback = createServer();
-        fallback.listen(0, () => {
+        fallback.listen(0, '127.0.0.1', () => {
           const { port } = fallback.address();
           fallback.close(() => resolve(port));
         });

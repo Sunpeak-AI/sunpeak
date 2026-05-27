@@ -652,12 +652,17 @@ async function runScaffoldSmokeTest() {
     {
       const evalPort = await getPort(19250);
       const evalInspectorPort = await getPort(19251);
+      const evalSandboxPort = await getPort(24714);
       let evalServer;
       try {
         evalServer = await startServerProcess(
           'node', [SUNPEAK_BIN, 'dev', '--port', String(evalInspectorPort), '--no-begging', '--', '--prod-tools'],
           projectDir,
-          { SUNPEAK_MCP_PORT: String(evalPort), SUNPEAK_DEV_OVERLAY: 'false' },
+          {
+            SUNPEAK_MCP_PORT: String(evalPort),
+            SUNPEAK_SANDBOX_PORT: String(evalSandboxPort),
+            SUNPEAK_DEV_OVERLAY: 'false',
+          },
           'scaffold eval schema', 30000
         );
 
