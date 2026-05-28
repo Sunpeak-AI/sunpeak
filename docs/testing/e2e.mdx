@@ -146,7 +146,7 @@ test('resources have correct metadata', async ({ mcp }) => {
 
 ### renderTool
 
-`inspector.renderTool` renders the tool result in the inspector and returns an `InspectorResult` with both the MCP data and a UI locator. With `input`, the tool is called on the real server. Without `input`, simulation fixture data is used when available. The returned `InspectorResult` includes a `source` field (`'fixture'` or `'server'`) indicating where the data came from, and a `screenshot()` method for visual regression.
+`inspector.renderTool` renders the tool result in the inspector and returns an `InspectorResult` with both the MCP data and a UI locator. With `input`, the tool is called on the real server. Without `input`, simulation fixture data is used when available. The returned `InspectorResult` includes a `source` field (`'fixture'` or `'server'`) indicating where the data came from, and a `screenshot()` method for visual regression. Inspector sidebars are hidden by default in this fixture so app e2e and visual tests do not depend on inspector layout. Pass `{ sidebar: true }` when a test needs the inspector controls.
 
 ```typescript
 // Call the real server with specific arguments
@@ -160,7 +160,7 @@ await expect(app.getByText('test')).toBeVisible();
 const result = await inspector.renderTool('show-albums', undefined, { theme: 'dark' });
 ```
 
-The options object accepts `theme`, `displayMode`, and `timeout`. Per-call timeout overrides the config default.
+The options object accepts `theme`, `displayMode`, `sidebar`, and `timeout`. Per-call timeout overrides the config default.
 
 ### Configuring default timeouts
 
@@ -312,7 +312,7 @@ test('pip mode works (ChatGPT only)', async ({ inspector }) => {
     Use `result.screenshot()` in tests that cover important visual states (light/dark theme, fullscreen, empty states). Visual tests catch CSS regressions that functional assertions miss:
     ```typescript
     await result.screenshot('albums-dark');
-    await result.screenshot('albums-fullscreen', { target: 'page' });
+    await result.screenshot('albums-fullscreen');
     ```
   </Accordion>
 

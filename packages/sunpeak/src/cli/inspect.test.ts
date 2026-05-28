@@ -507,7 +507,7 @@ describe('inspect endpoint security helpers', () => {
     );
   });
 
-  it('does not expose app-only MCP App tools to model chat', async () => {
+  it('exposes model-visible tools, including backend-only tools, to model chat', async () => {
     const { _securityTestExports } = await importInspectCommand();
 
     expect(_securityTestExports.isToolVisibleToModel({ _meta: {} })).toBe(true);
@@ -531,6 +531,42 @@ describe('inspect endpoint security helpers', () => {
         _meta: { ui: { visibility: 'app' } },
       })
     ).toBe(false);
+
+    const tools = _securityTestExports.getModelCallableTools([
+      { name: 'show-albums', _meta: { ui: { resourceUri: 'ui://albums' } } },
+      { name: 'lookup-album-metadata' },
+      { name: 'app-only-action', _meta: { ui: { visibility: ['app'] } } },
+    ]);
+    expect(tools.map((tool) => tool.name)).toEqual(['show-albums', 'lookup-album-metadata']);
+  });
+
+  it('formats empty backend-only tool results without implying an app render', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.formatModelVisibleToolResult({ name: 'lookup' }, {})).toBe(
+      'lookup completed.'
+    );
+    expect(
+      _securityTestExports.formatModelVisibleToolResult({ name: 'lookup' }, { content: [] })
+    ).toBe('lookup completed.');
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'lookup' },
+        { content: [], structuredContent: undefined, isError: false }
+      )
+    ).toBe('lookup completed.');
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'lookup' },
+        { content: [], isError: true }
+      )
+    ).toBe('lookup returned an error.');
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'show-albums', _meta: { ui: { resourceUri: 'ui://albums' } } },
+        { content: [] }
+      )
+    ).toBe('show-albums completed. The MCP App is ready to render.');
   });
 
   it('exposes model-visible MCP tool result fields without component-only _meta', async () => {

@@ -1349,14 +1349,18 @@ async function getApiKeyStatus(provider) {
   };
 }
 
-function toolResourceUri(tool) {
-  return tool?._meta?.ui?.resourceUri ?? tool?._meta?.['ui/resourceUri'];
-}
-
 function isToolVisibleToModel(tool) {
   const visibility = tool?._meta?.ui?.visibility ?? tool?._meta?.['ui/visibility'];
   if (visibility == null) return true;
   return Array.isArray(visibility) && visibility.includes('model');
+}
+
+function getModelCallableTools(tools) {
+  return tools.filter((tool) => isToolVisibleToModel(tool));
+}
+
+function toolRendersApp(tool) {
+  return !!(tool?._meta?.ui?.resourceUri ?? tool?._meta?.['ui/resourceUri']);
 }
 
 function sanitizeAiSdkSchema(schema) {
@@ -1440,19 +1444,17 @@ function formatModelVisibleToolResult(tool, result) {
   }
 
   const visibleResult = {};
-  if (Array.isArray(result?.content)) {
+  if (Array.isArray(result?.content) && result.content.length > 0) {
     visibleResult.content = result.content;
   }
-  if (result && 'structuredContent' in result) {
+  if (result?.structuredContent !== undefined) {
     visibleResult.structuredContent = result.structuredContent;
   }
-  if (result?.isError != null) {
-    visibleResult.isError = result.isError;
-  }
-
   return Object.keys(visibleResult).length > 0
     ? formatJsonForModel(visibleResult)
-    : `${toolName} completed. The MCP App is ready to render.`;
+    : toolRendersApp(tool)
+      ? `${toolName} completed. The MCP App is ready to render.`
+      : `${toolName} completed.`;
 }
 
 async function executeModelChatToolCall({ client, name, arguments: args }) {
@@ -1472,9 +1474,7 @@ async function runModelChat({ client, provider, modelId, messages, apiKey, appCo
   const capturedToolCalls = [];
   const tools = {};
 
-  for (const mcpTool of mcpTools.filter(
-    (tool) => !!toolResourceUri(tool) && isToolVisibleToModel(tool)
-  )) {
+  for (const mcpTool of getModelCallableTools(mcpTools)) {
     tools[mcpTool.name] = aiTool({
       description: mcpTool.description || mcpTool.title || '',
       inputSchema: jsonSchema(sanitizeAiSdkSchema(mcpTool.inputSchema)),
@@ -2672,6 +2672,8 @@ export const _securityTestExports = {
   isLoopbackRemoteAddress,
   isPrivateNetworkAddress,
   isToolVisibleToModel,
+  getModelCallableTools,
+  toolRendersApp,
   executeModelChatToolCall,
   formatModelVisibleToolResult,
   formatSharedAppContextForModel,

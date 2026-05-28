@@ -37,12 +37,20 @@ export interface CallToolResult {
 export interface RenderToolOptions {
   theme?: 'light' | 'dark';
   displayMode?: 'inline' | 'pip' | 'fullscreen';
+  /**
+   * Show inspector sidebars while rendering the tool.
+   * Defaults to false so e2e and visual tests are isolated from inspector UI layout changes.
+   */
+  sidebar?: boolean;
   timeout?: number;
   [key: string]: unknown;
 }
 
 export interface ScreenshotOptions extends PageAssertionsToHaveScreenshotOptions {
-  /** What to screenshot: 'app' (inner iframe content) or 'page' (full inspector). Default: 'app'. */
+  /**
+   * Screenshot target. Visual snapshots capture the app iframe area by default.
+   * @deprecated `target: 'page'` is ignored so inspector UI changes do not break app baselines.
+   */
   target?: 'app' | 'page';
   /** Specific locator to screenshot instead of the default target. */
   element?: Locator;

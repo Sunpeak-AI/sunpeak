@@ -10,7 +10,6 @@ import { useMcpConnection, type AuthType, type AuthConfig } from './use-mcp-conn
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
 import {
-  HelpIcon,
   SimpleSidebar,
   SidebarControl,
   SidebarCollapsibleControl,
@@ -114,10 +113,11 @@ export interface InspectorProps {
   /**
    * Hierarchical input for embedding: an MCP App with its resources, tools,
    * and saved simulations. Mirrors the MCP App data model — resources are
-   * keyed by URI, and each tool's `_meta.openai.outputTemplate` selects the
-   * resource it renders. The Inspector flattens this internally; pass the
-   * shape you already have from `listTools` + `listResources` + your fixture
-   * store and the component renders it. See `InspectorApp`.
+   * keyed by URI, UI tools link to resources with `_meta.openai.outputTemplate`,
+   * and backend-only tools can be selected, called, and inspected without
+   * rendering an iframe. The Inspector flattens this internally; pass the shape
+   * you already have from `listTools` + `listResources` + your fixture store
+   * and the component renders it. See `InspectorApp`.
    *
    * Mutually exclusive with `simulations`. When both are provided, `app`
    * wins — `simulations` stays for back-compat with the CLI codepath.
@@ -312,7 +312,6 @@ export function Inspector({
   const toolMap = React.useMemo(() => {
     const map = new Map<string, ToolInfo>();
     for (const [simName, sim] of Object.entries(simulations)) {
-      if (!sim.resource) continue; // Skip backend-only tools
       const toolName = sim.tool.name;
       if (!map.has(toolName)) {
         map.set(toolName, {
@@ -323,6 +322,9 @@ export function Inspector({
         });
       }
       const info = map.get(toolName)!;
+      if (!info.resource && sim.resource) {
+        info.resource = sim.resource;
+      }
       info.simNames.push(simName);
       if (hasFixtureData(sim)) {
         info.fixtureSimNames.push(simName);
@@ -341,6 +343,10 @@ export function Inspector({
         return labelA.localeCompare(labelB);
       }),
     [toolMap]
+  );
+  const defaultToolName = React.useMemo(
+    () => toolNames.find((name) => !!toolMap.get(name)?.resource) ?? toolNames[0] ?? '',
+    [toolMap, toolNames]
   );
 
   // Parse URL params once for tool/simulation initialization.
@@ -367,7 +373,7 @@ export function Inspector({
         if (info.simNames.includes(initUrlParams.simulation)) return toolName;
       }
     }
-    return toolNames[0] ?? '';
+    return defaultToolName;
   });
 
   // Reset tool selection when tools change (e.g., after reconnect)
@@ -375,7 +381,7 @@ export function Inspector({
   if (prevToolNamesRef.current !== toolNames) {
     prevToolNamesRef.current = toolNames;
     if (toolNames.length > 0 && !toolMap.has(selectedToolName)) {
-      setSelectedToolName(toolNames[0]);
+      setSelectedToolName(defaultToolName);
     }
   }
 
@@ -422,6 +428,12 @@ export function Inspector({
     defaultHost,
     preserveToolDataOnSimulationChange: isLiveMcpRender,
   });
+  const resetAppContextForSelectionChange = () => {
+    state.setModelContext(null);
+    state.setModelAppContext(null);
+    state.setModelContextJson('null');
+    state.setModelContextError('');
+  };
   const [serverUrl, setServerUrl] = React.useState(mcpServerUrl ?? '');
   const [authType, setAuthType] = React.useState<AuthType>('none');
   const [bearerToken, setBearerToken] = React.useState('');
@@ -449,7 +461,6 @@ export function Inspector({
   const [isRunning, setIsRunning] = React.useState(false);
   const [hasRun, setHasRun] = React.useState(false);
   const [showCheck, setShowCheck] = React.useState(false);
-  const prodResourcesId = React.useId();
   const [serverPreviewGeneration, setServerPreviewGeneration] = React.useState(0);
   const checkTimerRef = React.useRef<ReturnType<typeof setTimeout>>(undefined);
   const oauthCleanupRef = React.useRef<(() => void) | undefined>(undefined);
@@ -511,13 +522,14 @@ export function Inspector({
     () => currentModelProvider?.models ?? [],
     [currentModelProvider?.models]
   );
-  const modelCallableTools = React.useMemo(
-    () =>
-      Array.from(toolMap.values())
-        .filter((info) => !!info.resource && isToolVisibleToModel(info.tool))
-        .map((info) => info.tool),
-    [toolMap]
-  );
+  const modelCallableTools = React.useMemo(() => {
+    const map = new Map<string, Simulation['tool']>();
+    for (const sim of Object.values(simulations)) {
+      if (!isToolVisibleToModel(sim.tool) || map.has(sim.tool.name)) continue;
+      map.set(sim.tool.name, sim.tool);
+    }
+    return Array.from(map.values());
+  }, [simulations]);
 
   React.useEffect(() => {
     const nextServerUrl = mcpServerUrl ?? '';
@@ -1042,9 +1054,11 @@ export function Inspector({
         role: 'assistant',
         content:
           data.text ??
-          (toolCalls.length > 0
+          (rendersApp
             ? 'I called the MCP tool and rendered the app below.'
-            : 'The model returned an empty response.'),
+            : toolCalls.length > 0
+              ? 'I called the MCP tool.'
+              : 'The model returned an empty response.'),
         toolCalls: toolCalls.map((call) => ({
           name: call.name,
           arguments: call.arguments,
@@ -1380,14 +1394,28 @@ export function Inspector({
           style={{ color: 'var(--color-text-secondary)' }}
         >
           {isEmbedded
-            ? 'No tools with UI resources in this app'
+            ? 'No tools in this app'
             : isError
               ? 'Could not connect to MCP server'
               : isConnected
-                ? 'No tools with UI resources found on this server'
+                ? 'No tools found on this server'
                 : serverUrl
                   ? 'Connecting\u2026'
                   : 'Enter an MCP server URL to get started'}
+        </span>
+      </div>
+    );
+  } else if (!selectedToolInfo?.resource) {
+    content = (
+      <div
+        className="h-full w-full flex items-center justify-center"
+        style={{ background: iframeBg }}
+      >
+        <span
+          className="text-sm text-center max-w-xs"
+          style={{ color: 'var(--color-text-secondary)' }}
+        >
+          Tool does not render a UI
         </span>
       </div>
     );
@@ -1545,36 +1573,9 @@ export function Inspector({
       </button>
     ) : undefined;
 
-  const headerProdResourcesControl =
-    !hideInspectorModes && !demoMode && !isEmbedded ? (
-      <div
-        className="flex shrink-0 items-center gap-1.5 text-[11px] font-medium"
-        style={{ color: 'var(--color-text-secondary)' }}
-      >
-        <input
-          id={prodResourcesId}
-          type="checkbox"
-          checked={prodResources}
-          onChange={(event) => setProdResources(event.currentTarget.checked)}
-          className="h-3.5 w-3.5 accent-[var(--color-text-primary)]"
-        />
-        <label htmlFor={prodResourcesId} className="cursor-pointer select-none">
-          Prod Resources
-        </label>
-        <HelpIcon
-          tooltip="Load resources from dist/ builds instead of HMR"
-          docsPath="app-framework/cli/dev#prod-tools-and-prod-resources-flags"
-        />
-      </div>
-    ) : null;
-
-  const headerAction =
-    runButton || headerProdResourcesControl ? (
-      <div className="flex min-w-0 items-center gap-2">
-        {runButton}
-        {headerProdResourcesControl}
-      </div>
-    ) : undefined;
+  const headerAction = runButton ? (
+    <div className="flex min-w-0 items-center">{runButton}</div>
+  ) : undefined;
 
   const conversationContent = ShellConversation ? (
     <ShellConversation
@@ -1619,6 +1620,11 @@ export function Inspector({
   // host React app can place the Inspector inside a sized region (a sidebar,
   // a modal, a dashboard panel) without it escaping its container.
   const rootSizing = isEmbedded ? 'h-full w-full' : 'h-screen w-screen';
+  const getJsonPanelFlexGrow = (value: string) => {
+    const text = value || '';
+    const lineCount = text.split('\n').length;
+    return Math.max(1, Math.min(8, lineCount + Math.floor(text.length / 500)));
+  };
 
   if (!showSidebar) {
     return (
@@ -1635,6 +1641,10 @@ export function Inspector({
       <SimpleSidebar
         rootRef={rootRef}
         fillParent={isEmbedded}
+        sidebarWidth={state.sidebarWidth}
+        rightSidebarWidth={state.rightSidebarWidth}
+        onSidebarWidthChange={state.setSidebarWidth}
+        onRightSidebarWidthChange={state.setRightSidebarWidth}
         controls={
           <div className="space-y-1">
             {/*
@@ -1684,7 +1694,7 @@ export function Inspector({
                   <SidebarCollapsibleControl
                     key={`auth-${authType === 'none' ? 'none' : 'active'}`}
                     label="Authentication"
-                    defaultCollapsed={authType === 'none'}
+                    defaultCollapsed={false}
                   >
                     <div className="space-y-1">
                       <SidebarSelect
@@ -1783,14 +1793,153 @@ export function Inspector({
               </>
             )}
 
+            {/* ── Tool + Simulation row ── */}
+            {hasTools && (
+              <div className="grid grid-cols-2 gap-2" data-testid="tool-simulation-row">
+                <SidebarControl
+                  label="Tool"
+                  tooltip="Tool to inspect"
+                  docsPath="app-framework/cli/dev"
+                  data-testid="tool-selector"
+                >
+                  <SidebarSelect
+                    value={selectedToolName}
+                    onChange={(value) => {
+                      setIsLiveMcpRender(false);
+                      resetAppContextForSelectionChange();
+                      setSelectedToolName(value);
+                    }}
+                    options={toolNames.map((name) => {
+                      const info = toolMap.get(name)!;
+                      return {
+                        value: name,
+                        label: (info.tool.title as string | undefined) || name,
+                      };
+                    })}
+                  />
+                </SidebarControl>
+                <SidebarControl
+                  label={
+                    selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0 ? (
+                      'Simulation'
+                    ) : (
+                      <a
+                        href={`${DOCS_BASE_URL}/testing/simulations`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="no-underline transition-colors"
+                        style={{ color: 'var(--color-text-secondary)' }}
+                        onMouseEnter={(e) => {
+                          (e.target as HTMLElement).style.color = 'var(--color-text-primary)';
+                        }}
+                        onMouseLeave={(e) => {
+                          (e.target as HTMLElement).style.color = 'var(--color-text-secondary)';
+                        }}
+                      >
+                        Simulation
+                      </a>
+                    )
+                  }
+                  tooltip={
+                    selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
+                      ? 'Test fixture with mock data'
+                      : 'Create simulations for faster testing'
+                  }
+                  docsPath="testing/simulations"
+                  data-testid="simulation-selector"
+                >
+                  <SidebarSelect
+                    value={isLiveMcpRender ? '__live__' : (activeSimulationName ?? '__none__')}
+                    onChange={(value) => {
+                      if (value === '__live__') return;
+                      setIsLiveMcpRender(false);
+                      resetAppContextForSelectionChange();
+                      setActiveSimulationName(value === '__none__' ? null : value);
+                    }}
+                    options={[
+                      ...(isLiveMcpRender
+                        ? [
+                            {
+                              value: '__live__',
+                              label: 'Live MCP (model)',
+                            },
+                          ]
+                        : []),
+                      ...(demoMode
+                        ? []
+                        : [
+                            {
+                              value: '__none__',
+                              label:
+                                selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
+                                  ? 'None (call server)'
+                                  : 'None',
+                            },
+                          ]),
+                      ...(selectedToolInfo?.fixtureSimNames ?? []).map((simName) => ({
+                        value: simName,
+                        // Prefer the user-facing displayName (set by the
+                        // `app` prop's flattener) over the internal key.
+                        label: simulations[simName]?.displayName ?? simName,
+                      })),
+                    ]}
+                  />
+                </SidebarControl>
+              </div>
+            )}
+
+            {/* ── Host + Width row ── */}
+            <div className="grid grid-cols-2 gap-2">
+              {registeredHosts.length > 1 && (
+                <SidebarControl
+                  label="Host"
+                  tooltip="Host runtime to simulate"
+                  docsPath="app-framework/functions/host-detection"
+                >
+                  <SidebarSelect
+                    value={state.activeHost}
+                    onChange={(value) => state.setActiveHost(value as HostId)}
+                    options={registeredHosts.map((h) => ({
+                      value: h.id,
+                      label: h.label,
+                    }))}
+                  />
+                </SidebarControl>
+              )}
+              <SidebarControl label="Width" tooltip="Chat width" docsPath="testing/inspector">
+                <SidebarSelect
+                  value={state.screenWidth}
+                  onChange={(value) => state.setScreenWidth(value as ScreenWidth)}
+                  options={[
+                    { value: 'mobile-s', label: 'Mobile S (375px)' },
+                    { value: 'mobile-l', label: 'Mobile L (425px)' },
+                    { value: 'tablet', label: 'Tablet (768px)' },
+                    { value: 'full', label: '100% (Full)' },
+                  ]}
+                />
+              </SidebarControl>
+            </div>
+
+            {!hideInspectorModes && !demoMode && !isEmbedded && (
+              <div className="py-1">
+                <SidebarCheckbox
+                  checked={prodResources}
+                  onChange={setProdResources}
+                  label="Prod Resources"
+                  tooltip="Load resources from dist/ builds instead of HMR"
+                  docsPath="app-framework/cli/dev#prod-tools-and-prod-resources-flags"
+                />
+              </div>
+            )}
+
             {canUseModelChat && (
               <SidebarCollapsibleControl
                 label="Model Chat"
-                defaultCollapsed={true}
+                defaultCollapsed={false}
                 tooltip="Talk to this MCP server through a model"
                 docsPath="testing/evals"
               >
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <div className="grid grid-cols-2 gap-2">
                     <SidebarControl label="Provider">
                       <SidebarSelect
@@ -1863,131 +2012,6 @@ export function Inspector({
                 </div>
               </SidebarCollapsibleControl>
             )}
-
-            {/* ── Tool + Simulation row ── */}
-            {hasTools && (
-              <div className="grid grid-cols-2 gap-2" data-testid="tool-simulation-row">
-                <SidebarControl
-                  label="Tool"
-                  tooltip="Tool to inspect"
-                  docsPath="app-framework/cli/dev"
-                  data-testid="tool-selector"
-                >
-                  <SidebarSelect
-                    value={selectedToolName}
-                    onChange={(value) => {
-                      setIsLiveMcpRender(false);
-                      setSelectedToolName(value);
-                    }}
-                    options={toolNames.map((name) => {
-                      const info = toolMap.get(name)!;
-                      return {
-                        value: name,
-                        label: (info.tool.title as string | undefined) || name,
-                      };
-                    })}
-                  />
-                </SidebarControl>
-                <SidebarControl
-                  label={
-                    selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0 ? (
-                      'Simulation'
-                    ) : (
-                      <a
-                        href={`${DOCS_BASE_URL}/testing/simulations`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="no-underline transition-colors"
-                        style={{ color: 'var(--color-text-secondary)' }}
-                        onMouseEnter={(e) => {
-                          (e.target as HTMLElement).style.color = 'var(--color-text-primary)';
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.target as HTMLElement).style.color = 'var(--color-text-secondary)';
-                        }}
-                      >
-                        Simulation
-                      </a>
-                    )
-                  }
-                  tooltip={
-                    selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
-                      ? 'Test fixture with mock data'
-                      : 'Create simulations for faster testing'
-                  }
-                  docsPath="testing/simulations"
-                  data-testid="simulation-selector"
-                >
-                  <SidebarSelect
-                    value={isLiveMcpRender ? '__live__' : (activeSimulationName ?? '__none__')}
-                    onChange={(value) => {
-                      if (value === '__live__') return;
-                      setIsLiveMcpRender(false);
-                      setActiveSimulationName(value === '__none__' ? null : value);
-                    }}
-                    options={[
-                      ...(isLiveMcpRender
-                        ? [
-                            {
-                              value: '__live__',
-                              label: 'Live MCP (model)',
-                            },
-                          ]
-                        : []),
-                      ...(demoMode
-                        ? []
-                        : [
-                            {
-                              value: '__none__',
-                              label:
-                                selectedToolInfo && selectedToolInfo.fixtureSimNames.length > 0
-                                  ? 'None (call server)'
-                                  : 'None',
-                            },
-                          ]),
-                      ...(selectedToolInfo?.fixtureSimNames ?? []).map((simName) => ({
-                        value: simName,
-                        // Prefer the user-facing displayName (set by the
-                        // `app` prop's flattener) over the internal key.
-                        label: simulations[simName]?.displayName ?? simName,
-                      })),
-                    ]}
-                  />
-                </SidebarControl>
-              </div>
-            )}
-
-            {/* ── Host + Width row ── */}
-            <div className="grid grid-cols-2 gap-2">
-              {registeredHosts.length > 1 && (
-                <SidebarControl
-                  label="Host"
-                  tooltip="Host runtime to simulate"
-                  docsPath="app-framework/functions/host-detection"
-                >
-                  <SidebarSelect
-                    value={state.activeHost}
-                    onChange={(value) => state.setActiveHost(value as HostId)}
-                    options={registeredHosts.map((h) => ({
-                      value: h.id,
-                      label: h.label,
-                    }))}
-                  />
-                </SidebarControl>
-              )}
-              <SidebarControl label="Width" tooltip="Chat width" docsPath="testing/inspector">
-                <SidebarSelect
-                  value={state.screenWidth}
-                  onChange={(value) => state.setScreenWidth(value as ScreenWidth)}
-                  options={[
-                    { value: 'mobile-s', label: 'Mobile S (375px)' },
-                    { value: 'mobile-l', label: 'Mobile L (425px)' },
-                    { value: 'tablet', label: 'Tablet (768px)' },
-                    { value: 'full', label: '100% (Full)' },
-                  ]}
-                />
-              </SidebarControl>
-            </div>
 
             <SidebarCollapsibleControl
               label="Host Context"
@@ -2260,15 +2284,23 @@ export function Inspector({
                 </SidebarControl>
               </div>
             </SidebarCollapsibleControl>
-
+          </div>
+        }
+        rightControls={
+          <div className="flex h-full min-h-0 flex-col gap-3">
             <SidebarCollapsibleControl
               label="App Context"
-              defaultCollapsed
+              defaultCollapsed={false}
               tooltip="App-provided context shared with the model"
               docsPath="app-framework/hooks/use-app-state"
+              className="flex min-h-0 flex-col"
+              contentClassName="min-h-0 flex-1"
+              style={{ flex: `${getJsonPanelFlexGrow(state.modelContextJson)} 1 0` }}
+              tooltipPlacement="left"
             >
               <SidebarTextarea
                 value={state.modelContextJson}
+                data-testid="app-context-textarea"
                 onChange={(json) =>
                   state.validateJSON(json, state.setModelContextJson, state.setModelContextError)
                 }
@@ -2286,7 +2318,7 @@ export function Inspector({
                   })
                 }
                 error={state.modelContextError}
-                maxRows={8}
+                fill
               />
             </SidebarCollapsibleControl>
 
@@ -2295,6 +2327,10 @@ export function Inspector({
               defaultCollapsed={false}
               tooltip="Arguments passed to the tool"
               docsPath="app-framework/hooks/use-tool-data"
+              className="flex min-h-0 flex-col"
+              contentClassName="min-h-0 flex-1"
+              style={{ flex: `${getJsonPanelFlexGrow(state.toolInputJson)} 1 0` }}
+              tooltipPlacement="left"
             >
               <SidebarTextarea
                 value={state.toolInputJson}
@@ -2309,7 +2345,7 @@ export function Inspector({
                   )
                 }
                 error={state.toolInputError}
-                maxRows={8}
+                fill
               />
             </SidebarCollapsibleControl>
 
@@ -2319,6 +2355,10 @@ export function Inspector({
               tooltip="Structured content returned by the tool"
               docsPath="app-framework/hooks/use-tool-data"
               data-testid="tool-result-section"
+              className="flex min-h-0 flex-col"
+              contentClassName="min-h-0 flex-1"
+              style={{ flex: `${getJsonPanelFlexGrow(state.toolResultJson)} 1 0` }}
+              tooltipPlacement="left"
             >
               <SidebarTextarea
                 value={state.toolResultJson}
@@ -2344,7 +2384,7 @@ export function Inspector({
                   })
                 }
                 error={state.toolResultError}
-                maxRows={8}
+                fill
               />
             </SidebarCollapsibleControl>
           </div>

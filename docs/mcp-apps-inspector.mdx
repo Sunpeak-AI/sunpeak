@@ -61,18 +61,20 @@ See [Simulations API Reference](/testing/simulations) for the complete JSON sche
 
 ## Sidebar Controls
 
-The inspector sidebar lets you configure:
+The inspector sidebars let you configure:
 
 - **MCP Server** — URL to connect to (with connection status indicator)
-- **Tool** — which tool to inspect
+- **Tool** — which tool to inspect, including backend-only tools without UI resources
 - **Simulation** — which fixture to load (or "None" for real server calls)
 - **Host** — ChatGPT or Claude runtime
 - **Width** — mobile, tablet, or full-width viewport
 - **Host Context** — [theme](/app-framework/hooks/use-theme), [locale](/app-framework/hooks/use-locale), [display mode](/app-framework/hooks/use-display-mode), [platform](/app-framework/hooks/use-platform), [device capabilities](/app-framework/hooks/use-device-capabilities), [time zone](/app-framework/hooks/use-time-zone), [container dimensions](/app-framework/hooks/use-viewport), [safe area insets](/app-framework/hooks/use-safe-area)
-- **App Context** — model context JSON shared with the model via [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context)
-- **Tool Input/Result** — editable JSON for the [tool arguments and structured content](/app-framework/hooks/use-tool-data)
+- **App Context** — model context JSON shared with the model via [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context), shown in the right sidebar
+- **Tool Input/Result** — editable JSON for the [tool arguments and structured content](/app-framework/hooks/use-tool-data), shown in the right sidebar
 
-All sidebar settings are reflected in the URL, making them shareable and usable in automated tests via [`createInspectorUrl`](/testing/inspector#createinspectorurl).
+Selecting a backend-only tool shows `Tool does not render a UI` in the preview, but the tool can still be called from the sidebar and its result is still shown.
+
+Most runtime settings are reflected in the URL, making them shareable and usable in automated tests via [`createInspectorUrl`](/testing/inspector#createinspectorurl). Sidebar width adjustments are saved locally so they persist across refreshes.
 
 ## Using the Inspector in Tests
 

@@ -44,6 +44,13 @@ function buildInspectorUrl(params) {
   return qs ? `/?${qs}` : '/';
 }
 
+function withDefaultRenderParams(params) {
+  return {
+    ...params,
+    sidebar: params.sidebar == null ? 'false' : params.sidebar,
+  };
+}
+
 function resolveHostId(projectName) {
   if (!projectName) return 'chatgpt';
   if (projectName.startsWith('chatgpt')) return 'chatgpt';
@@ -83,7 +90,10 @@ async function readToolResult(page, timeout) {
               }
             });
             observer.observe(el, { childList: true, characterData: true, subtree: true });
-            timer = setTimeout(() => { observer.disconnect(); resolve(null); }, t);
+            timer = setTimeout(() => {
+              observer.disconnect();
+              resolve(null);
+            }, t);
           };
           check();
         }),
@@ -135,13 +145,17 @@ function createInspectorResult(page, resultData) {
         name = undefined;
       }
 
-      const { target = 'app', element, ...playwrightOptions } = options;
+      const { target, element, ...playwrightOptions } = options;
       let locator;
       if (element) {
         locator = element;
-      } else if (target === 'page') {
-        locator = page.locator('#root');
       } else {
+        if (target && target !== 'app') {
+          console.warn(
+            `[sunpeak] result.screenshot({ target: "${target}" }) is deprecated. ` +
+              'Visual snapshots always capture the app iframe area so inspector UI changes do not break user baselines.'
+          );
+        }
         locator = page.frameLocator('iframe').frameLocator('iframe').locator('body');
       }
       const fullName = name && !name.endsWith('.png') ? `${name}.png` : name;
@@ -171,7 +185,9 @@ const test = base.extend({
           data: { name, arguments: input || {} },
         });
         if (!response.ok()) {
-          throw new Error(`callTool(${name}) returned ${response.status()}: ${await response.text()}`);
+          throw new Error(
+            `callTool(${name}) returned ${response.status()}: ${await response.text()}`
+          );
         }
         return response.json();
       },
@@ -187,7 +203,9 @@ const test = base.extend({
           `${baseURL}/__sunpeak/read-resource?uri=${encodeURIComponent(uri)}`
         );
         if (!response.ok()) {
-          throw new Error(`readResource(${uri}) returned ${response.status()}: ${await response.text()}`);
+          throw new Error(
+            `readResource(${uri}) returned ${response.status()}: ${await response.text()}`
+          );
         }
         return response.text();
       },
@@ -237,7 +255,7 @@ const test = base.extend({
           ...rest,
         };
 
-        await page.goto(buildInspectorUrl(params));
+        await page.goto(buildInspectorUrl(withDefaultRenderParams(params)));
 
         const resolvedTimeout = callTimeout ?? testInfo.project.use?.mcpTimeout ?? 15_000;
         try {

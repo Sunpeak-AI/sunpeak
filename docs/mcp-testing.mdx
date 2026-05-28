@@ -29,7 +29,7 @@ Five levels of automated testing:
 
 1. **Unit tests** — Vitest with happy-dom for component and hook logic. Exclusively for the sunpeak MCP App framework. For testing-only use cases, your unit tests will already be in the same language as your server.
 2. **E2E tests** — Playwright specs against replicated ChatGPT and Claude runtimes via the [inspector](/mcp-apps-inspector). Test every combination of host, theme, display mode, and device type.
-4. **Visual regression tests** — Playwright specs against saved images of your rendered UI via the [inspector](/mcp-apps-inspector).
+3. **Visual regression tests** — Playwright specs against saved images of your rendered UI via the [inspector](/mcp-apps-inspector).
 4. **Live tests** — Playwright specs against real ChatGPT. sunpeak handles auth, message sending, and iframe access.
 5. **Evals** — Multi-model tool calling tests (GPT-4o, mini, Claude, Gemini, etc.). Each eval runs N times per model to measure how reliably each model can use your tools.
 
@@ -114,7 +114,7 @@ test('should render in fullscreen mode', async ({ inspector }) => {
   alt="Inspector set to inline light mode via URL params"
 />
 
-The `inspector.renderTool()` method accepts options for `theme`, `displayMode`, and `timeout`. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
+The `inspector.renderTool()` method accepts options for `theme`, `displayMode`, `sidebar`, and `timeout`. It hides inspector sidebars by default so app e2e tests do not depend on inspector layout. For advanced URL parameters, see the [Inspector API Reference](/testing/inspector#createinspectorurl).
 
 The config is a one-liner:
 
@@ -235,10 +235,9 @@ test('albums renders correctly', async ({ inspector }) => {
 });
 ```
 
-By default, `screenshot()` captures the app inside the double-iframe. Use `target: 'page'` for the full inspector, or pass a specific `element` locator:
+By default, `inspector.renderTool()` hides the inspector sidebars, and `screenshot()` captures the app inside the double-iframe, so inspector UI changes do not break your app visual baselines. Pass a specific `element` locator to narrow the capture further:
 
 ```typescript
-await result.screenshot('full-page', { target: 'page' });
 await result.screenshot('card', { element: app.locator('.card') });
 ```
 

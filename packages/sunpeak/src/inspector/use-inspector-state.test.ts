@@ -22,7 +22,7 @@ describe('useInspectorState', () => {
     window.history.replaceState({}, '', '/');
   });
 
-  it('filters out backend-only simulations', () => {
+  it('includes backend-only simulations', () => {
     const simulations = {
       'ui-tool': createSim('ui-tool', true),
       'backend-tool': createSim('backend-tool', false),
@@ -31,7 +31,18 @@ describe('useInspectorState', () => {
     const { result } = renderHook(() => useInspectorState({ simulations }));
 
     expect(result.current.simulationNames).toContain('ui-tool');
-    expect(result.current.simulationNames).not.toContain('backend-tool');
+    expect(result.current.simulationNames).toContain('backend-tool');
+  });
+
+  it('defaults to the first simulation with a UI resource', () => {
+    const simulations = {
+      'backend-tool': createSim('backend-tool', false),
+      'ui-tool': createSim('ui-tool', true),
+    };
+
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    expect(result.current.selectedSimulationName).toBe('ui-tool');
   });
 
   it('uses the viewport width for fullscreen container dimensions', () => {
@@ -99,7 +110,7 @@ describe('useInspectorState', () => {
     expect(result.current.modelAppContext).toBeNull();
   });
 
-  it('keeps app-written model context across simulation changes', () => {
+  it('refreshes app context across simulation changes', () => {
     const simulations = {
       first: createSim('first', true),
       second: createSim('second', true),
@@ -113,11 +124,8 @@ describe('useInspectorState', () => {
       result.current.setSelectedSimulationName('second');
     });
 
-    expect(result.current.modelAppContext).toEqual({
-      content: [],
-      structuredContent: { selectedAlbum: 'Pizza Tour' },
-    });
-    expect(result.current.modelContextJson).toBe('{\n  "selectedAlbum": "Pizza Tour"\n}');
+    expect(result.current.modelAppContext).toBeNull();
+    expect(result.current.modelContextJson).toBe('null');
   });
 
   describe('preference persistence', () => {
@@ -133,6 +141,8 @@ describe('useInspectorState', () => {
           containerMaxHeight: 600,
           containerMaxWidth: 800,
           screenWidth: 'tablet',
+          sidebarWidth: 340,
+          rightSidebarWidth: 420,
         })
       );
 
@@ -144,6 +154,8 @@ describe('useInspectorState', () => {
       expect(result.current.containerMaxHeight).toBe(600);
       expect(result.current.containerMaxWidth).toBe(800);
       expect(result.current.screenWidth).toBe('tablet');
+      expect(result.current.sidebarWidth).toBe(340);
+      expect(result.current.rightSidebarWidth).toBe(420);
     });
 
     it('ignores invalid values in stored preferences', () => {
@@ -154,6 +166,8 @@ describe('useInspectorState', () => {
           displayMode: 'magic',
           platform: 'console',
           screenWidth: 'enormous',
+          sidebarWidth: 'wide',
+          rightSidebarWidth: 120,
           containerMaxHeight: 'tall',
           hover: 'yes',
           safeAreaInsets: { top: 10 },
@@ -167,6 +181,8 @@ describe('useInspectorState', () => {
       expect(result.current.displayMode).toBe('inline');
       expect(result.current.platform).toBe('desktop');
       expect(result.current.screenWidth).toBe('full');
+      expect(result.current.sidebarWidth).toBe(260);
+      expect(result.current.rightSidebarWidth).toBe(260);
       expect(result.current.containerMaxHeight).toBeUndefined();
       expect(result.current.hover).toBe(true);
       expect(result.current.safeAreaInsets).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
@@ -205,6 +221,19 @@ describe('useInspectorState', () => {
       expect(result.current.activeHost).toBe('claude');
       // Storage still wins for fields not in the URL.
       expect(result.current.locale).toBe('fr-FR');
+    });
+
+    it('persists sidebar width changes', () => {
+      const { result } = renderHook(() => useInspectorState({ simulations }));
+
+      act(() => {
+        result.current.setSidebarWidth(360);
+        result.current.setRightSidebarWidth(390);
+      });
+
+      const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
+      expect(prefs.sidebarWidth).toBe(360);
+      expect(prefs.rightSidebarWidth).toBe(390);
     });
   });
 });

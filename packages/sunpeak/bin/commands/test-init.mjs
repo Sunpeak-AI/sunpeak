@@ -77,10 +77,7 @@ export async function testInit(args = [], deps = defaultDeps) {
 
   // Parse --server flag from CLI args
   const serverIdx = args.indexOf('--server');
-  const cliServer =
-    serverIdx !== -1 && args[serverIdx + 1]
-      ? args[serverIdx + 1]
-      : undefined;
+  const cliServer = serverIdx !== -1 && args[serverIdx + 1] ? args[serverIdx + 1] : undefined;
 
   const projectType = detectProjectType(d);
   const interactive = d.isTTY();
@@ -119,7 +116,10 @@ export async function testInit(args = [], deps = defaultDeps) {
           for (const prov of providers) {
             for (const model of prov.models) {
               config = config.replace(
-                new RegExp(`^(\\s*)// ('${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',?.*)$`, 'm'),
+                new RegExp(
+                  `^(\\s*)// ('${model.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}',?.*)$`,
+                  'm'
+                ),
                 '$1$2'
               );
             }
@@ -139,12 +139,16 @@ export async function testInit(args = [], deps = defaultDeps) {
           });
           if (!d.isCancel(key) && key) {
             // Strip newlines so a pasted value can't inject extra .env entries.
-            const cleanKey = String(key).replace(/[\r\n]+/g, '').trim();
+            const cleanKey = String(key)
+              .replace(/[\r\n]+/g, '')
+              .trim();
             if (cleanKey) envLines.push(`${prov.envVar}=${cleanKey}`);
           }
         }
         if (envLines.length > 0 && evalDir) {
-          const relEnvPath = evalDir.startsWith(d.cwd()) ? evalDir.slice(d.cwd().length + 1) : evalDir;
+          const relEnvPath = evalDir.startsWith(d.cwd())
+            ? evalDir.slice(d.cwd().length + 1)
+            : evalDir;
           d.writeFileSync(join(evalDir, '.env'), envLines.join('\n') + '\n');
           d.log.info(`API keys saved to ${relEnvPath}/.env (gitignored)`);
         }
@@ -165,7 +169,9 @@ export async function testInit(args = [], deps = defaultDeps) {
           stdio: 'inherit',
         });
       } catch {
-        d.log.info(`Skill install skipped. Install later: ${dlx} skills add Sunpeak-AI/sunpeak@test-mcp-server`);
+        d.log.info(
+          `Skill install skipped. Install later: ${dlx} skills add Sunpeak-AI/sunpeak@test-mcp-server`
+        );
       }
     }
   }
@@ -303,9 +309,10 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
   d.mkdirSync(evalsDir, { recursive: true });
 
   // Generate server line for eval config
-  let serverLine = '  // server: \'http://localhost:8000/mcp\',';
+  let serverLine = "  // server: 'http://localhost:8000/mcp',";
   if (isSunpeak) {
-    serverLine = '  // Omit server for sunpeak projects (auto-detected).\n  // server: \'http://localhost:8000/mcp\',';
+    serverLine =
+      "  // Omit server for sunpeak projects (auto-detected).\n  // server: 'http://localhost:8000/mcp',";
   } else if (server?.type === 'url') {
     serverLine = `  server: ${JSON.stringify(server.value)},`;
   } else if (server?.type === 'command') {
@@ -315,27 +322,27 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
   // Build the eval config content
   const configLines = [
     "import { defineEvalConfig } from 'sunpeak/eval';",
-    "",
-    "// API keys are loaded automatically from .env in this directory (gitignored).",
-    "// See .env.example for the format.",
-    "",
-    "export default defineEvalConfig({",
-    "  // MCP server to test.",
+    '',
+    '// API keys are loaded automatically from .env in this directory (gitignored).',
+    '// See .env.example for the format.',
+    '',
+    'export default defineEvalConfig({',
+    '  // MCP server to test.',
     serverLine,
-    "",
-    "  models: [",
-    "    // Uncomment models and install their provider packages:",
+    '',
+    '  models: [',
+    '    // Uncomment models and install their provider packages:',
     ...generateModelLines(),
-    "  ],",
-    "",
-    "  defaults: {",
-    "    runs: 5,           // Number of times to run each case per model",
-    "    maxSteps: 1,       // Max tool call steps per run",
-    "    temperature: 0,    // 0 for most deterministic results",
-    "    timeout: 30_000,   // Timeout per run in ms",
-    "  },",
-    "});",
-    "",
+    '  ],',
+    '',
+    '  defaults: {',
+    '    runs: 5,           // Number of times to run each case per model',
+    '    maxSteps: 1,       // Max tool call steps per run',
+    '    temperature: 0,    // 0 for most deterministic results',
+    '    timeout: 30_000,   // Timeout per run in ms',
+    '  },',
+    '});',
+    '',
   ];
 
   d.writeFileSync(join(evalsDir, 'eval.config.ts'), configLines.join('\n'));
@@ -437,13 +444,8 @@ function scaffoldVisualTest(filePath, d) {
 //   // await result.screenshot('tool-dark');
 // });
 
-// Full-page screenshot (captures the inspector chrome too):
-// test('full page renders correctly', async ({ inspector }) => {
-//   const result = await inspector.renderTool('your-tool', {}, { theme: 'light' });
-//   const app = result.app();
-//   await expect(app.getByText('Expected text')).toBeVisible();
-//   await result.screenshot('tool-page', { target: 'page', maxDiffPixelRatio: 0.02 });
-// });
+// renderTool() hides inspector sidebars by default, and screenshot() captures only
+// the MCP App iframe area, so inspector UI changes do not break your visual baselines.
 `
   );
   d.log.success(`Created ${filePath}`);
@@ -485,9 +487,10 @@ function scaffoldLiveTests(liveDir, { isSunpeak, server, d } = {}) {
     const parts = server.value.split(/\s+/);
     const cmd = parts[0];
     const args = parts.slice(1);
-    serverOption = args.length > 0
-      ? `\n  server: { command: ${JSON.stringify(cmd)}, args: [${args.map(a => JSON.stringify(a)).join(', ')}] },`
-      : `\n  server: { command: ${JSON.stringify(cmd)} },`;
+    serverOption =
+      args.length > 0
+        ? `\n  server: { command: ${JSON.stringify(cmd)}, args: [${args.map((a) => JSON.stringify(a)).join(', ')}] },`
+        : `\n  server: { command: ${JSON.stringify(cmd)} },`;
   }
 
   const configContent = `${liveConfigPreamble}
@@ -637,7 +640,9 @@ test('server exposes tools', async ({ mcp }) => {
 
   d.log.success('Created tests/sunpeak/ with all test types.');
   if (server.type === 'later') {
-    d.log.warn('Server not configured. Edit tests/sunpeak/playwright.config.ts before running tests.');
+    d.log.warn(
+      'Server not configured. Edit tests/sunpeak/playwright.config.ts before running tests.'
+    );
   }
 
   // Auto-install dependencies so users can run tests immediately
@@ -653,14 +658,22 @@ test('server exposes tools', async ({ mcp }) => {
   try {
     d.execSync(`${pm} exec playwright install chromium`, { cwd: testDir, stdio: 'inherit' });
   } catch {
-    d.log.warn(`Browser install failed. Run manually: cd tests/sunpeak && ${pm} exec playwright install chromium`);
+    d.log.warn(
+      `Browser install failed. Run manually: cd tests/sunpeak && ${pm} exec playwright install chromium`
+    );
   }
 
   d.log.step('Ready! Run tests with:');
   d.log.message('  npx sunpeak test              # E2E tests');
-  d.log.message('  npx sunpeak test --visual      # Visual regression (generates baselines on first run)');
-  d.log.message('  npx sunpeak test --live         # Live tests against real hosts (requires login)');
-  d.log.message('  npx sunpeak test --eval         # Multi-model evals (configure models in evals/eval.config.ts)');
+  d.log.message(
+    '  npx sunpeak test --visual      # Visual regression (generates baselines on first run)'
+  );
+  d.log.message(
+    '  npx sunpeak test --live         # Live tests against real hosts (requires login)'
+  );
+  d.log.message(
+    '  npx sunpeak test --eval         # Multi-model evals (configure models in evals/eval.config.ts)'
+  );
 }
 
 async function initJsProject(cliServer, d) {

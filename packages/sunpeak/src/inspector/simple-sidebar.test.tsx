@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import {
@@ -44,6 +44,71 @@ describe('SimpleSidebar', () => {
     expect(screen.getByText('Live Toggle')).toBeInTheDocument();
   });
 
+  it('renders optional right controls beside the main content', () => {
+    render(
+      <SimpleSidebar
+        controls={<div data-testid="left-controls">Left</div>}
+        rightControls={<div data-testid="right-controls">Right</div>}
+      >
+        <div data-testid="main-content">Main Content</div>
+      </SimpleSidebar>
+    );
+
+    expect(screen.getByTestId('left-controls')).toBeInTheDocument();
+    expect(screen.getByTestId('main-content')).toBeInTheDocument();
+    expect(screen.getByTestId('right-controls')).toBeInTheDocument();
+  });
+
+  it('uses controlled sidebar widths when provided', () => {
+    render(
+      <SimpleSidebar
+        controls={<div data-testid="left-controls">Left</div>}
+        rightControls={<div data-testid="right-controls">Right</div>}
+        sidebarWidth={320}
+        rightSidebarWidth={360}
+      >
+        <div data-testid="main-content">Main Content</div>
+      </SimpleSidebar>
+    );
+
+    expect(screen.getByTestId('left-controls').closest('aside')).toHaveStyle({ width: '320px' });
+    expect(screen.getByTestId('right-controls').closest('aside')).toHaveStyle({ width: '360px' });
+  });
+
+  it('keeps resized sidebar widths at or above the minimum', () => {
+    const onSidebarWidthChange = vi.fn();
+    const onRightSidebarWidthChange = vi.fn();
+    const originalInnerWidth = window.innerWidth;
+    Object.defineProperty(window, 'innerWidth', { configurable: true, value: 768 });
+    try {
+      render(
+        <SimpleSidebar
+          controls={<div data-testid="left-controls">Left</div>}
+          rightControls={<div data-testid="right-controls">Right</div>}
+          onSidebarWidthChange={onSidebarWidthChange}
+          onRightSidebarWidthChange={onRightSidebarWidthChange}
+        >
+          <div data-testid="main-content">Main Content</div>
+        </SimpleSidebar>
+      );
+
+      const resizeHandles = document.querySelectorAll('.cursor-col-resize');
+      fireEvent.mouseDown(resizeHandles[0]);
+      fireEvent.mouseMove(document, { clientX: 100 });
+      expect(onSidebarWidthChange).toHaveBeenLastCalledWith(260);
+      fireEvent.mouseUp(document);
+
+      fireEvent.mouseDown(resizeHandles[1]);
+      fireEvent.mouseMove(document, { clientX: 760 });
+      expect(onRightSidebarWidthChange).toHaveBeenLastCalledWith(260);
+    } finally {
+      Object.defineProperty(window, 'innerWidth', {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+    }
+  });
+
   it('does not render headerRight when not provided', () => {
     render(
       <SimpleSidebar controls={<div>Controls</div>}>
@@ -56,12 +121,33 @@ describe('SimpleSidebar', () => {
 });
 
 describe('HelpIcon', () => {
-  it('positions the tooltip immediately to the right of the icon', () => {
+  it('positions the tooltip immediately to the right of the cursor', () => {
     render(<HelpIcon tooltip="Helpful context" docsPath="testing/evals" />);
 
     const link = screen.getByRole('link', { name: 'Helpful context' });
+    fireEvent.mouseEnter(link, { clientX: 40, clientY: 50 });
+
     expect(link).toHaveAttribute('href', 'https://sunpeak.ai/docs/testing/evals');
-    expect(screen.getByText('Helpful context')).toHaveClass('left-full', 'ml-1.5');
+    expect(screen.getByText('Helpful context')).toHaveClass('fixed', 'block');
+    expect(screen.getByText('Helpful context')).toHaveStyle({
+      left: '48px',
+      top: '50px',
+      transform: 'translateY(-50%)',
+    });
+  });
+
+  it('can position the tooltip to the left of the cursor', () => {
+    render(<HelpIcon tooltip="Helpful context" docsPath="testing/evals" placement="left" />);
+
+    const link = screen.getByRole('link', { name: 'Helpful context' });
+    fireEvent.mouseEnter(link, { clientX: 40, clientY: 50 });
+
+    expect(screen.getByText('Helpful context')).toHaveClass('fixed', 'block');
+    expect(screen.getByText('Helpful context')).toHaveStyle({
+      left: '32px',
+      top: '50px',
+      transform: 'translate(-100%, -50%)',
+    });
   });
 });
 

@@ -63,25 +63,37 @@ describe('flattenAppToSimulations', () => {
     expect(flat['show_albums__show_albums'].resourceHtml).toBe('<h1>shared</h1>');
   });
 
-  it('skips tools whose outputTemplate references an unknown resource', () => {
-    const app: InspectorApp = {
-      resources: [{ uri: 'ui://albums', html: '<h1>x</h1>' }],
-      tools: [
-        { tool: makeTool('show_albums', 'ui://albums') },
-        { tool: makeTool('orphan', 'ui://missing') },
-      ],
-    };
-    const flat = flattenAppToSimulations(app);
-    expect(Object.keys(flat)).toEqual(['show_albums__show_albums']);
+  it('warns and keeps tools whose outputTemplate references an unknown resource', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const app: InspectorApp = {
+        resources: [{ uri: 'ui://albums', html: '<h1>x</h1>' }],
+        tools: [
+          { tool: makeTool('show_albums', 'ui://albums') },
+          { tool: makeTool('orphan', 'ui://missing') },
+        ],
+      };
+      const flat = flattenAppToSimulations(app);
+      expect(Object.keys(flat).sort()).toEqual(['orphan__orphan', 'show_albums__show_albums']);
+      expect(flat['orphan__orphan'].resource).toBeUndefined();
+      expect(flat['orphan__orphan'].resourceHtml).toBeUndefined();
+      expect(warnSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Tool 'orphan' references unknown resource URI 'ui://missing'")
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 
-  it('skips tools with no outputTemplate', () => {
+  it('keeps tools with no outputTemplate for model chat', () => {
     const app: InspectorApp = {
       resources: [{ uri: 'ui://albums', html: '<h1>x</h1>' }],
       tools: [{ tool: makeTool('headless_tool') }],
     };
     const flat = flattenAppToSimulations(app);
-    expect(flat).toEqual({});
+    expect(Object.keys(flat)).toEqual(['headless_tool__headless_tool']);
+    expect(flat['headless_tool__headless_tool'].resource).toBeUndefined();
+    expect(flat['headless_tool__headless_tool'].resourceHtml).toBeUndefined();
   });
 
   it('warns when a tool has duplicate simulation names', () => {

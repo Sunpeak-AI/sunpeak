@@ -64,7 +64,7 @@ No manual configuration or entry point files needed!
 
 The inspector sidebar has two primary selectors:
 
-- **Tool dropdown** — selects which tool to inspect. Always visible when tools exist.
+- **Tool dropdown** — selects which tool to inspect, including backend-only tools without UI resources. Selecting a backend-only tool shows `Tool does not render a UI`, but you can still edit Tool Input, click **Run**, and inspect Tool Result.
 - **Simulation dropdown** — selects a simulation fixture with mock data. Shown when fixtures exist for the selected tool. Includes a "None (call server)" option to bypass mock data and call the real handler via the **Run** button.
 
 For programmatic testing, these map to URL parameters:
@@ -76,7 +76,7 @@ http://localhost:3000/?simulation=show-albums&theme=dark
 # No mock data — user clicks Run for real handler:
 http://localhost:3000/?tool=show-albums&theme=dark
 
-# Hide the sidebar (resource viewer only):
+# Hide the sidebars (app viewer only):
 http://localhost:3000/?simulation=show-albums&sidebar=false
 
 # Hide the dev overlay (for e2e tests):
