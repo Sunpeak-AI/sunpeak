@@ -4,6 +4,11 @@ import { useState } from 'react';
 interface SimpleSidebarProps {
   children: React.ReactNode;
   controls: React.ReactNode;
+  rightControls?: React.ReactNode;
+  sidebarWidth?: number;
+  rightSidebarWidth?: number;
+  onSidebarWidthChange?: (width: number) => void;
+  onRightSidebarWidthChange?: (width: number) => void;
   /** Optional element rendered above the sidebar controls. */
   headerRight?: React.ReactNode;
   /**
@@ -20,7 +25,12 @@ interface SimpleSidebarProps {
   fillParent?: boolean;
 }
 
-const DEFAULT_SIDEBAR_WIDTH = 260; // ChatGPT sidebar: 260px (extracted 2026-03-21)
+export const DEFAULT_SIDEBAR_WIDTH = 260; // ChatGPT sidebar: 260px (extracted 2026-03-21)
+
+function clampSidebarWidth(rawWidth: number, viewportWidth: number) {
+  const maxWidth = Math.floor(viewportWidth / 3);
+  return Math.max(DEFAULT_SIDEBAR_WIDTH, Math.min(maxWidth, rawWidth));
+}
 
 function ChevronRightIcon() {
   return (
@@ -37,25 +47,53 @@ function ChevronRightIcon() {
 export function SimpleSidebar({
   children,
   controls,
+  rightControls,
+  sidebarWidth,
+  rightSidebarWidth,
+  onSidebarWidthChange,
+  onRightSidebarWidthChange,
   headerRight,
   rootRef,
   fillParent = false,
 }: SimpleSidebarProps) {
   const [isDrawerOpen, setIsDrawerOpen] = React.useState(false);
-  const [sidebarWidth, setSidebarWidth] = React.useState(DEFAULT_SIDEBAR_WIDTH);
+  const [internalSidebarWidth, setInternalSidebarWidth] = React.useState(DEFAULT_SIDEBAR_WIDTH);
+  const [internalRightSidebarWidth, setInternalRightSidebarWidth] =
+    React.useState(DEFAULT_SIDEBAR_WIDTH);
   const [isResizing, setIsResizing] = React.useState(false);
+  const [isResizingRight, setIsResizingRight] = React.useState(false);
+  const effectiveSidebarWidth = sidebarWidth ?? internalSidebarWidth;
+  const effectiveRightSidebarWidth = rightSidebarWidth ?? internalRightSidebarWidth;
+  const setSidebarWidth = React.useCallback(
+    (width: number) => {
+      setInternalSidebarWidth(width);
+      onSidebarWidthChange?.(width);
+    },
+    [onSidebarWidthChange]
+  );
+  const setRightSidebarWidth = React.useCallback(
+    (width: number) => {
+      setInternalRightSidebarWidth(width);
+      onRightSidebarWidthChange?.(width);
+    },
+    [onRightSidebarWidthChange]
+  );
 
   const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizing(true);
   }, []);
 
+  const handleRightMouseDown = React.useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsResizingRight(true);
+  }, []);
+
   React.useEffect(() => {
     if (!isResizing) return;
 
     const handleMouseMove = (e: MouseEvent) => {
-      const maxWidth = Math.floor(window.innerWidth / 3);
-      const newWidth = Math.min(maxWidth, Math.max(DEFAULT_SIDEBAR_WIDTH, e.clientX));
+      const newWidth = clampSidebarWidth(e.clientX, window.innerWidth);
       setSidebarWidth(newWidth);
     };
 
@@ -70,7 +108,29 @@ export function SimpleSidebar({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [isResizing]);
+  }, [isResizing, setSidebarWidth]);
+
+  React.useEffect(() => {
+    if (!isResizingRight) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const distanceFromRight = window.innerWidth - e.clientX;
+      const newWidth = clampSidebarWidth(distanceFromRight, window.innerWidth);
+      setRightSidebarWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsResizingRight(false);
+    };
+
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isResizingRight, setRightSidebarWidth]);
 
   return (
     <div
@@ -80,7 +140,7 @@ export function SimpleSidebar({
       } overflow-hidden relative`}
     >
       {/* Resize overlay to capture mouse events during drag */}
-      {isResizing && <div className="fixed inset-0 z-50 cursor-col-resize" />}
+      {(isResizing || isResizingRight) && <div className="fixed inset-0 z-50 cursor-col-resize" />}
 
       {/* Mobile drawer overlay */}
       {isDrawerOpen && (
@@ -104,7 +164,7 @@ export function SimpleSidebar({
           ${isDrawerOpen ? 'max-md:translate-x-0' : 'max-md:-translate-x-full'}
         `}
         style={{
-          width: sidebarWidth,
+          width: effectiveSidebarWidth,
           borderRight: '1px solid var(--color-border-primary)',
         }}
       >
@@ -171,6 +231,23 @@ export function SimpleSidebar({
         </button>
         {children}
       </main>
+
+      {rightControls && (
+        <aside
+          className="relative hidden md:flex flex-col bg-sidebar"
+          style={{
+            width: effectiveRightSidebarWidth,
+            borderLeft: '1px solid var(--color-border-primary)',
+          }}
+        >
+          <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-3 pt-2">{rightControls}</div>
+
+          <div
+            onMouseDown={handleRightMouseDown}
+            className="hidden md:block absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 dark:active:bg-white/20 transition-colors"
+          />
+        </aside>
+      )}
     </div>
   );
 }
@@ -182,11 +259,39 @@ const DOCS_BASE_URL = 'https://sunpeak.ai/docs';
 interface HelpIconProps {
   tooltip: string;
   docsPath: string;
+  placement?: 'left' | 'right';
 }
 
-export function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
+export function HelpIcon({ tooltip, docsPath, placement = 'right' }: HelpIconProps) {
+  const linkRef = React.useRef<HTMLAnchorElement>(null);
+  const [isTooltipVisible, setIsTooltipVisible] = React.useState(false);
+  const [tooltipPosition, setTooltipPosition] = React.useState({ left: 0, top: 0 });
+  const tooltipOffset = 8;
+  const tooltipTransform = placement === 'left' ? 'translate(-100%, -50%)' : 'translateY(-50%)';
+
+  const setTooltipFromPoint = React.useCallback(
+    (clientX: number, clientY: number) => {
+      setTooltipPosition({
+        left: placement === 'left' ? clientX - tooltipOffset : clientX + tooltipOffset,
+        top: clientY,
+      });
+    },
+    [placement]
+  );
+
+  const setTooltipFromIcon = React.useCallback(() => {
+    const rect = linkRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    setTooltipPosition({
+      left: placement === 'left' ? rect.left - tooltipOffset : rect.right + tooltipOffset,
+      top: rect.top + rect.height / 2,
+    });
+  }, [placement]);
+
   return (
     <a
+      ref={linkRef}
       href={`${DOCS_BASE_URL}/${docsPath}`}
       target="_blank"
       rel="noopener noreferrer"
@@ -195,6 +300,19 @@ export function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
       style={{
         color: 'var(--color-text-tertiary, var(--color-text-secondary))',
       }}
+      onMouseEnter={(e) => {
+        setIsTooltipVisible(true);
+        setTooltipFromPoint(e.clientX, e.clientY);
+      }}
+      onMouseMove={(e) => {
+        setTooltipFromPoint(e.clientX, e.clientY);
+      }}
+      onMouseLeave={() => setIsTooltipVisible(false)}
+      onFocus={() => {
+        setIsTooltipVisible(true);
+        setTooltipFromIcon();
+      }}
+      onBlur={() => setIsTooltipVisible(false)}
       onClick={(e) => e.stopPropagation()}
     >
       <svg
@@ -219,8 +337,13 @@ export function HelpIcon({ tooltip, docsPath }: HelpIconProps) {
       </svg>
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-full top-1/2 z-[200] ml-1.5 hidden -translate-y-1/2 whitespace-nowrap rounded px-2 py-1 text-[11px] font-normal leading-tight group-hover:block group-focus-within:block"
+        className={`pointer-events-none fixed z-[1000] whitespace-nowrap rounded px-2 py-1 text-[11px] font-normal leading-tight ${
+          isTooltipVisible ? 'block' : 'hidden'
+        }`}
         style={{
+          left: tooltipPosition.left,
+          top: tooltipPosition.top,
+          transform: tooltipTransform,
           backgroundColor: 'var(--color-text-primary)',
           color: 'var(--color-background-primary)',
         }}
@@ -236,6 +359,7 @@ interface SidebarControlProps {
   children: React.ReactNode;
   /** Short tooltip shown on hover of the help icon */
   tooltip?: string;
+  tooltipPlacement?: 'left' | 'right';
   /** Docs path appended to https://sunpeak.ai/docs/ */
   docsPath?: string;
   'data-testid'?: string;
@@ -245,6 +369,7 @@ export function SidebarControl({
   label,
   children,
   tooltip,
+  tooltipPlacement,
   docsPath,
   'data-testid': testId,
 }: SidebarControlProps) {
@@ -255,7 +380,9 @@ export function SidebarControl({
         style={{ color: 'var(--color-text-secondary)' }}
       >
         {label}
-        {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
+        {tooltip && docsPath && (
+          <HelpIcon tooltip={tooltip} docsPath={docsPath} placement={tooltipPlacement} />
+        )}
       </span>
       {children}
     </div>
@@ -266,8 +393,12 @@ interface SidebarCollapsibleControlProps {
   label: string;
   children: React.ReactNode;
   defaultCollapsed?: boolean;
+  className?: string;
+  contentClassName?: string;
+  style?: React.CSSProperties;
   /** Short tooltip shown on hover of the help icon */
   tooltip?: string;
+  tooltipPlacement?: 'left' | 'right';
   /** Docs path appended to https://sunpeak.ai/docs/ */
   docsPath?: string;
   'data-testid'?: string;
@@ -277,14 +408,22 @@ export function SidebarCollapsibleControl({
   label,
   children,
   defaultCollapsed = true,
+  className,
+  contentClassName,
+  style,
   tooltip,
+  tooltipPlacement,
   docsPath,
   'data-testid': testId,
 }: SidebarCollapsibleControlProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
 
   return (
-    <div className="space-y-1" data-testid={testId}>
+    <div
+      className={className ? `space-y-1 ${className}` : 'space-y-1'}
+      style={isCollapsed ? undefined : style}
+      data-testid={testId}
+    >
       <button
         onClick={() => setIsCollapsed(!isCollapsed)}
         className="w-full flex items-center justify-between text-[10px] font-medium leading-tight transition-colors py-1 cursor-pointer"
@@ -293,11 +432,13 @@ export function SidebarCollapsibleControl({
       >
         <span className="inline-flex items-center gap-1">
           {label}
-          {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
+          {tooltip && docsPath && (
+            <HelpIcon tooltip={tooltip} docsPath={docsPath} placement={tooltipPlacement} />
+          )}
         </span>
         <span className="text-[8px]">{isCollapsed ? '▶' : '▼'}</span>
       </button>
-      {!isCollapsed && children}
+      {!isCollapsed && <div className={contentClassName}>{children}</div>}
     </div>
   );
 }
@@ -421,6 +562,7 @@ interface SidebarCheckboxProps {
   label: string;
   /** Short tooltip shown on hover of the help icon */
   tooltip?: string;
+  tooltipPlacement?: 'left' | 'right';
   /** Docs path appended to https://sunpeak.ai/docs/ */
   docsPath?: string;
 }
@@ -430,6 +572,7 @@ export function SidebarCheckbox({
   onChange,
   label,
   tooltip,
+  tooltipPlacement,
   docsPath,
 }: SidebarCheckboxProps) {
   const id = React.useId();
@@ -449,7 +592,9 @@ export function SidebarCheckbox({
       >
         {label}
       </label>
-      {tooltip && docsPath && <HelpIcon tooltip={tooltip} docsPath={docsPath} />}
+      {tooltip && docsPath && (
+        <HelpIcon tooltip={tooltip} docsPath={docsPath} placement={tooltipPlacement} />
+      )}
     </div>
   );
 }
@@ -461,6 +606,7 @@ interface SidebarTextareaProps {
   onBlur?: () => void;
   placeholder?: string;
   maxRows?: number;
+  fill?: boolean;
   error?: string;
   'data-testid'?: string;
 }
@@ -472,6 +618,7 @@ export function SidebarTextarea({
   onBlur,
   placeholder,
   maxRows = 8,
+  fill = false,
   error,
   'data-testid': testId,
 }: SidebarTextareaProps) {
@@ -479,16 +626,18 @@ export function SidebarTextarea({
   const rows = Math.min(contentRows, maxRows);
 
   return (
-    <div className="space-y-0.5">
+    <div className={fill ? 'flex h-full min-h-0 flex-col gap-0.5' : 'space-y-0.5'}>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onFocus={onFocus}
         onBlur={onBlur}
         placeholder={placeholder}
-        rows={rows}
+        rows={fill ? undefined : rows}
         data-testid={testId}
-        className="w-full text-[10px] font-mono rounded-md px-2 py-1.5 outline-none resize-y"
+        className={`w-full text-[10px] font-mono rounded-md px-2 py-1.5 outline-none ${
+          fill ? 'h-full min-h-0 flex-1 resize-none' : 'resize-y'
+        }`}
         style={{
           ...formElementStyle,
           cursor: 'text',

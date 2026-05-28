@@ -28,11 +28,3 @@ test('albums renders correctly in fullscreen', async ({ inspector }) => {
 
   await result.screenshot('albums-fullscreen');
 });
-
-test('full page renders correctly', async ({ inspector }) => {
-  const result = await inspector.renderTool('show-albums', undefined, { theme: 'light' });
-  const app = result.app();
-  await expect(app.locator('button:has-text("Summer Slice")')).toBeVisible();
-
-  await result.screenshot('albums-page-light', { target: 'page', maxDiffPixelRatio: 0.02 });
-});

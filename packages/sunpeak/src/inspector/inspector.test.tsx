@@ -84,7 +84,7 @@ describe('Inspector', () => {
       expect(toolOptions).toHaveLength(1);
     });
 
-    it('excludes backend-only tools (no resource)', () => {
+    it('includes backend-only tools (no resource)', () => {
       render(
         <Inspector
           simulations={{
@@ -102,7 +102,10 @@ describe('Inspector', () => {
 
       const allOptions = screen.getAllByRole('option');
       const backendOption = allOptions.find((o) => o.textContent?.includes('backend-tool'));
-      expect(backendOption).toBeUndefined();
+      expect(backendOption).toBeDefined();
+      const toolSelect = screen.getByTestId('tool-selector').querySelector('select')!;
+      expect(toolSelect.value).toBe('test-tool');
+      expect(screen.queryByText('Tool does not render a UI')).not.toBeInTheDocument();
     });
   });
 
@@ -303,12 +306,12 @@ describe('Inspector', () => {
 
       const prodResourcesCheckbox = screen.getByRole('checkbox', { name: /prod resources/i });
       expect(prodResourcesCheckbox).toBeInTheDocument();
-      expect(prodResourcesCheckbox.closest('header')).toBeInTheDocument();
+      expect(prodResourcesCheckbox.closest('header')).not.toBeInTheDocument();
       expect(
         screen
           .getByRole('link', { name: /Load resources from dist\/ builds instead of HMR/i })
           .closest('header')
-      ).toBeInTheDocument();
+      ).not.toBeInTheDocument();
       expect(
         screen
           .getByRole('link', { name: /Load resources from dist\/ builds instead of HMR/i })
@@ -390,6 +393,8 @@ describe('Inspector', () => {
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       expect(screen.getByText('Authentication')).toBeInTheDocument();
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      expect(authSection.querySelector('select')).toHaveDisplayValue('None');
     });
 
     it('hides Authentication section in demo mode', () => {
@@ -399,11 +404,7 @@ describe('Inspector', () => {
     });
 
     it('shows auth type selector with None, Bearer Token, and OAuth options', async () => {
-      const user = userEvent.setup();
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
-
-      // Expand the Authentication section (collapsed by default when authType is 'none')
-      await user.click(screen.getByText('Authentication'));
 
       // Find the select inside the Authentication section
       const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
@@ -418,9 +419,6 @@ describe('Inspector', () => {
       const user = userEvent.setup();
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
-      // Expand auth section
-      await user.click(screen.getByText('Authentication'));
-
       // Select Bearer Token — find the select inside the Authentication section
       const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
       const authSelect = authSection.querySelector('select')!;
@@ -434,8 +432,6 @@ describe('Inspector', () => {
     it('shows Authorize button and Scopes input when OAuth is selected', async () => {
       const user = userEvent.setup();
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
-
-      await user.click(screen.getByText('Authentication'));
 
       const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
       const authSelect = authSection.querySelector('select')!;
@@ -472,8 +468,6 @@ describe('Inspector', () => {
           onCallTool={vi.fn()}
         />
       );
-
-      await user.click(screen.getByText('Authentication'));
 
       const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
       const authSelect = authSection.querySelector('select')!;
@@ -516,8 +510,6 @@ describe('Inspector', () => {
         />
       );
 
-      await user.click(screen.getByText('Authentication'));
-
       const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
       const authSelect = authSection.querySelector('select')!;
       await user.selectOptions(authSelect, 'oauth');
@@ -552,8 +544,7 @@ describe('Inspector', () => {
         expect(screen.getByTestId('connection-status')).toBeInTheDocument();
       });
 
-      // Expand auth section and select Bearer Token
-      await user.click(screen.getByText('Authentication'));
+      // Select Bearer Token
       const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
       const authSelect = authSection.querySelector('select')!;
       await user.selectOptions(authSelect, 'bearer');
@@ -731,7 +722,7 @@ describe('Inspector', () => {
       expect(screen.getByText('Enter an MCP server URL to get started')).toBeInTheDocument();
     });
 
-    it('shows "No tools with UI resources" when connected but no simulations', async () => {
+    it('shows "No tools found" when connected but no simulations', async () => {
       fetchSpy.mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }));
 
       render(
@@ -739,9 +730,7 @@ describe('Inspector', () => {
       );
 
       await waitFor(() => {
-        expect(
-          screen.getByText('No tools with UI resources found on this server')
-        ).toBeInTheDocument();
+        expect(screen.getByText('No tools found on this server')).toBeInTheDocument();
       });
     });
   });
@@ -757,6 +746,66 @@ describe('Inspector', () => {
       );
 
       expect(screen.getByTestId('tool-result-section')).toBeInTheDocument();
+    });
+
+    it('runs backend-only tools and shows results in the sidebar without rendering UI', async () => {
+      const onCallTool = vi.fn().mockResolvedValue({
+        content: [{ type: 'text', text: 'backend ok' }],
+        structuredContent: { status: 'ok' },
+      });
+      render(
+        <Inspector
+          simulations={{
+            'backend-tool': createSim({
+              name: 'backend-tool',
+              tool: { name: 'backend-tool', inputSchema: { type: 'object' } },
+              resource: undefined,
+              resourceUrl: undefined,
+            }),
+          }}
+          onCallTool={onCallTool}
+        />
+      );
+
+      expect(screen.getByText('Tool does not render a UI')).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: /run/i }));
+
+      await waitFor(() => {
+        expect(onCallTool).toHaveBeenCalledWith({ name: 'backend-tool', arguments: {} });
+      });
+      expect(screen.getByText('Tool does not render a UI')).toBeInTheDocument();
+      expect((screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement).value).toContain(
+        'backend ok'
+      );
+    });
+
+    it('loads backend-only simulation fixtures into the sidebar', () => {
+      render(
+        <Inspector
+          simulations={{
+            'backend-fixture': createSim({
+              name: 'backend-fixture',
+              tool: { name: 'backend-fixture', inputSchema: { type: 'object' } },
+              resource: undefined,
+              resourceUrl: undefined,
+              toolInput: { query: 'pizza' },
+              toolResult: {
+                content: [{ type: 'text', text: 'fixture ok' }],
+                structuredContent: { count: 3 },
+              },
+            }),
+          }}
+          onCallTool={vi.fn()}
+        />
+      );
+
+      expect(screen.getByText('Tool does not render a UI')).toBeInTheDocument();
+      expect((screen.getByTestId('tool-input-textarea') as HTMLTextAreaElement).value).toContain(
+        'pizza'
+      );
+      expect((screen.getByTestId('tool-result-textarea') as HTMLTextAreaElement).value).toContain(
+        'fixture ok'
+      );
     });
   });
 
@@ -1232,6 +1281,12 @@ describe('Inspector', () => {
             },
           },
         },
+        {
+          tool: {
+            name: 'lookup-album-metadata',
+            inputSchema: { type: 'object' as const, properties: {}, required: [] },
+          },
+        },
       ],
     };
 
@@ -1264,7 +1319,7 @@ describe('Inspector', () => {
 
     it('shows the embedded-mode empty-state message when no tools exist', () => {
       render(<Inspector app={emptyApp} onCallTool={vi.fn()} />);
-      expect(screen.getByText('No tools with UI resources in this app')).toBeInTheDocument();
+      expect(screen.getByText('No tools in this app')).toBeInTheDocument();
     });
 
     it('keeps model chat and the bottom composer hidden in embedded mode', () => {
@@ -1274,7 +1329,7 @@ describe('Inspector', () => {
       expect(screen.queryByPlaceholderText('Message sunpeak.ai')).not.toBeInTheDocument();
     });
 
-    it('keeps embedded model chat UI hidden even when modelChat is configured', () => {
+    it('keeps embedded model chat UI hidden even when modelChat is configured', async () => {
       const onChat = vi.fn(async () => ({
         text: 'Custom model response from embedder.',
         toolCalls: [],
@@ -1299,6 +1354,9 @@ describe('Inspector', () => {
         />
       );
 
+      const toolSelect = screen.getByTestId('tool-selector').querySelector('select')!;
+      await userEvent.selectOptions(toolSelect, 'lookup-album-metadata');
+      expect(screen.getByText('Tool does not render a UI')).toBeInTheDocument();
       expect(screen.queryByText('Model Chat')).not.toBeInTheDocument();
       expect(screen.queryByText('API Key')).not.toBeInTheDocument();
       expect(screen.queryByDisplayValue('Fractal Models')).not.toBeInTheDocument();
@@ -1336,8 +1394,6 @@ describe('Inspector', () => {
       expect(screen.getByText('Model Chat')).toBeInTheDocument();
       expect(screen.queryByText('API Key')).not.toBeInTheDocument();
 
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
-
       expect(screen.getByDisplayValue('Fractal Models')).toBeInTheDocument();
       expect(screen.getByDisplayValue('fractal-careful')).toBeInTheDocument();
 
@@ -1350,15 +1406,50 @@ describe('Inspector', () => {
           provider: 'fractal',
           modelId: 'fractal-careful',
           messages: [{ role: 'user', content: 'Render this app' }],
-          tools: [expect.objectContaining({ name: 'show-albums' })],
+          tools: expect.arrayContaining([expect.objectContaining({ name: 'show-albums' })]),
         })
       );
       const [chatRequest] = (
         onChat.mock.calls as unknown as Array<[{ tools: Array<{ name: string }> }]>
       )[0]!;
+      expect(chatRequest.tools.map((tool) => tool.name)).toContain('lookup-album-metadata');
       expect(chatRequest.tools.map((tool) => tool.name)).not.toContain('app-only-action');
       expect(screen.getByText('Custom model response from embedder.')).toBeInTheDocument();
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('does not claim a backend-only model tool call rendered an app', async () => {
+      const onChat = vi.fn(async () => ({
+        toolCalls: [
+          {
+            name: 'lookup-album-metadata',
+            arguments: {},
+            result: { content: [] },
+          },
+        ],
+      }));
+      render(
+        <Inspector
+          app={modelApp}
+          onCallTool={vi.fn()}
+          modelChat={{
+            enabled: true,
+            providers: [{ id: 'fractal', label: 'Fractal', defaultModel: 'fractal-careful' }],
+            onChat,
+          }}
+        />
+      );
+
+      const toolSelect = screen.getByTestId('tool-selector').querySelector('select')!;
+      await userEvent.selectOptions(toolSelect, 'lookup-album-metadata');
+      expect(screen.getByText('Tool does not render a UI')).toBeInTheDocument();
+      const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;
+      await userEvent.type(composer, 'Look this up{enter}');
+
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(1));
+      expect(screen.queryByText('Tool does not render a UI')).toBeNull();
+      expect(screen.getByText('I called the MCP tool.')).toBeInTheDocument();
+      expect(screen.queryByText('I called the MCP tool and rendered the app below.')).toBeNull();
     });
 
     it('keeps selected models inside the configured provider model list outside embedded mode', async () => {
@@ -1381,7 +1472,6 @@ describe('Inspector', () => {
         />
       );
 
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
       expect(screen.getByDisplayValue('fractal-careful')).toBeInTheDocument();
       expect(screen.queryByDisplayValue('fractal-deprecated')).not.toBeInTheDocument();
     });
@@ -1399,12 +1489,10 @@ describe('Inspector', () => {
         />
       );
 
-      await userEvent.click(screen.getByRole('button', { name: /App Context/ }));
       const appContext = screen.getByDisplayValue('null');
       fireEvent.change(appContext, { target: { value: '{"selectedAlbum":"Pizza Tour"}' } });
       fireEvent.blur(appContext);
 
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
       const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;
       await userEvent.type(composer, 'What is selected?{enter}');
 
@@ -1435,7 +1523,6 @@ describe('Inspector', () => {
         />
       );
 
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
       expect(screen.getByDisplayValue('fractal-small')).toBeInTheDocument();
       await userEvent.selectOptions(screen.getByDisplayValue('Fractal Fast'), 'fractal-careful');
       expect(screen.getByDisplayValue('fractal-large')).toBeInTheDocument();
@@ -1457,7 +1544,6 @@ describe('Inspector', () => {
       );
 
       await waitFor(() => expect(getStatus).toHaveBeenCalledWith('openai'));
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
       const keyInput = screen.getByPlaceholderText('Paste openai key');
       expect(keyInput).toHaveAttribute('autocomplete', 'new-password');
       await userEvent.type(keyInput, 'sk-fractal-test');
@@ -1491,7 +1577,7 @@ describe('Inspector', () => {
       };
       const { rerender } = render(<Inspector app={appA} onCallTool={vi.fn()} />);
       // No tools in appA — embedded empty state.
-      expect(screen.getByText('No tools with UI resources in this app')).toBeInTheDocument();
+      expect(screen.getByText('No tools in this app')).toBeInTheDocument();
       // Swap to appB. The Inspector should pick up the new tool without errors.
       rerender(<Inspector app={appB} onCallTool={vi.fn()} />);
       await waitFor(() => {
@@ -1516,11 +1602,11 @@ describe('Inspector', () => {
   });
 
   describe('Model chat API key status', () => {
-    it('defaults Model Chat to collapsed', () => {
+    it('defaults Model Chat to expanded', () => {
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
 
       expect(screen.getByText('Model Chat')).toBeInTheDocument();
-      expect(screen.queryByText('Provider')).not.toBeInTheDocument();
+      expect(screen.getByText('Provider')).toBeInTheDocument();
     });
 
     it('surfaces local API key status errors in the sidebar', async () => {
@@ -1532,7 +1618,6 @@ describe('Inspector', () => {
       );
 
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
 
       await expect(screen.findByText('macOS Keychain is locked')).resolves.toBeInTheDocument();
     });
@@ -1541,7 +1626,6 @@ describe('Inspector', () => {
       fetchSpy.mockRejectedValueOnce(new TypeError('Key status request failed'));
 
       render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
-      await userEvent.click(screen.getByRole('button', { name: /Model Chat/ }));
 
       await expect(screen.findByText('Key status request failed')).resolves.toBeInTheDocument();
     });

@@ -241,8 +241,19 @@ for (const host of hosts) {
       const tooltipBox = await prodResourcesHelp.locator('span[aria-hidden="true"]').boundingBox();
       expect(helpBox).not.toBeNull();
       expect(tooltipBox).not.toBeNull();
-      expect(Math.round(tooltipBox!.x - helpBox!.x - helpBox!.width)).toBeLessThanOrEqual(8);
-      expect(Math.round(tooltipBox!.x - helpBox!.x - helpBox!.width)).toBeGreaterThanOrEqual(4);
+      const tooltipGapFromCursor = Math.round(tooltipBox!.x - (helpBox!.x + helpBox!.width / 2));
+      expect(tooltipGapFromCursor).toBeLessThanOrEqual(12);
+      expect(tooltipGapFromCursor).toBeGreaterThanOrEqual(4);
+
+      const appContextHelp = page.getByRole('link', {
+        name: 'App-provided context shared with the model',
+      });
+      await appContextHelp.hover();
+      const rightHelpBox = await appContextHelp.boundingBox();
+      const leftTooltipBox = await appContextHelp.locator('span[aria-hidden="true"]').boundingBox();
+      expect(rightHelpBox).not.toBeNull();
+      expect(leftTooltipBox).not.toBeNull();
+      expect(leftTooltipBox!.x + leftTooltipBox!.width).toBeLessThanOrEqual(rightHelpBox!.x);
     });
   });
 
@@ -290,7 +301,7 @@ for (const host of hosts) {
           const box = await page.locator('iframe[title="Resource Preview"]').first().boundingBox();
           return Math.round(box?.width ?? 0);
         })
-        .toBeGreaterThan(Math.round(viewport.width * 0.75));
+        .toBeGreaterThan(Math.round(viewport.width * 0.55));
       await expectNoHorizontalOverflow(page);
     });
   });
@@ -558,7 +569,6 @@ for (const host of hosts) {
       });
 
       await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
-      await page.getByRole('button', { name: /Model Chat/ }).click();
 
       await page
         .locator('select')
@@ -647,7 +657,6 @@ test.describe('Model Chat API Keys', () => {
     });
 
     await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host: 'chatgpt' }));
-    await page.getByRole('button', { name: /Model Chat/ }).click();
 
     const passwordInput = page.locator('input[type="password"]').first();
     await expect(passwordInput).toHaveAttribute('placeholder', 'Paste openai key');

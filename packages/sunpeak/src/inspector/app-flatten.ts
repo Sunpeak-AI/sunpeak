@@ -5,12 +5,14 @@
  * surface; flattening here means the rest of the component is unchanged.
  *
  * Linkage: each tool's `_meta.openai.outputTemplate` URI selects the matching
- * resource. Tools whose template doesn't resolve to a known resource are
- * skipped — they have no UI to render and would only confuse the sidebar.
+ * resource. Tools without a matching resource are still flattened so users can
+ * select, call, and inspect backend-only tools from the sidebar, and model
+ * chat can call them too.
  *
- * A tool with no `simulations` still produces one entry so the sidebar has
- * something to select. That entry carries no fixture data, so the Inspector
- * shows the "Press Run" empty state and `onCallTool` decides what happens.
+ * A tool with no `simulations` still produces one entry so the inspector has
+ * a stable tool definition for sidebar selection (when renderable) and model
+ * chat. That entry carries no fixture data, so live calls flow through
+ * `onCallTool`.
  *
  * Naming split — `Simulation.name` vs `Simulation.displayName`:
  *
@@ -74,11 +76,14 @@ export function flattenAppToSimulations(app: InspectorApp | undefined): Record<s
 
   for (const appTool of app.tools) {
     const uri = getOutputTemplate(appTool.tool._meta);
-    if (!uri) continue;
-    const resource = resourcesByUri.get(uri);
-    if (!resource) continue;
+    const resource = uri ? resourcesByUri.get(uri) : undefined;
+    if (uri && !resource) {
+      console.warn(
+        `[Inspector] Tool '${appTool.tool.name}' references unknown resource URI '${uri}'. The tool remains callable but has no UI to render.`
+      );
+    }
 
-    const mcpResource = toMcpResource(resource);
+    const mcpResource = resource ? toMcpResource(resource) : undefined;
     const sims =
       appTool.simulations && appTool.simulations.length > 0
         ? appTool.simulations
@@ -101,10 +106,9 @@ export function flattenAppToSimulations(app: InspectorApp | undefined): Record<s
         // Pretty label for the sidebar. The internal `name` is the unique
         // composite key; the embedder's chosen simulation name surfaces here.
         displayName: sim.name,
-        resourceHtml: resource.html,
+        ...(resource ? { resourceHtml: resource.html, resource: mcpResource } : {}),
         userMessage: sim.userMessage,
         tool: appTool.tool,
-        resource: mcpResource,
         toolInput: sim.toolInput,
         toolResult: sim.toolResult,
         serverTools: sim.serverTools,

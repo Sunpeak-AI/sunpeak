@@ -59,14 +59,11 @@ test('albums renders correctly in dark mode', async ({ inspector }) => {
 
 ## Screenshot Targets
 
-By default, `screenshot()` captures the app content inside the double-iframe. Use the `target` option to capture the full inspector page, or pass a specific `element` locator:
+By default, `inspector.renderTool()` hides the inspector sidebars, and `screenshot()` captures the app content inside the double-iframe. This keeps visual baselines stable when the inspector UI changes. Pass a specific `element` locator to narrow the capture further:
 
 ```typescript
 // Screenshot just the app (default)
 await result.screenshot('app-view');
-
-// Screenshot the full inspector page (host chrome + app)
-await result.screenshot('full-page', { target: 'page' });
 
 // Screenshot a specific element
 await result.screenshot('album-card', {

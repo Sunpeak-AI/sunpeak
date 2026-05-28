@@ -80,8 +80,9 @@ The `app` prop mirrors the MCP App data model:
 - One **App** with a name and icon.
 - One or more **resources**, each identified by a `uri` and carrying the
   resource HTML as a string.
-- One or more **tools**. Each tool's `_meta.openai.outputTemplate` URI links
-  it to the resource it renders.
+- One or more **tools**. UI tools use `_meta.openai.outputTemplate` to link
+  to the resource they render. Backend-only tools can omit it and are still
+  available in the picker, the Run flow, and model chat.
 - Each tool has zero or more **simulations** — saved input/output states for
   testing UI variants.
 
@@ -101,7 +102,7 @@ interface InspectorAppResource {
 }
 
 interface InspectorAppTool {
-  tool: Tool; // MCP Tool with _meta.openai.outputTemplate
+  tool: Tool; // MCP Tool. UI tools use _meta.openai.outputTemplate.
   simulations?: InspectorAppSimulation[];
 }
 
@@ -341,6 +342,18 @@ simulation selected, and when an app inside the iframe makes a
 
 The MCP connection, authentication, and per-user routing all live in your
 code — sunpeak only sees the result of each call.
+
+Backend-only tools work the same way. Selecting one shows a small
+`Tool does not render a UI` placeholder in the preview, while the sidebar
+still lets users edit the input, click **Run**, and inspect the returned
+`CallToolResult`. If embedded model chat is enabled and a conversation
+starts, the chat transcript replaces that placeholder. A model can call only
+backend-only tools and return text or tool-call metadata, then later call a
+UI tool and render that UI as usual.
+
+Embedded model chat is opt-in. Passing `modelChat` by itself does not enable
+the chat UI; set `modelChat.enabled: true` and provide `modelChat.onChat` so
+your app owns the actual model call.
 
 ## The sandbox proxy
 

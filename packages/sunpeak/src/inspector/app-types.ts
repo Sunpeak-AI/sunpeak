@@ -1,10 +1,10 @@
 /**
  * Public input shape for embedding the Inspector inside another React app.
  *
- * Mirrors the MCP App data model: one App contains one or more Resources,
- * each Resource is rendered by one or more Tools (linked via the tool's
- * `_meta.openai.outputTemplate` URI), and each Tool can have zero or more
- * saved Simulations for testing UI states.
+ * Mirrors the MCP App data model: one App contains Resources, Tools, and
+ * saved Simulations for testing states. UI tools link to resources via
+ * `_meta.openai.outputTemplate`; backend-only tools can omit that link and
+ * still be selected, called, inspected, and offered to model chat.
  *
  * The Inspector flattens this hierarchy into its internal `Simulation` map
  * at runtime, so callers can construct the structure they already have from
@@ -67,11 +67,13 @@ export interface InspectorAppSimulation {
   serverTools?: Record<string, ServerToolMock>;
 }
 
-/** A tool defined by the App, plus any simulations testing its UI states. */
+/** A tool defined by the App, plus any simulations testing its states. */
 export interface InspectorAppTool {
   /**
-   * MCP `Tool` definition. The tool's `_meta.openai.outputTemplate` selects
-   * which resource the Inspector renders when this tool runs.
+   * MCP `Tool` definition. For UI tools, `_meta.openai.outputTemplate`
+   * selects which resource the Inspector renders when this tool runs.
+   * Backend-only tools can omit it; they stay available in the sidebar and
+   * model chat, with a no-UI placeholder in the preview.
    */
   tool: Tool;
   /** Optional saved test states for this tool. */
@@ -94,6 +96,6 @@ export interface InspectorApp {
   icon?: string;
   /** Resources this App exposes — typically one entry per UI surface. */
   resources: InspectorAppResource[];
-  /** Tools this App exposes — at least one per resource the user can reach. */
+  /** Tools this App exposes, including UI tools and backend-only tools. */
   tools: InspectorAppTool[];
 }

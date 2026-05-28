@@ -174,6 +174,8 @@ export default defineConfig({
 
 Use `result.screenshot()` to capture and compare screenshots against saved baselines. Comparisons only run with `sunpeak test --visual`. Without it, `screenshot()` silently skips, so you can include it in regular e2e tests.
 
+By default, `result.screenshot()` captures the rendered app inside the double-iframe, not the inspector chrome. Keep visual baselines scoped to the app unless the test is explicitly about the inspector UI.
+
 ```typescript
 import { test, expect } from 'sunpeak/test';
 
@@ -190,7 +192,6 @@ test('albums renders correctly', async ({ inspector }) => {
 
 | Option | Type | Description |
 |--------|------|-------------|
-| `target` | `'app' \| 'page'` | What to capture: `'app'` (inner iframe, default) or `'page'` (full inspector) |
 | `element` | `Locator` | Specific locator to screenshot instead of the default target |
 | `threshold` | `number` | Pixel comparison threshold (0-1) |
 | `maxDiffPixelRatio` | `number` | Maximum allowed ratio of differing pixels (0-1) |

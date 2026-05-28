@@ -22,6 +22,7 @@ interface ModelAppContext {
 const DEFAULT_THEME: McpUiTheme = 'dark';
 const DEFAULT_DISPLAY_MODE: McpUiDisplayMode = 'inline';
 const DEFAULT_PLATFORM: Platform = 'desktop';
+const DEFAULT_SIDEBAR_WIDTH = 260;
 
 export interface UseInspectorStateOptions {
   simulations: Record<string, Simulation>;
@@ -43,6 +44,10 @@ export interface InspectorState {
   // ── Screen width ──
   screenWidth: ScreenWidth;
   setScreenWidth: (width: ScreenWidth) => void;
+  sidebarWidth: number;
+  setSidebarWidth: (width: number) => void;
+  rightSidebarWidth: number;
+  setRightSidebarWidth: (width: number) => void;
 
   // ── Host context ──
   theme: McpUiTheme;
@@ -289,6 +294,8 @@ interface StoredPrefs {
   hover?: boolean;
   touch?: boolean;
   screenWidth?: ScreenWidth;
+  sidebarWidth?: number;
+  rightSidebarWidth?: number;
 }
 
 const VALID_THEMES: ReadonlySet<McpUiTheme> = new Set(['light', 'dark']);
@@ -355,6 +362,12 @@ function sanitizeStoredPrefs(raw: unknown): StoredPrefs {
     VALID_SCREEN_WIDTHS.has(obj.screenWidth as ScreenWidth)
   ) {
     prefs.screenWidth = obj.screenWidth as ScreenWidth;
+  }
+  if (typeof obj.sidebarWidth === 'number' && Number.isFinite(obj.sidebarWidth)) {
+    prefs.sidebarWidth = Math.max(DEFAULT_SIDEBAR_WIDTH, Math.round(obj.sidebarWidth));
+  }
+  if (typeof obj.rightSidebarWidth === 'number' && Number.isFinite(obj.rightSidebarWidth)) {
+    prefs.rightSidebarWidth = Math.max(DEFAULT_SIDEBAR_WIDTH, Math.round(obj.rightSidebarWidth));
   }
 
   return prefs;
@@ -429,22 +442,33 @@ export function useInspectorState({
   defaultHost = 'chatgpt',
   preserveToolDataOnSimulationChange = false,
 }: UseInspectorStateOptions): InspectorState {
-  // Only list simulations with a UI resource — backend-only tools have nothing to render.
-  const simulationNames = Object.keys(simulations)
-    .filter((name) => simulations[name].resource)
-    .sort((a, b) => {
-      const simA = simulations[a];
-      const simB = simulations[b];
-      const resourceLabelA = (simA.resource!.title as string) || simA.resource!.name;
-      const resourceLabelB = (simB.resource!.title as string) || simB.resource!.name;
-      const labelA = `${resourceLabelA}: ${(simA.tool.title as string) || simA.tool.name}`;
-      const labelB = `${resourceLabelB}: ${(simB.tool.title as string) || simB.tool.name}`;
-      return labelA.localeCompare(labelB);
-    });
+  // List every simulation so backend-only tools can still be selected, called,
+  // and inspected through the sidebar even though they have no resource to render.
+  const simulationNames = Object.keys(simulations).sort((a, b) => {
+    const simA = simulations[a];
+    const simB = simulations[b];
+    const resourceLabelA = simA.resource
+      ? `${(simA.resource.title as string) || simA.resource.name}: `
+      : '';
+    const resourceLabelB = simB.resource
+      ? `${(simB.resource.title as string) || simB.resource.name}: `
+      : '';
+    const labelA = `${resourceLabelA}${(simA.tool.title as string) || simA.tool.name}`;
+    const labelB = `${resourceLabelB}${(simB.tool.title as string) || simB.tool.name}`;
+    return labelA.localeCompare(labelB);
+  });
+  const defaultSimulationName =
+    simulationNames.find((name) => !!simulations[name]?.resource) ?? simulationNames[0] ?? '';
   const urlParams = useMemo(() => parseUrlParams(), []);
   const autoRun = urlParams.autoRun === true;
   const storedPrefs = useMemo(() => (autoRun ? {} : readStoredPrefs()), [autoRun]);
   const [screenWidth, setScreenWidth] = useState<ScreenWidth>(storedPrefs.screenWidth ?? 'full');
+  const [sidebarWidth, setSidebarWidth] = useState(
+    storedPrefs.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH
+  );
+  const [rightSidebarWidth, setRightSidebarWidth] = useState(
+    storedPrefs.rightSidebarWidth ?? DEFAULT_SIDEBAR_WIDTH
+  );
 
   const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
 
@@ -455,10 +479,9 @@ export function useInspectorState({
 
   // ── Simulation selection ──
   const initialSimulationName = useMemo(() => {
-    const defaultName = simulationNames[0] ?? '';
-    if (!urlParams.simulation) return defaultName;
-    return urlParams.simulation in simulations ? urlParams.simulation : defaultName;
-  }, [urlParams.simulation, simulations, simulationNames]);
+    if (!urlParams.simulation) return defaultSimulationName;
+    return urlParams.simulation in simulations ? urlParams.simulation : defaultSimulationName;
+  }, [urlParams.simulation, simulations, defaultSimulationName]);
 
   const [selectedSimulationName, setSelectedSimulationName] =
     useState<string>(initialSimulationName);
@@ -518,6 +541,8 @@ export function useInspectorState({
         hover,
         touch,
         screenWidth,
+        sidebarWidth,
+        rightSidebarWidth,
       };
       localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
     } catch {
@@ -536,6 +561,8 @@ export function useInspectorState({
     hover,
     touch,
     screenWidth,
+    sidebarWidth,
+    rightSidebarWidth,
   ]);
 
   // Content width measured from the conversation component's ResizeObserver.
@@ -771,6 +798,10 @@ export function useInspectorState({
 
     screenWidth,
     setScreenWidth,
+    sidebarWidth,
+    setSidebarWidth,
+    rightSidebarWidth,
+    setRightSidebarWidth,
 
     theme,
     setTheme,
