@@ -687,6 +687,8 @@ export function useInspectorState({
     }
     if (editingField !== 'modelContext') {
       setModelContext(null);
+      setModelAppContext(null);
+      setModelContextJson('null');
       setModelContextError('');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

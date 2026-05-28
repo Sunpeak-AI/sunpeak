@@ -110,7 +110,7 @@ describe('useInspectorState', () => {
     expect(result.current.modelAppContext).toBeNull();
   });
 
-  it('keeps app-written model context across simulation changes', () => {
+  it('refreshes app context across simulation changes', () => {
     const simulations = {
       first: createSim('first', true),
       second: createSim('second', true),
@@ -124,11 +124,8 @@ describe('useInspectorState', () => {
       result.current.setSelectedSimulationName('second');
     });
 
-    expect(result.current.modelAppContext).toEqual({
-      content: [],
-      structuredContent: { selectedAlbum: 'Pizza Tour' },
-    });
-    expect(result.current.modelContextJson).toBe('{\n  "selectedAlbum": "Pizza Tour"\n}');
+    expect(result.current.modelAppContext).toBeNull();
+    expect(result.current.modelContextJson).toBe('null');
   });
 
   describe('preference persistence', () => {

@@ -881,6 +881,50 @@ describe('Inspector', () => {
       });
     });
 
+    it('switching simulations refreshes app context', async () => {
+      const user = userEvent.setup();
+
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
+
+      const appContextTextarea = screen.getByTestId(
+        'app-context-textarea'
+      ) as HTMLTextAreaElement;
+      fireEvent.change(appContextTextarea, {
+        target: { value: '{"selectedAlbum":"Pizza Tour"}' },
+      });
+      fireEvent.blur(appContextTextarea);
+      expect(appContextTextarea.value).toContain('Pizza Tour');
+
+      const simSelect = screen.getByTestId('simulation-selector').querySelector('select')!;
+      await user.selectOptions(simSelect, 'albums-empty');
+
+      await waitFor(() => {
+        expect(appContextTextarea.value).toBe('null');
+      });
+    });
+
+    it('selecting no simulation refreshes app context', async () => {
+      const user = userEvent.setup();
+
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
+
+      const appContextTextarea = screen.getByTestId(
+        'app-context-textarea'
+      ) as HTMLTextAreaElement;
+      fireEvent.change(appContextTextarea, {
+        target: { value: '{"selectedAlbum":"Pizza Tour"}' },
+      });
+      fireEvent.blur(appContextTextarea);
+      expect(appContextTextarea.value).toContain('Pizza Tour');
+
+      const simSelect = screen.getByTestId('simulation-selector').querySelector('select')!;
+      await user.selectOptions(simSelect, '__none__');
+
+      await waitFor(() => {
+        expect(appContextTextarea.value).toBe('null');
+      });
+    });
+
     it('switching simulations for the same tool does not show empty state', async () => {
       const user = userEvent.setup();
 
@@ -939,6 +983,28 @@ describe('Inspector', () => {
       // Should now have map's mock data
       await waitFor(() => {
         expect(resultTextarea.value).toContain('"pins"');
+      });
+    });
+
+    it('switching tools refreshes app context', async () => {
+      const user = userEvent.setup();
+
+      render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
+
+      const appContextTextarea = screen.getByTestId(
+        'app-context-textarea'
+      ) as HTMLTextAreaElement;
+      fireEvent.change(appContextTextarea, {
+        target: { value: '{"selectedAlbum":"Pizza Tour"}' },
+      });
+      fireEvent.blur(appContextTextarea);
+      expect(appContextTextarea.value).toContain('Pizza Tour');
+
+      const toolSelect = screen.getByTestId('tool-selector').querySelector('select')!;
+      await user.selectOptions(toolSelect, 'show-map');
+
+      await waitFor(() => {
+        expect(appContextTextarea.value).toBe('null');
       });
     });
 

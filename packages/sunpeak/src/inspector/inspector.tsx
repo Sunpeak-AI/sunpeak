@@ -428,6 +428,12 @@ export function Inspector({
     defaultHost,
     preserveToolDataOnSimulationChange: isLiveMcpRender,
   });
+  const resetAppContextForSelectionChange = () => {
+    state.setModelContext(null);
+    state.setModelAppContext(null);
+    state.setModelContextJson('null');
+    state.setModelContextError('');
+  };
   const [serverUrl, setServerUrl] = React.useState(mcpServerUrl ?? '');
   const [authType, setAuthType] = React.useState<AuthType>('none');
   const [bearerToken, setBearerToken] = React.useState('');
@@ -1800,6 +1806,7 @@ export function Inspector({
                     value={selectedToolName}
                     onChange={(value) => {
                       setIsLiveMcpRender(false);
+                      resetAppContextForSelectionChange();
                       setSelectedToolName(value);
                     }}
                     options={toolNames.map((name) => {
@@ -1846,6 +1853,7 @@ export function Inspector({
                     onChange={(value) => {
                       if (value === '__live__') return;
                       setIsLiveMcpRender(false);
+                      resetAppContextForSelectionChange();
                       setActiveSimulationName(value === '__none__' ? null : value);
                     }}
                     options={[
@@ -2292,6 +2300,7 @@ export function Inspector({
             >
               <SidebarTextarea
                 value={state.modelContextJson}
+                data-testid="app-context-textarea"
                 onChange={(json) =>
                   state.validateJSON(json, state.setModelContextJson, state.setModelContextError)
                 }
