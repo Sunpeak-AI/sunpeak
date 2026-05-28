@@ -1,0 +1,244 @@
+---
+title: "MCP App Patterns - App-only Tools, Polling, Large Data"
+sidebarTitle: "Patterns"
+description: "Practical MCP App patterns for app-only tools, polling live data, loading large data, reporting errors, adapting to host context, and keeping model context useful."
+keywords: ["MCP App patterns", "build MCP App", "app-only tools", "MCP Apps polling", "MCP Apps large data", "MCP Apps best practices", "callServerTool", "updateModelContext"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+MCP Apps combine a model-called tool, a `ui://` resource, and a View that can talk back to the host. The basic flow is covered in [Lifecycle](/mcp-apps/lifecycle). This page covers common implementation patterns you will need once the first View is working.
+
+## Use App-only Tools for UI Interactions
+
+Set [`_meta.ui.visibility`](/mcp-apps/server/tool-meta) to `["app"]` when a tool should be callable by the View but hidden from the model. Use app-only tools for UI actions that do not help the model decide what to do next:
+
+- Refreshing dashboard data
+- Loading the next page of results
+- Saving form edits after the user clicks a button
+- Polling server state
+- Loading private or bulky data that should stay out of model context
+
+```ts
+registerAppTool(
+  server,
+  "refresh-orders",
+  {
+    title: "Refresh Orders",
+    description: "Refresh the current order list for the app UI.",
+    inputSchema: { cursor: z.string().optional() },
+    _meta: {
+      ui: {
+        resourceUri: "ui://orders/view.html",
+        visibility: ["app"],
+      },
+    },
+  },
+  async ({ cursor }) => {
+    const page = await loadOrders({ cursor });
+    return {
+      content: [{ type: "text", text: `Loaded ${page.orders.length} orders.` }],
+      structuredContent: page,
+    };
+  },
+);
+```
+
+Then call it from the View:
+
+```ts
+const result = await app.callServerTool({
+  name: "refresh-orders",
+  arguments: { cursor: nextCursor },
+});
+
+renderOrders(result.structuredContent);
+```
+
+Keep a text `content` block even when the View mostly uses `structuredContent`. Text-only hosts, logs, and debugging tools still need a readable summary.
+
+## Poll Live Data Deliberately
+
+For dashboards, job progress, or monitoring UIs, poll through an app-only tool. Stop polling during teardown and when the app is hidden or no longer needs updates.
+
+```ts
+let intervalId: number | undefined;
+
+async function pollStatus() {
+  const result = await app.callServerTool({
+    name: "get-job-status",
+    arguments: { jobId },
+  });
+
+  updateStatus(result.structuredContent);
+}
+
+app.ontoolresult = (result) => {
+  const job = result.structuredContent as { jobId: string };
+  jobId = job.jobId;
+  void pollStatus();
+  intervalId = window.setInterval(pollStatus, 3000);
+};
+
+app.onteardown = async () => {
+  if (intervalId) window.clearInterval(intervalId);
+  return {};
+};
+```
+
+Poll only while the View can use the result. If the server can return `complete`, `failed`, or `cancelled`, stop the interval as soon as that status arrives.
+
+## Load Large Data in Chunks
+
+Large files and large result sets should not go through one model-visible tool response. Split them into app-only requests and render progress in the View.
+
+```ts
+const ChunkSchema = z.object({
+  bytes: z.string(),
+  offset: z.number(),
+  byteCount: z.number(),
+  totalBytes: z.number(),
+  hasMore: z.boolean(),
+});
+
+registerAppTool(
+  server,
+  "read-report-chunk",
+  {
+    title: "Read Report Chunk",
+    description: "Load report data for the app UI.",
+    inputSchema: {
+      reportId: z.string(),
+      offset: z.number().default(0),
+      byteCount: z.number().default(500_000),
+    },
+    outputSchema: ChunkSchema,
+    _meta: {
+      ui: {
+        resourceUri: "ui://reports/view.html",
+        visibility: ["app"],
+      },
+    },
+  },
+  async ({ reportId, offset, byteCount }) => {
+    const chunk = await readReportChunk(reportId, offset, byteCount);
+    return {
+      content: [{ type: "text", text: `Read ${chunk.byteCount} bytes.` }],
+      structuredContent: chunk,
+    };
+  },
+);
+```
+
+In the View, loop until `hasMore` is false:
+
+```ts
+let offset = 0;
+let hasMore = true;
+
+while (hasMore) {
+  const result = await app.callServerTool({
+    name: "read-report-chunk",
+    arguments: { reportId, offset, byteCount: 500_000 },
+  });
+
+  const chunk = result.structuredContent as {
+    bytes: string;
+    byteCount: number;
+    hasMore: boolean;
+  };
+
+  appendBytes(chunk.bytes);
+  offset += chunk.byteCount;
+  hasMore = chunk.hasMore;
+}
+```
+
+Use [`readServerResource()`](/mcp-apps/app/requests/read-server-resource) for data that naturally belongs in MCP resources, such as images, video, generated files, or cached artifacts.
+
+## Report Errors at the Right Layer
+
+Use a tool-level error when the model can recover:
+
+```ts
+return {
+  isError: true,
+  content: [{ type: "text", text: "The date range must be 30 days or less." }],
+};
+```
+
+Throw an exception for broken app code, transport failures, or states where retrying the same request cannot work.
+
+When the View detects a degraded state that the model should know about, call [`updateModelContext()`](/mcp-apps/app/requests/update-model-context):
+
+```ts
+await app.updateModelContext({
+  content: [
+    {
+      type: "text",
+      text: "The chart is loaded, but live refresh is paused because the API returned 429.",
+    },
+  ],
+});
+```
+
+Keep these messages short and factual. They become part of the model's working context.
+
+## Adapt to Host Context
+
+Hosts can differ in theme, display mode, size, safe area insets, locale, and available capabilities. Read host context after `connect()` and listen for changes.
+
+```ts
+app.onhostcontextchanged = (context) => {
+  applyHostContext({ ...app.getHostContext(), ...context });
+};
+
+await app.connect();
+applyHostContext(app.getHostContext());
+```
+
+For React apps, prefer the SDK hooks:
+
+```tsx
+import {
+  useApp,
+  useHostStyles,
+} from "@modelcontextprotocol/ext-apps/react";
+
+export function Root() {
+  const { app } = useApp({
+    appInfo: { name: "Reports", version: "1.0.0" },
+    capabilities: {},
+  });
+
+  useHostStyles(app, app?.getHostContext());
+
+  return <ReportsView />;
+}
+```
+
+Check [`getHostCapabilities()`](/mcp-apps/app/accessors/get-host-capabilities) before relying on host-mediated features such as server tool calls, resource reads, file downloads, link opening, sampling, or message sending.
+
+## Keep Model Context Small
+
+Use `content` for the model-readable summary, `structuredContent` for the View, and app-only tools for data the model does not need.
+
+Good model context:
+
+```ts
+return {
+  content: [{ type: "text", text: "Found 124 orders. Showing the first 25." }],
+  structuredContent: { orders, nextCursor },
+};
+```
+
+Avoid putting full tables, binary data, long logs, or private UI state into `content`. If the model needs a summary later, let the View call [`updateModelContext()`](/mcp-apps/app/requests/update-model-context) with the specific facts the user selected.
+
+## Related
+
+- [Tool `_meta`](/mcp-apps/server/tool-meta) - Link tools to Views and set visibility
+- [Resource `_meta`](/mcp-apps/server/resource-meta) - Set CSP, permissions, domains, and borders
+- [`callServerTool()`](/mcp-apps/app/requests/call-server-tool) - Call MCP server tools from the View
+- [`readServerResource()`](/mcp-apps/app/requests/read-server-resource) - Read MCP resources from the View
+- [`updateModelContext()`](/mcp-apps/app/requests/update-model-context) - Send model-visible context from the View
+- [MCP App Lifecycle](/mcp-apps/lifecycle) - Understand the host and View handshake

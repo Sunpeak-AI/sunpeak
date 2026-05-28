@@ -279,6 +279,7 @@
             "pages": [
               "mcp-apps/introduction",
               "mcp-apps/lifecycle",
+              "mcp-apps/patterns",
               "mcp-apps/faq"
             ]
           },
