@@ -1,7 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { Inspector } from './inspector';
+import { Inspector, type InspectorModelChatRequest } from './inspector';
 import type { Simulation } from '../types/simulation';
 
 // Mock fetch for useMcpConnection
@@ -886,9 +886,7 @@ describe('Inspector', () => {
 
       render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
-      const appContextTextarea = screen.getByTestId(
-        'app-context-textarea'
-      ) as HTMLTextAreaElement;
+      const appContextTextarea = screen.getByTestId('app-context-textarea') as HTMLTextAreaElement;
       fireEvent.change(appContextTextarea, {
         target: { value: '{"selectedAlbum":"Pizza Tour"}' },
       });
@@ -908,9 +906,7 @@ describe('Inspector', () => {
 
       render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
-      const appContextTextarea = screen.getByTestId(
-        'app-context-textarea'
-      ) as HTMLTextAreaElement;
+      const appContextTextarea = screen.getByTestId('app-context-textarea') as HTMLTextAreaElement;
       fireEvent.change(appContextTextarea, {
         target: { value: '{"selectedAlbum":"Pizza Tour"}' },
       });
@@ -991,9 +987,7 @@ describe('Inspector', () => {
 
       render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
-      const appContextTextarea = screen.getByTestId(
-        'app-context-textarea'
-      ) as HTMLTextAreaElement;
+      const appContextTextarea = screen.getByTestId('app-context-textarea') as HTMLTextAreaElement;
       fireEvent.change(appContextTextarea, {
         target: { value: '{"selectedAlbum":"Pizza Tour"}' },
       });
@@ -1482,6 +1476,95 @@ describe('Inspector', () => {
       expect(chatRequest.tools.map((tool) => tool.name)).not.toContain('app-only-action');
       expect(screen.getByText('Custom model response from embedder.')).toBeInTheDocument();
       expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it('resets model chat with a new backend conversation id', async () => {
+      const onChat = vi.fn(async (_request: InspectorModelChatRequest) => ({
+        text: 'Model reply.',
+        toolCalls: [],
+      }));
+      render(
+        <Inspector
+          app={modelApp}
+          onCallTool={vi.fn()}
+          modelChat={{
+            enabled: true,
+            providers: [{ id: 'fractal', label: 'Fractal', defaultModel: 'fractal-careful' }],
+            onChat,
+          }}
+        />
+      );
+
+      const resetButton = screen.getByRole('button', { name: 'Reset model conversation' });
+      expect(resetButton).toBeDisabled();
+
+      const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;
+      await userEvent.type(composer, 'First prompt{enter}');
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(1));
+      expect(screen.getByText('First prompt')).toBeInTheDocument();
+      expect(resetButton).toBeEnabled();
+
+      await userEvent.click(resetButton);
+      expect(screen.queryByText('First prompt')).not.toBeInTheDocument();
+      expect(screen.queryByText('Model reply.')).not.toBeInTheDocument();
+      expect(resetButton).toBeDisabled();
+
+      await userEvent.type(composer, 'Second prompt{enter}');
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(2));
+
+      const requests = onChat.mock.calls.map(([request]) => request);
+      expect(requests[0].conversationId).toMatch(/^model-chat-/);
+      expect(requests[1].conversationId).toMatch(/^model-chat-/);
+      expect(requests[1].conversationId).not.toBe(requests[0].conversationId);
+      expect(requests[1].messages).toEqual([{ role: 'user', content: 'Second prompt' }]);
+    });
+
+    it('ignores an in-flight model response after resetting model chat', async () => {
+      let resolveFirst: (value: { text: string; toolCalls: [] }) => void = () => {};
+      const firstResponse = new Promise<{ text: string; toolCalls: [] }>((resolve) => {
+        resolveFirst = resolve;
+      });
+      let requestCount = 0;
+      const onChat = vi.fn(async (_request: InspectorModelChatRequest) => {
+        requestCount += 1;
+        if (requestCount === 1) return await firstResponse;
+        return { text: 'Second reply.', toolCalls: [] };
+      });
+
+      render(
+        <Inspector
+          app={modelApp}
+          onCallTool={vi.fn()}
+          modelChat={{
+            enabled: true,
+            providers: [{ id: 'fractal', label: 'Fractal', defaultModel: 'fractal-careful' }],
+            onChat,
+          }}
+        />
+      );
+
+      const resetButton = screen.getByRole('button', { name: 'Reset model conversation' });
+      const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;
+      await userEvent.type(composer, 'Slow prompt{enter}');
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(1));
+      expect(screen.getByText('Slow prompt')).toBeInTheDocument();
+
+      await userEvent.click(resetButton);
+      expect(screen.queryByText('Slow prompt')).not.toBeInTheDocument();
+
+      await act(async () => {
+        resolveFirst({ text: 'Stale reply.', toolCalls: [] });
+        await firstResponse;
+      });
+      expect(screen.queryByText('Stale reply.')).not.toBeInTheDocument();
+
+      await userEvent.type(composer, 'Fresh prompt{enter}');
+      await waitFor(() => expect(onChat).toHaveBeenCalledTimes(2));
+      expect(screen.getByText('Second reply.')).toBeInTheDocument();
+
+      const requests = onChat.mock.calls.map(([request]) => request);
+      expect(requests[1].conversationId).not.toBe(requests[0].conversationId);
+      expect(requests[1].messages).toEqual([{ role: 'user', content: 'Fresh prompt' }]);
     });
 
     it('does not claim a backend-only model tool call rendered an app', async () => {

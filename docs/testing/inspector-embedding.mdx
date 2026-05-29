@@ -355,6 +355,11 @@ Embedded model chat is opt-in. Passing `modelChat` by itself does not enable
 the chat UI; set `modelChat.enabled: true` and provide `modelChat.onChat` so
 your app owns the actual model call.
 
+Each `modelChat.onChat` request includes `conversationId`. If your backend
+keeps provider-side conversation state, store it under that id. When a user
+clicks the reset button in the Model Chat controls, the Inspector clears the
+visible transcript and sends the next turn with a new id.
+
 ## The sandbox proxy
 
 The Inspector renders apps inside a **double-iframe**: an outer sandbox proxy

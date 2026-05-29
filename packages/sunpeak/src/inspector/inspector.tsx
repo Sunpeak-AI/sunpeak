@@ -74,6 +74,12 @@ export interface InspectorModelKeyStatus {
 }
 
 export interface InspectorModelChatRequest {
+  /**
+   * Stable identifier for the current visible model-chat transcript. It rotates
+   * when the user resets model chat so backend-backed handlers can start a
+   * fresh provider conversation.
+   */
+  conversationId?: string;
   provider: string;
   modelId: string;
   messages: InspectorModelChatMessage[];
@@ -204,6 +210,14 @@ const DEFAULT_MODEL_PROVIDERS: InspectorModelProvider[] = [
     defaultModel: 'claude-sonnet-4-20250514',
   },
 ];
+
+function createModelConversationId() {
+  const random =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : Math.random().toString(36).slice(2);
+  return `model-chat-${Date.now()}-${random}`;
+}
 
 function splitCssArgs(value: string): string[] {
   const args: string[] = [];
@@ -518,6 +532,7 @@ export function Inspector({
   const [chatInput, setChatInput] = React.useState('');
   const [isChatting, setIsChatting] = React.useState(false);
   const [chatStatus, setChatStatus] = React.useState('');
+  const modelConversationIdRef = React.useRef(createModelConversationId());
   const currentModelProvider = React.useMemo(
     () => modelProviderOptions.find((provider) => provider.id === modelProvider),
     [modelProvider, modelProviderOptions]
@@ -660,6 +675,15 @@ export function Inspector({
     usesApiKeyUi,
     usesLocalModelEndpoints,
   ]);
+
+  const handleResetModelConversation = React.useCallback(() => {
+    const nextConversationId = createModelConversationId();
+    modelConversationIdRef.current = nextConversationId;
+    setChatMessages([]);
+    setChatInput('');
+    setChatStatus('');
+    setIsChatting(false);
+  }, []);
 
   // Keep useInspectorState's selection in sync with our tool/simulation selection.
   React.useEffect(() => {
@@ -997,6 +1021,7 @@ export function Inspector({
     state.setToolResultJson('');
     state.setToolResultError('');
     setHasRun(false);
+    const requestConversationId = modelConversationIdRef.current;
 
     try {
       const messages = nextMessages
@@ -1008,6 +1033,7 @@ export function Inspector({
       let data: InspectorModelChatResponse;
       if (modelChatHandler) {
         data = await modelChatHandler({
+          conversationId: requestConversationId,
           provider: modelProvider,
           modelId,
           messages,
@@ -1020,6 +1046,7 @@ export function Inspector({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            conversationId: requestConversationId,
             provider: modelProvider,
             modelId,
             messages,
@@ -1034,6 +1061,7 @@ export function Inspector({
       if (data.error) {
         throw new Error(data.error);
       }
+      if (requestConversationId !== modelConversationIdRef.current) return;
 
       let rendersApp = false;
       const toolCalls = data.toolCalls ?? [];
@@ -1082,6 +1110,7 @@ export function Inspector({
       });
       setChatStatus('');
     } catch (err) {
+      if (requestConversationId !== modelConversationIdRef.current) return;
       const message = err instanceof Error ? err.message : String(err);
       setChatMessages((messages) => [
         ...messages,
@@ -1093,7 +1122,9 @@ export function Inspector({
       ]);
       setChatStatus(message);
     } finally {
-      setIsChatting(false);
+      if (requestConversationId === modelConversationIdRef.current) {
+        setIsChatting(false);
+      }
     }
   }, [
     canUseModelChat,
@@ -1946,7 +1977,7 @@ export function Inspector({
                 docsPath="testing/evals"
               >
                 <div className="space-y-1">
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-[0.7fr_minmax(0,1fr)_1.75rem] items-end gap-2">
                     <SidebarControl label="Provider">
                       <SidebarSelect
                         value={modelProvider}
@@ -1976,6 +2007,41 @@ export function Inspector({
                         />
                       )}
                     </SidebarControl>
+                    <div className="space-y-1">
+                      <span
+                        className="block text-[10px] font-medium leading-tight opacity-0"
+                        aria-hidden="true"
+                      >
+                        Reset
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleResetModelConversation}
+                        disabled={chatMessages.length === 0 && !isChatting && !chatStatus}
+                        aria-label="Reset model conversation"
+                        title="Reset model conversation"
+                        className="flex h-7 w-7 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                        style={{
+                          backgroundColor: 'var(--color-background-primary)',
+                          color: 'var(--color-text-primary)',
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+                          <path d="M21 3v7h-7" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   {usesApiKeyUi && (
                     <SidebarControl label="API Key">
