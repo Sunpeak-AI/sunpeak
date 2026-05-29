@@ -198,7 +198,11 @@ interface ToolInfo {
 
 const DEFAULT_MODEL_PROVIDERS: InspectorModelProvider[] = [
   { id: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o' },
-  { id: 'anthropic', label: 'Anthropic', defaultModel: 'claude-3-5-sonnet-20241022' },
+  {
+    id: 'anthropic',
+    label: 'Anthropic',
+    defaultModel: 'claude-sonnet-4-20250514',
+  },
 ];
 
 function splitCssArgs(value: string): string[] {
@@ -995,10 +999,12 @@ export function Inspector({
     setHasRun(false);
 
     try {
-      const messages = nextMessages.map((message) => ({
-        role: message.role,
-        content: message.content,
-      }));
+      const messages = nextMessages
+        .map((message) => ({
+          role: message.role,
+          content: message.content.trim(),
+        }))
+        .filter((message) => message.content.length > 0);
       let data: InspectorModelChatResponse;
       if (modelChatHandler) {
         data = await modelChatHandler({

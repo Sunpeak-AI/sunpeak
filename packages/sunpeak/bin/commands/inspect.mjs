@@ -1392,9 +1392,22 @@ function normalizeModelId(modelId) {
   return trimmed;
 }
 
+function normalizeModelProviderModelId(provider, modelId) {
+  const normalizedModelId = normalizeModelId(modelId);
+  if (
+    provider === 'anthropic' &&
+    /^claude-\d+(?:-\d+)+-(opus|sonnet|haiku)$/i.test(normalizedModelId)
+  ) {
+    throw new Error(
+      `Unsupported Anthropic model ID "${normalizedModelId}". Use an Anthropic API model ID such as "claude-sonnet-4-20250514".`
+    );
+  }
+  return normalizedModelId;
+}
+
 async function createModelInstance(provider, modelId, apiKey) {
   assertModelProvider(provider);
-  const normalizedModelId = normalizeModelId(modelId);
+  const normalizedModelId = normalizeModelProviderModelId(provider, modelId);
   if (provider === 'openai') {
     const { createOpenAI } = await import('@ai-sdk/openai');
     const openai = createOpenAI({ apiKey });
@@ -1430,6 +1443,17 @@ function formatSharedAppContextForModel(appContext) {
   const normalized = normalizeModelAppContext(appContext);
   if (!normalized) return '';
   return formatJsonForModel(normalized);
+}
+
+function normalizeModelChatMessages(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .filter((message) => message?.role === 'user' || message?.role === 'assistant')
+    .map((message) => ({
+      role: message.role,
+      content: String(message.content ?? '').slice(0, 20000).trim(),
+    }))
+    .filter((message) => message.content.length > 0);
 }
 
 function formatModelVisibleToolResult(tool, result) {
@@ -1504,11 +1528,11 @@ async function runModelChat({ client, provider, modelId, messages, apiKey, appCo
     ]
       .filter(Boolean)
       .join('\n\n'),
-    messages: messages.map((message) => ({
-      role: message.role,
-      content: String(message.content ?? ''),
-    })),
-    maxSteps: 5,
+    messages: normalizeModelChatMessages(messages),
+    // AI SDK v4 can send an empty assistant text block to Anthropic when a
+    // tool-only response is followed by another model step. We only need the
+    // tool result for inspector rendering, so skip that follow-up call.
+    maxSteps: provider === 'anthropic' ? 1 : 5,
     maxRetries: 0,
   });
 
@@ -2513,13 +2537,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             res.end(JSON.stringify({ error: `No ${provider} API key saved.` }));
             return;
           }
-          const messages = Array.isArray(parsed.messages) ? parsed.messages : [];
-          const safeMessages = messages
-            .filter((message) => message?.role === 'user' || message?.role === 'assistant')
-            .map((message) => ({
-              role: message.role,
-              content: String(message.content ?? '').slice(0, 20000),
-            }));
+          const safeMessages = normalizeModelChatMessages(parsed.messages);
           if (safeMessages.length === 0) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ error: 'Missing chat messages.' }));
@@ -2678,8 +2696,10 @@ export const _securityTestExports = {
   formatModelVisibleToolResult,
   formatSharedAppContextForModel,
   normalizeApiKey,
+  normalizeModelChatMessages,
   normalizeModelAppContext,
   normalizeModelId,
+  normalizeModelProviderModelId,
   quoteSecurityInteractiveArg,
   readRequestBody,
   resolveHttpRedirectsForMcp,
