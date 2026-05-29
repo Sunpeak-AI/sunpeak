@@ -38,6 +38,16 @@ export interface ToolExpectation {
 }
 
 /**
+ * MCP App Context made visible to the model before the eval prompt.
+ */
+export interface EvalAppContext {
+  /** Text or multimodal content blocks shared from the app. */
+  content?: unknown[];
+  /** Structured app state shared from the app. */
+  structuredContent?: unknown;
+}
+
+/**
  * A single eval test case.
  */
 export interface EvalCase {
@@ -45,6 +55,8 @@ export interface EvalCase {
   name: string;
   /** The prompt to send to the model. */
   prompt: string;
+  /** MCP App Context to expose to the model for this prompt. */
+  appContext?: EvalAppContext;
   /** Maximum tool call steps (default: from config or 1). */
   maxSteps?: number;
   /** Expected tool call (single). */
@@ -143,6 +155,20 @@ export declare function discoverAndConvertTools(
 ): Promise<Record<string, unknown>>;
 
 /**
+ * Normalize MCP App Context into the model-visible context shape.
+ */
+export declare function normalizeEvalAppContext(
+  appContext: unknown,
+): EvalAppContext | undefined;
+
+/**
+ * Format MCP App Context as a system prompt fragment for the model.
+ */
+export declare function formatEvalAppContextForModel(
+  appContext: unknown,
+): string | undefined;
+
+/**
  * Run a single eval case against a model, returning the normalized result.
  */
 export declare function runSingleEval(params: {
@@ -152,6 +178,7 @@ export declare function runSingleEval(params: {
   maxSteps: number;
   temperature: number;
   timeout: number;
+  appContext?: EvalAppContext;
 }): Promise<EvalRunResult>;
 
 /**

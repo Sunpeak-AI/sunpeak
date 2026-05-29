@@ -161,6 +161,42 @@ export async function discoverAndConvertTools(client) {
   return tools;
 }
 
+const MODEL_VISIBLE_JSON_LIMIT_BYTES = 20000;
+
+/**
+ * Normalize MCP App Context into the same shape hosts expose to the model.
+ * Empty context is treated as absent.
+ * @param {unknown} appContext
+ * @returns {{ content?: unknown[], structuredContent?: unknown } | undefined}
+ */
+export function normalizeEvalAppContext(appContext) {
+  if (!appContext || typeof appContext !== 'object') return undefined;
+  const normalized = {};
+  if (Array.isArray(appContext.content) && appContext.content.length > 0) {
+    normalized.content = appContext.content;
+  }
+  if (appContext.structuredContent !== undefined) {
+    normalized.structuredContent = appContext.structuredContent;
+  }
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+}
+
+/**
+ * Build the system prompt fragment that makes app context visible to the model.
+ * @param {unknown} appContext
+ * @returns {string | undefined}
+ */
+export function formatEvalAppContextForModel(appContext) {
+  const normalized = normalizeEvalAppContext(appContext);
+  if (!normalized) return undefined;
+  const json = JSON.stringify(normalized);
+  const visibleJson =
+    json.length <= MODEL_VISIBLE_JSON_LIMIT_BYTES
+      ? json
+      : `${json.slice(0, MODEL_VISIBLE_JSON_LIMIT_BYTES)}...`;
+  return `Shared MCP App context from the currently rendered app, available for this turn:\n${visibleJson}`;
+}
+
 /**
  * Run a single eval case once against a model.
  * @param {object} params
@@ -170,15 +206,26 @@ export async function discoverAndConvertTools(client) {
  * @param {number} params.maxSteps
  * @param {number} params.temperature
  * @param {number} params.timeout
+ * @param {{ content?: unknown[], structuredContent?: unknown }} [params.appContext]
  * @returns {Promise<import('./eval-types.d.mts').EvalRunResult>}
  */
-export async function runSingleEval({ prompt, model, tools, maxSteps, temperature, timeout }) {
+export async function runSingleEval({
+  prompt,
+  model,
+  tools,
+  maxSteps,
+  temperature,
+  timeout,
+  appContext,
+}) {
   const { generateText } = await import('ai');
+  const system = formatEvalAppContextForModel(appContext);
 
   const result = await generateText({
     model,
     tools,
     prompt,
+    ...(system ? { system } : {}),
     maxSteps,
     temperature,
     maxRetries: 0, // We manage runs ourselves; AI SDK retries compound rate limits
@@ -356,6 +403,7 @@ export async function runEvalCaseAggregate({
         maxSteps: evalCase.maxSteps ?? maxSteps,
         temperature,
         timeout,
+        appContext: evalCase.appContext,
       });
       checkExpectations(result, evalCase);
       passed++;

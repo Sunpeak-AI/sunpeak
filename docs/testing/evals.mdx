@@ -6,7 +6,7 @@ keywords: ["MCP testing", "evals", "LLM testing", "tool calling", "multi-model",
 
 ## Overview
 
-Evals test whether different LLMs call your tools correctly. They connect to your MCP server via MCP protocol, discover tools, send prompts to multiple models (GPT-4o, Claude, Gemini, etc.), and assert that each model calls the right tools with the right arguments. Each eval case runs multiple times per model to measure reliability across non-deterministic LLM responses.
+Evals test whether different LLMs call your tools correctly. They connect to your MCP server via MCP protocol, discover tools, send prompts to multiple models (GPT-4o, Claude, Gemini, etc.), and assert that each model calls the right tools with the right arguments. Eval cases can also include App Context for follow-up prompts that depend on model-visible UI state. Each eval case runs multiple times per model to measure reliability across non-deterministic LLM responses.
 
 Evals work with any MCP server. For sunpeak framework projects, the dev server starts automatically. For standalone use, point to your running server.
 
@@ -70,7 +70,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=...
 
 ## Writing Evals
 
-Each eval file exports a `defineEval` with an array of cases. Each case has a prompt and an expectation for which tool gets called:
+Each eval file exports a `defineEval` with an array of cases. Each case has a prompt, optional App Context, and an expectation for which tool gets called:
 
 ```typescript
 // tests/evals/albums.eval.ts
@@ -92,9 +92,24 @@ export default defineEval({
         args: { search: expect.stringMatching(/pizza|austin/i) },
       },
     },
+    {
+      name: 'uses selected app state for follow-up',
+      prompt: 'Book this one',
+      appContext: {
+        structuredContent: {
+          selectedFlight: { carrier: 'delta', flightNumber: 'DL123' },
+        },
+      },
+      expect: {
+        tool: 'book-flight',
+        args: { carrier: 'delta' },
+      },
+    },
   ],
 });
 ```
+
+Use `appContext` when you need to test a follow-up turn that depends on state shared by the rendered MCP App, such as the selected flight, focused row, current cart, or active review decision. The shape matches `updateModelContext`: pass `structuredContent` for JSON state and `content` for model-visible content blocks. Each eval run exposes that context to the model before the prompt.
 
 ## Assertion Levels
 

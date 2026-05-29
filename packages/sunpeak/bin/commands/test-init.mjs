@@ -374,6 +374,8 @@ function scaffoldEvals(evalsDir, { server, isSunpeak, d: deps } = {}) {
  *
  * Each case sends a prompt to every configured model and checks
  * that the model calls the expected tool with the expected arguments.
+ * Add appContext to test follow-up prompts that depend on state shared
+ * by the rendered MCP App through updateModelContext or useAppState.
  * Cases run multiple times (configured via \`runs\` in eval.config.ts)
  * to measure reliability across non-deterministic LLM responses.
  */
@@ -384,6 +386,8 @@ export default defineEval({
     {
       name: 'example (replace me)',
       prompt: 'Show me a demo',
+      // Optional: seed model-visible App Context for follow-up prompts.
+      // appContext: { structuredContent: { selectedItem: { id: 'demo' } } },
       // expect which tool gets called and (optionally) its arguments:
       expect: {
         tool: 'your-tool-name',

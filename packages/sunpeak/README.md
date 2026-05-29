@@ -41,7 +41,9 @@ sunpeak replicates the ChatGPT and Claude runtimes locally so you can:
 - Pin tool states with simulation fixtures so UI regressions can't ship.
 - Automate the real-host loop with live tests: scripts that open your browser, prompt ChatGPT, and assert against the rendered app so you stop click-testing by hand.
 
-sunpeak also runs evals against your MCP server across multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model, so you can prove your tool descriptions and schemas hold up on cheaper models, not just the flagship ones.
+sunpeak also runs evals against your MCP server across multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model, so you can prove your tool descriptions, schemas, and model-visible App Context hold up on cheaper models, not just the flagship ones.
+
+Eval cases can seed App Context with `appContext`, which lets you test follow-up prompts such as "Book this one" against state the app has shared through `updateModelContext`.
 
 <div align="center">
   <a href="https://sunpeak.ai/docs/testing/evals">
@@ -99,7 +101,7 @@ npx sunpeak test
 
 Playwright fixtures handle inspector startup, MCP connection, iframe traversal, and host switching. Works with Python, Go, TypeScript, Rust, or any language.
 
-Evals add a second dimension: model compatibility. The eval framework connects to your MCP server via the MCP protocol, discovers its tools, and sends prompts to multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model and reports pass/fail counts, so you can measure whether your tool descriptions and schemas work reliably across smaller and cheaper models, not just the flagship ones.
+Evals add a second dimension: model compatibility. The eval framework connects to your MCP server via the MCP protocol, discovers its tools, and sends prompts to multiple models (GPT-4o, GPT-4o-mini, o4-mini, Claude Sonnet, Gemini 2.0 Flash) via the Vercel AI SDK. Each case runs N times per model and reports pass/fail counts, so you can measure whether your tool descriptions, schemas, and model-visible App Context work reliably across smaller and cheaper models, not just the flagship ones.
 
 ```ts
 import { test, expect } from 'sunpeak/test';

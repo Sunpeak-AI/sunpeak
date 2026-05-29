@@ -304,6 +304,120 @@ describe('defineEval / defineEvalConfig', () => {
   });
 });
 
+// ── App Context ────────────────────────────────────────────────────
+
+describe('eval appContext', () => {
+  it('normalizes structured app context for model-visible state', async () => {
+    const { normalizeEvalAppContext } = await importRunner();
+    expect(
+      normalizeEvalAppContext({
+        content: [],
+        structuredContent: { selectedFlight: { carrier: 'delta', flightNumber: 'DL123' } },
+      })
+    ).toEqual({
+      structuredContent: { selectedFlight: { carrier: 'delta', flightNumber: 'DL123' } },
+    });
+  });
+
+  it('keeps non-empty content blocks in app context', async () => {
+    const { normalizeEvalAppContext } = await importRunner();
+    expect(
+      normalizeEvalAppContext({
+        content: [{ type: 'text', text: 'Viewing Delta flight DL123' }],
+      })
+    ).toEqual({
+      content: [{ type: 'text', text: 'Viewing Delta flight DL123' }],
+    });
+  });
+
+  it('ignores empty app context', async () => {
+    const { normalizeEvalAppContext, formatEvalAppContextForModel } = await importRunner();
+    expect(normalizeEvalAppContext({ content: [] })).toBeUndefined();
+    expect(formatEvalAppContextForModel(null)).toBeUndefined();
+  });
+
+  it('formats app context as a system prompt fragment', async () => {
+    const { formatEvalAppContextForModel } = await importRunner();
+    const formatted = formatEvalAppContextForModel({
+      structuredContent: { selectedFlight: { carrier: 'delta' } },
+    });
+
+    expect(formatted).toContain('Shared MCP App context');
+    expect(formatted).toContain('"carrier":"delta"');
+  });
+
+  it('truncates large app context before sending it to the model', async () => {
+    const { formatEvalAppContextForModel } = await importRunner();
+    const formatted = formatEvalAppContextForModel({
+      structuredContent: { text: 'x'.repeat(25_000) },
+    });
+
+    expect(formatted?.length).toBeLessThan(21_000);
+    expect(formatted?.endsWith('...')).toBe(true);
+  });
+
+  it('passes app context to the AI SDK system prompt', async () => {
+    const generateText = vi.fn().mockResolvedValue({
+      steps: [],
+      text: '',
+      usage: {},
+      finishReason: 'stop',
+    });
+    vi.doMock('ai', () => ({ generateText }));
+
+    try {
+      const { runSingleEval } = await importRunner();
+      await runSingleEval({
+        prompt: 'Book this one',
+        model: 'model',
+        tools: {},
+        maxSteps: 1,
+        temperature: 0,
+        timeout: 1000,
+        appContext: {
+          structuredContent: { selectedFlight: { carrier: 'delta' } },
+        },
+      });
+
+      expect(generateText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          prompt: 'Book this one',
+          system: expect.stringContaining('"carrier":"delta"'),
+        })
+      );
+    } finally {
+      vi.doUnmock('ai');
+    }
+  });
+
+  it('omits the AI SDK system prompt when app context is empty', async () => {
+    const generateText = vi.fn().mockResolvedValue({
+      steps: [],
+      text: '',
+      usage: {},
+      finishReason: 'stop',
+    });
+    vi.doMock('ai', () => ({ generateText }));
+
+    try {
+      const { runSingleEval } = await importRunner();
+      await runSingleEval({
+        prompt: 'Show me albums',
+        model: 'model',
+        tools: {},
+        maxSteps: 1,
+        temperature: 0,
+        timeout: 1000,
+        appContext: { content: [] },
+      });
+
+      expect(generateText.mock.calls[0][0]).not.toHaveProperty('system');
+    } finally {
+      vi.doUnmock('ai');
+    }
+  });
+});
+
 // ── Model Registry ─────────────────────────────────────────────────
 
 describe('model registry', () => {
