@@ -493,6 +493,61 @@ for (const host of hosts) {
       await expect(iframe.getByRole('heading', { name: 'Lady Bird Lake' })).not.toBeVisible();
     });
 
+    test('resetting model chat clears the transcript and starts a new backend conversation', async ({
+      page,
+    }) => {
+      const requestBodies: Array<Record<string, unknown>> = [];
+
+      await routeSavedModelKey(page);
+
+      await page.route('**/__sunpeak/model-chat', async (route) => {
+        const body = JSON.parse(route.request().postData() ?? '{}');
+        requestBodies.push(body);
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            text: `Reply ${requestBodies.length}`,
+            toolCalls: [],
+          }),
+        });
+      });
+
+      await page.goto(createInspectorUrl({ tool: 'show-albums', theme: 'dark', host }));
+
+      const resetButton = page.getByRole('button', { name: 'Reset model conversation' });
+      await expect(resetButton).toBeDisabled();
+
+      await submitModelMessage(page, 'First model prompt');
+      await expect(
+        page.locator('[data-turn="user"]').filter({ hasText: 'First model prompt' })
+      ).toBeVisible();
+      await expect(
+        page.locator('[data-turn="assistant"]').filter({ hasText: 'Reply 1' })
+      ).toBeVisible();
+      await expect(resetButton).toBeEnabled();
+
+      await resetButton.click();
+      await expect(
+        page.locator('[data-turn="user"]').filter({ hasText: 'First model prompt' })
+      ).toHaveCount(0);
+      await expect(
+        page.locator('[data-turn="assistant"]').filter({ hasText: 'Reply 1' })
+      ).toHaveCount(0);
+      await expect(resetButton).toBeDisabled();
+
+      await submitModelMessage(page, 'Second model prompt');
+      await expect(
+        page.locator('[data-turn="assistant"]').filter({ hasText: 'Reply 2' })
+      ).toBeVisible();
+
+      expect(requestBodies).toHaveLength(2);
+      expect(requestBodies[0].conversationId).toEqual(expect.stringMatching(/^model-chat-/));
+      expect(requestBodies[1].conversationId).toEqual(expect.stringMatching(/^model-chat-/));
+      expect(requestBodies[1].conversationId).not.toBe(requestBodies[0].conversationId);
+      expect(requestBodies[1].messages).toEqual([{ role: 'user', content: 'Second model prompt' }]);
+    });
+
     test('preserves model tool data when switching from the default tool to carousel', async ({
       page,
     }) => {

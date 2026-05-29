@@ -1405,6 +1405,16 @@ function normalizeModelProviderModelId(provider, modelId) {
   return normalizedModelId;
 }
 
+function normalizeModelConversationId(conversationId) {
+  if (typeof conversationId !== 'string') return undefined;
+  const trimmed = conversationId.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.length > 200 || /[\u0000-\u001f\u007f]/.test(trimmed)) {
+    throw new Error('Invalid model conversation ID.');
+  }
+  return trimmed;
+}
+
 async function createModelInstance(provider, modelId, apiKey) {
   assertModelProvider(provider);
   const normalizedModelId = normalizeModelProviderModelId(provider, modelId);
@@ -1490,7 +1500,15 @@ async function executeModelChatToolCall({ client, name, arguments: args }) {
   };
 }
 
-async function runModelChat({ client, provider, modelId, messages, apiKey, appContext }) {
+async function runModelChat({
+  client,
+  provider,
+  modelId,
+  messages,
+  apiKey,
+  appContext,
+  conversationId,
+}) {
   assertModelProvider(provider);
   const { generateText, tool: aiTool, jsonSchema } = await import('ai');
   const model = await createModelInstance(provider, modelId, apiKey);
@@ -1537,6 +1555,7 @@ async function runModelChat({ client, provider, modelId, messages, apiKey, appCo
   });
 
   return {
+    ...(conversationId ? { conversationId } : {}),
     text: result.text || '',
     toolCalls: capturedToolCalls,
     finishReason: result.finishReason,
@@ -2543,6 +2562,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             res.end(JSON.stringify({ error: 'Missing chat messages.' }));
             return;
           }
+          const conversationId = normalizeModelConversationId(parsed.conversationId);
 
           const result = await withModelChatClient((client) =>
             runModelChat({
@@ -2552,6 +2572,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               messages: safeMessages,
               apiKey,
               appContext: normalizeModelAppContext(parsed.appContext),
+              conversationId,
             })
           );
           res.writeHead(200, { 'Content-Type': 'application/json' });
