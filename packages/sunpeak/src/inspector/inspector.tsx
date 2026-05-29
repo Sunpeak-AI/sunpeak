@@ -82,6 +82,7 @@ export interface InspectorModelChatRequest {
   conversationId?: string;
   provider: string;
   modelId: string;
+  host?: HostId;
   messages: InspectorModelChatMessage[];
   tools: Simulation['tool'][];
   appContext?: InspectorModelAppContext;
@@ -1036,6 +1037,7 @@ export function Inspector({
           conversationId: requestConversationId,
           provider: modelProvider,
           modelId,
+          host: state.activeHost,
           messages,
           tools: modelCallableTools,
           appContext: state.modelAppContext ?? undefined,
@@ -1049,6 +1051,7 @@ export function Inspector({
             conversationId: requestConversationId,
             provider: modelProvider,
             modelId,
+            host: state.activeHost,
             messages,
             appContext: state.modelAppContext ?? undefined,
           }),

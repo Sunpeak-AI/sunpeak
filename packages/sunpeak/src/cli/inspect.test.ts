@@ -700,6 +700,119 @@ describe('inspect endpoint security helpers', () => {
       )
     ).toBe('Album service failed');
   });
+
+  it('falls back when MCP error content is malformed', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'show-albums' },
+        { isError: true, content: [null, { type: 'image', data: 'ignored' }] }
+      )
+    ).toBe('show-albums returned an error.');
+  });
+
+  it('uses structured MCP error details when text content is absent', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    const result = _securityTestExports.formatModelVisibleToolResult(
+      { name: 'show-albums' },
+      {
+        isError: true,
+        content: [],
+        structuredContent: { code: 'invalid_category', retryWith: 'travel' },
+      },
+      { host: 'chatgpt', arguments: { category: 'travl' } }
+    );
+
+    expect(result).toMatchObject({
+      type: 'mcp_call',
+      error: expect.stringContaining('invalid_category'),
+    });
+    expect(result.error).toContain('travel');
+  });
+
+  it('formats ChatGPT MCP tool errors as failed mcp_call items for model chat', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'show-albums' },
+        { isError: true, content: [{ type: 'text', text: 'Album service failed' }] },
+        { host: 'chatgpt', arguments: { category: 'travel' }, toolCallId: 'call_123' }
+      )
+    ).toMatchObject({
+      type: 'mcp_call',
+      id: 'call_123',
+      name: 'show-albums',
+      arguments: { category: 'travel' },
+      error: 'Album service failed',
+      output: null,
+      status: 'failed',
+    });
+  });
+
+  it('does not pass non-object model arguments into MCP tool calls', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const client = {
+      callTool: vi.fn(async () => ({
+        structuredContent: { source: 'mcp-server' },
+      })),
+    };
+
+    const result = await _securityTestExports.executeModelChatToolCall({
+      client,
+      name: 'show-albums',
+      arguments: ['not', 'an', 'object'],
+    });
+
+    expect(client.callTool).toHaveBeenCalledWith({
+      name: 'show-albums',
+      arguments: {},
+    });
+    expect(result.arguments).toEqual({});
+  });
+
+  it('formats Claude MCP tool errors as mcp_tool_result blocks for model chat', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.formatModelVisibleToolResult(
+        { name: 'show-albums' },
+        { isError: true, content: [{ type: 'text', text: 'Album service failed' }] },
+        { host: 'claude', toolCallId: 'toolu_123' }
+      )
+    ).toMatchObject({
+      type: 'mcp_tool_result',
+      tool_use_id: 'toolu_123',
+      is_error: true,
+      content: [{ type: 'text', text: 'Album service failed' }],
+    });
+  });
+
+  it('turns MCP call exceptions into model-visible tool errors', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const client = {
+      callTool: vi.fn(async () => {
+        throw new Error('MCP server disconnected');
+      }),
+    };
+
+    const result = await _securityTestExports.executeModelChatToolCall({
+      client,
+      name: 'show-albums',
+      arguments: { category: 'model' },
+    });
+
+    expect(result).toMatchObject({
+      arguments: { category: 'model' },
+      result: {
+        content: [{ type: 'text', text: 'MCP server disconnected' }],
+        isError: true,
+      },
+      source: 'mcp',
+    });
+  });
 });
 
 describe('resolveMcpResourceMetadataUrl', () => {
