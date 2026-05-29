@@ -1437,6 +1437,24 @@ function formatJsonForModel(value) {
   return `${json.slice(0, MODEL_VISIBLE_JSON_LIMIT_BYTES)}...`;
 }
 
+function normalizeModelChatHost(host) {
+  if (host === 'chatgpt' || host === 'claude') return host;
+  return 'generic';
+}
+
+function isPlainObject(value) {
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    Object.getPrototypeOf(value) === Object.prototype
+  );
+}
+
+function normalizeToolArguments(args) {
+  return isPlainObject(args) ? args : {};
+}
+
 function normalizeModelAppContext(appContext) {
   if (!appContext || typeof appContext !== 'object') return undefined;
   const normalized = {};
@@ -1466,15 +1484,56 @@ function normalizeModelChatMessages(messages) {
     .filter((message) => message.content.length > 0);
 }
 
-function formatModelVisibleToolResult(tool, result) {
+function getToolErrorText(tool, result) {
+  const toolName = tool?.name || 'MCP tool';
+  const text = (result?.content || [])
+    .filter((part) => part && typeof part === 'object' && part.type === 'text')
+    .map((part) => String(part.text ?? ''))
+    .join('\n')
+    .trim();
+  if (text) return text;
+  if (result?.structuredContent !== undefined) {
+    return formatJsonForModel({ structuredContent: result.structuredContent });
+  }
+  return text || `${toolName} returned an error.`;
+}
+
+function formatModelVisibleToolError(tool, result, { host, arguments: args, toolCallId } = {}) {
+  const toolName = tool?.name || 'MCP tool';
+  const errorText = getToolErrorText(tool, result);
+  const id = typeof toolCallId === 'string' && toolCallId.trim() ? toolCallId : toolName;
+
+  switch (normalizeModelChatHost(host)) {
+    case 'chatgpt':
+      return {
+        type: 'mcp_call',
+        id,
+        name: toolName,
+        arguments: normalizeToolArguments(args),
+        error: errorText,
+        output: null,
+        status: 'failed',
+      };
+    case 'claude':
+      return {
+        type: 'mcp_tool_result',
+        tool_use_id: id,
+        is_error: true,
+        content: [{ type: 'text', text: errorText }],
+      };
+    default:
+      return {
+        isError: true,
+        content: [{ type: 'text', text: errorText }],
+      };
+  }
+}
+
+function formatModelVisibleToolResult(tool, result, options = {}) {
   const toolName = tool?.name || 'MCP tool';
   if (result?.isError) {
-    const text = (result.content || [])
-      .filter((part) => part.type === 'text')
-      .map((part) => part.text)
-      .join('\n')
-      .trim();
-    return text || `${toolName} returned an error.`;
+    if (options.host) return formatModelVisibleToolError(tool, result, options);
+    return getToolErrorText(tool, result);
   }
 
   const visibleResult = {};
@@ -1491,13 +1550,49 @@ function formatModelVisibleToolResult(tool, result) {
       : `${toolName} completed.`;
 }
 
-async function executeModelChatToolCall({ client, name, arguments: args }) {
-  const safeArgs = args && typeof args === 'object' ? args : {};
+function errorToMessage(error) {
+  if (error instanceof Error && error.message) return error.message;
+  return String(error || 'Unknown MCP tool error');
+}
+
+function createModelChatToolErrorResult(error) {
+  const message = errorToMessage(error);
   return {
-    arguments: safeArgs,
-    result: await client.callTool({ name, arguments: safeArgs }),
-    source: 'mcp',
+    content: [{ type: 'text', text: message }],
+    isError: true,
   };
+}
+
+async function executeModelChatToolCall({ client, name, arguments: args }) {
+  const safeArgs = normalizeToolArguments(args);
+  try {
+    return {
+      arguments: safeArgs,
+      result: await client.callTool({ name, arguments: safeArgs }),
+      source: 'mcp',
+    };
+  } catch (error) {
+    return {
+      arguments: safeArgs,
+      result: createModelChatToolErrorResult(error),
+      source: 'mcp',
+    };
+  }
+}
+
+function getModelChatHostInstructions(host) {
+  switch (normalizeModelChatHost(host)) {
+    case 'chatgpt':
+      return 'ChatGPT surfaces failed MCP calls as mcp_call items with an error field. When a tool result object has type "mcp_call", status "failed", or a non-empty error field, treat it as a failed MCP call, not a successful result.';
+    case 'claude':
+      return 'Claude surfaces failed MCP calls as mcp_tool_result blocks with is_error=true. When a tool result object has type "mcp_tool_result" and is_error is true, treat it as a failed MCP call, not a successful result.';
+    default:
+      return 'MCP tool failures are model-visible tool results. When a tool result has isError=true or describes a failed MCP call, treat it as a failed tool call, not a successful result.';
+  }
+}
+
+function getModelChatRetryInstructions() {
+  return 'After a failed MCP tool call, use the error text to decide the next step. Retry with corrected arguments for validation or business-logic errors. For transient service, timeout, or connectivity errors, you may retry once if the user request still needs the tool. Do not repeat the same failing tool call with the same arguments more than once.';
 }
 
 async function runModelChat({
@@ -1507,9 +1602,11 @@ async function runModelChat({
   messages,
   apiKey,
   appContext,
+  host,
   conversationId,
 }) {
   assertModelProvider(provider);
+  const normalizedHost = normalizeModelChatHost(host);
   const { generateText, tool: aiTool, jsonSchema } = await import('ai');
   const model = await createModelInstance(provider, modelId, apiKey);
   const { tools: mcpTools } = await client.listTools();
@@ -1521,14 +1618,23 @@ async function runModelChat({
       description: mcpTool.description || mcpTool.title || '',
       inputSchema: jsonSchema(sanitizeAiSdkSchema(mcpTool.inputSchema)),
       parameters: jsonSchema(sanitizeAiSdkSchema(mcpTool.inputSchema)),
-      execute: async (args) => {
+      execute: async (args, options) => {
         const { arguments: safeArgs, result } = await executeModelChatToolCall({
           client,
           name: mcpTool.name,
           arguments: args,
         });
-        capturedToolCalls.push({ name: mcpTool.name, arguments: safeArgs, result });
-        return formatModelVisibleToolResult(mcpTool, result);
+        capturedToolCalls.push({
+          name: mcpTool.name,
+          arguments: safeArgs,
+          result,
+          isError: !!result?.isError,
+        });
+        return formatModelVisibleToolResult(mcpTool, result, {
+          host: normalizedHost,
+          arguments: safeArgs,
+          toolCallId: options?.toolCallId,
+        });
       },
     });
   }
@@ -1539,7 +1645,9 @@ async function runModelChat({
     model,
     tools,
     system: [
-      'You are chatting inside the Sunpeak Inspector. When you call an MCP tool that renders an app, the host will render the app below your message. Do not repeat raw tool output, JSON, image URLs, markdown image lists, or full item inventories. Keep any narration brief and let the app carry the visual result.',
+      'You are chatting inside the sunpeak Inspector. When you call an MCP tool that renders an app, the host will render the app below your message. Do not repeat raw tool output, JSON, image URLs, markdown image lists, or full item inventories. Keep any narration brief and let the app carry the visual result.',
+      getModelChatHostInstructions(normalizedHost),
+      getModelChatRetryInstructions(),
       sharedAppContext
         ? `Shared MCP App context from the currently rendered app, available for this turn:\n${sharedAppContext}`
         : '',
@@ -2571,6 +2679,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               modelId: parsed.modelId,
               messages: safeMessages,
               apiKey,
+              host: parsed.host,
               appContext: normalizeModelAppContext(parsed.appContext),
               conversationId,
             })

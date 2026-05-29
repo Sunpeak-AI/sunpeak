@@ -1465,6 +1465,7 @@ describe('Inspector', () => {
         expect.objectContaining({
           provider: 'fractal',
           modelId: 'fractal-careful',
+          host: 'chatgpt',
           messages: [{ role: 'user', content: 'Render this app' }],
           tools: expect.arrayContaining([expect.objectContaining({ name: 'show-albums' })]),
         })
