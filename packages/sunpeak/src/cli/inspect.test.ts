@@ -494,6 +494,31 @@ describe('inspect endpoint security helpers', () => {
     );
   });
 
+  it('rejects common reversed Anthropic model ID shapes with a useful hint', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(() =>
+      _securityTestExports.normalizeModelProviderModelId('anthropic', 'claude-5-6-sonnet')
+    ).toThrow('Use an Anthropic API model ID such as "claude-sonnet-4-20250514"');
+    expect(
+      _securityTestExports.normalizeModelProviderModelId('anthropic', ' claude-sonnet-4-20250514 ')
+    ).toBe('claude-sonnet-4-20250514');
+    expect(_securityTestExports.normalizeModelProviderModelId('openai', ' gpt-4o ')).toBe('gpt-4o');
+  });
+
+  it('drops empty model chat messages before provider calls', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.normalizeModelChatMessages([
+        { role: 'assistant', content: '   ' },
+        { role: 'user', content: ' Find me flights ' },
+        { role: 'system', content: 'ignored' },
+        { role: 'assistant', content: null },
+      ])
+    ).toEqual([{ role: 'user', content: 'Find me flights' }]);
+  });
+
   it('rejects API keys with control characters before credential storage', async () => {
     const { _securityTestExports } = await importInspectCommand();
 

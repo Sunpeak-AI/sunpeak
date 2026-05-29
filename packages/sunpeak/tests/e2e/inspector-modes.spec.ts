@@ -574,7 +574,8 @@ for (const host of hosts) {
         .locator('select')
         .filter({ has: page.locator('option[value="anthropic"]') })
         .selectOption('anthropic');
-      const modelInput = page.locator('input[placeholder="claude-3-5-sonnet-20241022"]');
+      const modelInput = page.locator('input[placeholder="claude-sonnet-4-20250514"]');
+      await expect(modelInput).toHaveValue('claude-sonnet-4-20250514');
       await modelInput.fill('claude-test-model');
       await modelInput.press('Enter');
 
