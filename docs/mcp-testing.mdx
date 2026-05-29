@@ -378,7 +378,7 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
 
 ## Evals (Multi-Model Testing)
 
-Evals test whether different LLMs call your tools correctly. A tool description that GPT-4o interprets well might confuse Gemini. Evals connect to your MCP server, discover its tools, and send prompts to multiple models to check tool calling behavior.
+Evals test whether different LLMs call your tools correctly. A tool description that GPT-4o interprets well might confuse Gemini. Evals connect to your MCP server, discover its tools, and send prompts to multiple models to check tool calling behavior. Cases can include App Context for follow-up prompts that depend on model-visible UI state.
 
 ### Prerequisites
 
@@ -428,7 +428,7 @@ For sunpeak projects, the dev server starts automatically when you run evals.
 
 ### Writing Evals
 
-Create eval specs in `tests/evals/*.eval.ts`. Each file defines cases with prompts and expected tool calls:
+Create eval specs in `tests/evals/*.eval.ts`. Each file defines cases with prompts, optional App Context, and expected tool calls:
 
 ```typescript
 // tests/evals/show-albums.eval.ts
@@ -454,6 +454,19 @@ export default defineEval({
         { tool: 'publish-post' },
       ],
     },
+    {
+      name: 'follow-up uses selected app state',
+      prompt: 'Book this one',
+      appContext: {
+        structuredContent: {
+          selectedFlight: { carrier: 'delta', flightNumber: 'DL123' },
+        },
+      },
+      expect: {
+        tool: 'book-flight',
+        args: { carrier: 'delta' },
+      },
+    },
   ],
 });
 ```
@@ -463,6 +476,8 @@ Three assertion levels:
 1. **Single tool** — `expect: { tool: 'name', args: { ... } }` checks the first tool call with partial argument matching
 2. **Ordered sequence** — `expect: [{ tool: 'a' }, { tool: 'b' }]` checks multi-step tool call order
 3. **Custom function** — `assert: (result) => { ... }` gives full access to all tool calls, text, and usage data
+
+Use `appContext` for follow-up turns that depend on `updateModelContext` or `useAppState`, such as "Book this one" when the app has already shared the selected flight. The field accepts `structuredContent` for JSON state and `content` for model-visible content blocks.
 
 ### Running
 

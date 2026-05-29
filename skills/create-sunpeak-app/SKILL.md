@@ -325,7 +325,7 @@ await sendMessage({
 
 ### `useAppState` details
 
-State is preserved in React and automatically sent to the host via `updateModelContext()` after each update, so the LLM can see the current UI state in its context window.
+State is preserved in React and automatically sent to the host via `updateModelContext()` after each update, so the LLM can see the current UI state in its context window. For model evals, seed the same state with the eval case `appContext` field so follow-up prompts such as "Book this one" can be tested against the selected app state.
 
 ```tsx
 const [state, setState] = useAppState<{ decision: 'accepted' | 'rejected' | null }>({

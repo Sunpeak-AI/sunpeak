@@ -309,7 +309,7 @@ The live test runner imports your browser session, starts `sunpeak dev --prod-re
 
 ## Evals (Multi-Model Tool Calling)
 
-Evals test whether different LLMs call your tools correctly. They connect to your MCP server, discover tools via MCP protocol, and send prompts to multiple models to check tool calling behavior. Each case runs N times per model to measure reliability.
+Evals test whether different LLMs call your tools correctly. They connect to your MCP server, discover tools via MCP protocol, and send prompts to multiple models to check tool calling behavior. Each case can include App Context for follow-up turns that depend on model-visible UI state. Each case runs N times per model to measure reliability.
 
 ### Setup
 
@@ -366,6 +366,19 @@ export default defineEval({
       ],
     },
     {
+      name: 'follow-up uses selected app state',
+      prompt: 'Book this one',
+      appContext: {
+        structuredContent: {
+          selectedFlight: { carrier: 'delta', flightNumber: 'DL123' },
+        },
+      },
+      expect: {
+        tool: 'book-flight',
+        args: { carrier: 'delta' },
+      },
+    },
+    {
       name: 'custom assertion',
       prompt: 'Show me vacation photos',
       assert: (result) => {
@@ -377,7 +390,7 @@ export default defineEval({
 });
 ```
 
-Three assertion levels: single tool (`expect: { tool, args }`), ordered sequence (`expect: [...]`), or custom function (`assert: (result) => { ... }`). Args use partial matching -- extra keys in the actual call are allowed.
+Three assertion levels: single tool (`expect: { tool, args }`), ordered sequence (`expect: [...]`), or custom function (`assert: (result) => { ... }`). Args use partial matching -- extra keys in the actual call are allowed. Use `appContext` to seed `structuredContent` or `content` that the MCP App would normally share with the model through `updateModelContext`.
 
 ### Running
 
@@ -405,7 +418,7 @@ Not included in the default `sunpeak test` run (costs money, like `--live`).
 | `sunpeak/test/live/chatgpt` | ChatGPT-specific Playwright fixtures (`test` with `chatgpt` fixture) |
 | `sunpeak/test/live/chatgpt/config` | ChatGPT-specific Playwright config factory |
 | `sunpeak/test/inspect/config` | Inspect config factory for external MCP servers (`defineInspectConfig`) |
-| `sunpeak/eval` | Eval framework (`defineEval`, `defineEvalConfig`) for multi-model tool calling evals |
+| `sunpeak/eval` | Eval framework (`defineEval`, `defineEvalConfig`) for multi-model tool calling evals, including App Context follow-up cases |
 
 ## Migrating from older versions
 
