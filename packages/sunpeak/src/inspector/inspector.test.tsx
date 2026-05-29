@@ -6,8 +6,10 @@ import type { Simulation } from '../types/simulation';
 
 // Mock fetch for useMcpConnection
 let fetchSpy: ReturnType<typeof vi.spyOn>;
+const PREFS_KEY = 'sunpeak-inspector-prefs';
 
 beforeEach(() => {
+  localStorage.clear();
   fetchSpy = vi.spyOn(globalThis, 'fetch');
   // Default: health check succeeds
   fetchSpy.mockResolvedValue(new Response('{"tools":[]}', { status: 200 }));
@@ -1676,6 +1678,90 @@ describe('Inspector', () => {
       expect(screen.getByDisplayValue('fractal-small')).toBeInTheDocument();
       await userEvent.selectOptions(screen.getByDisplayValue('Fractal Fast'), 'fractal-careful');
       expect(screen.getByDisplayValue('fractal-large')).toBeInTheDocument();
+    });
+
+    it('defaults OpenAI model chat to the current ChatGPT default model id', () => {
+      render(<Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} />);
+
+      expect(screen.getByDisplayValue('gpt-5.5')).toBeInTheDocument();
+    });
+
+    it('restores persisted Model Chat and Prod Resources values', () => {
+      localStorage.setItem(
+        PREFS_KEY,
+        JSON.stringify({
+          modelProvider: 'fractal',
+          modelId: 'fractal-careful',
+          prodResources: true,
+        })
+      );
+
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          onCallTool={vi.fn()}
+          modelChat={{
+            providers: [
+              {
+                id: 'fractal',
+                label: 'Fractal Models',
+                models: ['fractal-fast', 'fractal-careful'],
+              },
+            ],
+            onChat: vi.fn(async () => ({ text: 'ok' })),
+          }}
+        />
+      );
+
+      expect(screen.getByDisplayValue('Fractal Models')).toBeInTheDocument();
+      expect(screen.getByDisplayValue('fractal-careful')).toBeInTheDocument();
+      expect(screen.getByLabelText('Prod Resources')).toBeChecked();
+    });
+
+    it('lets persisted Prod Resources override the default prop', () => {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ prodResources: false }));
+
+      render(
+        <Inspector simulations={{ test: createSim() }} onCallTool={vi.fn()} defaultProdResources />
+      );
+
+      expect(screen.getByLabelText('Prod Resources')).not.toBeChecked();
+    });
+
+    it('persists Model Chat and Prod Resources changes without dropping host prefs', async () => {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ theme: 'light', activeHost: 'claude' }));
+
+      render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          onCallTool={vi.fn()}
+          modelChat={{
+            providers: [
+              {
+                id: 'fractal',
+                label: 'Fractal Models',
+                models: ['fractal-fast', 'fractal-careful'],
+              },
+            ],
+            onChat: vi.fn(async () => ({ text: 'ok' })),
+          }}
+        />
+      );
+
+      await userEvent.selectOptions(screen.getByDisplayValue('fractal-fast'), 'fractal-careful');
+      await userEvent.click(screen.getByLabelText('Prod Resources'));
+
+      await waitFor(() => {
+        const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<
+          string,
+          unknown
+        >;
+        expect(prefs.modelProvider).toBe('fractal');
+        expect(prefs.modelId).toBe('fractal-careful');
+        expect(prefs.prodResources).toBe(true);
+        expect(prefs.theme).toBe('light');
+        expect(prefs.activeHost).toBe('claude');
+      });
     });
 
     it('lets host pages own API key status and save behavior for model chat outside embedded mode', async () => {

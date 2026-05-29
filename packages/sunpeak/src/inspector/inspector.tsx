@@ -5,7 +5,7 @@ import type {
   McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
-import { useInspectorState } from './use-inspector-state';
+import { readStoredPrefs, useInspectorState, writeStoredPrefs } from './use-inspector-state';
 import { useMcpConnection, type AuthType, type AuthConfig } from './use-mcp-connection';
 import { IframeResource } from './iframe-resource';
 import { ThemeProvider } from './theme-provider';
@@ -204,7 +204,7 @@ interface ToolInfo {
 }
 
 const DEFAULT_MODEL_PROVIDERS: InspectorModelProvider[] = [
-  { id: 'openai', label: 'OpenAI', defaultModel: 'gpt-4o' },
+  { id: 'openai', label: 'OpenAI', defaultModel: 'gpt-5.5' },
   {
     id: 'anthropic',
     label: 'Anthropic',
@@ -382,6 +382,10 @@ export function Inspector({
       autoRun: params.get('autoRun') === 'true',
     };
   }, []);
+  const storedPrefs = React.useMemo(
+    () => (initUrlParams.autoRun ? {} : readStoredPrefs()),
+    [initUrlParams.autoRun]
+  );
 
   // ── Tool selection ──
   // ?tool=X explicitly selects a tool. ?simulation=X infers the tool from the simulation.
@@ -473,7 +477,7 @@ export function Inspector({
     inspectorApiBaseUrl
   );
   const [prodResources, setProdResources] = React.useState(
-    state.urlProdResources ?? defaultProdResources
+    state.urlProdResources ?? storedPrefs.prodResources ?? defaultProdResources
   );
   const showSidebar = state.urlSidebar !== false;
   const showDevOverlay = state.urlDevOverlay !== false;
@@ -505,6 +509,13 @@ export function Inspector({
     }
     return modelProviderOptions[0]?.id ?? 'openai';
   }, [modelChat?.defaultProvider, modelProviderOptions]);
+  const initialModelProvider = React.useMemo(() => {
+    const stored = storedPrefs.modelProvider;
+    if (stored && modelProviderOptions.some((provider) => provider.id === stored)) {
+      return stored;
+    }
+    return defaultModelProvider;
+  }, [defaultModelProvider, modelProviderOptions, storedPrefs.modelProvider]);
   const getDefaultModelId = React.useCallback(
     (provider: string) => {
       const option = modelProviderOptions.find((item) => item.id === provider);
@@ -523,8 +534,23 @@ export function Inspector({
     },
     [modelChat?.defaultModel, modelProviderOptions]
   );
-  const [modelProvider, setModelProvider] = React.useState(defaultModelProvider);
-  const [modelId, setModelId] = React.useState(() => getDefaultModelId(defaultModelProvider));
+  const getInitialModelId = React.useCallback(
+    (provider: string) => {
+      const stored = storedPrefs.modelId;
+      if (storedPrefs.modelProvider && storedPrefs.modelProvider !== provider) {
+        return getDefaultModelId(provider);
+      }
+      const option = modelProviderOptions.find((item) => item.id === provider);
+      const providerModels = option?.models ?? [];
+      if (stored && (providerModels.length === 0 || providerModels.includes(stored))) {
+        return stored;
+      }
+      return getDefaultModelId(provider);
+    },
+    [getDefaultModelId, modelProviderOptions, storedPrefs.modelId, storedPrefs.modelProvider]
+  );
+  const [modelProvider, setModelProvider] = React.useState(initialModelProvider);
+  const [modelId, setModelId] = React.useState(() => getInitialModelId(initialModelProvider));
   const [apiKeyDraft, setApiKeyDraft] = React.useState('');
   const [keyStatus, setKeyStatus] = React.useState<InspectorModelKeyStatus>({ hasKey: false });
   const [isKeyStatusLoading, setIsKeyStatusLoading] = React.useState(usesApiKeyUi);
@@ -550,6 +576,21 @@ export function Inspector({
     }
     return Array.from(map.values());
   }, [simulations]);
+
+  const isFirstInspectorPrefsRender = React.useRef(true);
+  React.useEffect(() => {
+    if (isFirstInspectorPrefsRender.current) {
+      isFirstInspectorPrefsRender.current = false;
+      return;
+    }
+    if (initUrlParams.autoRun) return;
+    writeStoredPrefs({
+      ...readStoredPrefs(),
+      prodResources,
+      modelProvider,
+      modelId,
+    });
+  }, [initUrlParams.autoRun, modelId, modelProvider, prodResources]);
 
   React.useEffect(() => {
     const nextServerUrl = mcpServerUrl ?? '';
