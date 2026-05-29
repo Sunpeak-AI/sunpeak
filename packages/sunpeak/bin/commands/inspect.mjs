@@ -1363,9 +1363,43 @@ function toolRendersApp(tool) {
   return !!(tool?._meta?.ui?.resourceUri ?? tool?._meta?.['ui/resourceUri']);
 }
 
-function sanitizeAiSdkSchema(schema) {
-  const clean = { ...(schema || { type: 'object', properties: {} }) };
+function sanitizeAiSdkSchemaNode(schema) {
+  if (Array.isArray(schema)) {
+    return schema.map((item) => sanitizeAiSdkSchemaNode(item));
+  }
+  if (!schema || typeof schema !== 'object') return schema;
+
+  const clean = { ...schema };
   delete clean.$schema;
+  if (
+    clean.properties &&
+    typeof clean.properties === 'object' &&
+    !Array.isArray(clean.properties)
+  ) {
+    clean.properties = Object.fromEntries(
+      Object.entries(clean.properties).map(([key, value]) => [
+        key,
+        sanitizeAiSdkSchemaNode(value),
+      ])
+    );
+  }
+  if (clean.items !== undefined) {
+    clean.items = sanitizeAiSdkSchemaNode(clean.items);
+  }
+  for (const key of ['anyOf', 'allOf', 'oneOf']) {
+    if (Array.isArray(clean[key])) {
+      clean[key] = clean[key].map((item) => sanitizeAiSdkSchemaNode(item));
+    }
+  }
+
+  const isObjectSchema = clean.type === 'object' || clean.properties != null;
+  if (isObjectSchema) {
+    if (!clean.type) clean.type = 'object';
+    if (!clean.properties) clean.properties = {};
+    clean.additionalProperties = false;
+    return clean;
+  }
+
   if (
     clean.additionalProperties != null &&
     typeof clean.additionalProperties === 'object' &&
@@ -1373,8 +1407,14 @@ function sanitizeAiSdkSchema(schema) {
   ) {
     delete clean.additionalProperties;
   }
+  return clean;
+}
+
+export function sanitizeAiSdkSchema(schema) {
+  const clean = sanitizeAiSdkSchemaNode(schema || { type: 'object', properties: {} });
   if (!clean.type) clean.type = 'object';
   if (!clean.properties) clean.properties = {};
+  clean.additionalProperties = false;
   return clean;
 }
 
@@ -1421,9 +1461,10 @@ async function createModelInstance(provider, modelId, apiKey) {
   if (provider === 'openai') {
     const { createOpenAI } = await import('@ai-sdk/openai');
     const openai = createOpenAI({ apiKey });
+    const settings = { structuredOutputs: false };
     return typeof openai.chat === 'function'
-      ? openai.chat(normalizedModelId)
-      : openai(normalizedModelId);
+      ? openai.chat(normalizedModelId, settings)
+      : openai(normalizedModelId, settings);
   }
   const { createAnthropic } = await import('@ai-sdk/anthropic');
   return createAnthropic({ apiKey })(normalizedModelId);

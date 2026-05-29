@@ -435,6 +435,17 @@ describe('model registry', () => {
     }
   });
 
+  it('disables OpenAI structured outputs for reasoning model tool schemas', async () => {
+    const mod = await importRegistry();
+    const result = await mod.resolveModel('gpt-5.5').catch((e: Error) => e);
+    if (result instanceof Error) {
+      expect(result.message).toContain('@ai-sdk/openai');
+    } else {
+      expect(result).toHaveProperty('modelId', 'gpt-5.5');
+      expect(result.settings).toMatchObject({ structuredOutputs: false });
+    }
+  });
+
   it('routes claude- models to anthropic', async () => {
     const mod = await importRegistry();
     const result = await mod.resolveModel('claude-sonnet-4-20250514').catch((e: Error) => e);

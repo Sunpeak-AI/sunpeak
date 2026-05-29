@@ -1499,6 +1499,9 @@ describe('Inspector', () => {
       );
 
       const resetButton = screen.getByRole('button', { name: 'Reset model conversation' });
+      expect(resetButton).toHaveAttribute('title', 'Reset conversation');
+      expect(resetButton).toHaveClass('cursor-pointer');
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Reset conversation');
       expect(resetButton).toBeDisabled();
 
       const composer = document.querySelector<HTMLInputElement>('input[name="userInput"]')!;

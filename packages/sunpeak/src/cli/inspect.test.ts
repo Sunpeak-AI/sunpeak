@@ -905,6 +905,62 @@ describe('resolveMcpResourceMetadataUrl', () => {
 });
 
 describe('inspect CLI', () => {
+  describe('sanitizeAiSdkSchema', () => {
+    it('closes object schemas for OpenAI function tool compatibility', async () => {
+      const { sanitizeAiSdkSchema } = await import('../../bin/commands/inspect.mjs');
+
+      expect(
+        sanitizeAiSdkSchema({
+          $schema: 'https://json-schema.org/draft/2020-12/schema',
+          type: 'object',
+          required: ['title'],
+          properties: {
+            title: { type: 'string' },
+            metadata: {
+              type: 'object',
+              properties: {
+                owner: { type: 'string' },
+              },
+            },
+            files: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  path: { type: 'string' },
+                },
+              },
+            },
+          },
+        })
+      ).toEqual({
+        type: 'object',
+        required: ['title'],
+        additionalProperties: false,
+        properties: {
+          title: { type: 'string' },
+          metadata: {
+            type: 'object',
+            additionalProperties: false,
+            properties: {
+              owner: { type: 'string' },
+            },
+          },
+          files: {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              properties: {
+                path: { type: 'string' },
+              },
+            },
+          },
+        },
+      });
+    });
+  });
+
   describe('parseArgs (tested via inspect function behavior)', () => {
     it('should parse --server flag', async () => {
       // We'll test parseArgs logic by checking the inspect function rejects

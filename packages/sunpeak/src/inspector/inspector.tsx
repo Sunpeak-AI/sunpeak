@@ -2051,40 +2051,41 @@ export function Inspector({
                         />
                       )}
                     </SidebarControl>
-                    <div className="space-y-1">
-                      <span
-                        className="block text-[10px] font-medium leading-tight opacity-0"
-                        aria-hidden="true"
-                      >
-                        Reset
-                      </span>
+                    <div className="group relative flex h-7 items-center self-end">
                       <button
                         type="button"
                         onClick={handleResetModelConversation}
                         disabled={chatMessages.length === 0 && !isChatting && !chatStatus}
                         aria-label="Reset model conversation"
-                        title="Reset model conversation"
-                        className="flex h-7 w-7 items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-describedby="reset-model-conversation-tooltip"
+                        title="Reset conversation"
+                        className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                         style={{
                           backgroundColor: 'var(--color-background-primary)',
                           color: 'var(--color-text-primary)',
                         }}
                       >
                         <svg
-                          width="14"
-                          height="14"
+                          width="18"
+                          height="18"
                           viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
+                          fill="currentColor"
                           aria-hidden="true"
                         >
-                          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-                          <path d="M21 3v7h-7" />
+                          <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-8 3.58-8 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h8V3z" />
                         </svg>
                       </button>
+                      <span
+                        id="reset-model-conversation-tooltip"
+                        role="tooltip"
+                        className="pointer-events-none absolute right-0 top-full z-[1000] mt-1 hidden whitespace-nowrap rounded px-2 py-1 text-[11px] font-normal leading-tight group-focus-within:block group-hover:block"
+                        style={{
+                          backgroundColor: 'var(--color-text-primary)',
+                          color: 'var(--color-background-primary)',
+                        }}
+                      >
+                        Reset conversation
+                      </span>
                     </div>
                   </div>
                   {usesApiKeyUi && (
