@@ -138,11 +138,14 @@ describe('useInspectorState', () => {
           theme: 'light',
           locale: 'ja-JP',
           activeHost: 'claude',
+          containerHeight: 480,
+          containerWidth: 720,
           containerMaxHeight: 600,
           containerMaxWidth: 800,
           screenWidth: 'tablet',
           sidebarWidth: 340,
           rightSidebarWidth: 420,
+          timeZone: 'Asia/Tokyo',
         })
       );
 
@@ -151,11 +154,14 @@ describe('useInspectorState', () => {
       expect(result.current.theme).toBe('light');
       expect(result.current.locale).toBe('ja-JP');
       expect(result.current.activeHost).toBe('claude');
+      expect(result.current.containerHeight).toBe(480);
+      expect(result.current.containerWidth).toBe(720);
       expect(result.current.containerMaxHeight).toBe(600);
       expect(result.current.containerMaxWidth).toBe(800);
       expect(result.current.screenWidth).toBe('tablet');
       expect(result.current.sidebarWidth).toBe(340);
       expect(result.current.rightSidebarWidth).toBe(420);
+      expect(result.current.timeZone).toBe('Asia/Tokyo');
     });
 
     it('ignores invalid values in stored preferences', () => {
@@ -168,9 +174,14 @@ describe('useInspectorState', () => {
           screenWidth: 'enormous',
           sidebarWidth: 'wide',
           rightSidebarWidth: 120,
+          containerHeight: 'huge',
+          containerWidth: 'wide',
           containerMaxHeight: 'tall',
           hover: 'yes',
           safeAreaInsets: { top: 10 },
+          timeZone: 42,
+          modelProvider: 'openai\nforged',
+          modelId: 'gpt-test\u0000forged',
         })
       );
 
@@ -183,9 +194,19 @@ describe('useInspectorState', () => {
       expect(result.current.screenWidth).toBe('full');
       expect(result.current.sidebarWidth).toBe(260);
       expect(result.current.rightSidebarWidth).toBe(260);
+      expect(result.current.containerHeight).toBeUndefined();
+      expect(result.current.containerWidth).toBeUndefined();
       expect(result.current.containerMaxHeight).toBeUndefined();
       expect(result.current.hover).toBe(true);
       expect(result.current.safeAreaInsets).toEqual({ top: 0, bottom: 0, left: 0, right: 0 });
+
+      act(() => {
+        result.current.setLocale('en-GB');
+      });
+
+      const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
+      expect(prefs.modelProvider).toBeUndefined();
+      expect(prefs.modelId).toBeUndefined();
     });
 
     it('falls back to defaults when stored JSON is corrupt', () => {
@@ -234,6 +255,28 @@ describe('useInspectorState', () => {
       const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
       expect(prefs.sidebarWidth).toBe(360);
       expect(prefs.rightSidebarWidth).toBe(390);
+    });
+
+    it('persists the rest of the configured host-context values without dropping inspector prefs', () => {
+      localStorage.setItem(
+        PREFS_KEY,
+        JSON.stringify({ modelProvider: 'openai', modelId: 'gpt-test', prodResources: true })
+      );
+      const { result } = renderHook(() => useInspectorState({ simulations }));
+
+      act(() => {
+        result.current.setContainerHeight(512);
+        result.current.setContainerWidth(768);
+        result.current.setTimeZone('Europe/London');
+      });
+
+      const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
+      expect(prefs.containerHeight).toBe(512);
+      expect(prefs.containerWidth).toBe(768);
+      expect(prefs.timeZone).toBe('Europe/London');
+      expect(prefs.modelProvider).toBe('openai');
+      expect(prefs.modelId).toBe('gpt-test');
+      expect(prefs.prodResources).toBe(true);
     });
   });
 });

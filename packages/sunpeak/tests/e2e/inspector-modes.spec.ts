@@ -415,7 +415,7 @@ for (const host of hosts) {
 
       expect(requestBody).toMatchObject({
         provider: 'openai',
-        modelId: 'gpt-4o',
+        modelId: 'gpt-5.5',
         messages: [{ role: 'user', content: prompt }],
       });
 
@@ -729,7 +729,7 @@ test.describe('Model Chat API Keys', () => {
     await expect(page.locator('input[name="userInput"]').last()).toBeDisabled();
     await expect(page.locator('input[name="userInput"]').last()).toHaveAttribute(
       'placeholder',
-      'Add an API key to chat with gpt-4o'
+      'Add an API key to chat with gpt-5.5'
     );
 
     expect(keyRequests).toEqual([

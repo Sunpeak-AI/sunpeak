@@ -282,10 +282,12 @@ function parseUrlParams(): {
 
 const PREFS_KEY = 'sunpeak-inspector-prefs';
 
-interface StoredPrefs {
+export interface StoredPrefs {
   theme?: McpUiTheme;
   locale?: string;
   displayMode?: McpUiDisplayMode;
+  containerHeight?: number;
+  containerWidth?: number;
   containerMaxHeight?: number;
   containerMaxWidth?: number;
   safeAreaInsets?: { top: number; bottom: number; left: number; right: number };
@@ -296,6 +298,10 @@ interface StoredPrefs {
   screenWidth?: ScreenWidth;
   sidebarWidth?: number;
   rightSidebarWidth?: number;
+  timeZone?: string;
+  prodResources?: boolean;
+  modelProvider?: string;
+  modelId?: string;
 }
 
 const VALID_THEMES: ReadonlySet<McpUiTheme> = new Set(['light', 'dark']);
@@ -307,6 +313,10 @@ const VALID_SCREEN_WIDTHS: ReadonlySet<ScreenWidth> = new Set([
   'tablet',
   'full',
 ]);
+
+function isSafeStoredString(value: unknown): value is string {
+  return typeof value === 'string' && value.length <= 200 && !/[\u0000-\u001f\u007f]/.test(value);
+}
 
 // Validate the parsed JSON one field at a time so a corrupt or stale entry
 // (older sunpeak version, manual edit) can't seed bad values into state.
@@ -326,6 +336,12 @@ function sanitizeStoredPrefs(raw: unknown): StoredPrefs {
     VALID_DISPLAY_MODES.has(obj.displayMode as McpUiDisplayMode)
   ) {
     prefs.displayMode = obj.displayMode as McpUiDisplayMode;
+  }
+  if (typeof obj.containerHeight === 'number' && Number.isFinite(obj.containerHeight)) {
+    prefs.containerHeight = obj.containerHeight;
+  }
+  if (typeof obj.containerWidth === 'number' && Number.isFinite(obj.containerWidth)) {
+    prefs.containerWidth = obj.containerWidth;
   }
   if (typeof obj.containerMaxHeight === 'number' && Number.isFinite(obj.containerMaxHeight)) {
     prefs.containerMaxHeight = obj.containerMaxHeight;
@@ -369,11 +385,23 @@ function sanitizeStoredPrefs(raw: unknown): StoredPrefs {
   if (typeof obj.rightSidebarWidth === 'number' && Number.isFinite(obj.rightSidebarWidth)) {
     prefs.rightSidebarWidth = Math.max(DEFAULT_SIDEBAR_WIDTH, Math.round(obj.rightSidebarWidth));
   }
+  if (typeof obj.timeZone === 'string') {
+    prefs.timeZone = obj.timeZone;
+  }
+  if (typeof obj.prodResources === 'boolean') {
+    prefs.prodResources = obj.prodResources;
+  }
+  if (isSafeStoredString(obj.modelProvider)) {
+    prefs.modelProvider = obj.modelProvider;
+  }
+  if (isSafeStoredString(obj.modelId)) {
+    prefs.modelId = obj.modelId;
+  }
 
   return prefs;
 }
 
-function readStoredPrefs(): StoredPrefs {
+export function readStoredPrefs(): StoredPrefs {
   if (typeof window === 'undefined') return {};
   try {
     const raw = localStorage.getItem(PREFS_KEY);
@@ -381,6 +409,15 @@ function readStoredPrefs(): StoredPrefs {
     return sanitizeStoredPrefs(JSON.parse(raw));
   } catch {
     return {};
+  }
+}
+
+export function writeStoredPrefs(prefs: StoredPrefs): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+  } catch {
+    // localStorage may be unavailable (private browsing, storage quota) — ignore
   }
 }
 
@@ -497,8 +534,12 @@ export function useInspectorState({
     urlParams.displayMode ?? storedPrefs.displayMode ?? DEFAULT_DISPLAY_MODE
   );
   const [locale, setLocale] = useState(urlParams.locale ?? storedPrefs.locale ?? 'en-US');
-  const [containerHeight, setContainerHeight] = useState<number | undefined>(undefined);
-  const [containerWidth, setContainerWidth] = useState<number | undefined>(undefined);
+  const [containerHeight, setContainerHeight] = useState<number | undefined>(
+    storedPrefs.containerHeight
+  );
+  const [containerWidth, setContainerWidth] = useState<number | undefined>(
+    storedPrefs.containerWidth
+  );
   const [containerMaxHeight, setContainerMaxHeight] = useState<number | undefined>(
     urlParams.containerMaxHeight ?? storedPrefs.containerMaxHeight
   );
@@ -518,7 +559,9 @@ export function useInspectorState({
     urlParams.safeAreaInsets ??
       storedPrefs.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
   );
-  const [timeZone, setTimeZone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const [timeZone, setTimeZone] = useState(
+    () => storedPrefs.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
+  );
 
   // Skip persisting on the first render — only write when the user actually changes something.
   const isFirstRender = useRef(true);
@@ -528,31 +571,32 @@ export function useInspectorState({
       return;
     }
     if (autoRun) return;
-    try {
-      const prefs: StoredPrefs = {
-        theme,
-        locale,
-        displayMode,
-        containerMaxHeight,
-        containerMaxWidth,
-        safeAreaInsets,
-        activeHost,
-        platform,
-        hover,
-        touch,
-        screenWidth,
-        sidebarWidth,
-        rightSidebarWidth,
-      };
-      localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
-    } catch {
-      // localStorage may be unavailable (private browsing, storage quota) — ignore
-    }
+    writeStoredPrefs({
+      ...readStoredPrefs(),
+      theme,
+      locale,
+      displayMode,
+      containerHeight,
+      containerWidth,
+      containerMaxHeight,
+      containerMaxWidth,
+      safeAreaInsets,
+      activeHost,
+      platform,
+      hover,
+      touch,
+      screenWidth,
+      sidebarWidth,
+      rightSidebarWidth,
+      timeZone,
+    });
   }, [
     autoRun,
     theme,
     locale,
     displayMode,
+    containerHeight,
+    containerWidth,
     containerMaxHeight,
     containerMaxWidth,
     safeAreaInsets,
@@ -563,6 +607,7 @@ export function useInspectorState({
     screenWidth,
     sidebarWidth,
     rightSidebarWidth,
+    timeZone,
   ]);
 
   // Content width measured from the conversation component's ResizeObserver.
