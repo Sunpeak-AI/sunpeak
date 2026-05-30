@@ -15,6 +15,7 @@
  */
 import { createContext, useState, useEffect, type ReactNode } from 'react';
 import { App, PostMessageTransport } from '@modelcontextprotocol/ext-apps';
+import { initToolDataStore } from './tool-data-store';
 
 export interface AppProviderProps {
   appInfo: { name: string; version: string };
@@ -89,6 +90,12 @@ async function connectWithRetry(
     try {
       transport = new PostMessageTransport(window.parent, window.parent);
       const newApp = new App(appInfo, capabilities);
+      // Pre-register useToolData's notification handlers BEFORE connect()
+      // runs the ui/initialize handshake. Hosts that fire
+      // `ui/notifications/tool-result` immediately after the initialize
+      // response (ChatGPT on production Safari) would otherwise race the
+      // first React commit and drop the result. See tool-data-store.ts.
+      initToolDataStore(newApp);
       onAppCreated?.(newApp);
       await withTimeout(newApp.connect(transport), CONNECT_TIMEOUT_MS);
       return newApp;
