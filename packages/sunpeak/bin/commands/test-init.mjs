@@ -596,8 +596,10 @@ ${serverBlock}
       {
         compilerOptions: {
           target: 'ES2022',
+          lib: ['ESNext', 'DOM'],
           module: 'ESNext',
           moduleResolution: 'bundler',
+          types: ['node'],
           strict: true,
           esModuleInterop: true,
         },

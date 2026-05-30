@@ -24,6 +24,7 @@ export default defineConfig({
     dts({
       include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+      entryRoot: 'src',
       outDir: 'dist',
       rollupTypes: false,
     }),

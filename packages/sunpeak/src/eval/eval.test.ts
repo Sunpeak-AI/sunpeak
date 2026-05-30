@@ -416,6 +416,37 @@ describe('eval appContext', () => {
       vi.doUnmock('ai');
     }
   });
+
+  it('disables strict OpenAI tool schemas for arbitrary MCP schemas', async () => {
+    const generateText = vi.fn().mockResolvedValue({
+      steps: [],
+      text: '',
+      usage: {},
+      finishReason: 'stop',
+    });
+    vi.doMock('ai', () => ({ generateText }));
+
+    try {
+      const { runSingleEval } = await importRunner();
+      await runSingleEval({
+        prompt: 'Show me albums',
+        model: { provider: 'openai.chat', modelId: 'gpt-5.5' },
+        tools: {},
+        maxSteps: 1,
+        temperature: 0,
+        timeout: 1000,
+        appContext: { content: [] },
+      });
+
+      expect(generateText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerOptions: { openai: { strictJsonSchema: false } },
+        })
+      );
+    } finally {
+      vi.doUnmock('ai');
+    }
+  });
 });
 
 // ── Model Registry ─────────────────────────────────────────────────
@@ -442,7 +473,7 @@ describe('model registry', () => {
       expect(result.message).toContain('@ai-sdk/openai');
     } else {
       expect(result).toHaveProperty('modelId', 'gpt-5.5');
-      expect(result.settings).toMatchObject({ structuredOutputs: false });
+      expect(result).toHaveProperty('provider', 'openai.chat');
     }
   });
 

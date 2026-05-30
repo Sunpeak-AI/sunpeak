@@ -220,12 +220,16 @@ export async function runSingleEval({
 }) {
   const { generateText } = await import('ai');
   const system = formatEvalAppContextForModel(appContext);
+  const providerOptions = model?.provider?.startsWith('openai.')
+    ? { openai: { strictJsonSchema: false } }
+    : undefined;
 
   const result = await generateText({
     model,
     tools,
     prompt,
     ...(system ? { system } : {}),
+    ...(providerOptions ? { providerOptions } : {}),
     maxSteps,
     temperature,
     maxRetries: 0, // We manage runs ourselves; AI SDK retries compound rate limits

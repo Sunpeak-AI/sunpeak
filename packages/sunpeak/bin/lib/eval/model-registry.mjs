@@ -47,12 +47,9 @@ export async function resolveModel(modelId) {
     // @ai-sdk/openai v3 defaults to the Responses API, which requires strict
     // JSON Schema (additionalProperties: false at every level, all properties
     // required) — incompatible with arbitrary MCP server schemas. Use .chat()
-    // (Chat Completions API) when available and disable structured outputs,
-    // because reasoning models also enable strict function schemas by default.
-    const settings = { structuredOutputs: false };
-    return typeof openai.chat === 'function'
-      ? openai.chat(modelId, settings)
-      : openai(modelId, settings);
+    // (Chat Completions API) when available. The eval runner disables strict
+    // JSON Schema through per-call provider options.
+    return typeof openai.chat === 'function' ? openai.chat(modelId) : openai(modelId);
   }
   if (pkg === '@ai-sdk/anthropic') {
     const { anthropic } = provider;
