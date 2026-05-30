@@ -268,7 +268,7 @@ function makeSchemaOptional(shape: Record<string, unknown>): Record<string, unkn
   return optional;
 }
 
-function createAppServer(
+export function createAppServer(
   config: MCPServerConfig,
   simulations: SimulationWithDist[],
   viteMode: boolean
@@ -393,6 +393,16 @@ function createAppServer(
         );
         resourceHandles.set(resourceName, handle);
       }
+
+      // Multiple simulations can share a UI tool (e.g. show-albums + show-albums-empty
+      // exercise different fixture states). The MCP SDK rejects duplicate tool
+      // registrations, so register each tool name once — later sims still share
+      // the same resource (deduped above) and the inspector renders their
+      // fixture data from the simulation JSON, not from the registered handler.
+      if (registeredToolNames.has(tool.name as string)) {
+        continue;
+      }
+      registeredToolNames.add(tool.name as string);
 
       // Register the tool using ext-apps helper (normalizes ui/resourceUri metadata).
       // Capture the returned RegisteredTool handle for metadata updates on rebuild.
@@ -555,10 +565,10 @@ function createAppServer(
     }
   }
 
-  const uiToolCount = simulations.filter((s) => s.resource).length;
-  const plainToolCount = simulations.length - uiToolCount;
+  const uiToolCount = toolHandles.length;
+  const plainToolCount = registeredToolNames.size - uiToolCount;
   console.log(
-    `[MCP] Registered ${simulations.length} tool(s) (${uiToolCount} UI, ${plainToolCount} plain), ${registeredUriSet.size} resource(s)`
+    `[MCP] Registered ${registeredToolNames.size} tool(s) (${uiToolCount} UI, ${plainToolCount} plain), ${registeredUriSet.size} resource(s)`
   );
 
   return { server: mcpServer, resourceHandles, toolHandles };
