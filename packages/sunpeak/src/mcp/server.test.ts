@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import path from 'node:path';
 import fs from 'node:fs';
+import { createAppServer } from './server.js';
+import type { SimulationWithDist } from './types.js';
 
 describe('MCP Server Module', () => {
   it('validates that readToolHtml would need an existing file', () => {
@@ -85,5 +87,40 @@ describe('Dev overlay format contract', () => {
     expect('0.3ms').toMatch(/^\d+(\.\d)?ms$/);
     expect('143ms').toMatch(/^\d+(\.\d)?ms$/);
     expect('12.5ms').toMatch(/^\d+(\.\d)?ms$/);
+  });
+});
+
+describe('createAppServer', () => {
+  function makeUiSim(name: string, toolResult: unknown): SimulationWithDist {
+    return {
+      name,
+      distPath: '/tmp/sunpeak-test-not-read-at-registration.html',
+      tool: { name: 'show-albums', inputSchema: { type: 'object' } },
+      resource: {
+        name: 'albums',
+        uri: 'ui://albums',
+        mimeType: 'text/html',
+      },
+      toolResult: toolResult as SimulationWithDist['toolResult'],
+    };
+  }
+
+  it('registers a UI tool once even when multiple simulations target it', () => {
+    const simulations: SimulationWithDist[] = [
+      makeUiSim('show-albums', { structuredContent: { albums: ['a'] } }),
+      makeUiSim('show-albums-empty', { structuredContent: { albums: [] } }),
+      makeUiSim('show-albums-error', {
+        isError: true,
+        content: [{ type: 'text', text: 'boom' }],
+      }),
+    ];
+
+    // Before the dedup fix this threw because the MCP SDK rejects duplicate
+    // tool registrations.
+    const result = createAppServer({ simulations }, simulations, false);
+
+    expect(result.toolHandles).toHaveLength(1);
+    expect(result.toolHandles[0].resourceName).toBe('albums');
+    expect(result.resourceHandles.has('albums')).toBe(true);
   });
 });

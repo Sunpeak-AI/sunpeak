@@ -1034,6 +1034,11 @@ describe('inspect CLI', () => {
   describe('mergeSimulationFixtures', () => {
     const tmpDir = path.join(process.cwd(), '.test-simulations-' + Date.now());
 
+    const loadMerge = async () => {
+      const mod = await import('../../bin/commands/inspect.mjs');
+      return mod.mergeSimulationFixtures;
+    };
+
     beforeEach(() => {
       fs.mkdirSync(tmpDir, { recursive: true });
     });
@@ -1042,8 +1047,7 @@ describe('inspect CLI', () => {
       fs.rmSync(tmpDir, { recursive: true, force: true });
     });
 
-    it('should merge fixture toolInput into existing simulation', () => {
-      // Write a fixture
+    it('merges fixture toolInput into the discovered simulation', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'search.json'),
         JSON.stringify({
@@ -1053,7 +1057,6 @@ describe('inspect CLI', () => {
         })
       );
 
-      // Simulate discovered simulations
       const simulations = {
         search: {
           name: 'search',
@@ -1061,23 +1064,14 @@ describe('inspect CLI', () => {
         },
       };
 
-      // Manually run merge logic (same as inspect.mjs mergeSimulationFixtures)
-      const files = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'));
-      for (const file of files) {
-        const fixture = JSON.parse(fs.readFileSync(path.join(tmpDir, file), 'utf-8'));
-        const sim = simulations[fixture.tool];
-        if (sim) {
-          if (fixture.toolInput !== undefined) sim.toolInput = fixture.toolInput;
-          if (fixture.toolResult !== undefined) sim.toolResult = fixture.toolResult;
-          if (fixture.userMessage !== undefined) sim.userMessage = fixture.userMessage;
-        }
-      }
+      const mergeSimulationFixtures = await loadMerge();
+      mergeSimulationFixtures(tmpDir, simulations);
 
       expect(simulations.search.toolInput).toEqual({ query: 'headphones' });
       expect(simulations.search.userMessage).toBe('Find headphones');
     });
 
-    it('should create new simulation from fixture when tool not on server', () => {
+    it('creates a simulation from a fixture when the tool is not on the server', async () => {
       fs.writeFileSync(
         path.join(tmpDir, 'mock-tool.json'),
         JSON.stringify({
@@ -1088,22 +1082,8 @@ describe('inspect CLI', () => {
       );
 
       const simulations = {};
-
-      const files = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'));
-      for (const file of files) {
-        const fixture = JSON.parse(fs.readFileSync(path.join(tmpDir, file), 'utf-8'));
-        const toolName = fixture.tool;
-        const sim = simulations[toolName];
-        if (!sim) {
-          const simName = file.replace(/\.json$/, '');
-          simulations[simName] = {
-            name: simName,
-            tool: { name: toolName, inputSchema: { type: 'object' } },
-            toolInput: fixture.toolInput,
-            toolResult: fixture.toolResult,
-          };
-        }
-      }
+      const mergeSimulationFixtures = await loadMerge();
+      mergeSimulationFixtures(tmpDir, simulations);
 
       expect(simulations['mock-tool']).toBeDefined();
       expect(simulations['mock-tool'].tool.name).toBe('mock-tool');
@@ -1113,32 +1093,91 @@ describe('inspect CLI', () => {
       });
     });
 
-    it('should skip non-JSON files', () => {
-      fs.writeFileSync(path.join(tmpDir, 'readme.md'), '# Test');
-      fs.writeFileSync(
-        path.join(tmpDir, 'valid.json'),
-        JSON.stringify({ tool: 'valid', toolInput: { x: 1 } })
-      );
-
-      const files = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'));
-      expect(files).toHaveLength(1);
-      expect(files[0]).toBe('valid.json');
-    });
-
-    it('should skip fixtures without tool field', () => {
+    it('skips fixtures without a tool field', async () => {
       fs.writeFileSync(path.join(tmpDir, 'no-tool.json'), JSON.stringify({ toolInput: { x: 1 } }));
 
       const simulations = {};
-
-      const files = fs.readdirSync(tmpDir).filter((f) => f.endsWith('.json'));
-      for (const file of files) {
-        const fixture = JSON.parse(fs.readFileSync(path.join(tmpDir, file), 'utf-8'));
-        const toolName = fixture.tool;
-        if (!toolName) continue;
-        simulations[toolName] = { name: toolName };
-      }
+      const mergeSimulationFixtures = await loadMerge();
+      mergeSimulationFixtures(tmpDir, simulations);
 
       expect(Object.keys(simulations)).toHaveLength(0);
+    });
+
+    it('keeps every fixture when multiple files target the same tool', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'show-albums.json'),
+        JSON.stringify({
+          tool: 'show-albums',
+          toolResult: { structuredContent: { albums: ['a', 'b'] } },
+        })
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, 'show-albums-empty.json'),
+        JSON.stringify({
+          tool: 'show-albums',
+          toolResult: { structuredContent: { albums: [] } },
+        })
+      );
+      fs.writeFileSync(
+        path.join(tmpDir, 'show-albums-error.json'),
+        JSON.stringify({
+          tool: 'show-albums',
+          toolResult: { isError: true, content: [{ type: 'text', text: 'boom' }] },
+        })
+      );
+
+      const simulations = {
+        'show-albums': {
+          name: 'show-albums',
+          tool: { name: 'show-albums', inputSchema: { type: 'object' } },
+          resource: { uri: 'ui://albums', name: 'albums' },
+        },
+      };
+
+      const mergeSimulationFixtures = await loadMerge();
+      mergeSimulationFixtures(tmpDir, simulations);
+
+      expect(Object.keys(simulations).sort()).toEqual([
+        'show-albums',
+        'show-albums-empty',
+        'show-albums-error',
+      ]);
+      expect(simulations['show-albums'].toolResult).toEqual({
+        structuredContent: { albums: ['a', 'b'] },
+      });
+      expect(simulations['show-albums-empty'].toolResult).toEqual({
+        structuredContent: { albums: [] },
+      });
+      expect(simulations['show-albums-error'].toolResult.isError).toBe(true);
+      // Each derived sim inherits the discovered tool + resource metadata.
+      for (const name of ['show-albums', 'show-albums-empty', 'show-albums-error']) {
+        expect(simulations[name].tool.name).toBe('show-albums');
+        expect(simulations[name].resource).toEqual({ uri: 'ui://albums', name: 'albums' });
+      }
+    });
+
+    it('drops the auto-discovered slot when no fixture file reuses its name', async () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'show-albums-empty.json'),
+        JSON.stringify({
+          tool: 'show-albums',
+          toolResult: { structuredContent: { albums: [] } },
+        })
+      );
+
+      const simulations = {
+        'show-albums': {
+          name: 'show-albums',
+          tool: { name: 'show-albums', inputSchema: { type: 'object' } },
+        },
+      };
+
+      const mergeSimulationFixtures = await loadMerge();
+      mergeSimulationFixtures(tmpDir, simulations);
+
+      // The lone fixture takes over; no empty `show-albums` slot is left behind.
+      expect(Object.keys(simulations)).toEqual(['show-albums-empty']);
+      expect(simulations['show-albums-empty'].tool.name).toBe('show-albums');
     });
   });
 });

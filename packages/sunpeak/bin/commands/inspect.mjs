@@ -918,43 +918,66 @@ async function discoverSimulations(client) {
 
 /**
  * Load simulation JSON fixtures from a directory and merge into discovered simulations.
+ *
+ * Each fixture becomes a simulation keyed by its filename, so a tool can have
+ * multiple fixtures (e.g. `show-albums.json` and `show-albums-empty.json`
+ * both targeting tool `show-albums`). Auto-discovered slots are kept only for
+ * tools that have no fixture file.
+ *
  * @param {string} dir - Simulation directory path
  * @param {Record<string, object>} simulations - Discovered simulations to merge into
  */
-function mergeSimulationFixtures(dir, simulations) {
+export function mergeSimulationFixtures(dir, simulations) {
   if (!existsSync(dir)) return;
 
   const files = readdirSync(dir).filter((f) => f.endsWith('.json'));
+
+  // Load every fixture first so we can group by tool name. We need the grouping
+  // to decide whether to keep the auto-discovered slot (no fixtures) or replace
+  // it with one entry per fixture file (one or more fixtures).
+  const fixtures = [];
   for (const file of files) {
     try {
       const fixture = JSON.parse(readFileSync(join(dir, file), 'utf-8'));
-      const toolName = fixture.tool;
-      if (!toolName) continue;
-
-      // Find matching simulation by tool name
-      const sim = simulations[toolName];
-      if (sim) {
-        // Merge fixture data into discovered simulation
-        if (fixture.toolInput !== undefined) sim.toolInput = fixture.toolInput;
-        if (fixture.toolResult !== undefined) sim.toolResult = fixture.toolResult;
-        if (fixture.serverTools !== undefined) sim.serverTools = fixture.serverTools;
-        if (fixture.userMessage !== undefined) sim.userMessage = fixture.userMessage;
-        if (fixture.hostContext !== undefined) sim.hostContext = fixture.hostContext;
-      } else {
-        // Create a new simulation from the fixture (tool not on server, but user wants to mock it)
-        const simName = file.replace(/\.json$/, '');
-        simulations[simName] = {
-          name: simName,
-          tool: { name: toolName, inputSchema: { type: 'object' } },
-          toolInput: fixture.toolInput,
-          toolResult: fixture.toolResult,
-          serverTools: fixture.serverTools,
-          userMessage: fixture.userMessage,
-          hostContext: fixture.hostContext,
-        };
-      }
+      if (!fixture.tool) continue;
+      fixtures.push({ file, fixture });
     } catch (err) {
       console.warn(`Warning: Failed to parse simulation fixture ${file}:`, err.message);
+    }
+  }
+
+  const byTool = new Map();
+  for (const item of fixtures) {
+    const tool = item.fixture.tool;
+    if (!byTool.has(tool)) byTool.set(tool, []);
+    byTool.get(tool).push(item);
+  }
+
+  for (const [toolName, items] of byTool) {
+    const discovered = simulations[toolName];
+
+    // Drop the auto-discovered slot if none of the fixtures will reuse its
+    // key (filename === tool name). Otherwise the named fixture overwrites
+    // it in place below.
+    const reusesSlot = items.some(({ file }) => file.replace(/\.json$/, '') === toolName);
+    if (discovered && !reusesSlot) {
+      delete simulations[toolName];
+    }
+
+    for (const { file, fixture } of items) {
+      const simName = file.replace(/\.json$/, '');
+      const sim = discovered
+        ? { ...discovered, name: simName }
+        : {
+            name: simName,
+            tool: { name: toolName, inputSchema: { type: 'object' } },
+          };
+      if (fixture.toolInput !== undefined) sim.toolInput = fixture.toolInput;
+      if (fixture.toolResult !== undefined) sim.toolResult = fixture.toolResult;
+      if (fixture.serverTools !== undefined) sim.serverTools = fixture.serverTools;
+      if (fixture.userMessage !== undefined) sim.userMessage = fixture.userMessage;
+      if (fixture.hostContext !== undefined) sim.hostContext = fixture.hostContext;
+      simulations[simName] = sim;
     }
   }
 }
