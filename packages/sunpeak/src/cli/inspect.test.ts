@@ -439,6 +439,63 @@ describe('inspect endpoint security helpers', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
+  it('accepts anonymous OAuth redirects only when state matches', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const fetchFn = vi.fn(async () => {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'http://localhost:24681/oauth/callback?code=ok&state=state-123' },
+      });
+    });
+
+    await expect(
+      _securityTestExports.tryAnonymousOAuth(
+        'https://auth.example.com/authorize',
+        'http://localhost:24681/oauth/callback',
+        'state-123',
+        fetchFn
+      )
+    ).resolves.toBe('ok');
+  });
+
+  it('rejects anonymous OAuth redirects with mismatched state', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const fetchFn = vi.fn(async () => {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'http://localhost:24681/oauth/callback?code=ok&state=wrong' },
+      });
+    });
+
+    await expect(
+      _securityTestExports.tryAnonymousOAuth(
+        'https://auth.example.com/authorize',
+        'http://localhost:24681/oauth/callback',
+        'state-123',
+        fetchFn
+      )
+    ).rejects.toThrow('OAuth state mismatch');
+  });
+
+  it('rejects anonymous OAuth redirects to non-http schemes', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const fetchFn = vi.fn(async () => {
+      return new Response(null, {
+        status: 302,
+        headers: { Location: 'javascript:alert(1)' },
+      });
+    });
+
+    await expect(
+      _securityTestExports.tryAnonymousOAuth(
+        'https://auth.example.com/authorize',
+        'http://localhost:24681/oauth/callback',
+        'state-123',
+        fetchFn
+      )
+    ).rejects.toThrow('unsupported scheme');
+  });
+
   it('quotes macOS Keychain interactive arguments without allowing command injection', async () => {
     const { _securityTestExports } = await importInspectCommand();
 

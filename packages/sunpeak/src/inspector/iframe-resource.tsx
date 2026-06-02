@@ -9,16 +9,12 @@ import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 
 /**
  * Allowed origins for cross-origin script loading.
- * - Local development: localhost, 127.0.0.1, file://
  * - Production: sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com (serves user scripts)
+ *
+ * Loopback script URLs are handled separately in isAllowedUrl() so hosted
+ * inspectors cannot be tricked into loading scripts from a visitor's machine.
  */
-const ALLOWED_SCRIPT_ORIGINS = [
-  'https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com',
-  'http://localhost',
-  'https://localhost',
-  'http://127.0.0.1',
-  'https://127.0.0.1',
-];
+const ALLOWED_SCRIPT_ORIGINS = ['https://sunpeak-prod-app-storage.s3.us-east-2.amazonaws.com'];
 
 /**
  * Escapes HTML special characters to prevent XSS via attribute injection.

@@ -190,6 +190,22 @@ describe('IframeResource Security', () => {
   });
 
   describe('Script Origin Validation - isAllowedUrl', () => {
+    function withWindowLocation(url: string, callback: () => void) {
+      const originalLocation = window.location;
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: new URL(url),
+      });
+      try {
+        callback();
+      } finally {
+        Object.defineProperty(window, 'location', {
+          configurable: true,
+          value: originalLocation,
+        });
+      }
+    }
+
     it('allows relative paths starting with /', () => {
       expect(isAllowedUrl('/dist/carousel/carousel.js')).toBe(true);
       expect(isAllowedUrl('/scripts/widget.js')).toBe(true);
@@ -212,6 +228,21 @@ describe('IframeResource Security', () => {
     it('allows 127.0.0.1 with any port', () => {
       expect(isAllowedUrl('http://127.0.0.1:8080/script.js')).toBe(true);
       expect(isAllowedUrl('http://127.0.0.1:5173/script.js')).toBe(true);
+    });
+
+    it('rejects loopback scripts when the inspector is hosted remotely', () => {
+      withWindowLocation('https://inspector.example.com/', () => {
+        expect(isAllowedUrl('http://localhost/script.js')).toBe(false);
+        expect(isAllowedUrl('https://localhost/script.js')).toBe(false);
+        expect(isAllowedUrl('http://127.0.0.1/script.js')).toBe(false);
+        expect(isAllowedUrl('http://localhost:5173/script.js')).toBe(false);
+      });
+    });
+
+    it('allows same-origin absolute URLs when the inspector is hosted remotely', () => {
+      withWindowLocation('https://inspector.example.com/', () => {
+        expect(isAllowedUrl('https://inspector.example.com/dist/widget.js')).toBe(true);
+      });
     });
 
     it('allows sunpeak-prod-app-storage S3 bucket', () => {
@@ -328,9 +359,11 @@ describe('IframeResource Security', () => {
       );
     });
 
-    it('ALLOWED_SCRIPT_ORIGINS contains localhost for development', () => {
-      expect(ALLOWED_SCRIPT_ORIGINS).toContain('http://localhost');
-      expect(ALLOWED_SCRIPT_ORIGINS).toContain('https://localhost');
+    it('ALLOWED_SCRIPT_ORIGINS does not contain loopback origins', () => {
+      expect(ALLOWED_SCRIPT_ORIGINS).not.toContain('http://localhost');
+      expect(ALLOWED_SCRIPT_ORIGINS).not.toContain('https://localhost');
+      expect(ALLOWED_SCRIPT_ORIGINS).not.toContain('http://127.0.0.1');
+      expect(ALLOWED_SCRIPT_ORIGINS).not.toContain('https://127.0.0.1');
     });
   });
 

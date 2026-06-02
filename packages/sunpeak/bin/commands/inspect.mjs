@@ -308,7 +308,7 @@ async function negotiateOAuth(serverUrl) {
 
   // Try the anonymous/auto-approved path first: follow the authorization URL
   // without a browser and see if it immediately redirects with a code.
-  const code = await tryAnonymousOAuth(authUrl.toString(), callbackUrl);
+  const code = await tryAnonymousOAuth(authUrl.toString(), callbackUrl, oauthState.stateParam);
   if (code) {
     // Complete the flow with the authorization code.
     const tokenResult = await auth(provider, {
@@ -347,15 +347,17 @@ async function negotiateOAuth(serverUrl) {
  *
  * @param {string} authUrl - The authorization URL
  * @param {string} callbackUrl - The expected callback URL prefix
+ * @param {string} [expectedState] - OAuth state value that must be echoed by the callback
+ * @param {typeof fetch} [fetchFn]
  * @returns {Promise<string | null>}
  */
-async function tryAnonymousOAuth(authUrl, callbackUrl) {
+async function tryAnonymousOAuth(authUrl, callbackUrl, expectedState, fetchFn = fetch) {
   // Follow redirects manually to detect when the server redirects back
   // to our callback URL with a code parameter.
   let url = authUrl;
   const maxRedirects = 10;
   for (let i = 0; i < maxRedirects; i++) {
-    const response = await fetch(url, { redirect: 'manual' });
+    const response = await fetchFn(url, { redirect: 'manual' });
     const location = response.headers.get('location');
 
     if (!location) {
@@ -366,11 +368,21 @@ async function tryAnonymousOAuth(authUrl, callbackUrl) {
     }
 
     // Resolve relative redirects.
-    const resolved = new URL(location, url).toString();
+    const resolvedUrl = new URL(location, url);
+    if (resolvedUrl.protocol !== 'http:' && resolvedUrl.protocol !== 'https:') {
+      throw new Error(
+        `OAuth authorization redirect has unsupported scheme: ${resolvedUrl.protocol}`
+      );
+    }
+    const resolved = resolvedUrl.toString();
 
     // Check if the redirect goes to our callback URL.
     if (resolved.startsWith(callbackUrl)) {
       const params = new URL(resolved).searchParams;
+      const state = params.get('state');
+      if (expectedState && state !== expectedState) {
+        throw new Error('OAuth state mismatch — callback rejected');
+      }
       const code = params.get('code');
       if (code) return code;
       const error = params.get('error');
@@ -2875,6 +2887,7 @@ export const _securityTestExports = {
   readRequestBody,
   resolveHttpRedirectsForMcp,
   shouldAllowPrivateServerUrls,
+  tryAnonymousOAuth,
 };
 
 /**
