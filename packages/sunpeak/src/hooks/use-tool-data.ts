@@ -50,24 +50,24 @@ function getStore<TInput, TOutput>(
       for (const fn of lazy.listeners) fn();
     };
 
-    app.ontoolinput = (_params) => {
+    app.addEventListener('toolinput', (_params) => {
       lazy.data = {
         ...lazy.data,
         input: _params.arguments as TInput,
         inputPartial: null,
       };
       notify();
-    };
+    });
 
-    app.ontoolinputpartial = (_params) => {
+    app.addEventListener('toolinputpartial', (_params) => {
       lazy.data = {
         ...lazy.data,
         inputPartial: _params.arguments as TInput,
       };
       notify();
-    };
+    });
 
-    app.ontoolresult = (_params) => {
+    app.addEventListener('toolresult', (_params) => {
       lazy.data = {
         ...lazy.data,
         output: (_params.structuredContent ?? _params.content) as TOutput,
@@ -75,9 +75,9 @@ function getStore<TInput, TOutput>(
         isLoading: false,
       };
       notify();
-    };
+    });
 
-    app.ontoolcancelled = (_params) => {
+    app.addEventListener('toolcancelled', (_params) => {
       lazy.data = {
         ...lazy.data,
         isCancelled: true,
@@ -85,7 +85,7 @@ function getStore<TInput, TOutput>(
         isLoading: false,
       };
       notify();
-    };
+    });
   }
   return store;
 }

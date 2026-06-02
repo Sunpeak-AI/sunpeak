@@ -6,8 +6,29 @@ import { useToolData } from './use-tool-data';
 import { initToolDataStore } from './tool-data-store';
 import type { ReactNode } from 'react';
 
-function fakeApp(): App {
-  return {} as unknown as App;
+type ToolEvent = 'toolinput' | 'toolinputpartial' | 'toolresult' | 'toolcancelled';
+type FakeApp = App & {
+  emit: (type: ToolEvent, params: Record<string, unknown>) => void;
+};
+
+function fakeApp(): FakeApp {
+  const listeners = new Map<ToolEvent, Set<(params: Record<string, unknown>) => void>>();
+  const obj: Record<string, unknown> = {
+    addEventListener(type: ToolEvent, fn: (params: Record<string, unknown>) => void) {
+      const set = listeners.get(type) ?? new Set();
+      set.add(fn);
+      listeners.set(type, set);
+    },
+    removeEventListener(type: ToolEvent, fn: (params: Record<string, unknown>) => void) {
+      listeners.get(type)?.delete(fn);
+    },
+    emit(type: ToolEvent, params: Record<string, unknown>) {
+      for (const fn of listeners.get(type) ?? []) fn(params);
+      const handler = obj[`on${type}`];
+      if (typeof handler === 'function') handler(params);
+    },
+  };
+  return obj as unknown as FakeApp;
 }
 
 function wrapper(app: App | null) {
@@ -25,7 +46,7 @@ describe('useToolData eager-store integration', () => {
     const app = fakeApp();
     initToolDataStore(app);
     // Host fires the result before any React commit — the bug this PR fixes.
-    app.ontoolresult!({
+    app.emit('toolresult', {
       structuredContent: { greeting: 'hello' },
       content: [],
       isError: false,
@@ -51,7 +72,7 @@ describe('useToolData eager-store integration', () => {
     expect(result.current.isLoading).toBe(true);
 
     act(() => {
-      app.ontoolresult!({
+      app.emit('toolresult', {
         structuredContent: { greeting: 'late' },
         content: [],
         isError: false,
@@ -75,7 +96,7 @@ describe('useToolData eager-store integration', () => {
     expect(result.current.isLoading).toBe(true);
 
     act(() => {
-      app.ontoolresult!({
+      app.emit('toolresult', {
         structuredContent: { lazy: true },
         content: [],
         isError: false,
@@ -96,6 +117,32 @@ describe('useToolData eager-store integration', () => {
 
     expect(result.current.input).toEqual({ q: 'seed' });
     expect(result.current.output).toEqual({ items: ['a'] });
+    expect(result.current.isLoading).toBe(false);
+  });
+
+  it('keeps useToolData subscribed when a user also assigns ontoolresult', () => {
+    const app = fakeApp();
+    initToolDataStore(app);
+    let userResult: Record<string, unknown> | undefined;
+    app.ontoolresult = (params) => {
+      userResult = params as Record<string, unknown>;
+    };
+
+    const { result } = renderHook(() => useToolData(), {
+      wrapper: wrapper(app),
+    });
+
+    const payload = {
+      structuredContent: { composed: true },
+      content: [],
+      isError: false,
+    };
+    act(() => {
+      app.emit('toolresult', payload);
+    });
+
+    expect(userResult).toBe(payload);
+    expect(result.current.output).toEqual({ composed: true });
     expect(result.current.isLoading).toBe(false);
   });
 });

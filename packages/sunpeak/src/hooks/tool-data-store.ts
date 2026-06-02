@@ -2,7 +2,7 @@
  * Tool-data store shared between AppProvider and the useToolData hook.
  *
  * AppProvider eagerly creates the store and wires the App's tool-event
- * handlers BEFORE running the ui/initialize handshake. Without that, hosts
+ * listeners BEFORE running the ui/initialize handshake. Without that, hosts
  * that fire `ui/notifications/tool-result` immediately after the initialize
  * response (ChatGPT in production Safari is the known offender) race the
  * React commit that lets <AppProvider> children render and call
@@ -41,9 +41,9 @@ declare module '@modelcontextprotocol/ext-apps' {
 }
 
 /**
- * Initialize the tool-data store on an App instance and wire its
- * `on*` event handlers. Idempotent — returns the existing store if one is
- * already attached.
+ * Initialize the tool-data store on an App instance and wire its event
+ * listeners. Idempotent - returns the existing store if one is already
+ * attached.
  */
 export function initToolDataStore(app: App): ToolDataStore {
   if (app.__toolDataStore) return app.__toolDataStore;
@@ -66,24 +66,24 @@ export function initToolDataStore(app: App): ToolDataStore {
     for (const fn of store.listeners) fn();
   };
 
-  app.ontoolinput = (_params) => {
+  app.addEventListener('toolinput', (_params) => {
     store.data = {
       ...store.data,
       input: _params.arguments,
       inputPartial: null,
     };
     notify();
-  };
+  });
 
-  app.ontoolinputpartial = (_params) => {
+  app.addEventListener('toolinputpartial', (_params) => {
     store.data = {
       ...store.data,
       inputPartial: _params.arguments,
     };
     notify();
-  };
+  });
 
-  app.ontoolresult = (_params) => {
+  app.addEventListener('toolresult', (_params) => {
     store.data = {
       ...store.data,
       output: _params.structuredContent ?? _params.content,
@@ -91,9 +91,9 @@ export function initToolDataStore(app: App): ToolDataStore {
       isLoading: false,
     };
     notify();
-  };
+  });
 
-  app.ontoolcancelled = (_params) => {
+  app.addEventListener('toolcancelled', (_params) => {
     store.data = {
       ...store.data,
       isCancelled: true,
@@ -101,7 +101,7 @@ export function initToolDataStore(app: App): ToolDataStore {
       isLoading: false,
     };
     notify();
-  };
+  });
 
   return store;
 }
