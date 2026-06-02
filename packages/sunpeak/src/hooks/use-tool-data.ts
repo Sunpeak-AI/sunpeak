@@ -1,32 +1,37 @@
 import { useCallback, useMemo, useRef, useSyncExternalStore } from 'react';
 import type { App } from '@modelcontextprotocol/ext-apps';
 import { useApp } from './use-app';
+import { initToolDataStore, type ToolData, type ToolDataStore } from './tool-data-store';
 
-export interface ToolData<TInput = unknown, TOutput = unknown> {
-  input: TInput | null;
-  inputPartial: TInput | null;
-  output: TOutput | null;
-  isError: boolean;
-  isLoading: boolean;
-  isCancelled: boolean;
-  cancelReason: string | null;
-}
+export type { ToolData };
 
-interface ToolDataStore<TInput, TOutput> {
-  data: ToolData<TInput, TOutput>;
-  listeners: Set<() => void>;
-}
-
-const stores = new WeakMap<App, ToolDataStore<unknown, unknown>>();
+const stores = new WeakMap<App, ToolDataStore>();
 
 function getStore<TInput, TOutput>(
   app: App,
   defaultInput?: TInput,
   defaultOutput?: TOutput
 ): ToolDataStore<TInput, TOutput> {
+  // Prefer the eager store created by AppProvider before connect(). Doing so
+  // avoids a race where a host fires `ui/notifications/tool-result` between
+  // the initialize response and the first React commit — see the comment in
+  // tool-data-store.ts for the full background.
+  const eager = app.__toolDataStore as ToolDataStore<TInput, TOutput> | undefined;
+  if (eager) {
+    if (defaultInput !== undefined && eager.data.input === null) {
+      eager.data = { ...eager.data, input: defaultInput };
+    }
+    if (defaultOutput !== undefined && eager.data.output === null) {
+      eager.data = { ...eager.data, output: defaultOutput, isLoading: false };
+    }
+    return eager;
+  }
+
+  // Lazy path for App instances created outside <AppProvider> (tests, direct
+  // SDK usage). Same shape as the eager store, just attached via WeakMap.
   let store = stores.get(app) as ToolDataStore<TInput, TOutput> | undefined;
   if (!store) {
-    store = {
+    const lazy: ToolDataStore<TInput, TOutput> = {
       data: {
         input: defaultInput ?? null,
         inputPartial: null,
@@ -38,15 +43,16 @@ function getStore<TInput, TOutput>(
       },
       listeners: new Set(),
     };
-    stores.set(app, store as ToolDataStore<unknown, unknown>);
+    stores.set(app, lazy as ToolDataStore);
+    store = lazy;
 
     const notify = () => {
-      for (const fn of store!.listeners) fn();
+      for (const fn of lazy.listeners) fn();
     };
 
     app.ontoolinput = (_params) => {
-      store!.data = {
-        ...store!.data,
+      lazy.data = {
+        ...lazy.data,
         input: _params.arguments as TInput,
         inputPartial: null,
       };
@@ -54,16 +60,16 @@ function getStore<TInput, TOutput>(
     };
 
     app.ontoolinputpartial = (_params) => {
-      store!.data = {
-        ...store!.data,
+      lazy.data = {
+        ...lazy.data,
         inputPartial: _params.arguments as TInput,
       };
       notify();
     };
 
     app.ontoolresult = (_params) => {
-      store!.data = {
-        ...store!.data,
+      lazy.data = {
+        ...lazy.data,
         output: (_params.structuredContent ?? _params.content) as TOutput,
         isError: _params.isError ?? false,
         isLoading: false,
@@ -72,8 +78,8 @@ function getStore<TInput, TOutput>(
     };
 
     app.ontoolcancelled = (_params) => {
-      store!.data = {
-        ...store!.data,
+      lazy.data = {
+        ...lazy.data,
         isCancelled: true,
         cancelReason: _params.reason ?? null,
         isLoading: false,
@@ -83,6 +89,10 @@ function getStore<TInput, TOutput>(
   }
   return store;
 }
+
+// Re-export the eager initializer so callers (AppProvider) and tests can
+// pre-register handlers on an App before connect().
+export { initToolDataStore };
 
 /**
  * Reactive access to tool input and output data from the MCP Apps host.
