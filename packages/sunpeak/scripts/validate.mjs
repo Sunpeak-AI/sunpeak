@@ -842,6 +842,7 @@ async function testExample(resource, index) {
   const hmrPort = await getPort(24679 + index * 2);
   const sandboxPort = await getPort(24680 + index * 2);
   const env = {
+    CI: '1',
     SUNPEAK_TEST_PORT: String(testPort),
     SUNPEAK_MCP_PORT: String(mcpPort),
     SUNPEAK_HMR_PORT: String(hmrPort),
