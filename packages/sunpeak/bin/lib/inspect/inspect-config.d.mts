@@ -15,6 +15,14 @@ export interface InspectConfigOptions {
   use?: Record<string, unknown>;
   /** Visual regression testing configuration */
   visual?: VisualConfig;
+  /** HTTP headers for HTTP MCP server requests */
+  headers?: Record<string, string>;
+  /** Server startup timeout in ms */
+  timeout?: number;
+  /** Environment variables for stdio servers */
+  env?: Record<string, string>;
+  /** Working directory for stdio servers */
+  cwd?: string;
 }
 
 /**

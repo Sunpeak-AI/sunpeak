@@ -22,12 +22,16 @@ sunpeak inspect --server <url-or-command>
 | `--name <string>` | | App name displayed in inspector chrome |
 | `--env <KEY=VALUE>` | | Environment variable for stdio servers (repeatable) |
 | `--cwd <path>` | | Working directory for stdio servers |
+| `--header <Name: value>` | `-H` | HTTP header for HTTP MCP servers (repeatable) |
 
 ## Examples
 
 ```bash
 # Connect to an HTTP MCP server
 sunpeak inspect --server http://localhost:8000/mcp
+
+# Pass an Authorization header to an HTTP MCP server
+sunpeak inspect --server http://localhost:8000/mcp -H "Authorization: Bearer $TOKEN"
 
 # Connect to a stdio MCP server
 sunpeak inspect --server "python my_server.py"
@@ -51,6 +55,16 @@ sunpeak inspect --server http://localhost:8000/mcp --simulations tests/simulatio
 
 - **HTTP/SSE**: URLs starting with `http://` or `https://` connect via Streamable HTTP transport
 - **Stdio**: Any other string is parsed as a shell command and connects via stdio transport (e.g., `"python my_server.py"`, `"node server.js"`)
+
+## Authentication
+
+sunpeak auto-negotiates MCP OAuth when the server returns 401 Unauthorized and publishes standard MCP OAuth metadata. If you already have a token, pass it as an HTTP header:
+
+```bash
+sunpeak inspect --server http://localhost:8000/mcp -H "Authorization: Bearer $TOKEN"
+```
+
+You can repeat `--header` for other HTTP auth schemes or tenant headers.
 
 ## Combining with Simulations
 

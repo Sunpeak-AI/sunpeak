@@ -28,6 +28,7 @@ import { resolveSunpeakBin } from '../resolve-bin.mjs';
  * @param {string} [options.server.url] - HTTP server URL (alternative to command)
  * @param {Record<string, string>} [options.server.env] - Environment variables
  * @param {string} [options.server.cwd] - Working directory for the server process
+ * @param {Record<string, string>} [options.server.headers] - HTTP headers for HTTP MCP server requests
  * @param {string[]} [options.hosts] - Host shells to test (default: ['chatgpt', 'claude'])
  * @param {string} [options.testDir] - Test directory
  * @param {string} [options.simulationsDir] - Simulations directory for mock data
@@ -126,6 +127,12 @@ function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
     parts.push(server.cwd.includes(' ') ? `--cwd "${server.cwd}"` : `--cwd ${server.cwd}`);
   }
 
+  if (server.headers) {
+    for (const [key, value] of Object.entries(server.headers)) {
+      parts.push(`--header ${shellQuote(`${key}: ${value}`)}`);
+    }
+  }
+
   if (simulationsDir) {
     parts.push(`--simulations ${simulationsDir}`);
   }
@@ -133,4 +140,8 @@ function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
   parts.push(`--port ${port}`);
 
   return parts.join(' ');
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
 }

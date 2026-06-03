@@ -131,6 +131,7 @@ Inspector (works with any MCP server):
   sunpeak inspect          Inspect any MCP server in the inspector
     --server, -s <url|cmd> MCP server URL or stdio command (required)
     --simulations <dir>    Simulation JSON directory
+    --header, -H <header>  HTTP header for HTTP MCP servers (repeatable)
 
   sunpeak --version        Show version number
   Resources: ${resources.join(', ')} (comma/space separated)

@@ -33,12 +33,16 @@ sunpeak inspect --server <url-or-command>
 | `--server <url>` | HTTP URL or stdio command for the MCP server |
 | `--env KEY=VALUE` | Set an environment variable for stdio server processes. Repeatable. |
 | `--cwd <path>` | Working directory for stdio server processes |
+| `--header "Name: value"` | Set an HTTP header for HTTP MCP server requests. Repeatable. |
 
 Examples:
 
 ```bash
 # HTTP server
 sunpeak inspect --server http://localhost:8000/mcp
+
+# HTTP server with a bearer token
+sunpeak inspect --server http://localhost:8000/mcp -H "Authorization: Bearer $TOKEN"
 
 # Python stdio server with env vars
 sunpeak inspect --server "python server.py" --env DATABASE_URL=sqlite:///test.db --env DEBUG=1
@@ -52,6 +56,12 @@ sunpeak inspect --server "python server.py" --cwd ./my-server
 sunpeak auto-negotiates MCP OAuth when connecting to servers that return 401 Unauthorized. For servers with auto-approved (anonymous) OAuth, this happens without user interaction. For servers requiring interactive login, sunpeak opens the authorization URL in your browser and waits for the callback.
 
 No configuration is needed. sunpeak follows the [MCP OAuth specification](https://spec.modelcontextprotocol.io), discovering metadata from `/.well-known/oauth-protected-resource` and registering a client dynamically.
+
+If you already have a token, pass it directly:
+
+```bash
+sunpeak inspect --server http://localhost:8000/mcp -H "Authorization: Bearer $TOKEN"
+```
 
 ## Import
 

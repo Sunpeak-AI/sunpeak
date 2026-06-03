@@ -30,6 +30,7 @@ import { resolveSunpeakBin } from '../resolve-bin.mjs';
  * @param {number} [options.timeout] - Server startup timeout in ms (default: 60000)
  * @param {Record<string, string>} [options.env] - Environment variables for stdio servers
  * @param {string} [options.cwd] - Working directory for stdio servers
+ * @param {Record<string, string>} [options.headers] - HTTP headers for HTTP MCP server requests
  * @returns {import('@playwright/test').PlaywrightTestConfig}
  */
 export function defineInspectConfig(options) {
@@ -44,6 +45,7 @@ export function defineInspectConfig(options) {
     timeout,
     env,
     cwd,
+    headers,
   } = options;
 
   if (!server) {
@@ -65,6 +67,9 @@ export function defineInspectConfig(options) {
         })
       : []),
     ...(cwd ? [cwd.includes(' ') ? `--cwd "${cwd}"` : `--cwd ${cwd}`] : []),
+    ...(headers
+      ? Object.entries(headers).map(([k, v]) => `--header ${shellQuote(`${k}: ${v}`)}`)
+      : []),
     ...(simulationsDir ? [`--simulations ${simulationsDir}`] : []),
     `--port ${port}`,
     ...(name ? [`--name "${name}"`] : []),
@@ -82,4 +87,8 @@ export function defineInspectConfig(options) {
       healthUrl: `http://127.0.0.1:${port}/health`,
     },
   });
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
 }

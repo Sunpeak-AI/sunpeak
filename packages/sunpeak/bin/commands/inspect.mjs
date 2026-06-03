@@ -44,6 +44,7 @@ function parseArgs(args) {
     name: undefined,
     env: undefined,
     cwd: undefined,
+    headers: undefined,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -66,6 +67,10 @@ function parseArgs(args) {
       }
     } else if (arg === '--cwd' && i + 1 < args.length) {
       opts.cwd = args[++i];
+    } else if ((arg === '--header' || arg === '-H') && i + 1 < args.length) {
+      opts.headers = opts.headers || {};
+      const [name, value] = parseHttpHeader(args[++i]);
+      setHttpHeader(opts.headers, name, value);
     } else if (arg === '--help' || arg === '-h') {
       printHelp();
       process.exit(0);
@@ -89,14 +94,50 @@ Options:
   --name <string>            App name in inspector chrome
   --env <KEY=VALUE>          Environment variable for stdio servers (repeatable)
   --cwd <path>               Working directory for stdio servers
+  --header, -H <Name: value> HTTP header for HTTP MCP servers (repeatable)
   --help, -h                 Show this help
 
 Examples:
   sunpeak inspect --server http://localhost:8000/mcp
+  sunpeak inspect --server http://localhost:8000/mcp -H "Authorization: Bearer $TOKEN"
   sunpeak inspect --server "python my_server.py"
   sunpeak inspect --server "python server.py" --env API_KEY=sk-123 --cwd ./backend
   sunpeak inspect --server http://localhost:8000/mcp --simulations tests/simulations
 `);
+}
+
+function setHttpHeader(headers, name, value) {
+  const lowerName = name.toLowerCase();
+  for (const existingName of Object.keys(headers)) {
+    if (existingName.toLowerCase() === lowerName) {
+      delete headers[existingName];
+    }
+  }
+  headers[name] = value;
+}
+
+function parseHttpHeader(raw) {
+  if (typeof raw !== 'string') {
+    throw new Error('Invalid --header value. Expected "Name: value".');
+  }
+  const separator = raw.indexOf(':');
+  if (separator <= 0) {
+    throw new Error('Invalid --header value. Expected "Name: value".');
+  }
+
+  const name = raw.slice(0, separator).trim();
+  const value = raw.slice(separator + 1).trim();
+  if (!/^[!#$%&'*+.^_`|~0-9A-Za-z-]+$/.test(name)) {
+    throw new Error(`Invalid HTTP header name: ${name || '(empty)'}`);
+  }
+  if (/[\u0000-\u001f\u007f]/.test(value)) {
+    throw new Error(`Invalid HTTP header value for ${name}: control characters are not allowed`);
+  }
+  return [name, value];
+}
+
+function hasAuthorizationHeader(headers) {
+  return Object.keys(headers || {}).some((name) => name.toLowerCase() === 'authorization');
 }
 
 /**
@@ -503,6 +544,9 @@ function isAuthError(err) {
   // StreamableHTTPError includes a status code in its message.
   // Check for the specific "401" HTTP status pattern, not substring matches.
   const msg = err.message || '';
+  if (/"statusCode"\s*:\s*401\b/.test(msg)) return true;
+  if (/\bstatus(?:Code)?\s*[:=]\s*401\b/i.test(msg)) return true;
+  if (/\bHTTP\s+401\b/i.test(msg)) return true;
   if (msg.includes('invalid_token')) return true;
 
   // Connection errors (ECONNREFUSED, ETIMEDOUT, etc.) are never auth errors.
@@ -693,11 +737,15 @@ async function assertHttpServerUrlAllowed(
 
 async function resolveHttpRedirectsForMcp(
   serverArg,
-  { enforcePublicHttpUrl = false, fetchFn = fetch, lookupFn = dnsLookup } = {}
+  { enforcePublicHttpUrl = false, fetchFn = fetch, lookupFn = dnsLookup, requestInit } = {}
 ) {
   if (!enforcePublicHttpUrl) {
     try {
-      const probeResponse = await fetchFn(serverArg, { method: 'HEAD', redirect: 'follow' });
+      const probeResponse = await fetchFn(serverArg, {
+        ...(requestInit ?? {}),
+        method: 'HEAD',
+        redirect: 'follow',
+      });
       await probeResponse.body?.cancel?.();
       return probeResponse.url && probeResponse.url !== serverArg ? probeResponse.url : serverArg;
     } catch {
@@ -710,7 +758,11 @@ async function resolveHttpRedirectsForMcp(
   for (let i = 0; i < maxRedirects; i++) {
     let probeResponse;
     try {
-      probeResponse = await fetchFn(currentUrl, { method: 'HEAD', redirect: 'manual' });
+      probeResponse = await fetchFn(currentUrl, {
+        ...(requestInit ?? {}),
+        method: 'HEAD',
+        redirect: 'manual',
+      });
     } catch {
       return currentUrl;
     }
@@ -733,7 +785,7 @@ async function resolveHttpRedirectsForMcp(
 /**
  * Create an MCP client connection.
  * @param {string} serverArg - URL or command string
- * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, env?: Record<string, string>, cwd?: string, enforcePublicHttpUrl?: boolean }} [authConfig]
+ * @param {{ type?: 'none' | 'bearer' | 'oauth', bearerToken?: string, authProvider?: import('@modelcontextprotocol/sdk/client/auth.js').OAuthClientProvider, headers?: Record<string, string>, env?: Record<string, string>, cwd?: string, enforcePublicHttpUrl?: boolean }} [authConfig]
  * @returns {Promise<{ client: import('@modelcontextprotocol/sdk/client/index.js').Client, transport: import('@modelcontextprotocol/sdk/types.js').Transport, serverUrl?: string, stderrOutput?: string[] }>}
  */
 async function createMcpConnection(serverArg, authConfig) {
@@ -749,10 +801,18 @@ async function createMcpConnection(serverArg, authConfig) {
     const { StreamableHTTPClientTransport } =
       await import('@modelcontextprotocol/sdk/client/streamableHttp.js');
 
+    const requestHeaders = { ...(authConfig?.headers ?? {}) };
+    if (authConfig?.type === 'bearer' && authConfig.bearerToken) {
+      requestHeaders.Authorization = `Bearer ${authConfig.bearerToken}`;
+    }
+
     // Follow redirects (e.g. /mcp → /mcp/) before creating the transport.
     // The MCP SDK transport doesn't follow redirects on its own.
     const finalUrl = await resolveHttpRedirectsForMcp(serverArg, {
       enforcePublicHttpUrl: !!authConfig?.enforcePublicHttpUrl,
+      ...(Object.keys(requestHeaders).length > 0
+        ? { requestInit: { headers: requestHeaders } }
+        : {}),
     });
 
     if (authConfig?.enforcePublicHttpUrl) {
@@ -762,11 +822,6 @@ async function createMcpConnection(serverArg, authConfig) {
     const transportOpts = {};
     if (authConfig?.enforcePublicHttpUrl) {
       transportOpts.requestInit = { redirect: 'manual' };
-    }
-
-    const requestHeaders = {};
-    if (authConfig?.type === 'bearer' && authConfig.bearerToken) {
-      requestHeaders.Authorization = `Bearer ${authConfig.bearerToken}`;
     }
     if (Object.keys(requestHeaders).length > 0) {
       transportOpts.requestInit = {
@@ -2907,6 +2962,9 @@ export const _securityTestExports = {
   normalizeModelId,
   normalizeModelProviderModelId,
   quoteSecurityInteractiveArg,
+  parseHttpHeader,
+  hasAuthorizationHeader,
+  isAuthError,
   readRequestBody,
   resolveHttpRedirectsForMcp,
   shouldAllowPrivateServerUrls,
@@ -2970,6 +3028,7 @@ function readRequestBody(req, { maxBytes = Infinity } = {}) {
  * @param {object} [opts.viteCssConfig] - Vite css config override (e.g., lightningcss customAtRules)
  * @param {Record<string, string>} [opts.env] - Extra environment variables for stdio server processes
  * @param {string} [opts.cwd] - Working directory for stdio server processes
+ * @param {Record<string, string>} [opts.headers] - Extra HTTP headers for HTTP MCP server requests
  */
 export async function inspectServer(opts) {
   const {
@@ -2990,6 +3049,7 @@ export async function inspectServer(opts) {
     viteCssConfig,
     env: serverEnv,
     cwd: serverCwd,
+    headers: serverHeaders,
   } = opts;
 
   // Load favicon from sunpeak package for the inspector UI.
@@ -3017,6 +3077,7 @@ export async function inspectServer(opts) {
   const connectionOpts = {};
   if (serverEnv) connectionOpts.env = serverEnv;
   if (serverCwd) connectionOpts.cwd = serverCwd;
+  if (serverHeaders) connectionOpts.headers = serverHeaders;
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       mcpConnection = await createMcpConnection(resolvedServerUrl, connectionOpts);
@@ -3029,7 +3090,11 @@ export async function inspectServer(opts) {
       }
 
       // If the server requires OAuth, negotiate it and retry once.
-      if (isAuthError(err) && resolvedServerUrl.startsWith('http')) {
+      if (
+        isAuthError(err) &&
+        resolvedServerUrl.startsWith('http') &&
+        !hasAuthorizationHeader(connectionOpts.headers)
+      ) {
         console.log('Server requires authentication. Negotiating OAuth...');
         try {
           const authProvider = await negotiateOAuth(resolvedServerUrl);
@@ -3416,5 +3481,6 @@ export async function inspect(args) {
     name: opts.name,
     env: opts.env,
     cwd: opts.cwd,
+    headers: opts.headers,
   });
 }
