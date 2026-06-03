@@ -29,4 +29,6 @@ export function inspectServer(opts: {
   env?: Record<string, string>;
   /** Working directory for stdio server processes. */
   cwd?: string;
+  /** HTTP headers for HTTP MCP server requests. */
+  headers?: Record<string, string>;
 }): Promise<void>;

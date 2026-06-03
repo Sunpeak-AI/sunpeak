@@ -50,6 +50,18 @@ describe('defineConfig (external server)', () => {
     expect(config.webServer.command).toContain('--cwd ./backend');
   });
 
+  it('passes HTTP headers as --header flags', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: {
+        url: 'http://localhost:8000/mcp',
+        headers: { Authorization: 'Bearer test-token' },
+      },
+    });
+
+    expect(config.webServer.command).toContain("--header 'Authorization: Bearer test-token'");
+  });
+
   it('uses custom timeout', async () => {
     const { defineConfig } = await importTestConfig();
     const config = defineConfig({
@@ -178,6 +190,16 @@ describe('defineInspectConfig', () => {
     expect(config.webServer.command).toContain('--cwd ./backend');
   });
 
+  it('passes HTTP headers as --header flags', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: 'http://localhost:8000/mcp',
+      headers: { Authorization: 'Bearer test-token' },
+    });
+
+    expect(config.webServer.command).toContain("--header 'Authorization: Bearer test-token'");
+  });
+
   it('quotes cwd paths that contain spaces', async () => {
     const { defineInspectConfig } = await importInspectConfig();
     const config = defineInspectConfig({
@@ -239,26 +261,21 @@ describe('defineInspectConfig', () => {
 });
 
 describe('isAuthError', () => {
-  // isAuthError is not exported, so we re-implement the same logic to verify
-  // the detection patterns are correct. Keep this in sync with inspect.mjs.
-  const isAuthError = (err: Error) => {
-    if (err.constructor?.name === 'UnauthorizedError') return true;
-    const msg = err.message || '';
-    if (msg.includes('invalid_token')) return true;
-    if (msg.includes('ECONNREFUSED') || msg.includes('ETIMEDOUT') || msg.includes('ENOTFOUND')) {
-      return false;
-    }
-    return false;
+  const loadIsAuthError = async () => {
+    const { _securityTestExports } = await import('../../bin/commands/inspect.mjs');
+    return _securityTestExports.isAuthError;
   };
 
-  it('detects invalid_token error', () => {
+  it('detects invalid_token error', async () => {
+    const isAuthError = await loadIsAuthError();
     const err = new Error(
       'Streamable HTTP error: Error POSTing to endpoint: {"error":"invalid_token"}'
     );
     expect(isAuthError(err)).toBe(true);
   });
 
-  it('detects UnauthorizedError by class name', () => {
+  it('detects UnauthorizedError by class name', async () => {
+    const isAuthError = await loadIsAuthError();
     class UnauthorizedError extends Error {
       constructor() {
         super('Unauthorized');
@@ -267,22 +284,40 @@ describe('isAuthError', () => {
     expect(isAuthError(new UnauthorizedError())).toBe(true);
   });
 
-  it('does not match ECONNREFUSED', () => {
+  it('detects Streamable HTTP 401 JSON status messages', async () => {
+    const isAuthError = await loadIsAuthError();
+    const err = new Error(
+      'Streamable HTTP error: Error POSTing to endpoint: {"statusCode":401,"message":"Authentication is required"}'
+    );
+    expect(isAuthError(err)).toBe(true);
+  });
+
+  it('detects HTTP 401 text messages', async () => {
+    const isAuthError = await loadIsAuthError();
+    expect(isAuthError(new Error('HTTP 401 Unauthorized'))).toBe(true);
+    expect(isAuthError(new Error('status=401'))).toBe(true);
+  });
+
+  it('does not match ECONNREFUSED', async () => {
+    const isAuthError = await loadIsAuthError();
     const err = new Error('connect ECONNREFUSED 127.0.0.1:8000');
     expect(isAuthError(err)).toBe(false);
   });
 
-  it('does not match ETIMEDOUT', () => {
+  it('does not match ETIMEDOUT', async () => {
+    const isAuthError = await loadIsAuthError();
     const err = new Error('connect ETIMEDOUT 10.0.0.1:443');
     expect(isAuthError(err)).toBe(false);
   });
 
-  it('does not match generic errors', () => {
+  it('does not match generic errors', async () => {
+    const isAuthError = await loadIsAuthError();
     const err = new Error('Something went wrong');
     expect(isAuthError(err)).toBe(false);
   });
 
-  it('does not false-positive on URLs containing 401', () => {
+  it('does not false-positive on URLs containing 401', async () => {
+    const isAuthError = await loadIsAuthError();
     const err = new Error('Failed to fetch http://example.com/path/4014');
     expect(isAuthError(err)).toBe(false);
   });
@@ -439,6 +474,27 @@ describe('inspect endpoint security helpers', () => {
     expect(fetchFn).toHaveBeenCalledTimes(2);
   });
 
+  it('passes configured headers to MCP redirect probes', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+    const fetchFn = vi.fn(async () => new Response(null, { status: 200 }));
+
+    await expect(
+      _securityTestExports.resolveHttpRedirectsForMcp('https://mcp.example.com/mcp', {
+        fetchFn,
+        requestInit: { headers: { Authorization: 'Bearer test-token' } },
+      })
+    ).resolves.toBe('https://mcp.example.com/mcp');
+
+    expect(fetchFn).toHaveBeenCalledWith(
+      'https://mcp.example.com/mcp',
+      expect.objectContaining({
+        method: 'HEAD',
+        redirect: 'follow',
+        headers: { Authorization: 'Bearer test-token' },
+      })
+    );
+  });
+
   it('accepts anonymous OAuth redirects only when state matches', async () => {
     const { _securityTestExports } = await importInspectCommand();
     const fetchFn = vi.fn(async () => {
@@ -502,6 +558,31 @@ describe('inspect endpoint security helpers', () => {
     expect(_securityTestExports.quoteSecurityInteractiveArg("abc' def")).toBe("'abc'\\'' def'");
     expect(_securityTestExports.quoteSecurityInteractiveArg('$(security dump-keychain)')).toBe(
       "'$(security dump-keychain)'"
+    );
+  });
+
+  it('parses HTTP header CLI values', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(_securityTestExports.parseHttpHeader('Authorization: Bearer test-token')).toEqual([
+      'Authorization',
+      'Bearer test-token',
+    ]);
+    expect(_securityTestExports.parseHttpHeader('X-Api-Key: secret')).toEqual([
+      'X-Api-Key',
+      'secret',
+    ]);
+    expect(
+      _securityTestExports.hasAuthorizationHeader({ authorization: 'Bearer test-token' })
+    ).toBe(true);
+    expect(() => _securityTestExports.parseHttpHeader('Authorization Bearer test-token')).toThrow(
+      'Expected "Name: value"'
+    );
+    expect(() => _securityTestExports.parseHttpHeader('Bad Header: value')).toThrow(
+      'Invalid HTTP header name'
+    );
+    expect(() => _securityTestExports.parseHttpHeader('Authorization: bad\nvalue')).toThrow(
+      'control characters'
     );
   });
 

@@ -12,6 +12,10 @@ export interface ServerConfig {
   url?: string;
   /** Environment variables for the server process. */
   env?: Record<string, string>;
+  /** Working directory for the server process. */
+  cwd?: string;
+  /** HTTP headers for HTTP MCP server requests. */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -55,6 +59,8 @@ export interface TestConfigOptions {
   use?: Record<string, unknown>;
   /** Visual regression testing configuration. */
   visual?: VisualConfig;
+  /** Server startup timeout in ms. */
+  timeout?: number;
 }
 
 /**
