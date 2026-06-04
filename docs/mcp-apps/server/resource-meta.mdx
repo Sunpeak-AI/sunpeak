@@ -26,20 +26,29 @@ _meta: {
 
 ## Where to Set `_meta`
 
-Set `_meta.ui` on resources registered via [`registerAppResource`](/mcp-apps/server/register-app-resource). The SDK passes it through to both the [`resources/list`](/mcp-apps/mcp/resources#discovery-resourceslist) and [`resources/read`](/mcp-apps/mcp/resources#reading-resourcesread) responses automatically.
+Set `_meta.ui` on individual `contents[]` items returned by the [`registerAppResource`](/mcp-apps/server/register-app-resource) read callback when the host needs to enforce CSP, permissions, stable domains, or border preferences for the rendered View.
 
 ```ts
 import { registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 
 registerAppResource(server, "Music Player", "ui://music/player.html", {
-  _meta: {
-    ui: {
-      csp: { connectDomains: ["https://api.spotify.com"] },
-      permissions: { microphone: {} },
-      prefersBorder: false,
+  description: "Interactive music player",
+}, async () => ({
+  contents: [
+    {
+      uri: "ui://music/player.html",
+      mimeType: RESOURCE_MIME_TYPE,
+      text: musicPlayerHtml,
+      _meta: {
+        ui: {
+          csp: { connectDomains: ["https://api.spotify.com"] },
+          permissions: { microphone: {} },
+          prefersBorder: false,
+        },
+      },
     },
-  },
-}, readCallback);
+  ],
+}));
 ```
 
 <Accordion title="Advanced: listing-level vs content-item">
@@ -48,7 +57,7 @@ When using [`registerAppResource`](/mcp-apps/server/register-app-resource), you 
 1. **Listing-level** — in the config object. Hosts see this in the [`resources/list`](/mcp-apps/mcp/resources#discovery-resourceslist) response at connection time.
 2. **Content-item level** — on individual `contents[]` items returned by the read callback. Content-item values take precedence.
 
-This distinction matters when metadata varies per read. Most apps set the same values for both.
+Use content-item metadata for values that affect the rendered iframe. Listing-level metadata is useful as a static hint during discovery, but a host that renders a View reads the resource content and should apply the content-item metadata.
 </Accordion>
 
 ## Fields

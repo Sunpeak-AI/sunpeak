@@ -353,6 +353,7 @@
           {
             "group": "Server",
             "pages": [
+              "mcp-apps/server/build-server",
               "mcp-apps/server/capability-detection",
               "mcp-apps/server/csp-cors",
               "mcp-apps/server/register-app-resource",

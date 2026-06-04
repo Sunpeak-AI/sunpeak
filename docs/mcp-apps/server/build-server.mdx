@@ -1,0 +1,293 @@
+---
+title: 'Build an MCP App Server'
+sidebarTitle: 'Build Server'
+description: 'Build an MCP App server with capability detection, ui:// HTML resources, tool metadata, structuredContent, CSP, and app-only tools.'
+keywords:
+  [
+    'build MCP App server',
+    'MCP App server',
+    'MCP Apps',
+    'ui resource',
+    'structuredContent',
+    'app-only tool',
+    'registerAppTool',
+    'registerAppResource',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+An MCP App server is a normal MCP server with three additions:
+
+1. It detects whether the connecting host supports MCP Apps.
+2. It registers `ui://` HTML resources with the `text/html;profile=mcp-app` MIME type.
+3. It links tools to those resources with `_meta.ui.resourceUri`.
+
+This page shows the complete server-side shape. For the matching View code, see [App lifecycle](/mcp-apps/lifecycle) and [App class](/mcp-apps/app/app-class).
+
+## Server Checklist
+
+Before you test in a host, confirm these items:
+
+- The server checks `getUiCapability(clientCapabilities)` before adding UI metadata.
+- Every UI resource URI starts with `ui://`.
+- Every UI resource returns `mimeType: RESOURCE_MIME_TYPE`.
+- Each UI tool points at an existing resource with `_meta.ui.resourceUri`.
+- Tool results include a short `content` summary for the model.
+- Tool results put UI data in `structuredContent`.
+- The resource declares every external origin it needs in `_meta.ui.csp`.
+- UI-only actions use `visibility: ["app"]` so they do not appear in the model tool list.
+
+## Complete Example
+
+```ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  getUiCapability,
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
+import { z } from 'zod';
+
+const server = new McpServer({ name: 'orders', version: '1.0.0' });
+
+const ordersHtml = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Orders</title>
+    <script type="module" src="https://cdn.example.com/orders-view.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`;
+
+async function searchOrders(query: string) {
+  return {
+    query,
+    orders: [{ id: 'ord_123', customer: 'Ada Lovelace', total: 128.5, status: 'open' }],
+  };
+}
+
+server.server.oninitialized = () => {
+  const clientCapabilities = server.server.getClientCapabilities();
+  const uiCap = getUiCapability(clientCapabilities);
+  const supportsMcpApps = uiCap?.mimeTypes?.includes(RESOURCE_MIME_TYPE);
+
+  if (!supportsMcpApps) {
+    server.registerTool(
+      'search-orders',
+      {
+        title: 'Search Orders',
+        description: 'Search orders and return a text summary.',
+        inputSchema: { query: z.string() },
+      },
+      async ({ query }) => {
+        const result = await searchOrders(query);
+
+        return {
+          content: [
+            {
+              type: 'text',
+              text: `Found ${result.orders.length} order for "${query}".`,
+            },
+          ],
+        };
+      }
+    );
+
+    return;
+  }
+
+  registerAppResource(
+    server,
+    'Orders View',
+    'ui://orders/view.html',
+    {
+      description: 'Interactive order search results.',
+    },
+    async () => ({
+      contents: [
+        {
+          uri: 'ui://orders/view.html',
+          mimeType: RESOURCE_MIME_TYPE,
+          text: ordersHtml,
+          _meta: {
+            ui: {
+              csp: {
+                connectDomains: ['https://api.example.com'],
+                resourceDomains: ['https://cdn.example.com'],
+              },
+              prefersBorder: true,
+            },
+          },
+        },
+      ],
+    })
+  );
+
+  registerAppTool(
+    server,
+    'search-orders',
+    {
+      title: 'Search Orders',
+      description: 'Search orders and display the results in an interactive UI.',
+      inputSchema: { query: z.string() },
+      outputSchema: {
+        query: z.string(),
+        orders: z.array(
+          z.object({
+            id: z.string(),
+            customer: z.string(),
+            total: z.number(),
+            status: z.string(),
+          })
+        ),
+      },
+      _meta: {
+        ui: {
+          resourceUri: 'ui://orders/view.html',
+          visibility: ['model', 'app'],
+        },
+      },
+    },
+    async ({ query }) => {
+      const result = await searchOrders(query);
+
+      return {
+        content: [
+          {
+            type: 'text',
+            text: `Found ${result.orders.length} order for "${query}".`,
+          },
+        ],
+        structuredContent: result,
+      };
+    }
+  );
+
+  registerAppTool(
+    server,
+    'refresh-orders',
+    {
+      title: 'Refresh Orders',
+      description: 'Refresh order data for the app UI.',
+      inputSchema: { query: z.string() },
+      _meta: {
+        ui: {
+          resourceUri: 'ui://orders/view.html',
+          visibility: ['app'],
+        },
+      },
+    },
+    async ({ query }) => {
+      const result = await searchOrders(query);
+
+      return {
+        content: [{ type: 'text', text: 'Orders refreshed.' }],
+        structuredContent: result,
+      };
+    }
+  );
+};
+```
+
+## Why the Fallback Matters
+
+MCP Apps is negotiated through the MCP extensions capability. A server should not assume every host can render Views. If the host does not advertise support for `RESOURCE_MIME_TYPE`, register a normal MCP tool that returns useful text.
+
+The fallback tool can use the same name as the UI tool because only one branch is registered for a connection.
+
+## Resource and Tool Links
+
+The `ui://` resource is a template. The tool result is data. Keeping those separate lets hosts inspect, cache, and prefetch HTML before the tool runs.
+
+```ts
+registerAppResource(server, "Orders View", "ui://orders/view.html", ...);
+
+registerAppTool(server, "search-orders", {
+  _meta: { ui: { resourceUri: "ui://orders/view.html" } },
+}, handler);
+```
+
+The URI strings must match exactly. If a host cannot read the resource named in `_meta.ui.resourceUri`, it cannot render the View.
+
+## `content` vs `structuredContent`
+
+Use both fields in UI tool results:
+
+- `content` is the model-visible summary. Keep it short and readable.
+- `structuredContent` is the data your View renders.
+
+```ts
+return {
+  content: [{ type: 'text', text: 'Found 12 matching orders.' }],
+  structuredContent: {
+    orders,
+    nextCursor,
+  },
+};
+```
+
+Do not put large UI payloads only in `content`. It makes the model context harder to use and gives the View less predictable data.
+
+## CSP and External Assets
+
+MCP App HTML runs in a sandboxed iframe. By default, hosts block undeclared network and asset origins. Declare what the View needs:
+
+```ts
+async () => ({
+  contents: [
+    {
+      uri: 'ui://orders/view.html',
+      mimeType: RESOURCE_MIME_TYPE,
+      text: ordersHtml,
+      _meta: {
+        ui: {
+          csp: {
+            connectDomains: ['https://api.example.com'],
+            resourceDomains: ['https://cdn.example.com'],
+            frameDomains: ['https://www.youtube.com'],
+          },
+        },
+      },
+    },
+  ],
+});
+```
+
+Use `connectDomains` for `fetch`, XHR, and WebSockets. Use `resourceDomains` for scripts, styles, images, fonts, and media. See [Resource `_meta`](/mcp-apps/server/resource-meta) for the full CSP reference.
+
+## App-only Tools
+
+Use app-only tools for user actions that happen inside the View and do not need to appear in the model's tool list:
+
+```ts
+_meta: {
+  ui: {
+    resourceUri: "ui://orders/view.html",
+    visibility: ["app"],
+  },
+}
+```
+
+The View can call the tool through [`callServerTool()`](/mcp-apps/app/requests/call-server-tool), but the host must hide it from the model. This is a good fit for refresh buttons, pagination, saving UI edits, and polling.
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Capability Detection" icon="page" href="/mcp-apps/server/capability-detection">
+    Check whether a host supports MCP Apps before registering UI tools.
+  </Card>
+  <Card title="registerAppResource" icon="page" href="/mcp-apps/server/register-app-resource">
+    Register HTML resources with CSP and iframe metadata.
+  </Card>
+  <Card title="registerAppTool" icon="page" href="/mcp-apps/server/register-app-tool">
+    Register tools that render MCP App Views.
+  </Card>
+  <Card title="MCP App Patterns" icon="page" href="/mcp-apps/patterns">
+    Use app-only tools, polling, large data, and model context well.
+  </Card>
+</CardGroup>
