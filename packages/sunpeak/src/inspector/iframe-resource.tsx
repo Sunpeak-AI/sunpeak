@@ -771,9 +771,8 @@ export function IframeResource({
   // toggling the wrapper would unmount/remount the iframe mid-handshake,
   // which causes the tool result to never reach the app.
   const dims = hostContext?.containerDimensions;
-  const isFullscreenMode = hostContext?.displayMode === 'fullscreen';
   const wrapperStyle: React.CSSProperties = {};
-  if (dims && !isFullscreenMode) {
+  if (dims) {
     const h = 'height' in dims ? dims.height : undefined;
     const mh = 'maxHeight' in dims ? dims.maxHeight : undefined;
     const w = 'width' in dims ? dims.width : undefined;

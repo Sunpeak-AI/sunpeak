@@ -25,6 +25,16 @@ describe('createInspectorUrl', () => {
     expect(url).toContain('tool=search-products');
   });
 
+  it('encodes device preview params', () => {
+    const url = createInspectorUrl({
+      devicePreset: 'iphone-15-pro-max',
+      maxWidth: 430,
+    });
+
+    expect(url).toContain('devicePreset=iphone-15-pro-max');
+    expect(url).toContain('maxWidth=430');
+  });
+
   it('omits tool and simulation when undefined', () => {
     const url = createInspectorUrl({ theme: 'dark' });
     expect(url).not.toContain('tool=');

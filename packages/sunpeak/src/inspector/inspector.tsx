@@ -23,6 +23,7 @@ import { getHostShell, getRegisteredHosts, type HostChatMessage, type HostId } f
 import { resolveServerToolResult } from '../types/simulation';
 import type { Simulation } from '../types/simulation';
 import type { ScreenWidth } from './inspector-types';
+import { DEVICE_PRESETS, type DevicePresetSelection } from './device-presets';
 import type { InspectorApp } from './app-types';
 import { flattenAppToSimulations } from './app-flatten';
 import { inspectorApiEndpoint, readInspectorJson } from './inspector-api';
@@ -1993,8 +1994,11 @@ export function Inspector({
                   onChange={(value) => state.setScreenWidth(value as ScreenWidth)}
                   options={[
                     { value: 'mobile-s', label: 'Mobile S (375px)' },
+                    { value: 'mobile-m', label: 'Mobile M (393px)' },
                     { value: 'mobile-l', label: 'Mobile L (425px)' },
+                    { value: 'mobile-xl', label: 'Mobile XL (430px)' },
                     { value: 'tablet', label: 'Tablet (768px)' },
+                    { value: 'tablet-l', label: 'Tablet L (820px)' },
                     { value: 'full', label: '100% (Full)' },
                   ]}
                 />
@@ -2184,6 +2188,24 @@ export function Inspector({
                         !activeShell?.availableDisplayModes ||
                         activeShell.availableDisplayModes.includes(opt.value as McpUiDisplayMode)
                     )}
+                  />
+                </SidebarControl>
+
+                <SidebarControl
+                  label="Device"
+                  tooltip="Apply a mobile fullscreen host-context preset"
+                  docsPath="testing/inspector"
+                >
+                  <SidebarSelect
+                    value={state.devicePreset}
+                    onChange={(value) => state.applyDevicePreset(value as DevicePresetSelection)}
+                    options={[
+                      { value: 'custom', label: 'Custom' },
+                      ...DEVICE_PRESETS.map((preset) => ({
+                        value: preset.id,
+                        label: `${preset.label} (${preset.containerWidth} x ${preset.containerHeight})`,
+                      })),
+                    ]}
                   />
                 </SidebarControl>
 

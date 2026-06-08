@@ -1,7 +1,8 @@
 ---
-title: "Inspector"
-description: "API reference for the Inspector component."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app testing", "ChatGPT app testing", "inspector"]
+title: 'Inspector'
+description: 'API reference for the Inspector component.'
+keywords:
+  ['MCP Apps', 'ChatGPT Apps', 'Claude Apps', 'MCP app testing', 'ChatGPT app testing', 'inspector']
 ---
 
 <Badge color="yellow">sunpeak API</Badge>
@@ -15,9 +16,9 @@ The `Inspector` component provides a local development environment that replicat
 The tool picker includes both tools with UI resources and backend-only tools. When you select a backend-only tool outside a model conversation, the preview shows `Tool does not render a UI`; you can still edit Tool Input, click **Run**, and inspect Tool Result from the right sidebar.
 
 <Note>
-Dropping the Inspector into your own React app? See [Embedding the
-Inspector](/testing/inspector-embedding) for the `app` prop, the static
-sandbox file you host on your CDN, and the CSS isolation story.
+  Dropping the Inspector into your own React app? See [Embedding the
+  Inspector](/testing/inspector-embedding) for the `app` prop, the static sandbox file you host on
+  your CDN, and the CSS isolation story.
 </Note>
 
 ## CLI Usage
@@ -28,12 +29,12 @@ sunpeak inspect --server <url-or-command>
 
 ### CLI Flags
 
-| Flag | Description |
-|------|-------------|
-| `--server <url>` | HTTP URL or stdio command for the MCP server |
-| `--env KEY=VALUE` | Set an environment variable for stdio server processes. Repeatable. |
-| `--cwd <path>` | Working directory for stdio server processes |
-| `--header "Name: value"` | Set an HTTP header for HTTP MCP server requests. Repeatable. |
+| Flag                     | Description                                                         |
+| ------------------------ | ------------------------------------------------------------------- |
+| `--server <url>`         | HTTP URL or stdio command for the MCP server                        |
+| `--env KEY=VALUE`        | Set an environment variable for stdio server processes. Repeatable. |
+| `--cwd <path>`           | Working directory for stdio server processes                        |
+| `--header "Name: value"` | Set an HTTP header for HTTP MCP server requests. Repeatable.        |
 
 Examples:
 
@@ -70,7 +71,6 @@ import 'sunpeak/style.css'; // Required to style the inspector.
 import { Inspector } from 'sunpeak/inspector';
 ```
 
-
 ## Basic Usage
 
 <InspectorSnippet />
@@ -78,18 +78,16 @@ import { Inspector } from 'sunpeak/inspector';
 ## Props
 
 <ResponseField name="app" type="InspectorApp">
-  Hierarchical input for [embedding the Inspector](/testing/inspector-embedding)
-  in your own React app: an MCP App with its resources, tools, and saved
-  simulations. When provided, the Inspector switches to embedded mode — the
-  MCP Server URL input, Authentication section, and Prod Resources checkbox
-  are hidden, and no `/__sunpeak/*` network calls are made. Mutually exclusive
-  with `simulations`.
+  Hierarchical input for [embedding the Inspector](/testing/inspector-embedding) in your own React
+  app: an MCP App with its resources, tools, and saved simulations. When provided, the Inspector
+  switches to embedded mode — the MCP Server URL input, Authentication section, and Prod Resources
+  checkbox are hidden, and no `/__sunpeak/*` network calls are made. Mutually exclusive with
+  `simulations`.
 </ResponseField>
 
 <ResponseField name="simulations" type="Record<string, Simulation>">
-  Flat simulation map (the CLI codepath's input). Object mapping simulation
-  names to their definitions. See [Simulation API Reference](/testing/simulations)
-  for details.
+  Flat simulation map (the CLI codepath's input). Object mapping simulation names to their
+  definitions. See [Simulation API Reference](/testing/simulations) for details.
 </ResponseField>
 
 <ResponseField name="appName" type="string" default="Sunpeak App">
@@ -104,20 +102,30 @@ import { Inspector } from 'sunpeak/inspector';
   Optional children to render when no simulations are selected.
 </ResponseField>
 
-<ResponseField name="onCallTool" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
-  Handler for tool calls. When the user clicks **Run**, or when the app calls `callServerTool`, calls are forwarded to this callback. The `sunpeak dev` command wires this up automatically.
+<ResponseField
+  name="onCallTool"
+  type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult"
+>
+  Handler for tool calls. When the user clicks **Run**, or when the app calls `callServerTool`,
+  calls are forwarded to this callback. The `sunpeak dev` command wires this up automatically.
 </ResponseField>
 
-<ResponseField name="onCallToolDirect" type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult">
-  Direct tool handler call, bypassing MCP server mock data. Used by the **Run** button to call real handlers. Falls back to `onCallTool` if not provided.
+<ResponseField
+  name="onCallToolDirect"
+  type="(params: { name: string; arguments?: Record<string, unknown> }) => Promise<CallToolResult> | CallToolResult"
+>
+  Direct tool handler call, bypassing MCP server mock data. Used by the **Run** button to call real
+  handlers. Falls back to `onCallTool` if not provided.
 </ResponseField>
 
 <ResponseField name="defaultProdResources" type="boolean" default="false">
-  Initial state of the Prod Resources toggle. When `true`, the inspector loads resources from `dist/` production builds instead of HMR. Set by the `--prod-resources` CLI flag.
+  Initial state of the Prod Resources toggle. When `true`, the inspector loads resources from
+  `dist/` production builds instead of HMR. Set by the `--prod-resources` CLI flag.
 </ResponseField>
 
 <ResponseField name="hideInspectorModes" type="boolean" default="false">
-  Hide the Prod Resources checkbox in the sidebar. Used in standalone inspect mode where Prod Resources is not applicable.
+  Hide the Prod Resources checkbox in the sidebar. Used in standalone inspect mode where Prod
+  Resources is not applicable.
 </ResponseField>
 
 ## URL Parameters
@@ -126,25 +134,27 @@ The Inspector supports URL parameters for configuring the initial state. This is
 
 ### Supported Parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `tool` | `string` | First tool | Tool name to select. When specified without `simulation`, no mock data is loaded ("Press Run" state). |
-| `simulation` | `string` | First fixture | Simulation fixture name to load. Mock data renders immediately. |
-| `host` | `'chatgpt' \| 'claude'` | `'chatgpt'` | Host shell (conversation chrome, theming, capabilities) |
-| `theme` | `'light' \| 'dark'` | `'dark'` | Color theme |
-| `displayMode` | `'inline' \| 'pip' \| 'fullscreen'` | `'inline'` | App display mode |
-| `locale` | `string` | `'en-US'` | Locale for i18n |
-| `maxHeight` | `number` | `600` | Max height in PiP mode |
-| `deviceType` | `'mobile' \| 'tablet' \| 'desktop' \| 'unknown'` | `'desktop'` | Device type |
-| `hover` | `'true' \| 'false'` | `'true'` | Hover capability |
-| `touch` | `'true' \| 'false'` | `'false'` | Touch capability |
-| `safeAreaTop` | `number` | `0` | Top safe area inset |
-| `safeAreaBottom` | `number` | `0` | Bottom safe area inset |
-| `safeAreaLeft` | `number` | `0` | Left safe area inset |
-| `safeAreaRight` | `number` | `0` | Right safe area inset |
-| `prodResources` | `'true' \| 'false'` | `'false'` | Enable Prod Resources mode (dist/ bundles) |
-| `sidebar` | `'true' \| 'false'` | `'true'` | Show the inspector sidebar. Set to `false` for headless testing or embedding as a pure resource viewer. |
-| `devOverlay` | `'true' \| 'false'` | `'true'` | Show the dev overlay (resource timestamp + tool timing) inside resources. Set to `false` in e2e tests to prevent it from interfering with element assertions. |
+| Parameter        | Type                                                                      | Default             | Description                                                                                                                                                   |
+| ---------------- | ------------------------------------------------------------------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tool`           | `string`                                                                  | First tool          | Tool name to select. When specified without `simulation`, no mock data is loaded ("Press Run" state).                                                         |
+| `simulation`     | `string`                                                                  | First fixture       | Simulation fixture name to load. Mock data renders immediately.                                                                                               |
+| `host`           | `'chatgpt' \| 'claude'`                                                   | `'chatgpt'`         | Host shell (conversation chrome, theming, capabilities)                                                                                                       |
+| `theme`          | `'light' \| 'dark'`                                                       | `'dark'`            | Color theme                                                                                                                                                   |
+| `displayMode`    | `'inline' \| 'pip' \| 'fullscreen'`                                       | `'inline'`          | App display mode                                                                                                                                              |
+| `devicePreset`   | `'iphone-se' \| 'iphone-15' \| 'iphone-15-pro-max' \| 'ipad' \| 'custom'` | `'custom'`          | Named mobile fullscreen preview preset                                                                                                                        |
+| `locale`         | `string`                                                                  | `'en-US'`           | Locale for i18n                                                                                                                                               |
+| `maxHeight`      | `number`                                                                  | `600`               | Max height in PiP mode                                                                                                                                        |
+| `maxWidth`       | `number`                                                                  | Measured chat width | Max width for the app container                                                                                                                               |
+| `deviceType`     | `'mobile' \| 'tablet' \| 'desktop' \| 'unknown'`                          | `'desktop'`         | Device type                                                                                                                                                   |
+| `hover`          | `'true' \| 'false'`                                                       | `'true'`            | Hover capability                                                                                                                                              |
+| `touch`          | `'true' \| 'false'`                                                       | `'false'`           | Touch capability                                                                                                                                              |
+| `safeAreaTop`    | `number`                                                                  | `0`                 | Top safe area inset                                                                                                                                           |
+| `safeAreaBottom` | `number`                                                                  | `0`                 | Bottom safe area inset                                                                                                                                        |
+| `safeAreaLeft`   | `number`                                                                  | `0`                 | Left safe area inset                                                                                                                                          |
+| `safeAreaRight`  | `number`                                                                  | `0`                 | Right safe area inset                                                                                                                                         |
+| `prodResources`  | `'true' \| 'false'`                                                       | `'false'`           | Enable Prod Resources mode (dist/ bundles)                                                                                                                    |
+| `sidebar`        | `'true' \| 'false'`                                                       | `'true'`            | Show the inspector sidebar. Set to `false` for headless testing or embedding as a pure resource viewer.                                                       |
+| `devOverlay`     | `'true' \| 'false'`                                                       | `'true'`            | Show the dev overlay (resource timestamp + tool timing) inside resources. Set to `false` in e2e tests to prevent it from interfering with element assertions. |
 
 ### Example URLs
 
@@ -157,6 +167,9 @@ http://localhost:3000/?tool=show-albums&theme=dark
 
 # Fullscreen dark mode
 http://localhost:3000/?simulation=review-diff&theme=dark&displayMode=fullscreen
+
+# Fullscreen iPhone preview
+http://localhost:3000/?simulation=review-diff&devicePreset=iphone-15-pro-max
 
 # Mobile simulation with touch
 http://localhost:3000/?simulation=show-map&deviceType=mobile&touch=true&hover=false
@@ -185,7 +198,7 @@ import { createInspectorUrl } from 'sunpeak/inspector';
 
 ```typescript
 // Basic usage
-createInspectorUrl({ simulation: 'show-albums', theme: 'light' })
+createInspectorUrl({ simulation: 'show-albums', theme: 'light' });
 // Returns: '/?simulation=show-albums&theme=light'
 
 // With display mode
@@ -193,7 +206,7 @@ createInspectorUrl({
   simulation: 'review-diff',
   theme: 'dark',
   displayMode: 'fullscreen',
-})
+});
 // Returns: '/?simulation=review-diff&theme=dark&displayMode=fullscreen'
 
 // With device simulation
@@ -202,7 +215,7 @@ createInspectorUrl({
   deviceType: 'mobile',
   touch: true,
   hover: false,
-})
+});
 // Returns: '/?simulation=show-map&deviceType=mobile&touch=true&hover=false'
 
 // With safe area insets (for notch simulation)
@@ -210,9 +223,8 @@ createInspectorUrl({
   simulation: 'show-carousel',
   safeAreaTop: 44,
   safeAreaBottom: 34,
-})
+});
 // Returns: '/?simulation=show-carousel&safeAreaTop=44&safeAreaBottom=34'
-
 ```
 
 ### InspectorUrlParams Interface
@@ -224,8 +236,10 @@ interface InspectorUrlParams {
   host?: string;
   theme?: 'light' | 'dark';
   displayMode?: 'inline' | 'pip' | 'fullscreen';
+  devicePreset?: 'iphone-se' | 'iphone-15' | 'iphone-15-pro-max' | 'ipad' | 'custom';
   locale?: string;
   maxHeight?: number;
+  maxWidth?: number;
   deviceType?: 'mobile' | 'tablet' | 'desktop' | 'unknown';
   hover?: boolean;
   touch?: boolean;
@@ -245,7 +259,10 @@ E2E tests use the `tests/e2e/helpers.ts` wrapper which sets `devOverlay: false` 
 
 ```typescript
 // tests/e2e/helpers.ts (generated by sunpeak new)
-import { createInspectorUrl as _createInspectorUrl, type InspectorUrlParams } from 'sunpeak/chatgpt';
+import {
+  createInspectorUrl as _createInspectorUrl,
+  type InspectorUrlParams,
+} from 'sunpeak/chatgpt';
 
 export function createInspectorUrl(params: InspectorUrlParams, basePath?: string): string {
   return _createInspectorUrl({ devOverlay: false, ...params }, basePath);
@@ -259,10 +276,12 @@ import { createInspectorUrl } from './helpers';
 
 test.describe('Albums Resource', () => {
   test('should render in light mode', async ({ page }) => {
-    await page.goto(createInspectorUrl({
-      simulation: 'show-albums',
-      theme: 'light',
-    }));
+    await page.goto(
+      createInspectorUrl({
+        simulation: 'show-albums',
+        theme: 'light',
+      })
+    );
 
     const iframe = page.frameLocator('iframe').frameLocator('iframe');
     const albumCard = iframe.locator('button:has-text("Summer Slice")');
@@ -279,9 +298,10 @@ The inspector sidebar provides interactive controls for:
 - **Prod Resources**: Toggle Prod Resources mode — loads production-built HTML from `dist/` instead of Vite HMR
 - **Host**: Switch between ChatGPT and Claude conversation shells
 - **Simulation / Tool**: Select which simulation (or tool, in Prod Tools mode) to display
-- **Width**: Toggle between mobile (375px, 425px), tablet (768px), and full width (1024px)
+- **Width**: Toggle between mobile (375px, 393px, 425px, 430px), tablet (768px, 820px), and full width (1024px)
 - **Theme**: Toggle between light and dark themes
 - **Display Mode**: Switch between inline, PiP, and fullscreen modes
+- **Device**: Apply iPhone and iPad fullscreen host-context presets
 - **Locale**: Set the locale string
 - **Max Height**: Configure PiP mode height
 - **Device Type**: Configure device type and capabilities (hover, touch)

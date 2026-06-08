@@ -69,6 +69,14 @@ export { resolveServerToolResult } from '../types/simulation';
 // Types & URL helpers
 export type { ScreenWidth, InspectorConfig } from './inspector-types';
 export { SCREEN_WIDTHS } from './inspector-types';
+export {
+  CUSTOM_DEVICE_PRESET,
+  DEVICE_PRESETS,
+  DEVICE_PRESET_BY_ID,
+  getDevicePreset,
+  isDevicePresetSelection,
+} from './device-presets';
+export type { DevicePreset, DevicePresetId, DevicePresetSelection } from './device-presets';
 export { createInspectorUrl } from './inspector-url';
 export type { InspectorUrlParams } from './inspector-url';
 
