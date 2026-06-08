@@ -66,6 +66,72 @@ describe('useInspectorState', () => {
     ).toEqual({ height: 848, width: 1440 });
   });
 
+  it('applies a mobile fullscreen device preset from the URL', () => {
+    window.history.replaceState({}, '', '/?devicePreset=iphone-15-pro-max');
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    expect(result.current.devicePreset).toBe('iphone-15-pro-max');
+    expect(result.current.displayMode).toBe('fullscreen');
+    expect(result.current.screenWidth).toBe('mobile-xl');
+    expect(result.current.platform).toBe('mobile');
+    expect(result.current.hover).toBe(false);
+    expect(result.current.touch).toBe(true);
+    expect(result.current.containerWidth).toBe(430);
+    expect(result.current.containerHeight).toBe(932);
+    expect(result.current.safeAreaInsets).toEqual({ top: 59, bottom: 34, left: 0, right: 0 });
+    expect(result.current.hostContext.containerDimensions).toEqual({ height: 932, width: 430 });
+  });
+
+  it('applies a device preset from the state API', () => {
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.applyDevicePreset('iphone-15');
+    });
+
+    expect(result.current.devicePreset).toBe('iphone-15');
+    expect(result.current.displayMode).toBe('fullscreen');
+    expect(result.current.platform).toBe('mobile');
+    expect(result.current.containerWidth).toBe(393);
+    expect(result.current.containerHeight).toBe(852);
+    expect(result.current.safeAreaInsets).toEqual({ top: 59, bottom: 34, left: 0, right: 0 });
+  });
+
+  it('marks the device preset custom when dimensions are edited manually', () => {
+    window.history.replaceState({}, '', '/?devicePreset=iphone-15');
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.setContainerWidth(390);
+    });
+
+    expect(result.current.devicePreset).toBe('custom');
+    expect(result.current.containerWidth).toBe(390);
+    expect(result.current.safeAreaInsets).toEqual({ top: 59, bottom: 34, left: 0, right: 0 });
+  });
+
+  it('preserves current preview values when selecting custom after a device preset', () => {
+    const simulations = { 'ui-tool': createSim('ui-tool', true) };
+    const { result } = renderHook(() => useInspectorState({ simulations }));
+
+    act(() => {
+      result.current.applyDevicePreset('iphone-15');
+    });
+    act(() => {
+      result.current.applyDevicePreset('custom');
+    });
+
+    expect(result.current.devicePreset).toBe('custom');
+    expect(result.current.displayMode).toBe('fullscreen');
+    expect(result.current.containerWidth).toBe(393);
+    expect(result.current.containerHeight).toBe(852);
+    expect(result.current.safeAreaInsets).toEqual({ top: 59, bottom: 34, left: 0, right: 0 });
+  });
+
   it('stores structured model context for future model turns without changing resource state', () => {
     const simulations = { 'ui-tool': createSim('ui-tool', true) };
     const { result } = renderHook(() => useInspectorState({ simulations }));
@@ -170,6 +236,7 @@ describe('useInspectorState', () => {
         JSON.stringify({
           theme: 'neon-pink',
           displayMode: 'magic',
+          devicePreset: 'shoe-phone',
           platform: 'console',
           screenWidth: 'enormous',
           sidebarWidth: 'wide',
@@ -190,6 +257,7 @@ describe('useInspectorState', () => {
       // Bad values are dropped; defaults are used.
       expect(result.current.theme).toBe('dark');
       expect(result.current.displayMode).toBe('inline');
+      expect(result.current.devicePreset).toBe('custom');
       expect(result.current.platform).toBe('desktop');
       expect(result.current.screenWidth).toBe('full');
       expect(result.current.sidebarWidth).toBe(260);
@@ -216,6 +284,19 @@ describe('useInspectorState', () => {
 
       expect(result.current.theme).toBe('dark');
       expect(result.current.activeHost).toBe('chatgpt');
+    });
+
+    it('restores a stored device preset', () => {
+      localStorage.setItem(PREFS_KEY, JSON.stringify({ devicePreset: 'ipad' }));
+
+      const { result } = renderHook(() => useInspectorState({ simulations }));
+
+      expect(result.current.devicePreset).toBe('ipad');
+      expect(result.current.displayMode).toBe('fullscreen');
+      expect(result.current.screenWidth).toBe('tablet-l');
+      expect(result.current.platform).toBe('mobile');
+      expect(result.current.containerWidth).toBe(820);
+      expect(result.current.containerHeight).toBe(1180);
     });
 
     it('skips persistence when autoRun=true (test fixture mode)', () => {
@@ -255,6 +336,20 @@ describe('useInspectorState', () => {
       const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
       expect(prefs.sidebarWidth).toBe(360);
       expect(prefs.rightSidebarWidth).toBe(390);
+    });
+
+    it('persists device preset changes', () => {
+      const { result } = renderHook(() => useInspectorState({ simulations }));
+
+      act(() => {
+        result.current.applyDevicePreset('iphone-se');
+      });
+
+      const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}') as Record<string, unknown>;
+      expect(prefs.devicePreset).toBe('iphone-se');
+      expect(prefs.displayMode).toBe('fullscreen');
+      expect(prefs.containerWidth).toBe(375);
+      expect(prefs.containerHeight).toBe(667);
     });
 
     it('persists the rest of the configured host-context values without dropping inspector prefs', () => {

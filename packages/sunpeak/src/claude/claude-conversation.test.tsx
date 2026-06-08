@@ -43,7 +43,7 @@ describe('ClaudeConversation', () => {
 
     const fullscreenContent = screen.getByTestId('fullscreen-content');
     expect(fullscreenContent).toBeInTheDocument();
-    expect((fullscreenContent.closest('.fixed') as HTMLElement).style.maxWidth).toBe('');
+    expect((fullscreenContent.closest('.fixed') as HTMLElement).style.maxWidth).toBe('768px');
     expect(container.querySelector('footer')).toBeInTheDocument();
     expect(screen.getAllByPlaceholderText('Reply to sunpeak...').length).toBeGreaterThan(0);
     expect(screen.getByLabelText('Back')).toBeInTheDocument();

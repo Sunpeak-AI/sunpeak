@@ -44,7 +44,7 @@ describe('Conversation', () => {
     // Children stay mounted at stable tree position
     const fullscreenContent = screen.getByTestId('fullscreen-content');
     expect(fullscreenContent).toBeInTheDocument();
-    expect((fullscreenContent.closest('.fixed') as HTMLElement).style.maxWidth).toBe('');
+    expect((fullscreenContent.closest('.fixed') as HTMLElement).style.maxWidth).toBe('768px');
     // Fullscreen chrome overlay has a footer with input
     expect(container.querySelector('footer')).toBeInTheDocument();
     expect(screen.getAllByPlaceholderText('Message sunpeak.ai').length).toBeGreaterThan(0);

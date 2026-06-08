@@ -1,4 +1,5 @@
 import type { Theme, DisplayMode, DeviceType } from '../types/runtime';
+import type { DevicePresetSelection } from './device-presets';
 
 /**
  * Strongly-typed URL parameters for the Inspector.
@@ -69,6 +70,13 @@ export interface InspectorUrlParams {
   displayMode?: DisplayMode;
 
   /**
+   * Named host-context preset for one-click device previews.
+   * Applies viewport dimensions, platform, touch/hover capabilities, display
+   * mode, and safe-area values in the inspector.
+   */
+  devicePreset?: DevicePresetSelection;
+
+  /**
    * The locale for the inspector (e.g., 'en-US', 'ja-JP').
    * @default 'en-US'
    */
@@ -79,6 +87,11 @@ export interface InspectorUrlParams {
    * Only applicable when displayMode is 'pip'.
    */
   maxHeight?: number;
+
+  /**
+   * Maximum width in pixels for the widget container.
+   */
+  maxWidth?: number;
 
   /**
    * The device type to simulate.
@@ -181,11 +194,17 @@ export function createInspectorUrl(params: InspectorUrlParams, basePath = '/'): 
   if (params.displayMode !== undefined) {
     searchParams.set('displayMode', params.displayMode);
   }
+  if (params.devicePreset !== undefined) {
+    searchParams.set('devicePreset', params.devicePreset);
+  }
   if (params.locale !== undefined) {
     searchParams.set('locale', params.locale);
   }
   if (params.maxHeight !== undefined) {
     searchParams.set('maxHeight', String(params.maxHeight));
+  }
+  if (params.maxWidth !== undefined) {
+    searchParams.set('maxWidth', String(params.maxWidth));
   }
   if (params.deviceType !== undefined) {
     searchParams.set('deviceType', params.deviceType);

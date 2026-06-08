@@ -11,6 +11,12 @@ import type { ScreenWidth } from './inspector-types';
 import type { HostId } from './hosts';
 import { getHostShell } from './hosts';
 import { extractResourceCSP, type ResourceCSP } from './iframe-resource';
+import {
+  CUSTOM_DEVICE_PRESET,
+  getDevicePreset,
+  isDevicePresetSelection,
+  type DevicePresetSelection,
+} from './device-presets';
 
 type Platform = NonNullable<McpUiHostContext['platform']>;
 
@@ -54,6 +60,8 @@ export interface InspectorState {
   setTheme: (theme: McpUiTheme) => void;
   displayMode: McpUiDisplayMode;
   setDisplayMode: (mode: McpUiDisplayMode) => void;
+  devicePreset: DevicePresetSelection;
+  applyDevicePreset: (preset: DevicePresetSelection) => void;
   locale: string;
   setLocale: (locale: string) => void;
   containerHeight: number | undefined;
@@ -151,6 +159,7 @@ export interface InspectorState {
  * - simulation: simulation name (e.g., 'show-albums')
  * - theme: 'light' | 'dark'
  * - displayMode: 'inline' | 'pip' | 'fullscreen'
+ * - devicePreset: 'iphone-se' | 'iphone-15' | 'iphone-15-pro-max' | 'ipad' | 'custom'
  * - locale: e.g., 'en-US'
  * - maxHeight: number (containerDimensions.maxHeight)
  * - maxWidth: number (containerDimensions.maxWidth)
@@ -170,6 +179,7 @@ function parseUrlParams(): {
   toolInput?: Record<string, unknown>;
   theme?: McpUiTheme;
   displayMode?: McpUiDisplayMode;
+  devicePreset?: DevicePresetSelection;
   locale?: string;
   containerMaxHeight?: number;
   containerMaxWidth?: number;
@@ -205,6 +215,9 @@ function parseUrlParams(): {
     displayModeRaw && VALID_DISPLAY_MODES.has(displayModeRaw as McpUiDisplayMode)
       ? (displayModeRaw as McpUiDisplayMode)
       : null;
+  const devicePresetRaw = params.get('devicePreset');
+  const devicePreset =
+    devicePresetRaw && isDevicePresetSelection(devicePresetRaw) ? devicePresetRaw : undefined;
   const locale = params.get('locale');
   const maxHeightParam = params.get('maxHeight');
   const containerMaxHeight = maxHeightParam ? Number(maxHeightParam) : undefined;
@@ -266,6 +279,7 @@ function parseUrlParams(): {
     toolInput,
     theme: theme ?? undefined,
     displayMode: displayMode ?? undefined,
+    devicePreset,
     locale: locale ?? undefined,
     containerMaxHeight,
     containerMaxWidth,
@@ -286,6 +300,7 @@ export interface StoredPrefs {
   theme?: McpUiTheme;
   locale?: string;
   displayMode?: McpUiDisplayMode;
+  devicePreset?: DevicePresetSelection;
   containerHeight?: number;
   containerWidth?: number;
   containerMaxHeight?: number;
@@ -309,8 +324,11 @@ const VALID_DISPLAY_MODES: ReadonlySet<McpUiDisplayMode> = new Set(['inline', 'p
 const VALID_PLATFORMS: ReadonlySet<Platform> = new Set(['web', 'desktop', 'mobile']);
 const VALID_SCREEN_WIDTHS: ReadonlySet<ScreenWidth> = new Set([
   'mobile-s',
+  'mobile-m',
   'mobile-l',
+  'mobile-xl',
   'tablet',
+  'tablet-l',
   'full',
 ]);
 
@@ -336,6 +354,9 @@ function sanitizeStoredPrefs(raw: unknown): StoredPrefs {
     VALID_DISPLAY_MODES.has(obj.displayMode as McpUiDisplayMode)
   ) {
     prefs.displayMode = obj.displayMode as McpUiDisplayMode;
+  }
+  if (typeof obj.devicePreset === 'string' && isDevicePresetSelection(obj.devicePreset)) {
+    prefs.devicePreset = obj.devicePreset;
   }
   if (typeof obj.containerHeight === 'number' && Number.isFinite(obj.containerHeight)) {
     prefs.containerHeight = obj.containerHeight;
@@ -499,7 +520,13 @@ export function useInspectorState({
   const urlParams = useMemo(() => parseUrlParams(), []);
   const autoRun = urlParams.autoRun === true;
   const storedPrefs = useMemo(() => (autoRun ? {} : readStoredPrefs()), [autoRun]);
-  const [screenWidth, setScreenWidth] = useState<ScreenWidth>(storedPrefs.screenWidth ?? 'full');
+  const initialDevicePreset =
+    urlParams.devicePreset ?? storedPrefs.devicePreset ?? CUSTOM_DEVICE_PRESET;
+  const initialDevicePresetConfig = getDevicePreset(initialDevicePreset);
+  const [devicePreset, setDevicePreset] = useState<DevicePresetSelection>(initialDevicePreset);
+  const [screenWidth, _setScreenWidth] = useState<ScreenWidth>(
+    initialDevicePresetConfig?.screenWidth ?? storedPrefs.screenWidth ?? 'full'
+  );
   const [sidebarWidth, setSidebarWidth] = useState(
     storedPrefs.sidebarWidth ?? DEFAULT_SIDEBAR_WIDTH
   );
@@ -507,7 +534,7 @@ export function useInspectorState({
     storedPrefs.rightSidebarWidth ?? DEFAULT_SIDEBAR_WIDTH
   );
 
-  const isMobileWidth = (width: ScreenWidth) => width === 'mobile-s' || width === 'mobile-l';
+  const isMobileWidth = (width: ScreenWidth) => width.startsWith('mobile-');
 
   // ── Host selection ──
   const [activeHost, setActiveHost] = useState<HostId>(
@@ -531,37 +558,159 @@ export function useInspectorState({
     urlParams.theme ?? storedPrefs.theme ?? DEFAULT_THEME
   );
   const [displayMode, _setDisplayMode] = useState<McpUiDisplayMode>(
-    urlParams.displayMode ?? storedPrefs.displayMode ?? DEFAULT_DISPLAY_MODE
+    urlParams.displayMode ??
+      initialDevicePresetConfig?.displayMode ??
+      storedPrefs.displayMode ??
+      DEFAULT_DISPLAY_MODE
   );
   const [locale, setLocale] = useState(urlParams.locale ?? storedPrefs.locale ?? 'en-US');
-  const [containerHeight, setContainerHeight] = useState<number | undefined>(
-    storedPrefs.containerHeight
+  const [containerHeight, _setContainerHeight] = useState<number | undefined>(
+    initialDevicePresetConfig?.containerHeight ?? storedPrefs.containerHeight
   );
-  const [containerWidth, setContainerWidth] = useState<number | undefined>(
-    storedPrefs.containerWidth
+  const [containerWidth, _setContainerWidth] = useState<number | undefined>(
+    initialDevicePresetConfig?.containerWidth ?? storedPrefs.containerWidth
   );
-  const [containerMaxHeight, setContainerMaxHeight] = useState<number | undefined>(
-    urlParams.containerMaxHeight ?? storedPrefs.containerMaxHeight
+  const [containerMaxHeight, _setContainerMaxHeight] = useState<number | undefined>(
+    urlParams.containerMaxHeight ??
+      initialDevicePresetConfig?.containerMaxHeight ??
+      storedPrefs.containerMaxHeight
   );
-  const [containerMaxWidth, setContainerMaxWidth] = useState<number | undefined>(
-    urlParams.containerMaxWidth ?? storedPrefs.containerMaxWidth
+  const [containerMaxWidth, _setContainerMaxWidth] = useState<number | undefined>(
+    urlParams.containerMaxWidth ??
+      initialDevicePresetConfig?.containerMaxWidth ??
+      storedPrefs.containerMaxWidth
   );
-  const [platform, setPlatform] = useState<Platform>(
-    urlParams.platform ?? storedPrefs.platform ?? DEFAULT_PLATFORM
+  const [platform, _setPlatform] = useState<Platform>(
+    urlParams.platform ??
+      initialDevicePresetConfig?.platform ??
+      storedPrefs.platform ??
+      DEFAULT_PLATFORM
   );
-  const [hover, setHover] = useState(
-    urlParams.deviceCapabilities?.hover ?? storedPrefs.hover ?? true
+  const [hover, _setHover] = useState(
+    urlParams.deviceCapabilities?.hover ??
+      initialDevicePresetConfig?.hover ??
+      storedPrefs.hover ??
+      true
   );
-  const [touch, setTouch] = useState(
-    urlParams.deviceCapabilities?.touch ?? storedPrefs.touch ?? false
+  const [touch, _setTouch] = useState(
+    urlParams.deviceCapabilities?.touch ??
+      initialDevicePresetConfig?.touch ??
+      storedPrefs.touch ??
+      false
   );
-  const [safeAreaInsets, setSafeAreaInsets] = useState(
+  const [safeAreaInsets, _setSafeAreaInsets] = useState(
     urlParams.safeAreaInsets ??
+      initialDevicePresetConfig?.safeAreaInsets ??
       storedPrefs.safeAreaInsets ?? { top: 0, bottom: 0, left: 0, right: 0 }
   );
   const [timeZone, setTimeZone] = useState(
     () => storedPrefs.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone
   );
+  const skipNextHostSafeAreaRef = useRef(false);
+
+  const markCustomDevicePreset = useCallback(
+    (skipHostSafeAreaUpdate = true) => {
+      if (devicePreset !== CUSTOM_DEVICE_PRESET && skipHostSafeAreaUpdate) {
+        skipNextHostSafeAreaRef.current = true;
+      }
+      setDevicePreset(CUSTOM_DEVICE_PRESET);
+    },
+    [devicePreset]
+  );
+
+  const setScreenWidth = useCallback(
+    (width: ScreenWidth) => {
+      markCustomDevicePreset();
+      _setScreenWidth(width);
+    },
+    [markCustomDevicePreset]
+  );
+  const setContainerHeight = useCallback(
+    (height: number | undefined) => {
+      markCustomDevicePreset();
+      _setContainerHeight(height);
+    },
+    [markCustomDevicePreset]
+  );
+  const setContainerWidth = useCallback(
+    (width: number | undefined) => {
+      markCustomDevicePreset();
+      _setContainerWidth(width);
+    },
+    [markCustomDevicePreset]
+  );
+  const setContainerMaxHeight = useCallback(
+    (height: number | undefined) => {
+      markCustomDevicePreset();
+      _setContainerMaxHeight(height);
+    },
+    [markCustomDevicePreset]
+  );
+  const setContainerMaxWidth = useCallback(
+    (width: number | undefined) => {
+      markCustomDevicePreset();
+      _setContainerMaxWidth(width);
+    },
+    [markCustomDevicePreset]
+  );
+  const setPlatform = useCallback(
+    (nextPlatform: Platform) => {
+      markCustomDevicePreset();
+      _setPlatform(nextPlatform);
+    },
+    [markCustomDevicePreset]
+  );
+  const setHover = useCallback(
+    (value: boolean) => {
+      markCustomDevicePreset();
+      _setHover(value);
+    },
+    [markCustomDevicePreset]
+  );
+  const setTouch = useCallback(
+    (value: boolean) => {
+      markCustomDevicePreset();
+      _setTouch(value);
+    },
+    [markCustomDevicePreset]
+  );
+  const setSafeAreaInsets = useCallback(
+    (
+      value:
+        | { top: number; bottom: number; left: number; right: number }
+        | ((prev: { top: number; bottom: number; left: number; right: number }) => {
+            top: number;
+            bottom: number;
+            left: number;
+            right: number;
+          })
+    ) => {
+      markCustomDevicePreset();
+      _setSafeAreaInsets(value);
+    },
+    [markCustomDevicePreset]
+  );
+
+  const applyDevicePreset = useCallback((presetId: DevicePresetSelection) => {
+    const preset = getDevicePreset(presetId);
+    if (!preset) {
+      skipNextHostSafeAreaRef.current = true;
+      setDevicePreset(CUSTOM_DEVICE_PRESET);
+      return;
+    }
+
+    setDevicePreset(presetId);
+    _setDisplayMode(preset.displayMode);
+    _setScreenWidth(preset.screenWidth);
+    _setContainerHeight(preset.containerHeight);
+    _setContainerWidth(preset.containerWidth);
+    _setContainerMaxHeight(preset.containerMaxHeight);
+    _setContainerMaxWidth(preset.containerMaxWidth);
+    _setPlatform(preset.platform);
+    _setHover(preset.hover);
+    _setTouch(preset.touch);
+    _setSafeAreaInsets({ ...preset.safeAreaInsets });
+  }, []);
 
   // Skip persisting on the first render — only write when the user actually changes something.
   const isFirstRender = useRef(true);
@@ -576,6 +725,7 @@ export function useInspectorState({
       theme,
       locale,
       displayMode,
+      devicePreset,
       containerHeight,
       containerWidth,
       containerMaxHeight,
@@ -595,6 +745,7 @@ export function useInspectorState({
     theme,
     locale,
     displayMode,
+    devicePreset,
     containerHeight,
     containerWidth,
     containerMaxHeight,
@@ -618,13 +769,17 @@ export function useInspectorState({
   }, []);
 
   // Display mode setter that respects mobile width constraints
-  const setDisplayMode = (mode: McpUiDisplayMode) => {
-    if (isMobileWidth(screenWidth) && mode === 'pip') {
-      _setDisplayMode('fullscreen');
-    } else {
-      _setDisplayMode(mode);
-    }
-  };
+  const setDisplayMode = useCallback(
+    (mode: McpUiDisplayMode) => {
+      markCustomDevicePreset(false);
+      if (isMobileWidth(screenWidth) && mode === 'pip') {
+        _setDisplayMode('fullscreen');
+      } else {
+        _setDisplayMode(mode);
+      }
+    },
+    [markCustomDevicePreset, screenWidth]
+  );
 
   // Callback for IframeResource's onDisplayModeReady (paint fence ack).
   // Currently a no-op — the inspector doesn't need to track the confirmed
@@ -748,17 +903,23 @@ export function useInspectorState({
 
   // Auto-apply safe area insets when display mode or host changes
   useEffect(() => {
+    if (skipNextHostSafeAreaRef.current) {
+      skipNextHostSafeAreaRef.current = false;
+      return;
+    }
+    if (devicePreset !== CUSTOM_DEVICE_PRESET) return;
+
     const shell = getHostShell(activeHost);
     const modeInsets = shell?.safeAreaByDisplayMode?.[displayMode];
     if (modeInsets) {
-      setSafeAreaInsets({
+      _setSafeAreaInsets({
         top: modeInsets.top ?? 0,
         bottom: modeInsets.bottom ?? 0,
         left: modeInsets.left ?? 0,
         right: modeInsets.right ?? 0,
       });
     }
-  }, [displayMode, activeHost]);
+  }, [displayMode, activeHost, devicePreset]);
 
   // ── Host callbacks ──
 
@@ -854,6 +1015,8 @@ export function useInspectorState({
     setTheme,
     displayMode,
     setDisplayMode,
+    devicePreset,
+    applyDevicePreset,
     locale,
     setLocale,
     containerHeight,

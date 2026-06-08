@@ -1,7 +1,16 @@
 ---
-title: "MCP App Inspector"
-description: "Inspect MCP Apps in replicated ChatGPT and Claude runtimes."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app inspector", "ChatGPT app testing", "inspector", "local development"]
+title: 'MCP App Inspector'
+description: 'Inspect MCP Apps in replicated ChatGPT and Claude runtimes.'
+keywords:
+  [
+    'MCP Apps',
+    'ChatGPT Apps',
+    'Claude Apps',
+    'MCP app inspector',
+    'ChatGPT app testing',
+    'inspector',
+    'local development',
+  ]
 ---
 
 import InspectorSnippet from '/snippets/inspector.mdx';
@@ -25,10 +34,7 @@ This opens the inspector at `http://localhost:3000`. See [sunpeak inspect CLI Re
 
 <Note>In sunpeak framework projects, the inspector is built into `sunpeak dev` automatically.</Note>
 
-<img
-  src="https://cdn.sunpeak.ai/chatgpt-simulator.png"
-  alt="MCP App Inspector"
-/>
+<img src="https://cdn.sunpeak.ai/chatgpt-simulator.png" alt="MCP App Inspector" />
 
 ## What it does
 
@@ -67,8 +73,8 @@ The inspector sidebars let you configure:
 - **Tool** — which tool to inspect, including backend-only tools without UI resources
 - **Simulation** — which fixture to load (or "None" for real server calls)
 - **Host** — ChatGPT or Claude runtime
-- **Width** — mobile, tablet, or full-width viewport
-- **Host Context** — [theme](/app-framework/hooks/use-theme), [locale](/app-framework/hooks/use-locale), [display mode](/app-framework/hooks/use-display-mode), [platform](/app-framework/hooks/use-platform), [device capabilities](/app-framework/hooks/use-device-capabilities), [time zone](/app-framework/hooks/use-time-zone), [container dimensions](/app-framework/hooks/use-viewport), [safe area insets](/app-framework/hooks/use-safe-area)
+- **Width** — mobile, tablet, or full-width viewport, including exact iPhone and iPad widths
+- **Host Context** — [theme](/app-framework/hooks/use-theme), [locale](/app-framework/hooks/use-locale), [display mode](/app-framework/hooks/use-display-mode), device preset, [platform](/app-framework/hooks/use-platform), [device capabilities](/app-framework/hooks/use-device-capabilities), [time zone](/app-framework/hooks/use-time-zone), [container dimensions](/app-framework/hooks/use-viewport), [safe area insets](/app-framework/hooks/use-safe-area)
 - **App Context** — model context JSON shared with the model via [`useUpdateModelContext()`](/app-framework/hooks/use-update-model-context), shown in the right sidebar
 - **Tool Input/Result** — editable JSON for the [tool arguments and structured content](/app-framework/hooks/use-tool-data), shown in the right sidebar
 
@@ -84,11 +90,13 @@ The inspector doubles as the test runtime for automated E2E tests. See [MCP Test
 import { createInspectorUrl } from 'sunpeak/inspector';
 
 test('renders in dark mode on Claude', async ({ page }) => {
-  await page.goto(createInspectorUrl({
-    simulation: 'show-albums',
-    theme: 'dark',
-    host: 'claude',
-  }));
+  await page.goto(
+    createInspectorUrl({
+      simulation: 'show-albums',
+      theme: 'dark',
+      host: 'claude',
+    })
+  );
   // assert against the rendered resource
 });
 ```

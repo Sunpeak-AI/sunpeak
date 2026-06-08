@@ -368,6 +368,7 @@ export function Conversation({
                                     : 'no-scrollbar relative mb-2 @w-sm/main:w-full mx-0 max-sm:-mx-[1rem] max-sm:w-[100cqw] max-sm:overflow-hidden overflow-visible'
                               }
                               style={{
+                                ...(isFullscreen ? { maxWidth: containerWidth } : {}),
                                 ...(isPip ? { maxHeight: 'calc(50dvh - 38px)' } : {}),
                               }}
                             >
@@ -513,6 +514,7 @@ export function Conversation({
                                 : 'no-scrollbar relative mb-2 @w-sm/main:w-full mx-0 max-sm:-mx-[1rem] max-sm:w-[100cqw] max-sm:overflow-hidden overflow-visible'
                           }
                           style={{
+                            ...(isFullscreen ? { maxWidth: containerWidth } : {}),
                             ...(isPip ? { maxHeight: 'calc(50dvh - 38px)' } : {}),
                           }}
                         >

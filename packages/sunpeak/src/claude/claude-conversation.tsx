@@ -372,6 +372,7 @@ export function ClaudeConversation({
                                     : 'relative mb-2 w-full overflow-visible'
                               }
                               style={{
+                                ...(isFullscreen ? { maxWidth: containerWidth } : {}),
                                 ...(isPip ? { maxHeight: '480px' } : {}),
                               }}
                             >
@@ -492,6 +493,7 @@ export function ClaudeConversation({
                           : 'relative mb-2 w-full overflow-visible'
                     }
                     style={{
+                      ...(isFullscreen ? { maxWidth: containerWidth } : {}),
                       ...(isPip ? { maxHeight: '480px' } : {}),
                     }}
                   >
