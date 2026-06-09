@@ -619,6 +619,49 @@ describe('inspect endpoint security helpers', () => {
     expect(unboundedCallSites).toHaveLength(0);
   });
 
+  it('adds inspector request tokens to frameable resource URLs', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.appendInspectorRequestToken(
+        '/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums',
+        'token-123'
+      )
+    ).toBe('/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums&__sunpeak_token=token-123');
+
+    expect(
+      _securityTestExports.appendInspectorRequestToken(
+        'https://preview.example/api/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums',
+        'token-123'
+      )
+    ).toBe(
+      'https://preview.example/api/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums&__sunpeak_token=token-123'
+    );
+  });
+
+  it('adds inspector request tokens to simulation resource URLs only', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.addInspectorRequestTokenToSimulations(
+        {
+          albums: {
+            name: 'albums',
+            resourceUrl: '/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums',
+          },
+          backendOnly: { name: 'backendOnly' },
+        },
+        'token-123'
+      )
+    ).toEqual({
+      albums: {
+        name: 'albums',
+        resourceUrl: '/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums&__sunpeak_token=token-123',
+      },
+      backendOnly: { name: 'backendOnly' },
+    });
+  });
+
   it('rejects unsafe model IDs before provider SDK calls', async () => {
     const { _securityTestExports } = await importInspectCommand();
 

@@ -19,6 +19,7 @@ const { existsSync, readdirSync, readFileSync } = fs;
 const { join, resolve, dirname, sep } = path;
 import { fileURLToPath, pathToFileURL } from 'url';
 import { execFile, spawn } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { lookup as dnsLookup } from 'node:dns/promises';
 import { createServer as createHttpServer } from 'http';
 import { isIP } from 'node:net';
@@ -971,6 +972,42 @@ async function discoverSimulations(client) {
   return simulations;
 }
 
+function createInspectorRequestToken() {
+  return randomBytes(32).toString('base64url');
+}
+
+function appendInspectorRequestToken(resourceUrl, requestToken) {
+  if (!resourceUrl || !requestToken) return resourceUrl;
+  try {
+    const parsed = new URL(resourceUrl, 'http://sunpeak.local');
+    parsed.searchParams.set('__sunpeak_token', requestToken);
+    if (resourceUrl.startsWith('http://') || resourceUrl.startsWith('https://')) {
+      return parsed.toString();
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return resourceUrl;
+  }
+}
+
+function addInspectorRequestTokenToSimulations(simulations, requestToken) {
+  if (!requestToken || !simulations || typeof simulations !== 'object') return simulations;
+  return Object.fromEntries(
+    Object.entries(simulations).map(([name, sim]) => {
+      if (!sim || typeof sim !== 'object' || typeof sim.resourceUrl !== 'string') {
+        return [name, sim];
+      }
+      return [
+        name,
+        {
+          ...sim,
+          resourceUrl: appendInspectorRequestToken(sim.resourceUrl, requestToken),
+        },
+      ];
+    })
+  );
+}
+
 /**
  * Load simulation JSON fixtures from a directory and merge into discovered simulations.
  *
@@ -1810,6 +1847,7 @@ async function runModelChat({
  * @param {string} appName - Display name
  * @param {string|null} appIcon - Icon URL or emoji
  * @param {string} sandboxUrl - Sandbox server URL
+ * @param {string} requestToken - Unguessable token for frameable inspector resource URLs
  * @param {{ defaultProdResources?: boolean, hideInspectorModes?: boolean }} [modeFlags] - Mode toggles
  */
 function sunpeakInspectVirtualPlugin(
@@ -1818,6 +1856,7 @@ function sunpeakInspectVirtualPlugin(
   appName,
   appIcon,
   sandboxUrl,
+  requestToken,
   modeFlags = {}
 ) {
   const ENTRY_ID = 'virtual:sunpeak-inspect-entry';
@@ -1837,7 +1876,7 @@ import { createRoot } from 'react-dom/client';
 import { Inspector } from 'sunpeak/inspector';
 import 'sunpeak/style.css';
 
-const simulations = ${JSON.stringify(simulations)};
+const simulations = ${JSON.stringify(addInspectorRequestTokenToSimulations(simulations, requestToken))};
 const appName = ${JSON.stringify(appName ?? 'MCP Inspector')};
 const appIcon = ${JSON.stringify(appIcon ?? null)};
 const sandboxUrl = ${JSON.stringify(sandboxUrl)};
@@ -1897,7 +1936,7 @@ root.render(
  * Vite plugin for MCP server proxy endpoints.
  * @param {() => import('@modelcontextprotocol/sdk/client/index.js').Client} getClient
  * @param {(client: import('@modelcontextprotocol/sdk/client/index.js').Client) => void} setClient
- * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null, serverUrl?: string, liveServerUrl?: string }} [pluginOpts]
+ * @param {{ callToolDirect?: (name: string, args: Record<string, unknown>) => Promise<object>, simulationsDir?: string | null, serverUrl?: string, liveServerUrl?: string, requestToken?: string }} [pluginOpts]
  */
 function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   // Server URL and options for automatic session recovery.
@@ -1940,6 +1979,34 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   if (pluginOpts.serverUrl) _serverUrl = pluginOpts.serverUrl;
   if (pluginOpts.liveServerUrl) _liveServerUrl = pluginOpts.liveServerUrl;
   if (pluginOpts.connectionOpts) _connectionOpts = pluginOpts.connectionOpts;
+
+  function sendTokenedSimulations(res, payload) {
+    const body = {
+      ...payload,
+      ...(payload.simulations
+        ? {
+            simulations: addInspectorRequestTokenToSimulations(
+              payload.simulations,
+              pluginOpts.requestToken
+            ),
+          }
+        : {}),
+    };
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(body));
+  }
+
+  function requireInspectorRequestToken(req, res) {
+    if (!pluginOpts.requestToken) return true;
+    const fetchSiteHeader = req.headers['sec-fetch-site'];
+    const fetchSite = Array.isArray(fetchSiteHeader) ? fetchSiteHeader[0] : fetchSiteHeader;
+    if (fetchSite !== 'cross-site') return true;
+    const url = new URL(req.url, 'http://localhost');
+    if (url.searchParams.get('__sunpeak_token') === pluginOpts.requestToken) return true;
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden: missing or invalid inspector request token');
+    return false;
+  }
 
   async function withModelChatClient(callback) {
     const targetUrl = _liveServerUrl || _serverUrl;
@@ -2333,8 +2400,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           if (pluginOpts.simulationsDir) {
             mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
           }
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ status: 'ok', simulations }));
+          sendTokenedSimulations(res, { status: 'ok', simulations });
         } catch (err) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
@@ -2432,8 +2498,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
               if (pluginOpts.simulationsDir) {
                 mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
               }
-              res.writeHead(200, { 'Content-Type': 'application/json' });
-              res.end(JSON.stringify({ status: 'authorized', simulations }));
+              sendTokenedSimulations(res, { status: 'authorized', simulations });
               return;
             } catch {
               // Tokens may be expired, fall through to fresh auth below
@@ -2512,8 +2577,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             if (pluginOpts.simulationsDir) {
               mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
             }
-            res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify({ status: 'authorized', simulations }));
+            sendTokenedSimulations(res, { status: 'authorized', simulations });
           }
         } catch (err) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -2700,8 +2764,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
             mergeSimulationFixtures(pluginOpts.simulationsDir, simulations);
           }
 
-          res.writeHead(200, { 'Content-Type': 'application/json' });
-          res.end(JSON.stringify({ status: 'ok', simulations }));
+          sendTokenedSimulations(res, { status: 'ok', simulations });
         } catch (err) {
           res.writeHead(500, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ error: err.message }));
@@ -2826,6 +2889,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
       // Read resource from connected server
       server.middlewares.use('/__sunpeak/read-resource', async (req, res) => {
         if (!requireSameOrigin(req, res, { allowCrossSiteIframeNavigation: true })) return;
+        if (!requireInspectorRequestToken(req, res)) return;
         const url = new URL(req.url, 'http://localhost');
         const uri = url.searchParams.get('uri');
         if (!uri) {
@@ -2956,6 +3020,8 @@ export const _securityTestExports = {
   executeModelChatToolCall,
   formatModelVisibleToolResult,
   formatSharedAppContextForModel,
+  addInspectorRequestTokenToSimulations,
+  appendInspectorRequestToken,
   normalizeApiKey,
   normalizeModelChatMessages,
   normalizeModelAppContext,
@@ -3210,6 +3276,7 @@ export async function inspectServer(opts) {
   const inspectorServerUrl = resolvedServerUrl;
   const liveInspectorServerUrl =
     liveServerArg ?? defaultLiveMcpServerUrl(resolvedServerUrl) ?? resolvedServerUrl;
+  const inspectorRequestToken = createInspectorRequestToken();
 
   // Create the Vite server.
   // Use the sunpeak package dir as root to avoid scanning the user's project
@@ -3268,6 +3335,7 @@ export async function inspectServer(opts) {
         serverAppName,
         serverAppIcon,
         sandbox.url,
+        inspectorRequestToken,
         { defaultProdResources, hideInspectorModes: !frameworkMode }
       ),
       sunpeakInspectEndpointsPlugin(
@@ -3280,6 +3348,7 @@ export async function inspectServer(opts) {
           simulationsDir,
           serverUrl: resolvedServerUrl,
           liveServerUrl: liveInspectorServerUrl,
+          requestToken: inspectorRequestToken,
           connectionOpts,
         }
       ),
