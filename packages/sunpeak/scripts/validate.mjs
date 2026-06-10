@@ -516,6 +516,7 @@ async function startServerProcess(command, args, cwd, env, label, maxWaitMs = 15
   const proc = spawn(command, args, {
     cwd,
     env: { ...process.env, ...env },
+    detached: true,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
 
@@ -541,9 +542,7 @@ async function startServerProcess(command, args, cwd, env, label, maxWaitMs = 15
   }
 
   if (!ready) {
-    proc.kill('SIGTERM');
-    await new Promise(r => setTimeout(r, 500));
-    if (proc.exitCode === null) proc.kill('SIGKILL');
+    await killServer(proc);
     const reason = proc.exitCode !== null
       ? `exited with code ${proc.exitCode}`
       : `failed to start within ${maxWaitMs / 1000}s`;
@@ -553,14 +552,34 @@ async function startServerProcess(command, args, cwd, env, label, maxWaitMs = 15
   return { proc, port, stdout: () => stdout, stderr: () => stderr };
 }
 
-function killServer(proc) {
-  proc.kill('SIGTERM');
+function waitForProcessExit(proc, timeoutMs = 5000) {
+  if (proc.exitCode !== null || proc.signalCode !== null) return Promise.resolve();
+
   return new Promise(resolve => {
-    setTimeout(() => {
-      if (proc.exitCode === null) proc.kill('SIGKILL');
+    const timer = setTimeout(resolve, timeoutMs);
+    proc.once('exit', () => {
+      clearTimeout(timer);
       resolve();
-    }, 500);
+    });
   });
+}
+
+async function killServer(proc) {
+  if (proc.exitCode !== null || proc.signalCode !== null) return;
+  try {
+    process.kill(-proc.pid, 'SIGTERM');
+  } catch {
+    proc.kill('SIGTERM');
+  }
+  await new Promise(resolve => setTimeout(resolve, 500));
+  if (proc.exitCode === null && proc.signalCode === null) {
+    try {
+      process.kill(-proc.pid, 'SIGKILL');
+    } catch {
+      proc.kill('SIGKILL');
+    }
+  }
+  await waitForProcessExit(proc);
 }
 
 /**

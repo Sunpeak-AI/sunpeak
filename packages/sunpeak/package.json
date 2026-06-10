@@ -175,7 +175,7 @@
     "@ai-sdk/anthropic": "^3.0.81",
     "@ai-sdk/openai": "^3.0.68",
     "@clack/prompts": "^1.5.1",
-    "@modelcontextprotocol/ext-apps": "^1.7.3",
+    "@modelcontextprotocol/ext-apps": "^1.7.4",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "@vitejs/plugin-react": "^6.0.2",
     "ai": "^6.0.197",
