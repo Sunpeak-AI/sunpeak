@@ -52,10 +52,14 @@ The host calls `tools/call` with the tool name and validated arguments. The serv
 
 ## Results
 
-Tool results contain two fields:
+Tool results commonly use these fields:
 
-- **`content`** — An array of content blocks (`text`, `image`, `audio`) that go into the model's context. This is what the AI sees.
-- **`structuredContent`** — Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass data to Views (see [Event Handlers](/mcp-apps/app/event-handlers#ontoolresult)).
+- **`content`**: An array of content blocks (`text`, `image`, `audio`, resource links, or embedded resources) that text-only clients and models can read.
+- **`structuredContent`**: Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass data to Views (see [Event Handlers](/mcp-apps/app/event-handlers#ontoolresult)).
+- **`isError`**: Optional flag for tool execution errors returned as a tool result.
+- **`_meta`**: Optional metadata for clients or components. Do not use it for facts the model must see.
+
+When a tool returns `structuredContent`, MCP recommends also returning a serialized text block in `content` for compatibility. MCP Apps can then render `structuredContent` while text-only hosts still have usable output.
 
 ## Annotations
 
@@ -72,6 +76,9 @@ Tools can include annotations that help hosts decide how to handle them:
 
 <Card horizontal title="registerAppTool" icon="page" href="/mcp-apps/server/register-app-tool">
   Register tools with UI metadata on the MCP server.
+</Card>
+<Card horizontal title="Tool and Resource Contract" icon="list-check" href="/mcp-apps/server/tool-resource-contract">
+  See how MCP App tools, UI resources, and tool results fit together.
 </Card>
 
 <Tip>

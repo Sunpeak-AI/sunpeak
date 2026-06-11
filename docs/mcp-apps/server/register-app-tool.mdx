@@ -92,7 +92,10 @@ registerAppTool(
   },
   async (args) => {
     const weather = await fetchWeather(args.location);
-    return { content: [{ type: "text", text: JSON.stringify(weather) }] };
+    return {
+      content: [{ type: "text", text: JSON.stringify(weather) }],
+      structuredContent: weather,
+    };
   },
 );
 ```
@@ -117,7 +120,10 @@ registerAppTool(
   },
   async ({ itemId, quantity }) => {
     const cart = await updateCartItem(itemId, quantity);
-    return { content: [{ type: "text", text: JSON.stringify(cart) }] };
+    return {
+      content: [{ type: "text", text: JSON.stringify(cart) }],
+      structuredContent: cart,
+    };
   },
 );
 ```
@@ -149,6 +155,8 @@ registerAppTool(
 ## `_meta` Reference
 
 See **[Tool `_meta`](/mcp-apps/server/tool-meta)** for the complete reference on `resourceUri`, `visibility`, host behavior rules, and metadata normalization.
+
+See **[Tool and Resource Contract](/mcp-apps/server/tool-resource-contract)** for how tool metadata, resource metadata, `content`, and `structuredContent` fit together.
 
 <Tip>
 In the [sunpeak framework](/quickstart), tools are defined as auto-discovered files. See the [Tool File Reference](/app-framework/tools/tool-file).

@@ -81,7 +81,10 @@ registerAppTool(server, "update-quantity", {
   },
 }, async ({ itemId, quantity }) => {
   const cart = await updateCartItem(itemId, quantity);
-  return { content: [{ type: "text", text: JSON.stringify(cart) }] };
+  return {
+    content: [{ type: "text", text: JSON.stringify(cart) }],
+    structuredContent: cart,
+  };
 });
 ```
 
@@ -129,3 +132,5 @@ interface McpUiToolMeta {
 <Tip>
 The [sunpeak framework](/quickstart) provides [`useAppTools`](/app-framework/hooks/use-app-tools) for calling app-visible tools from React components, and the [Tool File Reference](/app-framework/tools/tool-file) for defining tool metadata.
 </Tip>
+
+For a complete field-by-field checklist across tools, resources, resource metadata, and tool results, see the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).

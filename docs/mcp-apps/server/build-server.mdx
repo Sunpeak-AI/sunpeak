@@ -23,7 +23,7 @@ An MCP App server is a normal MCP server with three additions:
 2. It registers `ui://` HTML resources with the `text/html;profile=mcp-app` MIME type.
 3. It links tools to those resources with `_meta.ui.resourceUri`.
 
-This page shows the complete server-side shape. For the matching View code, see [App lifecycle](/mcp-apps/lifecycle) and [App class](/mcp-apps/app/app-class).
+This page shows the complete server-side shape. For the matching View code, see [App lifecycle](/mcp-apps/lifecycle) and [App class](/mcp-apps/app/app-class). For a field-by-field checklist of what belongs in the tool, resource, resource metadata, and tool result, see the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).
 
 ## Server Checklist
 
@@ -286,6 +286,9 @@ The View can call the tool through [`callServerTool()`](/mcp-apps/app/requests/c
   </Card>
   <Card title="registerAppTool" icon="page" href="/mcp-apps/server/register-app-tool">
     Register tools that render MCP App Views.
+  </Card>
+  <Card title="Tool and Resource Contract" icon="list-check" href="/mcp-apps/server/tool-resource-contract">
+    Check the fields that connect MCP tools, UI resources, and tool results.
   </Card>
   <Card title="MCP App Patterns" icon="page" href="/mcp-apps/patterns">
     Use app-only tools, polling, large data, and model context well.

@@ -1,0 +1,237 @@
+---
+title: 'MCP App Tool and Resource Contract'
+sidebarTitle: 'Tool and Resource Contract'
+description: 'A field-by-field contract for MCP App tools, ui:// HTML resources, _meta.ui.resourceUri, structuredContent, CSP metadata, and app-only tool visibility.'
+keywords:
+  [
+    'MCP App tool resource contract',
+    'MCP App structuredContent',
+    'MCP App HTML resource',
+    'MCP App _meta.ui.resourceUri',
+    'ui:// resource',
+    'text/html;profile=mcp-app',
+    'MCP App app-only tool',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+An MCP App is a normal MCP tool plus a `ui://` HTML resource. The tool returns data. The resource renders the UI. The link between them is `_meta.ui.resourceUri`.
+
+Use this page as the server-side contract to check before testing in a host.
+
+## Required Pieces
+
+| Piece               | Where it appears                          | What it does                                                                                            |
+| ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| Tool definition     | `tools/list`                              | Gives the model a callable tool with `name`, `description`, `inputSchema`, and optional `outputSchema`. |
+| Tool UI metadata    | `tool._meta.ui.resourceUri`               | Points the host at the HTML resource to render after the tool call.                                     |
+| Resource definition | `resources/list` or tool-linked discovery | Declares the `ui://` resource and `text/html;profile=mcp-app` MIME type.                                |
+| Resource contents   | `resources/read`                          | Returns the HTML document and any iframe metadata under `contents[]._meta.ui`.                          |
+| Tool result         | `tools/call` result                       | Returns model-readable `content` and UI-readable `structuredContent`.                                   |
+
+<Note>
+  MCP Apps are optional. Servers should check the host's MCP Apps capability before registering UI
+  metadata, then fall back to text-only MCP tools when the host does not support
+  `text/html;profile=mcp-app`.
+</Note>
+
+## Minimal Contract
+
+```ts
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import {
+  registerAppResource,
+  registerAppTool,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
+import { z } from 'zod';
+
+const server = new McpServer({ name: 'orders', version: '1.0.0' });
+const resourceUri = 'ui://orders/view.html';
+
+registerAppResource(
+  server,
+  'Orders View',
+  resourceUri,
+  { mimeType: RESOURCE_MIME_TYPE },
+  async () => ({
+    contents: [
+      {
+        uri: resourceUri,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: '<!doctype html><html><body><div id="root"></div></body></html>',
+        _meta: {
+          ui: {
+            csp: {
+              connectDomains: ['https://api.example.com'],
+              resourceDomains: ['https://cdn.example.com'],
+            },
+            prefersBorder: true,
+          },
+        },
+      },
+    ],
+  })
+);
+
+registerAppTool(
+  server,
+  'search-orders',
+  {
+    title: 'Search Orders',
+    description: 'Search orders and display the results.',
+    inputSchema: { query: z.string() },
+    outputSchema: {
+      query: z.string(),
+      orders: z.array(z.object({ id: z.string(), total: z.number() })),
+    },
+    _meta: {
+      ui: {
+        resourceUri,
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  async ({ query }) => {
+    const result = {
+      query,
+      orders: [{ id: 'ord_123', total: 128.5 }],
+    };
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result) }],
+      structuredContent: result,
+    };
+  }
+);
+```
+
+## Tool Metadata
+
+Put UI linkage on the tool, not in the tool result:
+
+```ts
+_meta: {
+  ui: {
+    resourceUri: "ui://orders/view.html",
+    visibility: ["model", "app"],
+  },
+}
+```
+
+| Field                     | Requirement           | Notes                                                                                                        |
+| ------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `_meta.ui.resourceUri`    | Required for UI tools | Must match the resource URI exactly. Use `ui://`.                                                            |
+| `_meta.ui.visibility`     | Optional              | Defaults to `["model", "app"]`. Use `["app"]` for UI-only actions.                                           |
+| `_meta["ui/resourceUri"]` | Deprecated            | `registerAppTool` writes compatibility metadata for older hosts. New code should use `_meta.ui.resourceUri`. |
+
+## Resource Contents
+
+The resource is the HTML template. The tool result is the data. Keep them separate so hosts can read, inspect, and cache UI HTML before the tool runs.
+
+```ts
+{
+  contents: [
+    {
+      uri: "ui://orders/view.html",
+      mimeType: "text/html;profile=mcp-app",
+      text: html,
+      _meta: {
+        ui: {
+          csp: {
+            connectDomains: ["https://api.example.com"],
+            resourceDomains: ["https://cdn.example.com"],
+          },
+          permissions: { clipboardWrite: {} },
+          prefersBorder: true,
+        },
+      },
+    },
+  ],
+}
+```
+
+| Field                    | Requirement                           | Notes                                                                                     |
+| ------------------------ | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `uri`                    | Required                              | Must match the tool's `_meta.ui.resourceUri`.                                             |
+| `mimeType`               | Required                              | Use `RESOURCE_MIME_TYPE`, which is `text/html;profile=mcp-app`.                           |
+| `text` or `blob`         | Required                              | Return a valid HTML document as text or base64 HTML.                                      |
+| `_meta.ui.csp`           | Required when loading outside origins | Declare fetch, script, style, font, image, media, and nested iframe origins.              |
+| `_meta.ui.permissions`   | Optional                              | Hosts may grant requested browser capabilities, but apps must handle denial.              |
+| `_meta.ui.domain`        | Optional                              | Host-specific stable sandbox origin for CORS, OAuth callbacks, or origin-restricted APIs. |
+| `_meta.ui.prefersBorder` | Recommended                           | Set this explicitly because host defaults vary.                                           |
+
+## Tool Results
+
+Use both MCP result channels:
+
+```ts
+return {
+  content: [{ type: 'text', text: JSON.stringify(result) }],
+  structuredContent: result,
+};
+```
+
+| Field               | Audience                        | Guidance                                                                                                                            |
+| ------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `content`           | Model and text-only clients     | Include a short text summary. For structured results, MCP recommends also serializing the JSON into a text block for compatibility. |
+| `structuredContent` | Host, View, and typed clients   | Put the object your UI renders here. If you declare `outputSchema`, this object must match it.                                      |
+| `_meta`             | Host or component-only metadata | Use sparingly. Do not rely on it for model-visible facts.                                                                           |
+| `isError`           | Host and model                  | Set `true` for tool execution errors that should still return a tool result. Use JSON-RPC errors for protocol failures.             |
+
+## App-Only Tools
+
+Set `visibility: ["app"]` when the View needs a server round trip that the model should not see, such as refresh, pagination, autosave, or form submit.
+
+```ts
+registerAppTool(
+  server,
+  'refresh-orders',
+  {
+    description: 'Refresh order data for the app UI.',
+    inputSchema: { query: z.string() },
+    _meta: {
+      ui: {
+        resourceUri: 'ui://orders/view.html',
+        visibility: ['app'],
+      },
+    },
+  },
+  async ({ query }) => {
+    const result = await searchOrders(query);
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(result) }],
+      structuredContent: result,
+    };
+  }
+);
+```
+
+The host must hide app-only tools from the model tool list and reject View calls to tools whose visibility does not include `"app"`.
+
+## Common Failures
+
+| Symptom                                      | Likely cause                                 | Fix                                                                       |
+| -------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------- |
+| The tool runs but no UI appears              | Missing or mismatched `_meta.ui.resourceUri` | Check that the tool URI and resource URI are identical.                   |
+| The iframe is blank                          | Wrong MIME type or invalid HTML              | Use `RESOURCE_MIME_TYPE` and return a full HTML document.                 |
+| Images, scripts, or fetch calls fail         | Missing CSP metadata                         | Add the origin to `resourceDomains`, `connectDomains`, or `frameDomains`. |
+| The model calls a refresh or pagination tool | Tool is visible to `"model"`                 | Set `visibility: ["app"]`.                                                |
+| The View receives hard-to-parse text         | Tool only returned `content`                 | Add `structuredContent` and an `outputSchema`.                            |
+| A text-only host gets unusable output        | Tool only returned `structuredContent`       | Also return model-readable `content`.                                     |
+
+## Related
+
+<Card horizontal title="Build an MCP App Server" icon="server" href="/mcp-apps/server/build-server">
+  Complete server example with capability detection and fallback tools.
+</Card>
+
+<Card horizontal title="Tool _meta" icon="page" href="/mcp-apps/server/tool-meta">
+  Full reference for resource linkage and tool visibility.
+</Card>
+
+<Card horizontal title="Resource _meta" icon="page" href="/mcp-apps/server/resource-meta">
+  Full reference for CSP, permissions, stable domains, and borders.
+</Card>
