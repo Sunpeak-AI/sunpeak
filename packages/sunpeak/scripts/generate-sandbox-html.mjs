@@ -67,6 +67,15 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   var platformScript = platform === 'chatgpt'
     ? ${JSON.stringify(MOCK_OPENAI_SCRIPT)}
     : null;
+  var DEFAULT_INNER_SANDBOX =
+    'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+  var ALLOWED_INNER_SANDBOX_TOKENS = {
+    'allow-scripts': true,
+    'allow-same-origin': true,
+    'allow-forms': true,
+    'allow-popups': true,
+    'allow-popups-to-escape-sandbox': true
+  };
 
   window.addEventListener('message', function(event) {
     var data = event.data;
@@ -124,8 +133,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
     clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
     innerFrame = document.createElement('iframe');
-    innerFrame.sandbox = p.sandbox ||
-      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+    innerFrame.sandbox = sanitizeInnerSandbox(p.sandbox);
     if (p.allow) innerFrame.allow = p.allow;
     document.body.appendChild(innerFrame);
     innerWindow = innerFrame.contentWindow;
@@ -138,13 +146,14 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   }
 
   function createInnerFrameWithSrc(p) {
+    var safeSrc = normalizeInnerSrc(p && p.src);
+    if (!safeSrc) return;
     clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
     innerFrame = document.createElement('iframe');
-    innerFrame.sandbox =
-      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+    innerFrame.sandbox = DEFAULT_INNER_SANDBOX;
     if (p.allow) innerFrame.allow = p.allow;
-    innerFrame.src = p.src;
+    innerFrame.src = safeSrc;
     innerFrame.style.height = '100%';
     if (p.theme) innerFrame.style.colorScheme = p.theme;
 
@@ -187,6 +196,26 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
     innerFrame.style.opacity = '0';
     document.body.appendChild(innerFrame);
     innerWindow = innerFrame.contentWindow;
+  }
+
+  function sanitizeInnerSandbox(value) {
+    if (typeof value !== 'string' || !value.trim()) return DEFAULT_INNER_SANDBOX;
+    var tokens = value.trim().split(/\\s+/);
+    for (var i = 0; i < tokens.length; i++) {
+      if (!ALLOWED_INNER_SANDBOX_TOKENS[tokens[i]]) return DEFAULT_INNER_SANDBOX;
+    }
+    return tokens.join(' ');
+  }
+
+  function normalizeInnerSrc(value) {
+    if (typeof value !== 'string') return null;
+    try {
+      var url = new URL(value, window.location.href);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+      return url.toString();
+    } catch(e) {
+      return null;
+    }
   }
 
   var PAINT_FENCE_SCRIPT = 'window.addEventListener("message",function(e){' +

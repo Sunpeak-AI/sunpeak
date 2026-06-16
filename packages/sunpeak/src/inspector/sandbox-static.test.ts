@@ -21,11 +21,20 @@ import { readFileSync, existsSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { MOCK_OPENAI_RUNTIME_SCRIPT } from './mock-openai-runtime';
+import { generateSandboxProxyHtml } from './sandbox-proxy';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const DIST_HTML = resolve(__dirname, '..', '..', 'dist', 'sandbox-proxy.html');
 
 describe('static sandbox HTML drift guard', () => {
+  it('hardens parent-provided proxy commands before creating inner iframes', () => {
+    const html = generateSandboxProxyHtml();
+    expect(html).toContain('sanitizeInnerSandbox');
+    expect(html).toContain('normalizeInnerSrc');
+    expect(html).toContain("url.protocol !== 'http:' && url.protocol !== 'https:'");
+    expect(html).not.toContain("'allow-top-navigation': true");
+  });
+
   it.skipIf(!existsSync(DIST_HTML))('embeds the live MOCK_OPENAI_RUNTIME_SCRIPT verbatim', () => {
     const html = readFileSync(DIST_HTML, 'utf8');
     // The script is emitted as a JSON-stringified JS string in the generated

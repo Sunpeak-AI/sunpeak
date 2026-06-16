@@ -135,6 +135,15 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   var innerFrame = null;
   var innerWindow = null;
   var platformScript = ${platformScript};
+  var DEFAULT_INNER_SANDBOX =
+    'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+  var ALLOWED_INNER_SANDBOX_TOKENS = {
+    'allow-scripts': true,
+    'allow-same-origin': true,
+    'allow-forms': true,
+    'allow-popups': true,
+    'allow-popups-to-escape-sandbox': true
+  };
 
   // Relay messages between parent (host) and inner iframe (app)
   window.addEventListener('message', function(event) {
@@ -221,8 +230,7 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
     if (innerFrame) innerFrame.remove();
 
     innerFrame = document.createElement('iframe');
-    innerFrame.sandbox = params.sandbox ||
-      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+    innerFrame.sandbox = sanitizeInnerSandbox(params.sandbox);
     if (params.allow) innerFrame.allow = params.allow;
     document.body.appendChild(innerFrame);
     innerWindow = innerFrame.contentWindow;
@@ -236,14 +244,15 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
   }
 
   function createInnerFrameWithSrc(params) {
+    var safeSrc = normalizeInnerSrc(params && params.src);
+    if (!safeSrc) return;
     clearInterval(readyInterval);
     if (innerFrame) innerFrame.remove();
 
     innerFrame = document.createElement('iframe');
-    innerFrame.sandbox =
-      'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox';
+    innerFrame.sandbox = DEFAULT_INNER_SANDBOX;
     if (params.allow) innerFrame.allow = params.allow;
-    innerFrame.src = params.src;
+    innerFrame.src = safeSrc;
     innerFrame.style.height = '100%';
 
     if (params.theme) {
@@ -298,6 +307,26 @@ iframe { border: none; width: 100%; height: 100%; display: block; }
     innerFrame.style.opacity = '0';
     document.body.appendChild(innerFrame);
     innerWindow = innerFrame.contentWindow;
+  }
+
+  function sanitizeInnerSandbox(value) {
+    if (typeof value !== 'string' || !value.trim()) return DEFAULT_INNER_SANDBOX;
+    var tokens = value.trim().split(/\\s+/);
+    for (var i = 0; i < tokens.length; i++) {
+      if (!ALLOWED_INNER_SANDBOX_TOKENS[tokens[i]]) return DEFAULT_INNER_SANDBOX;
+    }
+    return tokens.join(' ');
+  }
+
+  function normalizeInnerSrc(value) {
+    if (typeof value !== 'string') return null;
+    try {
+      var url = new URL(value, window.location.href);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+      return url.toString();
+    } catch(e) {
+      return null;
+    }
   }
 
   var PAINT_FENCE_SCRIPT = 'window.addEventListener("message",function(e){' +
