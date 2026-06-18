@@ -1,19 +1,20 @@
 ---
-title: "MCP Apps registerAppTool - Register UI Tools"
-sidebarTitle: "registerAppTool"
-description: "Register MCP tools that render interactive HTML UIs. Configure tool visibility, input schemas, structured content, and UI metadata with registerAppTool."
-keywords: ["MCP Apps", "ChatGPT Apps", "register tool", "MCP server", "tool visibility", "input schema"]
+title: 'MCP Apps registerAppTool - Register UI Tools'
+sidebarTitle: 'registerAppTool'
+description: 'Register MCP tools that render interactive HTML UIs. Configure tool visibility, input schemas, structured content, and UI metadata with registerAppTool.'
+keywords:
+  ['MCP Apps', 'ChatGPT Apps', 'register tool', 'MCP server', 'tool visibility', 'input schema']
 ---
 
 <Badge color="green">MCP Apps SDK</Badge>
 
 ```ts
-import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
 ```
 
 ## Overview
 
-`registerAppTool` is a convenience wrapper around the MCP SDK's [`server.registerTool()`](/mcp-apps/mcp/tools) that normalizes [UI metadata](/mcp-apps/introduction#how-are-tools-linked-to-uis) for compatibility across hosts. Use it instead of `registerTool` when your tool should render a View.
+`registerAppTool` is a convenience wrapper around the MCP SDK's [`server.registerTool()`](/mcp-apps/mcp/tools) that normalizes [UI metadata](/mcp-apps/introduction#how-are-tools-linked-to-uis) for compatibility across hosts. Use it instead of `registerTool` when your tool should render a View or when it needs MCP App visibility metadata.
 
 ## Signature
 
@@ -22,8 +23,8 @@ function registerAppTool(
   server: McpServer,
   name: string,
   config: McpUiAppToolConfig,
-  cb: ToolCallback,
-): RegisteredTool
+  cb: ToolCallback
+): RegisteredTool;
 ```
 
 ## Parameters
@@ -55,10 +56,10 @@ function registerAppTool(
     MCP tool annotations (e.g., `readOnlyHint`).
   </ResponseField>
   <ResponseField name="_meta" type="object" required>
-    UI metadata linking this tool to a resource. See [_meta Reference](#_meta-reference) below for full details.
+    UI metadata linking this tool to a resource, controlling tool visibility, or both. See [_meta Reference](#_meta-reference) below for full details.
     <ResponseField name="ui" type="McpUiToolMeta" required>
       <ResponseField name="resourceUri" type="string">
-        URI of the UI resource to display (e.g., `"ui://weather/view.html"`). Must match a URI registered via [`registerAppResource`](/mcp-apps/server/register-app-resource).
+        URI of the UI resource to display (e.g., `"ui://weather/view.html"`). Required for tools that render a View. Must match a URI registered via [`registerAppResource`](/mcp-apps/server/register-app-resource).
       </ResponseField>
       <ResponseField name="visibility" type="McpUiToolVisibility[]">
         Who can access this tool. Default: `["model", "app"]`. See [visibility](#visibility) below.
@@ -76,55 +77,54 @@ function registerAppTool(
 ### Basic tool with UI
 
 ```ts
-import { registerAppTool } from "@modelcontextprotocol/ext-apps/server";
-import { z } from "zod";
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
+import { z } from 'zod';
 
 registerAppTool(
   server,
-  "get-weather",
+  'get-weather',
   {
-    title: "Get Weather",
-    description: "Get current weather for a location",
+    title: 'Get Weather',
+    description: 'Get current weather for a location',
     inputSchema: { location: z.string() },
     _meta: {
-      ui: { resourceUri: "ui://weather/view.html" },
+      ui: { resourceUri: 'ui://weather/view.html' },
     },
   },
   async (args) => {
     const weather = await fetchWeather(args.location);
     return {
-      content: [{ type: "text", text: JSON.stringify(weather) }],
+      content: [{ type: 'text', text: JSON.stringify(weather) }],
       structuredContent: weather,
     };
-  },
+  }
 );
 ```
 
 ### App-only tool (hidden from model)
 
-Set `visibility: ["app"]` for tools that should only be callable from the View — useful for polling, pagination, or UI-driven server interactions:
+Set `visibility: ["app"]` for tools that should only be callable from the View, such as polling, pagination, or UI-driven server interactions. Omit `resourceUri` when the helper does not render a new View:
 
 ```ts
 registerAppTool(
   server,
-  "update-quantity",
+  'update-quantity',
   {
-    description: "Update item quantity in cart",
+    description: 'Update item quantity in cart',
     inputSchema: { itemId: z.string(), quantity: z.number() },
     _meta: {
       ui: {
-        resourceUri: "ui://shop/cart.html",
-        visibility: ["app"],
+        visibility: ['app'],
       },
     },
   },
   async ({ itemId, quantity }) => {
     const cart = await updateCartItem(itemId, quantity);
     return {
-      content: [{ type: "text", text: JSON.stringify(cart) }],
+      content: [{ type: 'text', text: JSON.stringify(cart) }],
       structuredContent: cart,
     };
-  },
+  }
 );
 ```
 
@@ -135,20 +135,20 @@ Set `visibility: ["model"]` for tools that the model can call but the View canno
 ```ts
 registerAppTool(
   server,
-  "show-cart",
+  'show-cart',
   {
     description: "Display the user's shopping cart",
     _meta: {
       ui: {
-        resourceUri: "ui://shop/cart.html",
-        visibility: ["model"],
+        resourceUri: 'ui://shop/cart.html',
+        visibility: ['model'],
       },
     },
   },
   async () => {
     const cart = await getCart();
-    return { content: [{ type: "text", text: JSON.stringify(cart) }] };
-  },
+    return { content: [{ type: 'text', text: JSON.stringify(cart) }] };
+  }
 );
 ```
 
@@ -159,5 +159,6 @@ See **[Tool `_meta`](/mcp-apps/server/tool-meta)** for the complete reference on
 See **[Tool and Resource Contract](/mcp-apps/server/tool-resource-contract)** for how tool metadata, resource metadata, `content`, and `structuredContent` fit together.
 
 <Tip>
-In the [sunpeak framework](/quickstart), tools are defined as auto-discovered files. See the [Tool File Reference](/app-framework/tools/tool-file).
+  In the [sunpeak framework](/quickstart), tools are defined as auto-discovered files. See the [Tool
+  File Reference](/app-framework/tools/tool-file).
 </Tip>

@@ -1,11 +1,13 @@
 ---
 title: 'MCP App Tool and Resource Contract'
 sidebarTitle: 'Tool and Resource Contract'
-description: 'A field-by-field contract for MCP App tools, ui:// HTML resources, _meta.ui.resourceUri, structuredContent, CSP metadata, and app-only tool visibility.'
+description: 'A field-by-field server checklist for MCP App tools, ui:// HTML resources, _meta.ui.resourceUri, structuredContent, outputSchema, CSP metadata, and app-only tool visibility.'
 keywords:
   [
     'MCP App tool resource contract',
+    'MCP App server checklist',
     'MCP App structuredContent',
+    'MCP App outputSchema',
     'MCP App HTML resource',
     'MCP App _meta.ui.resourceUri',
     'ui:// resource',
@@ -20,7 +22,19 @@ An MCP App is a normal MCP tool plus a `ui://` HTML resource. The tool returns d
 
 Use this page as the server-side contract to check before testing in a host.
 
-## Required Pieces
+## Choose the Right Tool Shape
+
+Most MCP App servers have three tool shapes. Use this table before adding metadata:
+
+| Tool shape                 | Model can call | View can call | Renders a View | Required metadata                                          |
+| -------------------------- | -------------- | ------------- | -------------- | ---------------------------------------------------------- |
+| UI-launching tool          | Yes            | Usually yes   | Yes            | `_meta.ui.resourceUri` plus optional `visibility`.         |
+| App-only helper tool       | No             | Yes           | No             | `_meta.ui.visibility: ["app"]`. `resourceUri` is optional. |
+| Backend-only standard tool | Yes            | No            | No             | No MCP Apps metadata. Use normal MCP tool metadata.        |
+
+Use UI-launching tools for the actions a user can ask the model to perform, such as "show orders." Use app-only helper tools for actions the rendered View triggers directly, such as refresh, pagination, autosave, or form submit. Use backend-only tools when the result belongs in the conversation and no UI should render.
+
+## Required Pieces for a UI Tool
 
 | Piece               | Where it appears                          | What it does                                                                                            |
 | ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -120,11 +134,11 @@ _meta: {
 }
 ```
 
-| Field                     | Requirement           | Notes                                                                                                        |
-| ------------------------- | --------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `_meta.ui.resourceUri`    | Required for UI tools | Must match the resource URI exactly. Use `ui://`.                                                            |
-| `_meta.ui.visibility`     | Optional              | Defaults to `["model", "app"]`. Use `["app"]` for UI-only actions.                                           |
-| `_meta["ui/resourceUri"]` | Deprecated            | `registerAppTool` writes compatibility metadata for older hosts. New code should use `_meta.ui.resourceUri`. |
+| Field                     | Requirement                     | Notes                                                                                                        |
+| ------------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `_meta.ui.resourceUri`    | Required for UI-launching tools | Must match the resource URI exactly. Use `ui://`. Optional for app-only helpers that do not render a View.   |
+| `_meta.ui.visibility`     | Optional                        | Defaults to `["model", "app"]`. Use `["app"]` for UI-only actions.                                           |
+| `_meta["ui/resourceUri"]` | Deprecated                      | `registerAppTool` writes compatibility metadata for older hosts. New code should use `_meta.ui.resourceUri`. |
 
 ## Resource Contents
 
@@ -180,9 +194,11 @@ return {
 | `_meta`             | Host or component-only metadata | Use sparingly. Do not rely on it for model-visible facts.                                                                           |
 | `isError`           | Host and model                  | Set `true` for tool execution errors that should still return a tool result. Use JSON-RPC errors for protocol failures.             |
 
-## App-Only Tools
+## App-Only Helper Tools
 
 Set `visibility: ["app"]` when the View needs a server round trip that the model should not see, such as refresh, pagination, autosave, or form submit.
+
+An app-only helper tool may include `resourceUri` when it belongs to a specific View, but it does not have to. Omitting `resourceUri` means the helper is callable from the app connection but does not tell the host to render a new iframe when the tool is called.
 
 ```ts
 registerAppTool(
@@ -193,7 +209,6 @@ registerAppTool(
     inputSchema: { query: z.string() },
     _meta: {
       ui: {
-        resourceUri: 'ui://orders/view.html',
         visibility: ['app'],
       },
     },
@@ -210,6 +225,21 @@ registerAppTool(
 ```
 
 The host must hide app-only tools from the model tool list and reject View calls to tools whose visibility does not include `"app"`.
+
+## Server Checklist
+
+Before testing in a real host, verify the server response shape:
+
+| Check                                      | Why it matters                                                                    |
+| ------------------------------------------ | --------------------------------------------------------------------------------- |
+| `initialize` advertises MCP Apps support   | Lets the server decide whether to send UI metadata or fall back to text tools.    |
+| `tools/list` includes `_meta.ui`           | Gives MCP Apps hosts the `resourceUri` and `visibility` contract.                 |
+| `resources/read` returns app HTML          | Hosts render the returned HTML in a sandboxed iframe.                             |
+| HTML uses `text/html;profile=mcp-app`      | Distinguishes an MCP App View from a plain MCP resource.                          |
+| CSP lists every external origin            | Fetches, scripts, images, fonts, media, and nested iframes are otherwise blocked. |
+| `outputSchema` matches `structuredContent` | Lets clients validate the typed tool result that the View consumes.               |
+| `content` includes text fallback           | Keeps text-only MCP clients and older hosts useful.                               |
+| App-only helpers use `visibility`          | Stops the model from calling UI-only actions such as refresh or submit.           |
 
 ## Common Failures
 
