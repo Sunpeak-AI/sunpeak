@@ -19,6 +19,7 @@
 export function createBaseConfig({ hosts, testDir, webServer, port, use, globalSetup, visual, timeout }) {
   // Separate snapshot path from other visual options passed to expect.toHaveScreenshot
   const { snapshotPathTemplate, ...toHaveScreenshotDefaults } = visual ?? {};
+  const workerOverride = parsePositiveInt(process.env.SUNPEAK_TEST_WORKERS);
 
   return {
     ...(globalSetup ? { globalSetup } : {}),
@@ -27,7 +28,7 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 1,
     // Limit workers to avoid overwhelming the double-iframe sandbox proxy.
-    workers: process.env.CI ? 1 : 2,
+    workers: workerOverride ?? (process.env.CI ? 1 : 2),
     reporter: 'list',
     // Only override snapshot path when visual config is provided, to avoid
     // changing Playwright's default for projects that don't use visual testing.
@@ -82,4 +83,10 @@ function parsePort(value) {
   if (value == null) return null;
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function parsePositiveInt(value) {
+  if (value == null) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
 }

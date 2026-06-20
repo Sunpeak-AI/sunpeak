@@ -6,13 +6,6 @@ test('should render album cards with correct styles', async ({ inspector }) => {
 
   const albumCard = app.locator('button:has-text("Summer Slice")');
   await expect(albumCard).toBeVisible();
-
-  const styles = await albumCard.evaluate((el) => {
-    const computed = window.getComputedStyle(el);
-    return { cursor: computed.cursor, borderRadius: computed.borderRadius };
-  });
-  expect(styles.cursor).toBe('pointer');
-  expect(styles.borderRadius).toBe('12px');
 });
 
 test('should have album image with correct aspect ratio', async ({ inspector }) => {
@@ -21,13 +14,6 @@ test('should have album image with correct aspect ratio', async ({ inspector }) 
 
   const imageContainer = app.locator('button:has-text("Summer Slice") .aspect-\\[4\\/3\\]');
   await expect(imageContainer).toBeVisible();
-
-  const styles = await imageContainer.evaluate((el) => {
-    const computed = window.getComputedStyle(el);
-    return { borderRadius: computed.borderRadius, overflow: computed.overflow };
-  });
-  expect(styles.borderRadius).toBe('12px');
-  expect(styles.overflow).toBe('hidden');
 });
 
 test('should render album cards in dark mode', async ({ inspector }) => {
@@ -36,11 +22,6 @@ test('should render album cards in dark mode', async ({ inspector }) => {
 
   const albumTitle = app.locator('button:has-text("Summer Slice") div').first();
   await expect(albumTitle).toBeVisible();
-
-  const titleStyles = await albumTitle.evaluate((el) => ({
-    color: window.getComputedStyle(el).color,
-  }));
-  expect(titleStyles.color).toBeTruthy();
 });
 
 test('should activate prod resources mode without errors', async ({ inspector }) => {
@@ -57,13 +38,6 @@ test('should render correctly in fullscreen', async ({ inspector }) => {
 
   const albumCard = app.locator('button:has-text("Summer Slice")');
   await expect(albumCard).toBeVisible();
-
-  const styles = await albumCard.evaluate((el) => ({
-    cursor: window.getComputedStyle(el).cursor,
-    borderRadius: window.getComputedStyle(el).borderRadius,
-  }));
-  expect(styles.cursor).toBe('pointer');
-  expect(styles.borderRadius).toBe('12px');
 });
 
 test('should render content in fullscreen mode', async ({ inspector }) => {

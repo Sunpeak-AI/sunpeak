@@ -1954,7 +1954,41 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
    */
   function isDeadSession(err) {
     const msg = err?.message ?? '';
-    return msg.includes('Unknown session') || msg.includes('404') || msg.includes('fetch failed');
+    return (
+      msg.includes('Unknown session') ||
+      msg.includes('404') ||
+      msg.includes('fetch failed') ||
+      msg.includes('MCP request timed out')
+    );
+  }
+
+  function getMcpRequestTimeoutMs() {
+    const raw = process.env.SUNPEAK_INSPECT_MCP_REQUEST_TIMEOUT_MS;
+    if (!raw) return 0;
+    const n = Number(raw);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  }
+
+  async function withMcpRequestTimeout(promise) {
+    const timeoutMs = getMcpRequestTimeoutMs();
+    if (!timeoutMs) return await promise;
+
+    let timer;
+    try {
+      return await Promise.race([
+        promise.catch((err) => {
+          throw err;
+        }),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error(`MCP request timed out after ${timeoutMs}ms`)),
+            timeoutMs
+          );
+        }),
+      ]);
+    } finally {
+      clearTimeout(timer);
+    }
   }
 
   /**
@@ -2088,14 +2122,14 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
         if (!requireSameOrigin(req, res)) return;
         try {
           const client = getClient();
-          const result = await client.listTools();
+          const result = await withMcpRequestTimeout(client.listTools());
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result));
         } catch (err) {
           // If the session died (server restarted, timeout, etc.), try to reconnect once.
           if (isDeadSession(err) && (await tryReconnect())) {
             try {
-              const result = await getClient().listTools();
+              const result = await withMcpRequestTimeout(getClient().listTools());
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify(result));
               return;
@@ -2152,7 +2186,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
         try {
           const { name, arguments: args } = parsed;
           const client = getClient();
-          const result = await client.callTool({ name, arguments: args });
+          const result = await withMcpRequestTimeout(client.callTool({ name, arguments: args }));
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify(result));
         } catch (err) {
@@ -2160,7 +2194,9 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           if (isDeadSession(err) && (await tryReconnect())) {
             try {
               const { name, arguments: args } = parsed;
-              const result = await getClient().callTool({ name, arguments: args });
+              const result = await withMcpRequestTimeout(
+                getClient().callTool({ name, arguments: args })
+              );
               res.writeHead(200, { 'Content-Type': 'application/json' });
               res.end(JSON.stringify(result));
               return;
@@ -2900,7 +2936,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
 
         try {
           const client = getClient();
-          const result = await client.readResource({ uri });
+          const result = await withMcpRequestTimeout(client.readResource({ uri }));
           const content = result.contents?.[0];
           if (!content) {
             res.writeHead(404);
@@ -2943,7 +2979,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           // Try reconnecting on dead session before returning error
           if (isDeadSession(err) && (await tryReconnect())) {
             try {
-              const retryResult = await getClient().readResource({ uri });
+              const retryResult = await withMcpRequestTimeout(getClient().readResource({ uri }));
               const retryContent = retryResult.contents?.[0];
               if (retryContent) {
                 const mimeType = sanitizeMimeType(retryContent.mimeType);

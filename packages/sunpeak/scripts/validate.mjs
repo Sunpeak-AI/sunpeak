@@ -667,6 +667,8 @@ async function runScaffoldSmokeTest() {
       SUNPEAK_MCP_PORT: String(testMcpPort),
       SUNPEAK_HMR_PORT: String(testHmrPort),
       SUNPEAK_SANDBOX_PORT: String(testSandboxPort),
+      SUNPEAK_TEST_WORKERS: '1',
+      SUNPEAK_INSPECT_MCP_REQUEST_TIMEOUT_MS: '10000',
     });
     if (!testResult.ok) return { ok: false, step: 'sunpeak test (scaffold)', output: testResult.output };
 
@@ -866,6 +868,8 @@ async function testExample(resource, index) {
     SUNPEAK_MCP_PORT: String(mcpPort),
     SUNPEAK_HMR_PORT: String(hmrPort),
     SUNPEAK_SANDBOX_PORT: String(sandboxPort),
+    SUNPEAK_TEST_WORKERS: '1',
+    SUNPEAK_INSPECT_MCP_REQUEST_TIMEOUT_MS: '10000',
   };
 
   // Link local sunpeak
