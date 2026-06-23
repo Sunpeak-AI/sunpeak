@@ -8,8 +8,25 @@ const {
   isValidCspSource,
   generateCSP,
   generateScriptHtml,
+  buildIframeAllow,
   ALLOWED_SCRIPT_ORIGINS,
 } = _testExports;
+
+function withWindowLocation(url: string, callback: () => void) {
+  const originalLocation = window.location;
+  Object.defineProperty(window, 'location', {
+    configurable: true,
+    value: new URL(url),
+  });
+  try {
+    callback();
+  } finally {
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: originalLocation,
+    });
+  }
+}
 
 describe('IframeResource', () => {
   it('renders an iframe with srcDoc', () => {
@@ -208,22 +225,6 @@ describe('IframeResource Security', () => {
   });
 
   describe('Script Origin Validation - isAllowedUrl', () => {
-    function withWindowLocation(url: string, callback: () => void) {
-      const originalLocation = window.location;
-      Object.defineProperty(window, 'location', {
-        configurable: true,
-        value: new URL(url),
-      });
-      try {
-        callback();
-      } finally {
-        Object.defineProperty(window, 'location', {
-          configurable: true,
-          value: originalLocation,
-        });
-      }
-    }
-
     it('allows relative paths starting with /', () => {
       expect(isAllowedUrl('/dist/carousel/carousel.js')).toBe(true);
       expect(isAllowedUrl('/scripts/widget.js')).toBe(true);
@@ -367,6 +368,15 @@ describe('IframeResource Security', () => {
       const allow = iframe.getAttribute('allow');
 
       expect(allow).toBe('local-network-access *');
+    });
+
+    it('does not grant local-network-access from hosted inspectors', () => {
+      withWindowLocation('https://inspector.example.com/', () => {
+        expect(buildIframeAllow(undefined)).toBe('');
+        expect(buildIframeAllow({ microphone: {}, clipboardWrite: {} })).toBe(
+          'microphone; clipboard-write'
+        );
+      });
     });
   });
 

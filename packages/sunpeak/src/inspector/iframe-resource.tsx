@@ -303,9 +303,15 @@ function generateScriptHtml(
  * combines them with inspector baseline permissions.
  */
 function buildIframeAllow(permissions: McpUiResourcePermissions | undefined): string {
-  const parts: string[] = [
-    'local-network-access *', // Always needed for local dev server access
-  ];
+  const parts: string[] = [];
+
+  // Local-network-access is required for `sunpeak dev` because the app iframe
+  // loads from local Vite/MCP servers. Do not grant it from hosted inspectors:
+  // untrusted app resources should not get extra private-network reachability
+  // in a visitor's browser just because the inspector is remote.
+  if (isInspectorOnLoopback()) {
+    parts.push('local-network-access *');
+  }
 
   // Map spec permissions to their Permission Policy names
   const permMap: [keyof McpUiResourcePermissions, string][] = [
