@@ -844,6 +844,16 @@ export function Inspector({
           setOauthStatus('error');
           return;
         }
+        // The popup starts as same-origin about:blank so browsers count it as
+        // user-initiated, but the remote authorization page must not keep an
+        // opener reference back to the inspector. Cross-origin pages cannot
+        // read the inspector, but they can navigate window.opener.
+        try {
+          popup.opener = null;
+        } catch {
+          // Some browser/window shims expose opener as read-only. The callback
+          // still validates origin/state; this is best-effort hardening.
+        }
         popup.location.href = parsedAuthUrl.toString();
 
         // Listen for the popup's callback via two channels:
@@ -874,6 +884,7 @@ export function Inspector({
         // Channel 1: postMessage (origin-verified)
         const handleMessage = (event: MessageEvent) => {
           if (event.origin !== window.location.origin) return;
+          if (event.source !== popup) return;
           if (event.data?.type !== 'sunpeak-oauth-callback') return;
           handleOAuthResult(event.data);
         };

@@ -527,6 +527,59 @@ describe('Inspector', () => {
       openSpy.mockRestore();
     });
 
+    it('severs the OAuth popup opener before navigating to remote authorization', async () => {
+      const user = userEvent.setup();
+      const popup = {
+        close: vi.fn(),
+        closed: false,
+        location: { href: '' },
+        opener: window,
+      };
+      const openSpy = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window);
+
+      fetchSpy
+        .mockResolvedValueOnce(new Response('{"tools":[]}', { status: 200 }))
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ hasKey: false }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        )
+        .mockResolvedValueOnce(
+          new Response(
+            JSON.stringify({
+              status: 'redirect',
+              authUrl: 'https://auth.example.test/authorize',
+            }),
+            {
+              status: 200,
+              headers: { 'Content-Type': 'application/json' },
+            }
+          )
+        );
+
+      const { unmount } = render(
+        <Inspector
+          simulations={{ test: createSim() }}
+          mcpServerUrl="http://localhost:8000/mcp"
+          onCallTool={vi.fn()}
+        />
+      );
+
+      const authSection = screen.getByText('Authentication').closest('[class*="space-y"]')!;
+      const authSelect = authSection.querySelector('select')!;
+      await user.selectOptions(authSelect, 'oauth');
+      await user.click(screen.getByRole('button', { name: 'Authorize' }));
+
+      await waitFor(() => {
+        expect(popup.location.href).toBe('https://auth.example.test/authorize');
+      });
+      expect(popup.opener).toBeNull();
+
+      unmount();
+      openSpy.mockRestore();
+    });
+
     it('reconnects with bearer token when token is entered', async () => {
       const user = userEvent.setup();
 
