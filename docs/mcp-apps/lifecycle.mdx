@@ -5,7 +5,7 @@ description: "Understand the complete MCP App lifecycle: tool and resource disco
 keywords: ["MCP Apps", "ChatGPT Apps", "app lifecycle", "initialization", "teardown", "tool discovery"]
 ---
 
-An MCP App goes through five stages: discovery, initialization, data delivery, interactive phase, and teardown. The host orchestrates this lifecycle — the [App class](/mcp-apps/app/app-class) handles most of it automatically via `connect()`.
+An MCP App goes through five stages: discovery, initialization, data delivery, interactive phase, and teardown. The host orchestrates this lifecycle, and the [App class](/mcp-apps/app/app-class) handles most of it automatically via `connect()`.
 
 ## Sequence
 
@@ -60,10 +60,10 @@ The Host reads the tool's `_meta.ui.resourceUri` to determine which resource to 
 
 When a UI tool is called, the Host renders the iframe. The View sends `ui/initialize` with its app info and capabilities. The Host responds with:
 
-- **Protocol version** — Negotiated protocol version
-- **Host info** — Host name and version
-- **Host capabilities** — What the host supports (tool proxying, messages, links, etc.)
-- **Host context** — Theme, locale, display mode, container dimensions, safe area insets
+- **Protocol version** -- Negotiated protocol version
+- **Host info** -- Host name and version
+- **Host capabilities** -- What the host supports (tool proxying, messages, links, etc.)
+- **Host context** -- Theme, locale, display mode, container dimensions, safe area insets
 
 The View then sends `ui/notifications/initialized` to signal readiness.
 
@@ -75,10 +75,10 @@ The `App` class handles this handshake automatically in `connect()`. Register ev
 
 The Host sends tool arguments and results to the View:
 
-- **`ui/notifications/tool-input`** — Complete tool arguments after the tool call begins
-- **`ui/notifications/tool-input-partial`** — Streaming partial arguments (healed JSON) for progressive rendering
-- **`ui/notifications/tool-result`** — Tool execution result from the server, including both `content` (text for model context) and `structuredContent` (data optimized for UI rendering)
-- **`ui/notifications/tool-cancelled`** — Notification that tool execution was cancelled
+- **`ui/notifications/tool-input`** -- Complete tool arguments after the tool call begins
+- **`ui/notifications/tool-input-partial`** -- Streaming partial arguments (healed JSON) for progressive rendering
+- **`ui/notifications/tool-result`** -- Tool execution result from the server, including both `content` (text for model context) and `structuredContent` (data optimized for UI rendering)
+- **`ui/notifications/tool-cancelled`** -- Notification that tool execution was cancelled
 
 ## 4. Interactive Phase
 
@@ -113,4 +113,6 @@ app.onteardown = async () => {
 
 ## Host Context Updates
 
-At any point during the interactive phase, the Host may send `ui/notifications/host-context-changed` when the environment changes (theme toggle, resize, locale change). The `App` class automatically merges these updates into its internal context — access the latest via [`getHostContext()`](/mcp-apps/app/accessors/get-host-context).
+At any point during the interactive phase, the Host may send `ui/notifications/host-context-changed` when the environment changes (theme toggle, resize, locale change). The `App` class automatically merges these updates into its internal context, which you can read via [`getHostContext()`](/mcp-apps/app/accessors/get-host-context).
+
+Host context also drives layout. Use [Layout and Display](/mcp-apps/layout) when you need to handle `containerDimensions`, auto-resize, safe areas, or display mode changes.

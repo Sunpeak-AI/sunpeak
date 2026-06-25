@@ -82,13 +82,14 @@ if (ctx?.displayMode === "inline") {
 
 The method creates a `ResizeObserver` that watches:
 
-1. `document.documentElement` — catches viewport-level changes
-2. `document.body` — catches content-level changes
+1. `document.documentElement` catches viewport-level changes.
+2. `document.body` catches content-level changes.
 
 When either element's size changes, the observer sends the current `scrollWidth` and `scrollHeight` of `document.documentElement` to the host via `sendSizeChanged()`.
 
 ## Related
 
-- [`sendSizeChanged()`](/mcp-apps/app/requests/send-size-changed) — Manually send a one-time size update
-- [`useAutoResize`](/mcp-apps/react/use-auto-resize) — React hook that wraps this method
-- [Auto-Resize](/mcp-apps/app/app-class#auto-resize) — How auto-resize works in the `App` class
+- [`sendSizeChanged()`](/mcp-apps/app/requests/send-size-changed) -- Manually send a one-time size update
+- [Layout and Display](/mcp-apps/layout) -- How host dimensions, auto-resize, display modes, and safe areas fit together
+- [`useAutoResize`](/mcp-apps/react/use-auto-resize) -- React hook that wraps this method
+- [Auto-Resize](/mcp-apps/app/app-class#auto-resize) -- How auto-resize works in the `App` class

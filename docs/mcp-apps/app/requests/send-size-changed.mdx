@@ -79,8 +79,11 @@ function resizeCanvas(width: number, height: number) {
 When `autoResize` is enabled (the default), calling `sendSizeChanged` is unnecessary for standard DOM changes. The auto-resize observer handles this automatically. Disable auto-resize only when you need precise manual control over reported dimensions.
 </Note>
 
+For guidance on when the host expects size updates, see [Layout and Display](/mcp-apps/layout).
+
 ## Related
 
 - [Auto-Resize](/mcp-apps/app/app-class#auto-resize) -- How automatic size detection works in the `App` class.
+- [Layout and Display](/mcp-apps/layout) -- How host dimensions, auto-resize, display modes, and safe areas fit together.
 - [`useAutoResize`](/mcp-apps/react/use-auto-resize) -- React hook for auto-resize behavior.
 - [Requests](/mcp-apps/app/requests) -- Overview of all View-to-host request methods.

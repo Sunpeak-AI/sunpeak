@@ -1,0 +1,259 @@
+---
+title: "MCP Apps Layout, Size, and Display Modes"
+sidebarTitle: "Layout and Display"
+description: "Build MCP Apps that size correctly inside AI chat hosts. Covers host containerDimensions, auto-resize, size-changed notifications, display modes, safe areas, and responsive View CSS."
+keywords: ["MCP Apps layout", "MCP App iframe size", "MCP Apps display modes", "containerDimensions", "ui/notifications/size-changed", "MCP Apps responsive UI", "ChatGPT Apps layout", "Claude Apps layout"]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+MCP Apps render inside host-controlled iframes. The View owns its internal layout, but the Host owns the outer container. A good View reads the Host's constraints, reports its content size when the Host lets it grow, and adapts when the user changes display mode.
+
+Use this page when a View is clipped, grows forever, leaves empty space, ignores safe areas, or behaves differently between inline and fullscreen modes.
+
+## The Layout Contract
+
+The Host sends layout state in [`hostContext`](/mcp-apps/app/accessors/get-host-context) during `ui/initialize` and may update it later with [`onhostcontextchanged`](/mcp-apps/app/event-handlers/onhostcontextchanged).
+
+```ts
+type McpUiDisplayMode = "inline" | "fullscreen" | "pip";
+
+interface McpUiHostContext {
+  displayMode?: McpUiDisplayMode;
+  availableDisplayModes?: McpUiDisplayMode[];
+  containerDimensions?: {
+    width?: number;
+    maxWidth?: number;
+    height?: number;
+    maxHeight?: number;
+  };
+  safeAreaInsets?: {
+    top: number;
+    right: number;
+    bottom: number;
+    left: number;
+  };
+}
+```
+
+| Field | Who sets it | What the View should do |
+|-------|-------------|-------------------------|
+| `displayMode` | Host | Switch layout density, controls, and navigation for `inline`, `fullscreen`, or `pip`. |
+| `availableDisplayModes` | Host | Only request modes that appear here. |
+| `width` or `height` | Host | Treat the dimension as fixed and fill it. |
+| `maxWidth` or `maxHeight` | Host | Let content size the iframe up to that limit, then scroll or paginate internally. |
+| omitted dimension | Host | Let content define that dimension and report size changes. |
+| `safeAreaInsets` | Host | Pad fixed controls away from host chrome, notches, and mobile browser UI. |
+
+## Fixed vs Flexible Dimensions
+
+Each axis is independent. A host can fix width while letting height grow, or fix both axes in fullscreen.
+
+### Fixed Dimensions
+
+If `containerDimensions.height` or `containerDimensions.width` is set, the Host controls that axis. Fill the available space instead of reporting a larger preferred size.
+
+```ts
+const dims = app.getHostContext()?.containerDimensions;
+
+if (dims?.height) {
+  document.documentElement.style.height = "100vh";
+  document.body.style.height = "100vh";
+}
+
+if (dims?.width) {
+  document.documentElement.style.width = "100vw";
+}
+```
+
+In React with sunpeak:
+
+```tsx
+import { useViewport } from "sunpeak";
+
+export function OrdersView() {
+  const viewport = useViewport();
+  const fixedHeight = viewport && "height" in viewport && viewport.height;
+
+  return (
+    <main className={fixedHeight ? "h-dvh overflow-hidden" : "min-h-0"}>
+      {/* App content */}
+    </main>
+  );
+}
+```
+
+### Flexible Dimensions
+
+If the Host sends `maxHeight` or `maxWidth`, the View can choose its content size up to that value. This is common for inline chat cards where the host wants the app to fit naturally in the conversation.
+
+```css
+:root,
+body {
+  margin: 0;
+}
+
+.app {
+  max-height: var(--host-max-height, none);
+  overflow: auto;
+}
+```
+
+```ts
+const dims = app.getHostContext()?.containerDimensions;
+
+if (dims?.maxHeight) {
+  document.documentElement.style.setProperty(
+    "--host-max-height",
+    `${dims.maxHeight}px`,
+  );
+}
+```
+
+## Auto-Resize
+
+The Host can only resize flexible iframes when the View reports its content size. The SDK handles this by default:
+
+- [`App`](/mcp-apps/app/app-class) enables `autoResize: true` by default.
+- Auto-resize watches `document.body` and `document.documentElement` with `ResizeObserver`.
+- When content changes, the View sends `ui/notifications/size-changed`.
+- The Host updates iframe dimensions when the corresponding axis is flexible.
+
+Most apps should keep auto-resize enabled and avoid manual size messages.
+
+```ts
+const app = new App(
+  { name: "Orders", version: "1.0.0" },
+  { availableDisplayModes: ["inline", "fullscreen"] },
+  { autoResize: true },
+);
+
+await app.connect();
+```
+
+Use [`sendSizeChanged()`](/mcp-apps/app/requests/send-size-changed) only when DOM measurement is not enough, such as canvas rendering, virtualized content, or an animation whose final size is known after a transition.
+
+```ts
+chart.on("rendered", () => {
+  const rect = container.getBoundingClientRect();
+  app.sendSizeChanged({ width: rect.width, height: rect.height });
+});
+```
+
+## Display Modes
+
+Views declare supported display modes in `McpUiAppCapabilities`. Hosts declare the modes they can provide in `hostContext.availableDisplayModes`. The View can request a mode, but the Host decides the final mode.
+
+```ts
+const app = new App(
+  { name: "Orders", version: "1.0.0" },
+  { availableDisplayModes: ["inline", "fullscreen"] },
+);
+
+await app.connect();
+
+const hostModes = app.getHostContext()?.availableDisplayModes ?? [];
+if (hostModes.includes("fullscreen")) {
+  const result = await app.requestDisplayMode({ mode: "fullscreen" });
+  console.log(result.mode); // The mode actually set by the Host.
+}
+```
+
+Inline Views should be compact and quick to scan. Fullscreen Views can use denser controls, persistent sidebars, and larger canvases. PiP Views should be narrow, resilient to small sizes, and focused on one ongoing task.
+
+In React with sunpeak:
+
+```tsx
+import { useDisplayMode, useRequestDisplayMode } from "sunpeak";
+
+export function DisplayModeButton() {
+  const displayMode = useDisplayMode();
+  const { requestDisplayMode, availableModes } = useRequestDisplayMode();
+  const canFullscreen = availableModes?.includes("fullscreen");
+
+  if (!canFullscreen) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={() =>
+        requestDisplayMode(displayMode === "fullscreen" ? "inline" : "fullscreen")
+      }
+    >
+      {displayMode === "fullscreen" ? "Exit fullscreen" : "Open fullscreen"}
+    </button>
+  );
+}
+```
+
+## Safe Areas
+
+Use `safeAreaInsets` for fixed headers, footers, floating buttons, and mobile layouts. It is host-provided padding in pixels.
+
+```tsx
+import { useSafeArea } from "sunpeak";
+
+export function FixedToolbar() {
+  const safeArea = useSafeArea();
+
+  return (
+    <div
+      className="fixed bottom-0 left-0 right-0"
+      style={{
+        paddingBottom: safeArea?.bottom ?? 0,
+        paddingLeft: safeArea?.left ?? 0,
+        paddingRight: safeArea?.right ?? 0,
+      }}
+    >
+      {/* Toolbar controls */}
+    </div>
+  );
+}
+```
+
+## CSS Rules That Hold Up Across Hosts
+
+Start with host-neutral document sizing:
+
+```css
+html,
+body,
+#root {
+  margin: 0;
+  min-width: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+```
+
+Then choose scrolling intentionally:
+
+| Scenario | Recommended behavior |
+|----------|----------------------|
+| Inline card with flexible height | Let content size naturally and rely on auto-resize. |
+| Inline card with `maxHeight` | Set `max-height` and put overflow on the content region. |
+| Fullscreen with fixed `height` | Fill the viewport and scroll only the pane that needs it. |
+| Canvas or map | Use a stable `min-height` or aspect ratio, then report the rendered size. |
+| Mobile host | Use safe areas and avoid hover-only controls. |
+
+Avoid viewport-only assumptions in inline mode. `100vh` can be much larger than the chat card the Host is willing to show. Use it only when the Host has fixed the height or when your app is fullscreen.
+
+## Common Problems
+
+| Problem | Likely cause | Fix |
+|---------|--------------|-----|
+| The iframe clips the bottom of the View | Auto-resize is disabled, or content size changed outside DOM layout. | Keep `autoResize: true` or call `sendSizeChanged()` after the change. |
+| The app grows taller after every render | The View reports size while also adding layout that depends on the reported iframe size. | Remove feedback loops. In inline mode, let content define height or put overflow inside a fixed pane. |
+| Fullscreen shows a tiny card | The View is still using inline max-width or card layout. | Branch on `displayMode === "fullscreen"` and fill the fixed container. |
+| A fullscreen button does nothing | The Host does not expose `fullscreen` in `availableDisplayModes`, or it declined the request. | Hide unavailable mode controls and trust the returned mode. |
+| Floating controls overlap host chrome | Safe area insets are ignored. | Add `safeAreaInsets` to fixed-position padding. |
+
+## Related
+
+- [`getHostContext()`](/mcp-apps/app/accessors/get-host-context) - Read display mode, dimensions, and safe areas.
+- [`requestDisplayMode()`](/mcp-apps/app/requests/request-display-mode) - Ask the Host to switch display modes.
+- [`sendSizeChanged()`](/mcp-apps/app/requests/send-size-changed) - Manually report View dimensions.
+- [`setupSizeChangedNotifications()`](/mcp-apps/app/requests/setup-size-changed-notifications) - Control auto-resize.
+- [`useAutoResize`](/mcp-apps/react/use-auto-resize) - React wrapper for manual auto-resize control.

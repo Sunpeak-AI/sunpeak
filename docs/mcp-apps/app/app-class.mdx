@@ -125,6 +125,8 @@ new PostMessageTransport(eventTarget?, eventSource)
 
 By default, `App` monitors `document.body` and `document.documentElement` for size changes and sends `ui/notifications/size-changed` to the host. Disable with `{ autoResize: false }`. In React, you can use the [`useAutoResize`](/mcp-apps/react/use-auto-resize) hook instead.
 
+For the full host sizing contract, including fixed vs flexible `containerDimensions` and display mode changes, see [Layout and Display](/mcp-apps/layout).
+
 ### [setupSizeChangedNotifications()](/mcp-apps/app/requests/setup-size-changed-notifications)
 
 Manually start auto-resize reporting. Returns a cleanup function. Automatically called by `connect()` when `autoResize: true`.

@@ -103,7 +103,7 @@ Views can be displayed in different modes:
 - **fullscreen** — Takes over the window (editors, games, dashboards)
 - **pip** — Picture-in-picture overlay (music player, timer)
 
-Views declare which modes they support; Hosts declare which they can provide. The Host always has final say over its own UI.
+Views declare which modes they support; Hosts declare which they can provide. The Host always has final say over its own UI. See [Layout and Display](/mcp-apps/layout) for sizing, auto-resize, and safe area guidance.
 
 ## How are MCP Apps secured?
 
@@ -113,6 +113,6 @@ Servers declare which network domains their UI needs via [CSP metadata](/mcp-app
 
 ## More questions?
 
-The [Patterns](/mcp-apps/patterns) guide covers app-only tools, polling, large data, errors, and host adaptation. The [MCP Apps FAQ](/mcp-apps/faq) answers common questions about hosts, UI delivery, display modes, theming, security, and testing.
+The [Layout and Display](/mcp-apps/layout) guide covers iframe sizing, display modes, and responsive View CSS. The [Patterns](/mcp-apps/patterns) guide covers app-only tools, polling, large data, errors, and host adaptation. The [MCP Apps FAQ](/mcp-apps/faq) answers common questions about hosts, UI delivery, display modes, theming, security, and testing.
 
 If you are wiring the server side from scratch, start with [Build an MCP App Server](/mcp-apps/server/build-server). It shows capability detection, `ui://` resources, `_meta.ui.resourceUri`, `structuredContent`, CSP, and app-only tools in one example. For a field-by-field check before testing in a host, use the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).
