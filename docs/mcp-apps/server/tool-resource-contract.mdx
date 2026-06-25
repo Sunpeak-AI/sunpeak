@@ -1,13 +1,14 @@
 ---
 title: 'MCP App Tool and Resource Contract'
 sidebarTitle: 'Tool and Resource Contract'
-description: 'A field-by-field server checklist for MCP App tools, ui:// HTML resources, _meta.ui.resourceUri, structuredContent, outputSchema, CSP metadata, and app-only tool visibility.'
+description: 'A field-by-field server checklist for MCP App tools, ui:// HTML resources, _meta.ui.resourceUri, tool annotations, structuredContent, outputSchema, CSP metadata, and app-only tool visibility.'
 keywords:
   [
     'MCP App tool resource contract',
     'MCP App server checklist',
     'MCP App structuredContent',
     'MCP App outputSchema',
+    'MCP tool annotations',
     'MCP App HTML resource',
     'MCP App _meta.ui.resourceUri',
     'ui:// resource',
@@ -39,6 +40,7 @@ Use UI-launching tools for the actions a user can ask the model to perform, such
 | Piece               | Where it appears                          | What it does                                                                                            |
 | ------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Tool definition     | `tools/list`                              | Gives the model a callable tool with `name`, `description`, `inputSchema`, and optional `outputSchema`. |
+| Tool annotations    | `tool.annotations`                        | Gives hosts safety hints such as read-only, destructive, idempotent, or external-system behavior.       |
 | Tool UI metadata    | `tool._meta.ui.resourceUri`               | Points the host at the HTML resource to render after the tool call.                                     |
 | Resource definition | `resources/list` or tool-linked discovery | Declares the `ui://` resource and `text/html;profile=mcp-app` MIME type.                                |
 | Resource contents   | `resources/read`                          | Returns the HTML document and any iframe metadata under `contents[]._meta.ui`.                          |
@@ -100,6 +102,10 @@ registerAppTool(
       query: z.string(),
       orders: z.array(z.object({ id: z.string(), total: z.number() })),
     },
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
     _meta: {
       ui: {
         resourceUri,
@@ -120,6 +126,34 @@ registerAppTool(
   }
 );
 ```
+
+## Tool Annotations
+
+Use standard MCP `annotations` to describe what the tool does. Use `_meta.ui` to describe MCP App behavior such as View linkage and visibility.
+
+| Annotation | Use it for | Example |
+| ---------- | ---------- | ------- |
+| `readOnlyHint` | Tools that do not modify state. | Search, list, preview, load dashboard. |
+| `destructiveHint` | Tools that can delete, overwrite, cancel, charge, or send. | Cancel order, delete record, submit payment. |
+| `idempotentHint` | Tools that are safe to retry with the same arguments. | Save draft by stable id, refresh cache. |
+| `openWorldHint` | Tools that interact with systems outside your backend. | Email, payment, public web, third-party APIs. |
+
+Tool visibility and annotations are independent. An app-only helper can still be destructive, and a UI-launching model tool can be read-only.
+
+```ts
+annotations: {
+  readOnlyHint: true,
+  openWorldHint: false,
+},
+_meta: {
+  ui: {
+    resourceUri: "ui://orders/view.html",
+    visibility: ["model", "app"],
+  },
+}
+```
+
+See [Tool Annotations](/mcp-apps/server/tool-annotations) for examples of read-only UI tools, app-only write helpers, and destructive actions.
 
 ## Tool Metadata
 
@@ -237,6 +271,7 @@ Before testing in a real host, verify the server response shape:
 | `resources/read` returns app HTML          | Hosts render the returned HTML in a sandboxed iframe.                             |
 | HTML uses `text/html;profile=mcp-app`      | Distinguishes an MCP App View from a plain MCP resource.                          |
 | CSP lists every external origin            | Fetches, scripts, images, fonts, media, and nested iframes are otherwise blocked. |
+| Tool annotations match behavior            | Lets hosts apply useful review UI and avoid treating writes as reads.             |
 | `outputSchema` matches `structuredContent` | Lets clients validate the typed tool result that the View consumes.               |
 | `content` includes text fallback           | Keeps text-only MCP clients and older hosts useful.                               |
 | App-only helpers use `visibility`          | Stops the model from calling UI-only actions such as refresh or submit.           |
@@ -260,6 +295,10 @@ Before testing in a real host, verify the server response shape:
 
 <Card horizontal title="Tool _meta" icon="page" href="/mcp-apps/server/tool-meta">
   Full reference for resource linkage and tool visibility.
+</Card>
+
+<Card horizontal title="Tool Annotations" icon="shield-check" href="/mcp-apps/server/tool-annotations">
+  Add host-facing safety hints to MCP App tools.
 </Card>
 
 <Card horizontal title="Resource _meta" icon="page" href="/mcp-apps/server/resource-meta">

@@ -53,7 +53,8 @@ function registerAppTool(
     Zod schema or JSON Schema for tool output.
   </ResponseField>
   <ResponseField name="annotations" type="ToolAnnotations">
-    MCP tool annotations (e.g., `readOnlyHint`).
+    Standard MCP tool annotations, such as `readOnlyHint`, `destructiveHint`, `idempotentHint`,
+    and `openWorldHint`. See [Tool Annotations](/mcp-apps/server/tool-annotations).
   </ResponseField>
   <ResponseField name="_meta" type="object" required>
     UI metadata linking this tool to a resource, controlling tool visibility, or both. See [_meta Reference](#_meta-reference) below for full details.
@@ -98,6 +99,30 @@ registerAppTool(
       structuredContent: weather,
     };
   }
+);
+```
+
+### Read-only tool annotations
+
+Add `annotations` when a UI tool is read-only, destructive, idempotent, or calls external systems. Hosts can use these hints for review UI and tool-calling behavior.
+
+```ts
+registerAppTool(
+  server,
+  'search-orders',
+  {
+    title: 'Search Orders',
+    description: 'Search orders and display the results.',
+    inputSchema: { query: z.string() },
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      ui: { resourceUri: 'ui://orders/view.html' },
+    },
+  },
+  handler
 );
 ```
 
@@ -155,6 +180,8 @@ registerAppTool(
 ## `_meta` Reference
 
 See **[Tool `_meta`](/mcp-apps/server/tool-meta)** for the complete reference on `resourceUri`, `visibility`, host behavior rules, and metadata normalization.
+
+See **[Tool Annotations](/mcp-apps/server/tool-annotations)** for when to set `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint`.
 
 See **[Tool and Resource Contract](/mcp-apps/server/tool-resource-contract)** for how tool metadata, resource metadata, `content`, and `structuredContent` fit together.
 

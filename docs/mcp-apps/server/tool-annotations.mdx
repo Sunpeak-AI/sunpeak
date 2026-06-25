@@ -1,0 +1,169 @@
+---
+title: 'MCP Tool Annotations for MCP Apps'
+sidebarTitle: 'Tool Annotations'
+description: 'Use MCP tool annotations in MCP App servers to describe read-only tools, destructive actions, idempotent calls, and external system access.'
+keywords:
+  [
+    'MCP tool annotations',
+    'MCP Apps tool annotations',
+    'readOnlyHint',
+    'destructiveHint',
+    'idempotentHint',
+    'openWorldHint',
+    'MCP App safety',
+    'MCP tool review',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+Tool annotations are standard MCP metadata on a tool definition. They tell hosts what kind of action the tool performs, which helps hosts choose review UI, risk labels, and tool-calling behavior.
+
+Annotations are separate from [`_meta.ui`](/mcp-apps/server/tool-meta):
+
+| Field | Answers | Example |
+| ----- | ------- | ------- |
+| `annotations` | What does this tool do? | Read data, delete data, call an external service. |
+| `_meta.ui` | Who can call it, and does it render a View? | Model-visible, app-only, linked to `ui://orders/view.html`. |
+
+Use both on MCP App tools. A UI-launching tool can be read-only. An app-only helper can still write data. Visibility does not describe safety.
+
+## Annotation Fields
+
+| Annotation | Use it when | MCP App guidance |
+| ---------- | ----------- | ---------------- |
+| `title` | You want a short human-readable tool name. | Keep it action-oriented, such as `Search Orders` or `Save Draft`. |
+| `readOnlyHint` | The tool does not modify state. | Set `true` for search, preview, list, load, and filter tools. |
+| `destructiveHint` | The tool can delete, overwrite, cancel, charge, send, or otherwise cause user-visible harm. | Set `true` for destructive model-visible tools and for destructive app-only helpers called from the View. |
+| `idempotentHint` | Repeating the same call has the same effect as calling it once. | Set `true` only when retries are safe, such as `saveDraft` with a stable draft id. |
+| `openWorldHint` | The tool interacts with systems outside the MCP server's control. | Set `false` for local reads or your own database. Set `true` for email, payment, web, SaaS, or third-party API actions. |
+
+<Note>
+  Annotations are hints, not authorization. Your server still needs authentication, permission checks,
+  input validation, and confirmation flows for sensitive actions.
+</Note>
+
+## Read-Only UI Tool
+
+A search or dashboard tool usually renders a View and reads server data. Mark it read-only so hosts can treat it as lower risk.
+
+```ts
+registerAppTool(
+  server,
+  'search-orders',
+  {
+    title: 'Search Orders',
+    description: 'Search orders and display the results.',
+    inputSchema: { query: z.string() },
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      ui: {
+        resourceUri: 'ui://orders/view.html',
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  async ({ query }) => {
+    const result = await searchOrders(query);
+
+    return {
+      content: [{ type: 'text', text: `Found ${result.orders.length} orders.` }],
+      structuredContent: result,
+    };
+  }
+);
+```
+
+## App-Only Write Helper
+
+App-only tools are hidden from the model, but they are still real server tools. If a button in the View writes data, annotate that tool honestly.
+
+```ts
+registerAppTool(
+  server,
+  'save-order-note',
+  {
+    title: 'Save Order Note',
+    description: 'Save an order note from the app UI.',
+    inputSchema: { orderId: z.string(), note: z.string() },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      ui: {
+        visibility: ['app'],
+      },
+    },
+  },
+  async ({ orderId, note }) => {
+    const saved = await saveOrderNote(orderId, note);
+
+    return {
+      content: [{ type: 'text', text: 'Order note saved.' }],
+      structuredContent: saved,
+    };
+  }
+);
+```
+
+## Destructive Tool
+
+If a model-visible tool can cancel, delete, send, purchase, or overwrite something, set `destructiveHint: true`. Hosts may use this to add confirmation or show stronger review UI.
+
+```ts
+registerAppTool(
+  server,
+  'cancel-order',
+  {
+    title: 'Cancel Order',
+    description: 'Cancel an order by id.',
+    inputSchema: { orderId: z.string() },
+    annotations: {
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      ui: {
+        resourceUri: 'ui://orders/cancel.html',
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  async ({ orderId }) => {
+    const result = await cancelOrder(orderId);
+
+    return {
+      content: [{ type: 'text', text: `Order ${orderId} was cancelled.` }],
+      structuredContent: result,
+    };
+  }
+);
+```
+
+## Checklist
+
+- Add annotations to every model-visible tool, especially UI-launching tools.
+- Add annotations to app-only tools when they write data or call external systems.
+- Do not use `readOnlyHint: true` on a tool that writes state, even if the write is small.
+- Set `destructiveHint: true` for delete, cancel, overwrite, send, purchase, or irreversible actions.
+- Set `idempotentHint: true` only when server-side retries are safe.
+- Set `openWorldHint: true` when the tool reaches outside your controlled backend.
+
+## Related
+
+<CardGroup cols={2}>
+  <Card title="Tool and Resource Contract" icon="list-check" href="/mcp-apps/server/tool-resource-contract">
+    Check the full server-side contract for MCP App tools and resources.
+  </Card>
+  <Card title="Tool _meta" icon="tag" href="/mcp-apps/server/tool-meta">
+    Link tools to Views and control model vs app visibility.
+  </Card>
+</CardGroup>

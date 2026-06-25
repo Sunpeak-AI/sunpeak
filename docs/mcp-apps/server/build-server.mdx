@@ -33,6 +33,7 @@ Before you test in a host, confirm these items:
 - Every UI resource URI starts with `ui://`.
 - Every UI resource returns `mimeType: RESOURCE_MIME_TYPE`.
 - Each UI tool points at an existing resource with `_meta.ui.resourceUri`.
+- Model-visible tools include MCP `annotations` for read-only, destructive, idempotent, and external-system behavior.
 - Tool results include a short `content` summary for the model.
 - Tool results put UI data in `structuredContent`.
 - The resource declares every external origin it needs in `_meta.ui.csp`.
@@ -83,6 +84,10 @@ server.server.oninitialized = () => {
         title: 'Search Orders',
         description: 'Search orders and return a text summary.',
         inputSchema: { query: z.string() },
+        annotations: {
+          readOnlyHint: true,
+          openWorldHint: false,
+        },
       },
       async ({ query }) => {
         const result = await searchOrders(query);
@@ -146,6 +151,10 @@ server.server.oninitialized = () => {
           })
         ),
       },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
       _meta: {
         ui: {
           resourceUri: 'ui://orders/view.html',
@@ -175,6 +184,10 @@ server.server.oninitialized = () => {
       title: 'Refresh Orders',
       description: 'Refresh order data for the app UI.',
       inputSchema: { query: z.string() },
+      annotations: {
+        readOnlyHint: true,
+        openWorldHint: false,
+      },
       _meta: {
         ui: {
           resourceUri: 'ui://orders/view.html',
@@ -233,6 +246,17 @@ return {
 
 Do not put large UI payloads only in `content`. It makes the model context harder to use and gives the View less predictable data.
 
+## Tool Annotations
+
+Use MCP `annotations` alongside MCP Apps `_meta.ui`:
+
+- `annotations` tells the host whether the tool is read-only, destructive, idempotent, or reaches outside your backend.
+- `_meta.ui` tells the host whether the tool renders a View and whether the model, the View, or both can call it.
+
+For the `search-orders` tool above, `readOnlyHint: true` is correct because the tool only reads order data. If you add a `cancel-order` or `submit-payment` tool, set `destructiveHint: true` and require server-side authorization even if the host shows a confirmation.
+
+See [Tool Annotations](/mcp-apps/server/tool-annotations) for examples.
+
 ## CSP and External Assets
 
 MCP App HTML runs in a sandboxed iframe. By default, hosts block undeclared network and asset origins. Declare what the View needs:
@@ -289,6 +313,9 @@ The View can call the tool through [`callServerTool()`](/mcp-apps/app/requests/c
   </Card>
   <Card title="Tool and Resource Contract" icon="list-check" href="/mcp-apps/server/tool-resource-contract">
     Check the fields that connect MCP tools, UI resources, and tool results.
+  </Card>
+  <Card title="Tool Annotations" icon="shield-check" href="/mcp-apps/server/tool-annotations">
+    Add read-only, destructive, idempotent, and external-system hints.
   </Card>
   <Card title="MCP App Patterns" icon="page" href="/mcp-apps/patterns">
     Use app-only tools, polling, large data, and model context well.

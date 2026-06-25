@@ -63,12 +63,13 @@ When a tool returns `structuredContent`, MCP recommends also returning a seriali
 
 ## Annotations
 
-Tools can include annotations that help hosts decide how to handle them:
+Tools can include annotations that help hosts decide how to handle them. These hints do not replace authorization or user confirmation for sensitive actions.
 
 | Annotation | Description |
-|------------|-------------|
+| ---------- | ----------- |
+| `title` | Short human-readable tool title. |
 | `readOnlyHint` | Tool does not modify state. |
-| `destructiveHint` | Tool may perform destructive operations (deletes, overwrites). |
+| `destructiveHint` | Tool may perform destructive operations, such as deletes or overwrites. |
 | `idempotentHint` | Calling the tool multiple times with the same arguments has the same effect. |
 | `openWorldHint` | Tool interacts with external systems outside the server's control. |
 
@@ -79,6 +80,9 @@ Tools can include annotations that help hosts decide how to handle them:
 </Card>
 <Card horizontal title="Tool and Resource Contract" icon="list-check" href="/mcp-apps/server/tool-resource-contract">
   See how MCP App tools, UI resources, and tool results fit together.
+</Card>
+<Card horizontal title="Tool Annotations" icon="shield-check" href="/mcp-apps/server/tool-annotations">
+  Use read-only, destructive, idempotent, and external-system hints in MCP App servers.
 </Card>
 
 <Tip>
