@@ -65,10 +65,11 @@ for (const resource of resources) {
       env: { ...process.env, FORCE_COLOR: '1' },
     });
 
-    // Re-run install with --ignore-workspace so pnpm treats the example
-    // as a standalone project instead of part of the monorepo workspace
+    // Re-run install after scaffold generation so examples have fresh lockfiles.
+    // Each generated app includes its own pnpm-workspace.yaml, so pnpm reads
+    // the app-local install policy instead of the parent monorepo workspace.
     if (!skipInstall) {
-      execSync('pnpm install --ignore-workspace', {
+      execSync('pnpm install', {
         cwd: exampleDir,
         stdio: 'inherit',
         env: { ...process.env, FORCE_COLOR: '1' },

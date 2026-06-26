@@ -577,6 +577,13 @@ async function initExternalProject(cliServer, d) {
     ) + '\n'
   );
 
+  d.writeFileSync(
+    join(testDir, 'pnpm-workspace.yaml'),
+    `allowBuilds:
+  esbuild: true
+`
+  );
+
   // sunpeak.config.ts (used as playwright config)
   const serverBlock = generateServerConfigBlock(server, '../..');
   d.writeFileSync(

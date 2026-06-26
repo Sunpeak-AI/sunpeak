@@ -36,6 +36,7 @@ const TEMPLATE_ROOT = join(PACKAGE_ROOT, 'template');
 const DOCS_ROOT = join(REPO_ROOT, 'docs');
 const EXAMPLES_DIR = join(REPO_ROOT, 'examples');
 const SUNPEAK_BIN = join(PACKAGE_ROOT, 'bin', 'sunpeak.js');
+const GENERATED_PROJECT_PNPM_INSTALL = 'pnpm install --no-frozen-lockfile';
 
 // Helper functions
 function printSection(text) {
@@ -344,7 +345,7 @@ function runTestInitSmokeTest() {
       writeFileSync(testPkgPath, JSON.stringify(testPkg, null, 2) + '\n');
 
       const compileResult = runSteps([
-        { name: 'test-init install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
+        { name: 'test-init install', command: GENERATED_PROJECT_PNPM_INSTALL },
         { name: 'test-init typecheck', command: 'pnpm exec tsc --noEmit' },
       ], testDir);
       allOutput.push(`--- external: compile ---\n${compileResult.output}`);
@@ -612,7 +613,7 @@ async function runScaffoldSmokeTest() {
 
     // ── Install + typecheck ──
     const setupResult = runSteps([
-      { name: 'pnpm install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
+      { name: 'pnpm install', command: GENERATED_PROJECT_PNPM_INSTALL },
       { name: 'playwright install', command: 'pnpm exec playwright install chromium' },
       { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
     ], projectDir);
@@ -875,15 +876,22 @@ async function testExample(resource, index) {
   // Link local sunpeak
   const pkgPath = join(exampleDir, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+  const originalSunpeakDependency = pkg.dependencies.sunpeak;
   pkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
-  return runSteps([
-    { name: 'pnpm install', command: 'pnpm install --ignore-workspace --no-frozen-lockfile' },
-    { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
-    { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
-    { name: 'pnpm test', command: 'pnpm test' },
-  ], exampleDir, env);
+  try {
+    return runSteps([
+      { name: 'pnpm install', command: GENERATED_PROJECT_PNPM_INSTALL },
+      { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
+      { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
+      { name: 'pnpm test', command: 'pnpm test' },
+    ], exampleDir, env);
+  } finally {
+    const restoredPkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    restoredPkg.dependencies.sunpeak = originalSunpeakDependency;
+    writeFileSync(pkgPath, JSON.stringify(restoredPkg, null, 2) + '\n');
+  }
 }
 
 /**
@@ -1433,15 +1441,16 @@ try {
     const firstDir = join(EXAMPLES_DIR, `${resources[0]}-example`);
     const pkgPath = join(firstDir, 'package.json');
     const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
+    const originalSunpeakDependency = pkg.dependencies.sunpeak;
     pkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
     writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
     console.log('\nInstalling Playwright browsers...');
-    runCommand('pnpm install --ignore-workspace --no-frozen-lockfile', firstDir);
+    runCommand(GENERATED_PROJECT_PNPM_INSTALL, firstDir);
     runCommand('pnpm exec playwright install chromium --with-deps', firstDir);
     printSuccess('Playwright browsers installed');
     // Undo the link — testExample will re-link + install
     const origPkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-    origPkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
+    origPkg.dependencies.sunpeak = originalSunpeakDependency;
     writeFileSync(pkgPath, JSON.stringify(origPkg, null, 2) + '\n');
   }
 
