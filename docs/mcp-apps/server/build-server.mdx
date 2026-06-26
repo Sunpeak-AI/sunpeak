@@ -25,6 +25,8 @@ An MCP App server is a normal MCP server with three additions:
 
 This page shows the complete server-side shape. For the matching View code, see [App lifecycle](/mcp-apps/lifecycle) and [App class](/mcp-apps/app/app-class). For a field-by-field checklist of what belongs in the tool, resource, resource metadata, and tool result, see the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).
 
+If you already have a standard MCP tool and want to add a View without changing its external tool name, see [Add a UI to an MCP Tool](/mcp-apps/server/add-ui-to-tool).
+
 ## Server Checklist
 
 Before you test in a host, confirm these items:
@@ -304,6 +306,9 @@ The View can call the tool through [`callServerTool()`](/mcp-apps/app/requests/c
 <CardGroup cols={2}>
   <Card title="Capability Detection" icon="page" href="/mcp-apps/server/capability-detection">
     Check whether a host supports MCP Apps before registering UI tools.
+  </Card>
+  <Card title="Add a UI to an MCP Tool" icon="page" href="/mcp-apps/server/add-ui-to-tool">
+    Convert an existing tool into a UI-rendering MCP App.
   </Card>
   <Card title="registerAppResource" icon="page" href="/mcp-apps/server/register-app-resource">
     Register HTML resources with CSP and iframe metadata.

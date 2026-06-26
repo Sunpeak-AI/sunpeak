@@ -1,0 +1,298 @@
+---
+title: 'Add a UI to an MCP Tool'
+sidebarTitle: 'Add UI to Tool'
+description: 'Turn an existing MCP tool into an MCP App by adding a ui:// HTML resource, _meta.ui.resourceUri, structuredContent, outputSchema, CSP metadata, and optional app-only helper tools.'
+keywords:
+  [
+    'add UI to MCP tool',
+    'MCP tool UI',
+    'MCP App UI resource',
+    'MCP tool resourceUri',
+    'MCP App structuredContent',
+    'MCP App outputSchema',
+    'ui:// HTML resource',
+    'text/html;profile=mcp-app',
+    'convert MCP tool to app',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+If you already have an MCP tool that returns useful data, you do not need to rewrite it. Add a UI resource, link the tool to that resource, and keep the tool result readable for normal MCP clients.
+
+This guide shows the smallest useful conversion path.
+
+## Before You Start
+
+Start with a working MCP tool:
+
+```ts
+server.registerTool(
+  'search-tickets',
+  {
+    title: 'Search Tickets',
+    description: 'Search support tickets.',
+    inputSchema: { query: z.string() },
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
+  },
+  async ({ query }) => {
+    const result = await searchTickets(query);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${result.tickets.length} tickets for "${query}".`,
+        },
+      ],
+    };
+  }
+);
+```
+
+The tool already has a name, description, input schema, annotations, and a model-readable result. The MCP App version keeps those pieces.
+
+## 1. Choose the UI Boundary
+
+Add a View only when the user benefits from seeing or changing data inside the conversation.
+
+| Keep a normal MCP tool when...                 | Add an MCP App View when...                                                            |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------- |
+| A short text answer is enough.                 | The result is easier to scan as a table, chart, map, media player, or form.            |
+| The model should reason over the whole result. | The user needs controls such as filters, pagination, editing, approval, or drill-down. |
+| There is no persistent UI state.               | The View should fetch fresh data or send user actions back to the server.              |
+
+Keep the first tool call model-visible. Add app-only helper tools later for UI-only interactions.
+
+## 2. Define the Data Contract
+
+The View should render `structuredContent`, not scrape text from `content`. Add an `outputSchema` that matches the object your UI consumes:
+
+```ts
+const TicketSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  status: z.enum(['open', 'pending', 'closed']),
+  priority: z.enum(['low', 'medium', 'high']),
+});
+
+const SearchTicketsOutputSchema = {
+  query: z.string(),
+  tickets: z.array(TicketSchema),
+};
+```
+
+Use `content` for a short model-readable summary and `structuredContent` for the UI payload:
+
+```ts
+return {
+  content: [
+    {
+      type: 'text',
+      text: `Found ${result.tickets.length} tickets for "${query}".`,
+    },
+  ],
+  structuredContent: result,
+};
+```
+
+Do not move all data into `_meta`. Hosts and Views can read `_meta`, but the model cannot rely on it for facts.
+
+## 3. Register an HTML Resource
+
+MCP Apps render HTML resources with the `text/html;profile=mcp-app` MIME type. The resource URI should use `ui://` and should be stable.
+
+```ts
+import { registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+
+const ticketResourceUri = 'ui://tickets/search.html';
+
+registerAppResource(
+  server,
+  'Ticket Search View',
+  ticketResourceUri,
+  {
+    description: 'Interactive ticket search results.',
+  },
+  async () => ({
+    contents: [
+      {
+        uri: ticketResourceUri,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ticket Search</title>
+    <script type="module" src="https://cdn.example.com/ticket-search.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>`,
+        _meta: {
+          ui: {
+            csp: {
+              connectDomains: ['https://api.example.com'],
+              resourceDomains: ['https://cdn.example.com'],
+            },
+            prefersBorder: true,
+          },
+        },
+      },
+    ],
+  })
+);
+```
+
+Declare every origin the View needs. Use `connectDomains` for `fetch`, XHR, and WebSockets. Use `resourceDomains` for scripts, styles, images, fonts, and media. If the View embeds another iframe, add that origin to `frameDomains`.
+
+## 4. Link the Tool to the Resource
+
+Switch the UI-capable branch from `server.registerTool()` to `registerAppTool()` and add `_meta.ui.resourceUri`.
+
+```ts
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
+
+registerAppTool(
+  server,
+  'search-tickets',
+  {
+    title: 'Search Tickets',
+    description: 'Search support tickets and display the results.',
+    inputSchema: { query: z.string() },
+    outputSchema: SearchTicketsOutputSchema,
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      ui: {
+        resourceUri: ticketResourceUri,
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  async ({ query }) => {
+    const result = await searchTickets(query);
+
+    return {
+      content: [
+        {
+          type: 'text',
+          text: `Found ${result.tickets.length} tickets for "${query}".`,
+        },
+      ],
+      structuredContent: result,
+    };
+  }
+);
+```
+
+The `resourceUri` string must match the registered resource URI exactly. Hosts use that value to read the HTML, render the iframe, and deliver the tool input and result to the View.
+
+## 5. Keep a Text Fallback
+
+MCP Apps are optional. Check host capabilities before registering UI metadata, then register a normal text tool when the host does not support MCP Apps.
+
+```ts
+import { getUiCapability, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+
+server.server.oninitialized = () => {
+  const uiCap = getUiCapability(server.server.getClientCapabilities());
+  const supportsMcpApps = uiCap?.mimeTypes?.includes(RESOURCE_MIME_TYPE);
+
+  if (!supportsMcpApps) {
+    server.registerTool('search-tickets', textOnlyConfig, textOnlyHandler);
+    return;
+  }
+
+  registerAppResource(server, 'Ticket Search View', ticketResourceUri, resourceConfig, readHtml);
+  registerAppTool(server, 'search-tickets', appToolConfig, appToolHandler);
+};
+```
+
+Use the same tool name in both branches. Only one branch is registered for the connection, so callers do not need separate tool names.
+
+## 6. Add App-only Helper Tools
+
+If the View needs refresh, pagination, autosave, or form submit, add helper tools with `visibility: ['app']`. These tools are callable from the View through [`callServerTool()`](/mcp-apps/app/requests/call-server-tool), but hosts must hide them from the model.
+
+```ts
+registerAppTool(
+  server,
+  'load-next-ticket-page',
+  {
+    title: 'Load Next Ticket Page',
+    description: 'Load another page of tickets for the app UI.',
+    inputSchema: {
+      query: z.string(),
+      cursor: z.string(),
+    },
+    outputSchema: SearchTicketsOutputSchema,
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
+    _meta: {
+      ui: {
+        visibility: ['app'],
+      },
+    },
+  },
+  async ({ query, cursor }) => {
+    const result = await searchTickets(query, { cursor });
+
+    return {
+      content: [{ type: 'text', text: `Loaded ${result.tickets.length} more tickets.` }],
+      structuredContent: result,
+    };
+  }
+);
+```
+
+Omit `resourceUri` for helper tools that only return data to an already-rendered View. Add `resourceUri` only when the helper itself should be associated with a View.
+
+## 7. Test the Contract
+
+Before testing in a real host, verify the protocol shape locally:
+
+```bash
+npx sunpeak inspect --server http://localhost:8000/mcp
+```
+
+Check these items:
+
+- `tools/list` includes `_meta.ui.resourceUri` on the UI-launching tool.
+- `resources/read` returns `mimeType: "text/html;profile=mcp-app"`.
+- The resource URI and `_meta.ui.resourceUri` match exactly.
+- The tool returns both `content` and `structuredContent`.
+- The `outputSchema` matches `structuredContent`.
+- App-only helpers use `visibility: ["app"]`.
+- The iframe can load every external origin declared in `_meta.ui.csp`.
+
+For automated checks, use the [MCP testing fixtures](/testing/e2e) to call the tool and render the View in the inspector.
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Build an MCP App Server" icon="server" href="/mcp-apps/server/build-server">
+    See the complete server-side example with capability detection.
+  </Card>
+  <Card
+    title="Tool and Resource Contract"
+    icon="list-check"
+    href="/mcp-apps/server/tool-resource-contract"
+  >
+    Check each field that connects tools, resources, and results.
+  </Card>
+  <Card title="Tool _meta" icon="tag" href="/mcp-apps/server/tool-meta">
+    Link tools to Views and set model or app visibility.
+  </Card>
+  <Card title="Resource _meta" icon="page" href="/mcp-apps/server/resource-meta">
+    Configure CSP, permissions, stable domains, and borders.
+  </Card>
+</CardGroup>

@@ -19,6 +19,10 @@ An MCP App is an interactive UI that an MCP server delivers and an AI chat host 
 A regular [tool](/mcp-apps/mcp/tools) returns text and structured data that the model reads. An MCP App links a tool to an HTML [UI resource](/mcp-apps/mcp/resources), so when the tool runs the host renders that UI and passes it the tool result. The tool still returns text for the model, so the same tool works whether or not the host can render UI. See [register an app tool](/mcp-apps/server/register-app-tool).
 </Accordion>
 
+<Accordion title="How do I add a UI to an existing MCP tool?">
+Keep the tool name, input schema, annotations, and model-readable `content`. Add a `ui://` HTML resource, return `structuredContent` for the View, declare an `outputSchema`, and link the tool with `_meta.ui.resourceUri`. Keep a text-only registration branch for hosts that do not advertise MCP Apps support. See [Add a UI to an MCP Tool](/mcp-apps/server/add-ui-to-tool).
+</Accordion>
+
 <Accordion title="Which AI hosts support MCP Apps?">
 ChatGPT and Claude render MCP Apps today. The protocol is host-agnostic, so other hosts can adopt it without changes to your server. Hosts advertise their UI support when they connect, and your server checks those capabilities before registering UI-enabled tools. See [capability detection](/mcp-apps/server/capability-detection).
 </Accordion>
