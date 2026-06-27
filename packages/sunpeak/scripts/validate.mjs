@@ -12,8 +12,8 @@
 
 import { execSync, spawn } from 'child_process';
 import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import { existsSync, readFileSync, readdirSync, writeFileSync, rmSync, mkdirSync } from 'fs';
+import { dirname, join, sep } from 'path';
+import { existsSync, readFileSync, readdirSync, writeFileSync, rmSync, mkdirSync, cpSync } from 'fs';
 import { discoverResources } from '../bin/lib/patterns.mjs';
 import { getPort } from '../bin/lib/get-port.mjs';
 
@@ -35,6 +35,7 @@ const REPO_ROOT = join(__dirname, '..', '..', '..');
 const TEMPLATE_ROOT = join(PACKAGE_ROOT, 'template');
 const DOCS_ROOT = join(REPO_ROOT, 'docs');
 const EXAMPLES_DIR = join(REPO_ROOT, 'examples');
+const VALIDATE_EXAMPLES_TMP = join(REPO_ROOT, '.tmp-validate-examples');
 const SUNPEAK_BIN = join(PACKAGE_ROOT, 'bin', 'sunpeak.js');
 const GENERATED_PROJECT_PNPM_INSTALL = 'pnpm install --no-frozen-lockfile';
 
@@ -78,6 +79,13 @@ function runCommandCapture(command, cwd, env) {
   } catch (error) {
     return { ok: false, output: (error.stdout?.toString() || '') + (error.stderr?.toString() || '') };
   }
+}
+
+async function fetchWithTimeout(url, options, timeoutMs = 10000) {
+  return fetch(url, {
+    ...options,
+    signal: AbortSignal.timeout(timeoutMs),
+  });
 }
 
 /**
@@ -642,7 +650,7 @@ async function runScaffoldSmokeTest() {
         );
 
         // Verify tool discovery
-        const listResp = await fetch(`http://localhost:${devPort}/__sunpeak/list-tools`);
+        const listResp = await fetchWithTimeout(`http://localhost:${devPort}/__sunpeak/list-tools`);
         if (!listResp.ok) throw new Error(`scaffold dev: list-tools returned ${listResp.status}`);
         const { tools } = await listResp.json();
         if (!tools || tools.length === 0) throw new Error('scaffold dev: no tools discovered');
@@ -855,7 +863,19 @@ async function runScaffoldSmokeTest() {
  */
 async function testExample(resource, index) {
   const exampleName = `${resource}-example`;
-  const exampleDir = join(EXAMPLES_DIR, exampleName);
+  const sourceExampleDir = join(EXAMPLES_DIR, exampleName);
+  const exampleDir = join(VALIDATE_EXAMPLES_TMP, exampleName);
+
+  if (existsSync(exampleDir)) {
+    rmSync(exampleDir, { recursive: true });
+  }
+  mkdirSync(VALIDATE_EXAMPLES_TMP, { recursive: true });
+
+  const skippedCopyDirs = new Set(['node_modules', 'dist', 'test-results', 'playwright-report']);
+  cpSync(sourceExampleDir, exampleDir, {
+    recursive: true,
+    filter: (source) => !source.split(sep).some(part => skippedCopyDirs.has(part)),
+  });
 
   // Find available ports for parallel execution.
   // Each parallel example gets its own preferred port range to minimize contention.
@@ -876,7 +896,6 @@ async function testExample(resource, index) {
   // Link local sunpeak
   const pkgPath = join(exampleDir, 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-  const originalSunpeakDependency = pkg.dependencies.sunpeak;
   pkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
   writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
@@ -888,9 +907,9 @@ async function testExample(resource, index) {
       { name: 'pnpm test', command: 'pnpm test' },
     ], exampleDir, env);
   } finally {
-    const restoredPkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
-    restoredPkg.dependencies.sunpeak = originalSunpeakDependency;
-    writeFileSync(pkgPath, JSON.stringify(restoredPkg, null, 2) + '\n');
+    if (existsSync(exampleDir)) {
+      rmSync(exampleDir, { recursive: true });
+    }
   }
 }
 
@@ -1462,6 +1481,10 @@ try {
   const parallelStart = Date.now();
   console.log(`Running scaffold smoke test + test init + ${resources.length} examples in parallel...\n`);
 
+  if (existsSync(VALIDATE_EXAMPLES_TMP)) {
+    rmSync(VALIDATE_EXAMPLES_TMP, { recursive: true });
+  }
+
   const [scaffoldResult, testInitResult, ...exampleResults] = await Promise.all([
     // Scaffold smoke test (sunpeak new → dev → test → build → start)
     runScaffoldSmokeTest(),
@@ -1557,13 +1580,40 @@ try {
   // Rebuild last example to ensure dist/ is fresh
   const lastResource = resources[resources.length - 1];
   const lastExampleDir = join(EXAMPLES_DIR, `${lastResource}-example`);
-  console.log(`Rebuilding ${lastResource}-example for production server test...`);
-  if (!runCommand(`node ${SUNPEAK_BIN} build`, lastExampleDir)) {
-    throw new Error('Failed to rebuild for production server test');
+  const productionExampleDir = join(VALIDATE_EXAMPLES_TMP, `${lastResource}-production-server`);
+  if (existsSync(productionExampleDir)) {
+    rmSync(productionExampleDir, { recursive: true });
   }
-  printSuccess('sunpeak build (for production server)');
+  mkdirSync(VALIDATE_EXAMPLES_TMP, { recursive: true });
+  cpSync(lastExampleDir, productionExampleDir, {
+    recursive: true,
+    filter: (source) => !source.split(sep).some(part => ['node_modules', 'dist', 'test-results', 'playwright-report'].includes(part)),
+  });
 
-  await validateProductionServer(lastExampleDir);
+  try {
+    const prodPkgPath = join(productionExampleDir, 'package.json');
+    const prodPkg = JSON.parse(readFileSync(prodPkgPath, 'utf-8'));
+    prodPkg.dependencies.sunpeak = `file:${PACKAGE_ROOT}`;
+    writeFileSync(prodPkgPath, JSON.stringify(prodPkg, null, 2) + '\n');
+
+    console.log(`Installing ${lastResource}-example for production server test...`);
+    if (!runCommand(GENERATED_PROJECT_PNPM_INSTALL, productionExampleDir)) {
+      throw new Error('Failed to install production server test example');
+    }
+    printSuccess('production server example installed');
+
+    console.log(`Rebuilding ${lastResource}-example for production server test...`);
+    if (!runCommand(`node ${SUNPEAK_BIN} build`, productionExampleDir)) {
+      throw new Error('Failed to rebuild for production server test');
+    }
+    printSuccess('sunpeak build (for production server)');
+
+    await validateProductionServer(productionExampleDir);
+  } finally {
+    if (existsSync(productionExampleDir)) {
+      rmSync(productionExampleDir, { recursive: true });
+    }
+  }
 
   // ==========================================================================
   // Phase 6b: Inspect mode integration test
