@@ -689,6 +689,39 @@ function shouldAllowPrivateServerUrls(req) {
   );
 }
 
+function firstHeaderValue(value) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function normalizeForwardedProto(value) {
+  const proto = firstHeaderValue(value)?.split(',')[0]?.trim().toLowerCase();
+  return proto === 'http' || proto === 'https' ? proto : undefined;
+}
+
+function requestOriginForSameOriginCheck(req) {
+  const host = firstHeaderValue(req.headers?.host);
+  if (!host) return undefined;
+  const proto =
+    normalizeForwardedProto(req.headers?.['x-forwarded-proto']) ??
+    (req.socket?.encrypted ? 'https' : 'http');
+  try {
+    return new URL(`${proto}://${host}`).origin;
+  } catch {
+    return undefined;
+  }
+}
+
+function isSameInspectorOrigin(req, origin) {
+  if (!origin) return true;
+  let parsedOrigin;
+  try {
+    parsedOrigin = new URL(firstHeaderValue(origin));
+  } catch {
+    return false;
+  }
+  return parsedOrigin.origin === requestOriginForSameOriginCheck(req);
+}
+
 async function assertHttpServerUrlAllowed(
   urlValue,
   { allowPrivateNetwork = false, lookupFn = dnsLookup } = {}
@@ -2081,13 +2114,10 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
    * @param {import('http').ServerResponse} res
    */
   function requireSameOrigin(req, res, { allowCrossSiteIframeNavigation = false } = {}) {
-    const fetchSiteHeader = req.headers['sec-fetch-site'];
-    const fetchSite = Array.isArray(fetchSiteHeader) ? fetchSiteHeader[0] : fetchSiteHeader;
+    const fetchSite = firstHeaderValue(req.headers['sec-fetch-site']);
     if (fetchSite === 'cross-site') {
-      const fetchDestHeader = req.headers['sec-fetch-dest'];
-      const fetchModeHeader = req.headers['sec-fetch-mode'];
-      const fetchDest = Array.isArray(fetchDestHeader) ? fetchDestHeader[0] : fetchDestHeader;
-      const fetchMode = Array.isArray(fetchModeHeader) ? fetchModeHeader[0] : fetchModeHeader;
+      const fetchDest = firstHeaderValue(req.headers['sec-fetch-dest']);
+      const fetchMode = firstHeaderValue(req.headers['sec-fetch-mode']);
       if (allowCrossSiteIframeNavigation && fetchDest === 'iframe' && fetchMode === 'navigate') {
         return true;
       }
@@ -2096,17 +2126,9 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
       return false;
     }
 
-    const origin = req.headers.origin;
+    const origin = firstHeaderValue(req.headers.origin);
     if (!origin) return true;
-    let originHost;
-    try {
-      originHost = new URL(origin).host;
-    } catch {
-      res.writeHead(403, { 'Content-Type': 'application/json' });
-      res.end(JSON.stringify({ error: 'Forbidden: invalid Origin header' }));
-      return false;
-    }
-    if (originHost !== req.headers.host) {
+    if (!isSameInspectorOrigin(req, origin)) {
       res.writeHead(403, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ error: 'Forbidden: cross-origin request blocked' }));
       return false;
@@ -3071,6 +3093,8 @@ export const _securityTestExports = {
   resolveHttpRedirectsForMcp,
   shouldAllowPrivateServerUrls,
   tryAnonymousOAuth,
+  requestOriginForSameOriginCheck,
+  isSameInspectorOrigin,
 };
 
 /**

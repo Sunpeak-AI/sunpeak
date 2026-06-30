@@ -430,6 +430,35 @@ describe('inspect endpoint security helpers', () => {
     }
   });
 
+  it('compares Origin against the inspector request scheme and host', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    const proxiedReq = {
+      headers: { host: 'preview.example', 'x-forwarded-proto': 'https' },
+      socket: { encrypted: false },
+    };
+    expect(_securityTestExports.requestOriginForSameOriginCheck(proxiedReq)).toBe(
+      'https://preview.example'
+    );
+    expect(_securityTestExports.isSameInspectorOrigin(proxiedReq, 'https://preview.example')).toBe(
+      true
+    );
+    expect(_securityTestExports.isSameInspectorOrigin(proxiedReq, 'http://preview.example')).toBe(
+      false
+    );
+
+    const localReq = {
+      headers: { host: '127.0.0.1:3000' },
+      socket: { encrypted: false },
+    };
+    expect(_securityTestExports.isSameInspectorOrigin(localReq, 'http://127.0.0.1:3000')).toBe(
+      true
+    );
+    expect(_securityTestExports.isSameInspectorOrigin(localReq, 'https://127.0.0.1:3000')).toBe(
+      false
+    );
+  });
+
   it('validates hosted-mode redirects before following them', async () => {
     const { _securityTestExports } = await importInspectCommand();
     const fetchFn = vi.fn(async (url: string) => {
