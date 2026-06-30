@@ -824,7 +824,16 @@ async function resolveHttpRedirectsForMcp(
  */
 async function createMcpConnection(serverArg, authConfig) {
   const { Client } = await import('@modelcontextprotocol/sdk/client/index.js');
-  const client = new Client({ name: 'sunpeak-inspector', version: '1.0.0' });
+  const client = new Client(
+    { name: 'sunpeak-inspector', version: '1.0.0' },
+    {
+      capabilities: {
+        extensions: {
+          'io.modelcontextprotocol/ui': { mimeTypes: ['text/html;profile=mcp-app'] },
+        },
+      },
+    },
+  );
 
   if (serverArg.startsWith('http://') || serverArg.startsWith('https://')) {
     if (authConfig?.enforcePublicHttpUrl) {
