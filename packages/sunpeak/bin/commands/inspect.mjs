@@ -2847,8 +2847,9 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
           const url = new URL(req.url, 'http://localhost');
           const provider = url.searchParams.get('provider') || 'openai';
           try {
+            const status = await getApiKeyStatus(provider);
             res.writeHead(200, { 'Content-Type': 'application/json' });
-            res.end(JSON.stringify(await getApiKeyStatus(provider)));
+            res.end(JSON.stringify(status));
           } catch (err) {
             res.writeHead(400, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ hasKey: false, error: err.message }));
