@@ -1,0 +1,244 @@
+---
+title: 'Migrate from OpenAI Apps SDK to MCP Apps'
+sidebarTitle: 'Migrate OpenAI Apps'
+description: 'Convert an OpenAI Apps SDK app to the MCP Apps SDK by mapping openai/outputTemplate, text/html+skybridge, widgetCSP, window.openai, tool results, and app runtime APIs to MCP Apps equivalents.'
+keywords:
+  [
+    'migrate OpenAI Apps SDK to MCP Apps',
+    'OpenAI Apps SDK MCP Apps',
+    'openai/outputTemplate MCP Apps',
+    'text/html+skybridge text/html profile mcp-app',
+    'window.openai MCP Apps',
+    'convert ChatGPT app to MCP App',
+    'MCP Apps migration',
+    'MCP Apps SDK migration',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+OpenAI Apps SDK code can move to MCP Apps without changing the core shape of your app. The server still exposes an MCP tool and an HTML resource. The View still renders in an iframe. The main changes are metadata names, the resource MIME type, CSP field names, and the client runtime API.
+
+Use this page as a migration checklist for existing OpenAI Apps SDK code. For a fresh MCP Apps server, start with [Build an MCP App Server](/mcp-apps/server/build-server).
+
+## Migration Checklist
+
+- Replace OpenAI tool metadata keys with `_meta.ui`.
+- Replace `text/html+skybridge` with `RESOURCE_MIME_TYPE`, which is `text/html;profile=mcp-app`.
+- Convert resource CSP keys from snake case to camel case.
+- Register UI tools and resources with `registerAppTool()` and `registerAppResource()`.
+- Keep model-readable `content` in tool results and put View data in `structuredContent`.
+- Replace `window.openai` reads and methods with the `App` class or React `useApp()` hook.
+- Register App event handlers before `app.connect()` when using the plain `App` class.
+- Test in a host that supports MCP Apps, then verify text fallback behavior for clients without UI support.
+
+## Server Metadata Mapping
+
+| OpenAI Apps SDK | MCP Apps SDK | Notes |
+| --------------- | ------------ | ----- |
+| `_meta["openai/outputTemplate"]` | `_meta.ui.resourceUri` | Points the tool at the `ui://` resource to render. |
+| `_meta["openai/widgetAccessible"]` | `_meta.ui.visibility` | Include `"app"` when the View can call the tool. |
+| `_meta["openai/visibility"]` | `_meta.ui.visibility` | Include `"model"` when the model can call the tool. |
+| `_meta["openai/toolInvocation/invoking"]` | No direct MCP Apps field | Use normal tool result text or app state in the View. |
+| `_meta["openai/toolInvocation/invoked"]` | No direct MCP Apps field | Use normal tool result text or app state in the View. |
+
+MCP Apps visibility is an array. A normal UI-launching tool usually uses the default `["model", "app"]`. A UI helper such as pagination or autosave uses `["app"]` so it stays out of the model tool list.
+
+```ts
+import { registerAppTool } from '@modelcontextprotocol/ext-apps/server';
+
+registerAppTool(
+  server,
+  'show-cart',
+  {
+    title: 'Show Cart',
+    description: 'Display the user cart.',
+    inputSchema: { userId: z.string() },
+    _meta: {
+      ui: {
+        resourceUri: 'ui://cart/view.html',
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  async ({ userId }) => {
+    const cart = await getCart(userId);
+
+    return {
+      content: [{ type: 'text', text: `Cart has ${cart.items.length} items.` }],
+      structuredContent: { cart },
+    };
+  }
+);
+```
+
+See [Tool Metadata](/mcp-apps/server/tool-meta) and the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract) for the full field reference.
+
+## Resource Mapping
+
+| OpenAI Apps SDK | MCP Apps SDK | Notes |
+| --------------- | ------------ | ----- |
+| `text/html+skybridge` | `RESOURCE_MIME_TYPE` | The constant resolves to `text/html;profile=mcp-app`. |
+| `_meta["openai/widgetCSP"]` | `_meta.ui.csp` | Resource-level CSP for the sandboxed iframe. |
+| `resource_domains` | `resourceDomains` | Static assets such as scripts, CSS, images, fonts, and media. |
+| `connect_domains` | `connectDomains` | Fetch, XHR, EventSource, and WebSocket origins. |
+| `frame_domains` | `frameDomains` | Origins for nested iframes. |
+| `redirect_domains` | No direct MCP Apps field | Host-specific OpenAI redirects do not map to MCP Apps CSP. |
+| `_meta["openai/widgetDomain"]` | `_meta.ui.domain` | Stable sandbox origin when a host supports it. |
+| `_meta["openai/widgetPrefersBorder"]` | `_meta.ui.prefersBorder` | Set this explicitly because host defaults can differ. |
+| `_meta["openai/widgetDescription"]` | No direct MCP Apps field | Use `updateModelContext()` for dynamic model-visible context. |
+
+```ts
+import {
+  registerAppResource,
+  RESOURCE_MIME_TYPE,
+} from '@modelcontextprotocol/ext-apps/server';
+
+const resourceUri = 'ui://cart/view.html';
+
+registerAppResource(
+  server,
+  'Cart View',
+  resourceUri,
+  { mimeType: RESOURCE_MIME_TYPE },
+  async () => ({
+    contents: [
+      {
+        uri: resourceUri,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: html,
+        _meta: {
+          ui: {
+            csp: {
+              resourceDomains: ['https://cdn.example.com'],
+              connectDomains: ['https://api.example.com'],
+              frameDomains: ['https://checkout.example.com'],
+            },
+            prefersBorder: true,
+          },
+        },
+      },
+    ],
+  })
+);
+```
+
+MCP Apps HTML runs in a sandboxed iframe, so every external origin must be declared. Check built HTML, bundled JavaScript, CSS, image URLs, font URLs, API URLs, and nested iframes before shipping. See [CSP and CORS](/mcp-apps/server/csp-cors).
+
+## Before and After
+
+Before, an OpenAI Apps SDK tool links its UI with a flat metadata key:
+
+```ts
+server.registerTool(
+  'show-cart',
+  {
+    title: 'Show Cart',
+    description: 'Display the user cart.',
+    inputSchema: { userId: z.string() },
+    annotations: { readOnlyHint: true },
+    _meta: {
+      'openai/outputTemplate': 'ui://cart/view.html',
+      'openai/widgetAccessible': true,
+    },
+  },
+  handler
+);
+```
+
+After, MCP Apps uses nested UI metadata. The helper also writes compatibility metadata for older MCP Apps hosts:
+
+```ts
+registerAppTool(
+  server,
+  'show-cart',
+  {
+    title: 'Show Cart',
+    description: 'Display the user cart.',
+    inputSchema: { userId: z.string() },
+    annotations: { readOnlyHint: true },
+    _meta: {
+      ui: {
+        resourceUri: 'ui://cart/view.html',
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  handler
+);
+```
+
+Keep the tool name stable when you can. Existing prompts, evals, and client code are easier to migrate when the same tool name returns the same core data.
+
+## Client Runtime Mapping
+
+OpenAI Apps SDK Views usually read a pre-populated `window.openai` object. MCP Apps Views create an `App` instance, register handlers, and connect to the host.
+
+| OpenAI Apps SDK | MCP Apps SDK | Notes |
+| --------------- | ------------ | ----- |
+| `window.openai.toolInput` | `app.ontoolinput = (params) => params.arguments` | Register the handler before `connect()`. |
+| `window.openai.toolOutput` | `app.ontoolresult = (params) => params.structuredContent` | Use `structuredContent` for UI data. |
+| `window.openai.toolResponseMetadata` | `app.ontoolresult = (params) => params._meta` | Use only for host or component-only metadata. |
+| `window.openai.theme` | `app.getHostContext()?.theme` | Also listen for `onhostcontextchanged`. |
+| `window.openai.locale` | `app.getHostContext()?.locale` | BCP 47 locale string. |
+| `window.openai.displayMode` | `app.getHostContext()?.displayMode` | Check available modes before requesting a change. |
+| `window.openai.callTool(name, args)` | `app.callServerTool({ name, arguments: args })` | Used by app-only helper tools. |
+| `window.openai.sendFollowUpMessage({ prompt })` | `app.sendMessage({ role, content })` | MCP Apps uses MCP content blocks. |
+| `window.openai.openExternal({ href })` | `app.openLink({ url })` | Host-mediated external navigation. |
+| `window.openai.notifyIntrinsicHeight(height)` | `app.sendSizeChanged({ width, height })` | Auto resize is on by default for the App class. |
+
+```ts
+import { App } from '@modelcontextprotocol/ext-apps';
+
+const app = new App({ name: 'CartView', version: '1.0.0' });
+
+app.ontoolinput = (params) => {
+  renderInput(params.arguments);
+};
+
+app.ontoolresult = (params) => {
+  renderCart(params.structuredContent);
+};
+
+app.onhostcontextchanged = (context) => {
+  applyTheme(context.theme);
+};
+
+await app.connect();
+
+applyTheme(app.getHostContext()?.theme);
+```
+
+For React Views, use [`useApp()`](/mcp-apps/react/use-app), which manages the connection lifecycle for you.
+
+## Features Without Direct Equivalents
+
+Some OpenAI Apps SDK APIs do not have direct MCP Apps equivalents. Keep these migrations explicit so the app fails predictably during review:
+
+| OpenAI Apps SDK feature | MCP Apps migration path |
+| ----------------------- | ----------------------- |
+| `window.openai.widgetState` and `setWidgetState()` | Use server-side state or app-owned browser state. |
+| `window.openai.uploadFile()` | Keep file upload in a host-specific branch until MCP Apps adds a standard API. |
+| `window.openai.getFileDownloadUrl()` | Use host-specific code or a normal server URL with declared CSP. |
+| `window.openai.requestModal()` and `requestClose()` | Model as an in-View interaction or host-specific branch. |
+| `window.openai.view` | Use host context, display modes, and CSS layout hooks. |
+
+## Validate the Migration
+
+Run these checks before testing in a real host:
+
+- Search for `"openai/` in server code. Remaining hits should be deliberate host-specific compatibility code.
+- Search for `text/html+skybridge`. Replace it with `RESOURCE_MIME_TYPE`.
+- Search for `resource_domains`, `connect_domains`, and `frame_domains`. Replace them with MCP Apps camel-case fields.
+- Search for `window.openai` in View code. Replace common runtime calls with `App` or React hooks.
+- Call `tools/list` and confirm the UI tool includes `_meta.ui.resourceUri`.
+- Call `resources/read` and confirm the resource returns `mimeType: "text/html;profile=mcp-app"`.
+- Call the UI tool and confirm the result includes model-readable `content` and View-readable `structuredContent`.
+- Open the app in the sunpeak inspector and verify the iframe can load every declared external origin.
+
+```bash
+npx sunpeak inspect --server http://localhost:8000/mcp
+```
+
+For automated coverage, use [MCP App E2E tests](/testing/e2e) to call the tool, render the View, and assert against the double-iframe app content.
+

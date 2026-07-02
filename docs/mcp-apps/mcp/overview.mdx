@@ -27,7 +27,7 @@ flowchart LR
 
 - **Host** — An AI application (ChatGPT, Claude) that initiates connections to servers. Each host runs one or more clients.
 - **Client** — A protocol client within the host that maintains a 1:1 connection to a server. Handles capability negotiation, request routing, and session management.
-- **Server** — A program that exposes tools, resources, and other capabilities over MCP. Servers are stateless between sessions.
+- **Server** — A program that exposes tools, resources, and other capabilities over MCP. Servers decide how to handle state and may keep per-session data when the transport and application need it.
 
 ## Transports
 

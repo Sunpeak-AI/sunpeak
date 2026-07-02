@@ -18,6 +18,7 @@ When a client connects, the host calls `tools/list` to discover the server's too
 | `name` | Unique identifier (e.g., `"get-weather"`) |
 | `description` | What the tool does, for the model to read |
 | `inputSchema` | JSON Schema defining accepted parameters |
+| `outputSchema` | Optional JSON Schema defining `structuredContent` returned by the tool |
 | `annotations` | Hints about behavior (read-only, destructive, etc.) |
 
 ```json
@@ -30,6 +31,14 @@ When a client connects, the host calls `tools/list` to discover the server's too
       "location": { "type": "string", "description": "City name" }
     },
     "required": ["location"]
+  },
+  "outputSchema": {
+    "type": "object",
+    "properties": {
+      "temperatureC": { "type": "number" },
+      "summary": { "type": "string" }
+    },
+    "required": ["temperatureC", "summary"]
   }
 }
 ```
