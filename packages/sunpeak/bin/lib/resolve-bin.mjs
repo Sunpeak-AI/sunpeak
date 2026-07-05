@@ -37,3 +37,21 @@ export function resolveSunpeakBin() {
 
   return 'sunpeak';
 }
+
+/**
+ * Find the JavaScript entry for the sunpeak CLI when sunpeak is installed
+ * locally. Returns null when only a global/bare binary is available.
+ *
+ * @returns {string | null} Path to bin/sunpeak.js, or null as fallback
+ */
+export function resolveSunpeakJsBin() {
+  const cwdJsBin = join(process.cwd(), 'node_modules', 'sunpeak', 'bin', 'sunpeak.js');
+  if (existsSync(cwdJsBin)) return cwdJsBin;
+
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const pkgRoot = join(__dirname, '..', '..');
+  const packageJsBin = join(pkgRoot, 'bin', 'sunpeak.js');
+  if (existsSync(packageJsBin)) return packageJsBin;
+
+  return null;
+}

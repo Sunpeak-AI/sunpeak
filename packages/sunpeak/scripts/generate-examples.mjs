@@ -59,7 +59,7 @@ for (const resource of resources) {
   const exampleDir = join(EXAMPLES_DIR, exampleName);
 
   try {
-    execSync(`node ${SUNPEAK_BIN} new ${exampleName} ${resource}`, {
+    execSync(`node ${SUNPEAK_BIN} new ${exampleName} ${resource} --skip-install`, {
       cwd: EXAMPLES_DIR,
       stdio: 'inherit',
       env: { ...process.env, FORCE_COLOR: '1' },

@@ -567,6 +567,7 @@ async function initExternalProject(cliServer, d) {
           '@types/node': 'latest',
           sunpeak: getSunpeakVersion(),
           '@playwright/test': 'latest',
+          typescript: 'latest',
         },
         scripts: {
           test: 'sunpeak test',

@@ -9,6 +9,8 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'happy-dom',
+    maxWorkers: 1,
+    pool: 'threads',
     setupFiles: './tests/setup.ts',
     exclude: ['**/node_modules/**', '**/tests/e2e/**', '**/tests/live/**'],
   },

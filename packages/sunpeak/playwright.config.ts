@@ -12,7 +12,9 @@ import { defineConfig, devices } from '@playwright/test';
 // dev server finds alternatives if taken. Using dynamic getPortSync here causes
 // issues when Playwright re-evaluates the config (each evaluation gets a different port).
 const port = Number(process.env.SUNPEAK_TEST_PORT) || 6777;
+const mcpPort = Number(process.env.SUNPEAK_MCP_PORT) || 18777;
 const sandboxPort = Number(process.env.SUNPEAK_SANDBOX_PORT) || 24681;
+const hmrPort = Number(process.env.SUNPEAK_HMR_PORT) || 24679;
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -37,7 +39,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `PORT=${port} SUNPEAK_SANDBOX_PORT=${sandboxPort} pnpm -C template dev`,
+    command: `cd template && PORT=${port} SUNPEAK_MCP_PORT=${mcpPort} SUNPEAK_SANDBOX_PORT=${sandboxPort} SUNPEAK_HMR_PORT=${hmrPort} node ../bin/sunpeak.js dev`,
     url: `http://127.0.0.1:${port}/health`,
     reuseExistingServer: !process.env.CI,
     timeout: 60000,

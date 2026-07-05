@@ -999,8 +999,7 @@ export function Inspector({
       // since it measures actual handler execution. Fall back to client round-trip
       // for non-sunpeak servers that don't include server-side timing.
       const resultMeta = (result as Record<string, unknown>)?._meta as
-        | Record<string, unknown>
-        | undefined;
+        Record<string, unknown> | undefined;
       const serverMs = (resultMeta?._sunpeak as Record<string, unknown> | undefined)?.requestTimeMs;
       const durationMs = typeof serverMs === 'number' ? serverMs : clientMs;
       const resultWithTiming = {

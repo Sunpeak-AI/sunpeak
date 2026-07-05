@@ -51,8 +51,10 @@ function getVersion() {
   switch (command) {
     case 'new':
       {
-        const { init } = await import(commandUrl('new.mjs'));
-        await init(args[0], args[1]);
+        const { defaultDeps, init } = await import(commandUrl('new.mjs'));
+        const skipInstall = args.includes('--skip-install');
+        const positionalArgs = args.filter((arg) => arg !== '--skip-install');
+        await init(positionalArgs[0], positionalArgs[1], { ...defaultDeps, skipInstall });
       }
       break;
 

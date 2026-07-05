@@ -44,9 +44,9 @@ test('should show detail view with place info in fullscreen', async ({ inspector
   });
   const app = result.app();
 
-  const card = app.locator('.rounded-2xl').first();
-  await expect(card).toBeVisible();
-  await card.click();
+  const firstPlace = app.getByRole('heading', { name: 'Lady Bird Lake' });
+  await expect(firstPlace).toBeVisible();
+  await firstPlace.click();
 
   await expect(app.locator('h1:has-text("Lady Bird Lake")')).toBeVisible({ timeout: 5000 });
   await expect(app.locator('text=Highlights')).toBeVisible();
@@ -73,9 +73,9 @@ test('should not have a back button in detail view', async ({ inspector }) => {
   });
   const app = result.app();
 
-  const card = app.locator('.rounded-2xl').first();
-  await expect(card).toBeVisible();
-  await card.click();
+  const firstPlace = app.getByRole('heading', { name: 'Lady Bird Lake' });
+  await expect(firstPlace).toBeVisible();
+  await firstPlace.click();
 
   await expect(app.locator('h1:has-text("Lady Bird Lake")')).toBeVisible({ timeout: 5000 });
   const backButton = app.locator('button[aria-label="Back to carousel"]');
@@ -88,9 +88,9 @@ test('should center the hero image without stretching', async ({ inspector }) =>
   });
   const app = result.app();
 
-  const card = app.locator('.rounded-2xl').first();
-  await expect(card).toBeVisible();
-  await card.click();
+  const firstPlace = app.getByRole('heading', { name: 'Lady Bird Lake' });
+  await expect(firstPlace).toBeVisible();
+  await firstPlace.click();
 
   await expect(app.locator('h1:has-text("Lady Bird Lake")')).toBeVisible({ timeout: 5000 });
   await expect(app.locator('img[alt="Lady Bird Lake"]')).toBeVisible();

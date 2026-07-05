@@ -34,9 +34,7 @@ export async function runTest(args) {
   const isEval = args.includes('--eval');
   let isVisual = args.includes('--visual');
   const isUpdate = args.includes('--update');
-  const filteredArgs = args.filter(
-    (a) => !['--unit', '--e2e', '--live', '--eval', '--visual', '--update'].includes(a)
-  );
+  const filteredArgs = filterRunnerArgs(args);
 
   // --update implies --visual (no point updating without enabling visual)
   if (isUpdate) isVisual = true;
@@ -117,6 +115,12 @@ export async function runTest(args) {
   process.exit(failed ? failed.code : 0);
 }
 
+export function filterRunnerArgs(args) {
+  return args.filter(
+    (a) => !['--unit', '--e2e', '--live', '--eval', '--visual', '--update', '--'].includes(a)
+  );
+}
+
 /**
  * Spawn a child process and return its exit code.
  */
@@ -151,7 +155,7 @@ function runPlaywright(args, options = {}) {
   }
 
   const configArgs = config ? ['--config', config] : [];
-  const extraArgs = updateSnapshots ? ['--update-snapshots'] : [];
+  const extraArgs = updateSnapshots ? ['--update-snapshots=all'] : [];
 
   return runChild(
     'pnpm',

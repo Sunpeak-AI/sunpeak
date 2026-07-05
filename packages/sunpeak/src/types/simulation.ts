@@ -15,8 +15,7 @@ import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
  * entry whose `when` keys shallow-match the call arguments wins.
  */
 export type ServerToolMock =
-  | CallToolResult
-  | Array<{ when: Record<string, unknown>; result: CallToolResult }>;
+  CallToolResult | Array<{ when: Record<string, unknown>; result: CallToolResult }>;
 
 /**
  * A simulation packages a component with its example data and metadata.

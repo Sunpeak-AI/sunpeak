@@ -1,13 +1,7 @@
 import { DisplayMode, Theme } from '../types/runtime';
 
 export type ScreenWidth =
-  | 'mobile-s'
-  | 'mobile-m'
-  | 'mobile-l'
-  | 'mobile-xl'
-  | 'tablet'
-  | 'tablet-l'
-  | 'full';
+  'mobile-s' | 'mobile-m' | 'mobile-l' | 'mobile-xl' | 'tablet' | 'tablet-l' | 'full';
 
 export type InspectorConfig = {
   theme: Theme;

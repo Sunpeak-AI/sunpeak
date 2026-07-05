@@ -87,6 +87,7 @@ export const defaultDeps = {
   renameSync,
   execSync,
   execAsync,
+  skipInstall: false,
   promptName: defaultPromptName,
   selectResources: defaultSelectResources,
   selectProviders: defaultSelectProviders,
@@ -331,14 +332,16 @@ export async function init(projectName, resourcesArg, deps = defaultDeps) {
       d.writeFileSync(readmePath, readme);
     }
   }
-  const s = d.spinner();
-  s.start(`Installing dependencies with ${pm}...`);
+  if (!d.skipInstall) {
+    const s = d.spinner();
+    s.start(`Installing dependencies with ${pm}...`);
 
-  try {
-    await d.execAsync(`${pm} install`, { cwd: targetDir });
-    s.stop(`Installed dependencies with ${pm}`);
-  } catch {
-    s.stop(`Install failed. You can try running "${pm} install" manually.`);
+    try {
+      await d.execAsync(`${pm} install`, { cwd: targetDir });
+      s.stop(`Installed dependencies with ${pm}`);
+    } catch {
+      s.stop(`Install failed. You can try running "${pm} install" manually.`);
+    }
   }
 
   // Offer to configure eval providers (only in interactive mode)

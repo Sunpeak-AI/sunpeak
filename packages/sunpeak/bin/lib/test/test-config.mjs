@@ -18,7 +18,7 @@
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
 import { createBaseConfig, resolvePorts } from './base-config.mjs';
-import { resolveSunpeakBin } from '../resolve-bin.mjs';
+import { resolveSunpeakBin, resolveSunpeakJsBin } from '../resolve-bin.mjs';
 
 /**
  * @param {Object} [options]
@@ -60,7 +60,7 @@ export function defineConfig(options = {}) {
     command = buildInspectCommand({ server, port, sandboxPort, simulationsDir });
   } else if (isSunpeakProject) {
     // sunpeak framework project mode
-    command = `PORT=${port} SUNPEAK_SANDBOX_PORT=${sandboxPort} pnpm dev`;
+    command = `PORT=${port} SUNPEAK_SANDBOX_PORT=${sandboxPort} ${buildSunpeakCommand('dev')}`;
   } else {
     throw new Error(
       'defineConfig: either provide a `server` option or run from a sunpeak project directory.'
@@ -140,6 +140,15 @@ function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
   parts.push(`--port ${port}`);
 
   return parts.join(' ');
+}
+
+function buildSunpeakCommand(subcommand) {
+  const jsBin = resolveSunpeakJsBin();
+  if (jsBin) {
+    return `${shellQuote(process.execPath)} ${shellQuote(jsBin)} ${subcommand}`;
+  }
+
+  return `${shellQuote(resolveSunpeakBin())} ${subcommand}`;
 }
 
 function shellQuote(value) {

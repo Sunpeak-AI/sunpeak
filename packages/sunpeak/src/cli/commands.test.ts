@@ -7,6 +7,7 @@ import path from 'node:path';
 const importUpgrade = () => import('../../bin/commands/upgrade.mjs');
 const importNew = () => import('../../bin/commands/new.mjs');
 const importTestInit = () => import('../../bin/commands/test-init.mjs');
+const importTest = () => import('../../bin/commands/test.mjs');
 
 // Mock console for all tests
 const createMockConsole = () => ({
@@ -37,6 +38,16 @@ const noopConfirm = vi.fn().mockResolvedValue(false);
 const noopExecAsync = vi.fn().mockResolvedValue({});
 
 describe('CLI Commands', () => {
+  describe('test command', () => {
+    it('strips sunpeak flags and separator before forwarding runner args', async () => {
+      const { filterRunnerArgs } = await importTest();
+
+      expect(filterRunnerArgs(['--visual', '--update', '--', 'tests/e2e/visual.spec.ts'])).toEqual([
+        'tests/e2e/visual.spec.ts',
+      ]);
+    });
+  });
+
   describe('new command', () => {
     it('should error when no resources are discovered', async () => {
       const { init } = await importNew();
@@ -288,6 +299,37 @@ describe('CLI Commands', () => {
 
       // Verify outro was called
       expect(noopOutro).toHaveBeenCalled();
+    });
+
+    it('should skip dependency install when requested', async () => {
+      const { init } = await importNew();
+      const execAsync = vi.fn();
+
+      await init('my-project', 'carousel', {
+        discoverResources: () => ['carousel'],
+        detectPackageManager: () => 'pnpm',
+        existsSync: () => false,
+        mkdirSync: vi.fn(),
+        cpSync: vi.fn(),
+        readFileSync: () =>
+          JSON.stringify({ version: '1.0.0', dependencies: { sunpeak: 'workspace:*' } }),
+        writeFileSync: vi.fn(),
+        renameSync: vi.fn(),
+        execSync: vi.fn(),
+        execAsync,
+        skipInstall: true,
+        confirm: noopConfirm,
+        cwd: () => '/test',
+        templateDir: '/template',
+        rootPkgPath: '/root/package.json',
+        console: createMockConsole(),
+        process: createMockProcess(),
+        intro: noopIntro,
+        outro: noopOutro,
+        spinner: noopSpinner,
+      });
+
+      expect(execAsync).not.toHaveBeenCalled();
     });
 
     it('should include all resources when empty string passed as arg', async () => {

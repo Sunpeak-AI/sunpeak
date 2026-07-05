@@ -20,6 +20,7 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
   // Separate snapshot path from other visual options passed to expect.toHaveScreenshot
   const { snapshotPathTemplate, ...toHaveScreenshotDefaults } = visual ?? {};
   const workerOverride = parsePositiveInt(process.env.SUNPEAK_TEST_WORKERS);
+  const webServerTimeout = parsePositiveInt(process.env.SUNPEAK_WEB_SERVER_TIMEOUT_MS);
 
   return {
     ...(globalSetup ? { globalSetup } : {}),
@@ -27,6 +28,7 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 1,
+    timeout: parsePositiveInt(process.env.SUNPEAK_TEST_TIMEOUT_MS) ?? 60_000,
     // Limit workers to avoid overwhelming the double-iframe sandbox proxy.
     workers: workerOverride ?? (process.env.CI ? 1 : 2),
     reporter: 'list',
@@ -54,7 +56,7 @@ export function createBaseConfig({ hosts, testDir, webServer, port, use, globalS
       command: webServer.command,
       url: webServer.healthUrl,
       reuseExistingServer: !process.env.CI,
-      timeout: timeout ?? 60_000,
+      timeout: timeout ?? webServerTimeout ?? 60_000,
     },
   };
 }

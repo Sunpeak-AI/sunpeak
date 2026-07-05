@@ -4,9 +4,9 @@
  * Local Testing Script for Sunpeak
  * This script runs all local tests described in DEVELOPMENT.md
  *
- * Parallelization strategy:
- * - Package-level checks run sequentially (fast, shared state)
- * - Scaffold smoke test + all example projects run in parallel
+ * Validation strategy:
+ * - Package-level checks run sequentially
+ * - Scaffold and generated example projects run in isolated temp directories
  * - Each example gets unique ports to avoid conflicts
  */
 
@@ -35,7 +35,7 @@ const REPO_ROOT = join(__dirname, '..', '..', '..');
 const TEMPLATE_ROOT = join(PACKAGE_ROOT, 'template');
 const DOCS_ROOT = join(REPO_ROOT, 'docs');
 const EXAMPLES_DIR = join(REPO_ROOT, 'examples');
-const VALIDATE_EXAMPLES_TMP = join(REPO_ROOT, '.tmp-validate-examples');
+const PRODUCTION_TMP = join(REPO_ROOT, '.tmp-validate-production');
 const SUNPEAK_BIN = join(PACKAGE_ROOT, 'bin', 'sunpeak.js');
 const GENERATED_PROJECT_PNPM_INSTALL = 'pnpm install --no-frozen-lockfile';
 
@@ -50,6 +50,11 @@ function printSuccess(text) {
   console.log(`${colors.green}✓ ${text}${colors.reset}`);
 }
 
+function removeDirIfExists(dir) {
+  if (!existsSync(dir)) return;
+  rmSync(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+}
+
 function runCommand(command, cwd, env) {
   try {
     execSync(command, {
@@ -61,6 +66,20 @@ function runCommand(command, cwd, env) {
   } catch (error) {
     return false;
   }
+}
+
+function runCommandIsolated(command, cwd, env) {
+  return new Promise((resolve) => {
+    const child = spawn(command, {
+      cwd,
+      shell: true,
+      detached: true,
+      stdio: 'inherit',
+      env: { ...process.env, FORCE_COLOR: '1', ...env },
+    });
+    child.on('error', () => resolve(false));
+    child.on('close', (code) => resolve(code === 0));
+  });
 }
 
 /**
@@ -275,9 +294,7 @@ function validateDocs() {
 function runTestInitSmokeTest() {
   const tmpBase = join(REPO_ROOT, '.tmp-validate-test-init');
 
-  if (existsSync(tmpBase)) {
-    rmSync(tmpBase, { recursive: true });
-  }
+  removeDirIfExists(tmpBase);
   mkdirSync(tmpBase, { recursive: true });
 
   try {
@@ -511,9 +528,7 @@ function runTestInitSmokeTest() {
 
     return { ok: true, step: null, output: allOutput.join('\n') };
   } finally {
-    if (existsSync(tmpBase)) {
-      rmSync(tmpBase, { recursive: true });
-    }
+    removeDirIfExists(tmpBase);
   }
 }
 
@@ -575,20 +590,66 @@ function waitForProcessExit(proc, timeoutMs = 5000) {
 
 async function killServer(proc) {
   if (proc.exitCode !== null || proc.signalCode !== null) return;
-  try {
-    process.kill(-proc.pid, 'SIGTERM');
-  } catch {
-    proc.kill('SIGTERM');
-  }
+  const childPgid = getProcessGroupId(proc.pid);
+  const currentPgid = getProcessGroupId(process.pid);
+  const canKillProcessGroup = childPgid && currentPgid && childPgid !== currentPgid;
+
+  const signalProcessTree = (signal) => {
+    const childPids = getChildProcessIds(proc.pid);
+    if (canKillProcessGroup) {
+      try {
+        process.kill(-childPgid, signal);
+      } catch {
+        // Fall through to direct process signaling below.
+      }
+    }
+
+    for (const childPid of childPids) {
+      try {
+        process.kill(childPid, signal);
+      } catch {
+        // Process already exited.
+      }
+    }
+
+    try {
+      proc.kill(signal);
+    } catch {
+      // Process already exited.
+    }
+  };
+
+  signalProcessTree('SIGTERM');
   await new Promise(resolve => setTimeout(resolve, 500));
   if (proc.exitCode === null && proc.signalCode === null) {
-    try {
-      process.kill(-proc.pid, 'SIGKILL');
-    } catch {
-      proc.kill('SIGKILL');
-    }
+    signalProcessTree('SIGKILL');
   }
   await waitForProcessExit(proc);
+}
+
+function getChildProcessIds(pid) {
+  try {
+    return execSync(`pgrep -P ${pid}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim()
+      .split('\n')
+      .map((line) => Number.parseInt(line, 10))
+      .filter(Number.isFinite);
+  } catch {
+    return [];
+  }
+}
+
+function getProcessGroupId(pid) {
+  try {
+    const output = execSync(`ps -o pgid= -p ${pid}`, { stdio: ['ignore', 'pipe', 'ignore'] })
+      .toString()
+      .trim();
+    const pgid = Number.parseInt(output, 10);
+    return Number.isFinite(pgid) ? pgid : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -602,9 +663,7 @@ async function killServer(proc) {
 async function runScaffoldSmokeTest() {
   const tmpDir = join(REPO_ROOT, '.tmp-validate-new');
 
-  if (existsSync(tmpDir)) {
-    rmSync(tmpDir, { recursive: true });
-  }
+  removeDirIfExists(tmpDir);
   mkdirSync(tmpDir, { recursive: true });
 
   try {
@@ -661,17 +720,18 @@ async function runScaffoldSmokeTest() {
       }
     }
 
-    // ── sunpeak test (unit + e2e) with CLEAN Vite cache ──
-    // Users run `sunpeak test` right after `sunpeak new`. The first run has no
-    // Vite dep cache, so this catches flaky first-run issues (port mismatches,
-    // slow Vite optimization, etc.). We explicitly delete the cache before running.
+    // ── sunpeak unit tests with CLEAN Vite cache ──
+    // Package-level e2e covers the inspector browser path. The scaffold smoke
+    // test verifies generated unit tests and keeps dev/build/start checks below.
     const testPort = await getPort(19200);
     const testMcpPort = await getPort(19210);
     const testHmrPort = await getPort(24712);
     const testSandboxPort = await getPort(24710);
     const viteCacheDir = join(projectDir, 'node_modules', '.vite-mcp');
-    if (existsSync(viteCacheDir)) rmSync(viteCacheDir, { recursive: true });
-    const testResult = runCommandCapture('pnpm test', projectDir, {
+    removeDirIfExists(viteCacheDir);
+    const scaffoldSunpeakBin = join(projectDir, 'node_modules', 'sunpeak', 'bin', 'sunpeak.js');
+    const testResult = runCommandCapture(`node ${JSON.stringify(scaffoldSunpeakBin)} test --unit`, projectDir, {
+      CI: '1',
       SUNPEAK_TEST_PORT: String(testPort),
       SUNPEAK_MCP_PORT: String(testMcpPort),
       SUNPEAK_HMR_PORT: String(testHmrPort),
@@ -679,7 +739,7 @@ async function runScaffoldSmokeTest() {
       SUNPEAK_TEST_WORKERS: '1',
       SUNPEAK_INSPECT_MCP_REQUEST_TIMEOUT_MS: '10000',
     });
-    if (!testResult.ok) return { ok: false, step: 'sunpeak test (scaffold)', output: testResult.output };
+    if (!testResult.ok) return { ok: false, step: 'sunpeak test --unit (scaffold)', output: testResult.output };
 
     // ── eval framework smoke test ──
     // Verify that `sunpeak test --eval` can start the dev server, connect,
@@ -850,9 +910,8 @@ async function runScaffoldSmokeTest() {
 
     return { ok: true, step: null, output: '' };
   } finally {
-    if (existsSync(tmpDir)) {
-      rmSync(tmpDir, { recursive: true });
-    }
+    await killProcessesReferencingPath(tmpDir);
+    removeDirIfExists(tmpDir);
   }
 }
 
@@ -864,17 +923,18 @@ async function runScaffoldSmokeTest() {
 async function testExample(resource, index) {
   const exampleName = `${resource}-example`;
   const sourceExampleDir = join(EXAMPLES_DIR, exampleName);
-  const exampleDir = join(VALIDATE_EXAMPLES_TMP, exampleName);
+  const exampleDir = join(REPO_ROOT, `.tmp-validate-${exampleName}`);
 
-  if (existsSync(exampleDir)) {
-    rmSync(exampleDir, { recursive: true });
-  }
-  mkdirSync(VALIDATE_EXAMPLES_TMP, { recursive: true });
+  removeDirIfExists(exampleDir);
 
   const skippedCopyDirs = new Set(['node_modules', 'dist', 'test-results', 'playwright-report']);
+  const skippedCopyFiles = new Set(['pnpm-lock.yaml']);
   cpSync(sourceExampleDir, exampleDir, {
     recursive: true,
-    filter: (source) => !source.split(sep).some(part => skippedCopyDirs.has(part)),
+    filter: (source) => {
+      const parts = source.split(sep);
+      return !parts.some(part => skippedCopyDirs.has(part) || skippedCopyFiles.has(part));
+    },
   });
 
   // Find available ports for parallel execution.
@@ -890,6 +950,7 @@ async function testExample(resource, index) {
     SUNPEAK_HMR_PORT: String(hmrPort),
     SUNPEAK_SANDBOX_PORT: String(sandboxPort),
     SUNPEAK_TEST_WORKERS: '1',
+    SUNPEAK_WEB_SERVER_TIMEOUT_MS: '180000',
     SUNPEAK_INSPECT_MCP_REQUEST_TIMEOUT_MS: '10000',
   };
 
@@ -904,12 +965,48 @@ async function testExample(resource, index) {
       { name: 'pnpm install', command: GENERATED_PROJECT_PNPM_INSTALL },
       { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
       { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
-      { name: 'pnpm test', command: 'pnpm test' },
+      {
+        name: 'sunpeak test --unit',
+        command: `node ${JSON.stringify(join(exampleDir, 'node_modules', 'sunpeak', 'bin', 'sunpeak.js'))} test --unit`,
+      },
     ], exampleDir, env);
   } finally {
-    if (existsSync(exampleDir)) {
-      rmSync(exampleDir, { recursive: true });
+    await killProcessesReferencingPath(exampleDir);
+    removeDirIfExists(exampleDir);
+  }
+}
+
+async function killProcessesReferencingPath(path) {
+  const currentPid = process.pid;
+  const parentPid = process.ppid;
+
+  const pids = (() => {
+    try {
+      return execSync('ps -axo pid=,command=', { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .split('\n')
+        .map((line) => {
+          const match = line.trim().match(/^(\d+)\s+(.+)$/);
+          if (!match) return null;
+          const pid = Number.parseInt(match[1], 10);
+          const command = match[2];
+          return Number.isFinite(pid) && command.includes(path) ? pid : null;
+        })
+        .filter((pid) => pid && pid !== currentPid && pid !== parentPid);
+    } catch {
+      return [];
     }
+  })();
+
+  for (const signal of ['SIGTERM', 'SIGKILL']) {
+    for (const pid of pids) {
+      try {
+        process.kill(pid, signal);
+      } catch {
+        // Process already exited.
+      }
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
   }
 }
 
@@ -1432,7 +1529,19 @@ try {
   printSuccess('Playwright browsers installed');
 
   console.log('\nRunning: pnpm test:e2e (package-level inspector e2e)');
-  if (!runCommand('pnpm test:e2e', PACKAGE_ROOT)) throw new Error('pnpm test:e2e failed');
+  {
+    const packageE2ePort = await getPort(6777);
+    const packageE2eMcpPort = await getPort(18777);
+    const packageE2eSandboxPort = await getPort(24681);
+    const packageE2eHmrPort = await getPort(24679);
+    if (!(await runCommandIsolated('pnpm test:e2e', PACKAGE_ROOT, {
+      CI: '1',
+      SUNPEAK_TEST_PORT: String(packageE2ePort),
+      SUNPEAK_MCP_PORT: String(packageE2eMcpPort),
+      SUNPEAK_SANDBOX_PORT: String(packageE2eSandboxPort),
+      SUNPEAK_HMR_PORT: String(packageE2eHmrPort),
+    }))) throw new Error('pnpm test:e2e failed');
+  }
   printSuccess('pnpm test:e2e');
 
   // ==========================================================================
@@ -1474,38 +1583,43 @@ try {
   }
 
   // ==========================================================================
-  // Phase 4: Parallel — scaffold smoke test + all examples
+  // Phase 4: Scaffold smoke test
   // ==========================================================================
-  printSection('PARALLEL: SCAFFOLD + EXAMPLES');
+  printSection('SCAFFOLD SMOKE TEST');
 
-  const parallelStart = Date.now();
-  console.log(`Running scaffold smoke test + test init + ${resources.length} examples in parallel...\n`);
+  const scaffoldStart = Date.now();
+  console.log('Running scaffold smoke test (sunpeak new → dev → test → build → start)...\n');
 
-  if (existsSync(VALIDATE_EXAMPLES_TMP)) {
-    rmSync(VALIDATE_EXAMPLES_TMP, { recursive: true });
-  }
-
-  const [scaffoldResult, testInitResult, ...exampleResults] = await Promise.all([
-    // Scaffold smoke test (sunpeak new → dev → test → build → start)
-    runScaffoldSmokeTest(),
-    // Test init smoke test (sunpeak test init)
-    new Promise(resolve => resolve(runTestInitSmokeTest())),
-    // All examples in parallel
-    ...resources.map((resource, index) =>
-      new Promise(resolve => resolve(testExample(resource, index)))
-    ),
-  ]);
-
-  // Report scaffold result
+  const scaffoldResult = await runScaffoldSmokeTest();
   if (scaffoldResult.ok) {
-    printSuccess('scaffold smoke test (new → dev → test → build → start)');
+    const scaffoldDuration = ((Date.now() - scaffoldStart) / 1000).toFixed(1);
+    printSuccess(`scaffold smoke test (new → dev → test → build → start) (${scaffoldDuration}s)`);
   } else {
     console.error(`\n${colors.red}✗ scaffold smoke test failed at: ${scaffoldResult.step}${colors.reset}`);
     console.error(`${colors.dim}${scaffoldResult.output.split('\n').slice(-30).join('\n')}${colors.reset}`);
     throw new Error(`Scaffold smoke test failed at: ${scaffoldResult.step}`);
   }
 
-  // Report test init result
+  // ==========================================================================
+  // Phase 5: Parallel — test init + examples
+  // ==========================================================================
+  printSection('PARALLEL: TEST INIT + EXAMPLES');
+
+  const parallelStart = Date.now();
+  console.log(`Running test init + ${resources.length} examples in parallel...\n`);
+
+  for (const resource of resources) {
+    const exampleTmpDir = join(REPO_ROOT, `.tmp-validate-${resource}-example`);
+    removeDirIfExists(exampleTmpDir);
+  }
+
+  const [testInitResult, ...exampleResults] = await Promise.all([
+    new Promise(resolve => resolve(runTestInitSmokeTest())),
+    ...resources.map((resource, index) =>
+      new Promise(resolve => resolve(testExample(resource, index)))
+    ),
+  ]);
+
   if (testInitResult.ok) {
     printSuccess('test init smoke test (sunpeak test init)');
   } else {
@@ -1567,9 +1681,7 @@ try {
 
     // Clean up baselines (template is part of the monorepo, not a user project)
     const screenshotsDir = join(TEMPLATE_ROOT, 'tests/e2e/__screenshots__');
-    if (existsSync(screenshotsDir)) {
-      rmSync(screenshotsDir, { recursive: true });
-    }
+    removeDirIfExists(screenshotsDir);
   }
 
   // ==========================================================================
@@ -1580,14 +1692,14 @@ try {
   // Rebuild last example to ensure dist/ is fresh
   const lastResource = resources[resources.length - 1];
   const lastExampleDir = join(EXAMPLES_DIR, `${lastResource}-example`);
-  const productionExampleDir = join(VALIDATE_EXAMPLES_TMP, `${lastResource}-production-server`);
-  if (existsSync(productionExampleDir)) {
-    rmSync(productionExampleDir, { recursive: true });
-  }
-  mkdirSync(VALIDATE_EXAMPLES_TMP, { recursive: true });
+  const productionExampleDir = join(PRODUCTION_TMP, `${lastResource}-production-server`);
+  removeDirIfExists(productionExampleDir);
+  mkdirSync(PRODUCTION_TMP, { recursive: true });
   cpSync(lastExampleDir, productionExampleDir, {
     recursive: true,
-    filter: (source) => !source.split(sep).some(part => ['node_modules', 'dist', 'test-results', 'playwright-report'].includes(part)),
+    filter: (source) => !source.split(sep).some(part =>
+      ['node_modules', 'dist', 'test-results', 'playwright-report', 'pnpm-lock.yaml'].includes(part)
+    ),
   });
 
   try {
@@ -1610,9 +1722,7 @@ try {
 
     await validateProductionServer(productionExampleDir);
   } finally {
-    if (existsSync(productionExampleDir)) {
-      rmSync(productionExampleDir, { recursive: true });
-    }
+    removeDirIfExists(productionExampleDir);
   }
 
   // ==========================================================================

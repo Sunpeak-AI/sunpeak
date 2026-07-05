@@ -893,9 +893,7 @@ describe('Inspector', () => {
       }),
     };
 
-    it('switching tools updates the simulation dropdown', async () => {
-      const user = userEvent.setup();
-
+    it('switching tools updates the simulation dropdown', () => {
       render(<Inspector simulations={multiToolSims} onCallTool={vi.fn()} />);
 
       // albums tool selected by default (alphabetical) — should have 2 fixture sims
@@ -906,7 +904,7 @@ describe('Inspector', () => {
 
       // Switch to map tool
       const toolSelect = screen.getByTestId('tool-selector').querySelector('select')!;
-      await user.selectOptions(toolSelect, 'show-map');
+      fireEvent.change(toolSelect, { target: { value: 'show-map' } });
 
       // Simulation dropdown should now show map's fixtures
       const updatedSimOptions = screen
