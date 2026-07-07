@@ -48,7 +48,7 @@ console.log(`Examples directory: ${EXAMPLES_DIR}\n`);
 
 // Clean and recreate examples directory
 if (existsSync(EXAMPLES_DIR)) {
-  rmSync(EXAMPLES_DIR, { recursive: true });
+  rmSync(EXAMPLES_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 mkdirSync(EXAMPLES_DIR, { recursive: true });
 
@@ -59,6 +59,10 @@ for (const resource of resources) {
   const exampleDir = join(EXAMPLES_DIR, exampleName);
 
   try {
+    if (existsSync(exampleDir)) {
+      rmSync(exampleDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    }
+
     execSync(`node ${SUNPEAK_BIN} new ${exampleName} ${resource} --skip-install`, {
       cwd: EXAMPLES_DIR,
       stdio: 'inherit',

@@ -107,6 +107,17 @@ async function fetchWithTimeout(url, options, timeoutMs = 10000) {
   });
 }
 
+function extractInspectorRequestToken(entryJs) {
+  return entryJs.match(/[?&]__sunpeak_token=([^"'&\\]+)/)?.[1] ?? null;
+}
+
+function readResourceUrl(baseUrl, uri, requestToken) {
+  const url = new URL('/__sunpeak/read-resource', baseUrl);
+  url.searchParams.set('uri', uri);
+  if (requestToken) url.searchParams.set('__sunpeak_token', requestToken);
+  return url.toString();
+}
+
 /**
  * Run a sequence of commands, stopping on first failure. Returns { ok, step, output }.
  */
@@ -963,7 +974,7 @@ async function testExample(resource, index) {
   try {
     return runSteps([
       { name: 'pnpm install', command: GENERATED_PROJECT_PNPM_INSTALL },
-      { name: 'tsc --noEmit', command: 'pnpm exec tsc --noEmit' },
+      { name: 'tsc --noEmit', command: 'node node_modules/typescript/bin/tsc --noEmit' },
       { name: 'sunpeak build', command: `node ${SUNPEAK_BIN} build` },
       {
         name: 'sunpeak test --unit',
@@ -1155,6 +1166,10 @@ async function validateInspectMode(exampleDir) {
       }
       printSuccess('Inspect server started');
 
+      const entryResp = await fetch(`http://localhost:${inspectPort}/@id/__x00__virtual:sunpeak-inspect-entry`);
+      if (!entryResp.ok) throw new Error(`Virtual entry module returned ${entryResp.status}`);
+      const inspectorRequestToken = extractInspectorRequestToken(await entryResp.text());
+
       // Verify tool discovery
       const listToolsResp = await fetch(`http://localhost:${inspectPort}/__sunpeak/list-tools`);
       if (!listToolsResp.ok) throw new Error(`list-tools returned ${listToolsResp.status}`);
@@ -1180,7 +1195,7 @@ async function validateInspectMode(exampleDir) {
 
       // Verify resource reading endpoint responds (even if no resources matched)
       const readResourceResp = await fetch(
-        `http://localhost:${inspectPort}/__sunpeak/read-resource?uri=nonexistent://test`
+        readResourceUrl(`http://localhost:${inspectPort}`, 'nonexistent://test', inspectorRequestToken)
       );
       // Should return 404 or 500 (resource not found), not crash
       if (readResourceResp.status !== 404 && readResourceResp.status !== 500) {
@@ -1263,6 +1278,11 @@ async function validateDevServer(projectDir) {
     }
     printSuccess('Dev server started');
 
+    const entryResp = await fetch(`http://localhost:${devPort}/@id/__x00__virtual:sunpeak-inspect-entry`);
+    if (!entryResp.ok) throw new Error(`Virtual entry module returned ${entryResp.status}`);
+    const entryJs = await entryResp.text();
+    const inspectorRequestToken = extractInspectorRequestToken(entryJs);
+
     // ── 2. Tool discovery ──
     const listToolsResp = await fetch(`http://localhost:${devPort}/__sunpeak/list-tools`);
     if (!listToolsResp.ok) throw new Error(`list-tools returned ${listToolsResp.status}`);
@@ -1335,7 +1355,9 @@ async function validateDevServer(projectDir) {
 
     // ── 8. Resource HTML served with Vite HMR ──
     const firstUri = uiTools[0]._meta?.ui?.resourceUri ?? uiTools[0]._meta?.['ui/resourceUri'];
-    const readResp = await fetch(`http://localhost:${devPort}/__sunpeak/read-resource?uri=${encodeURIComponent(firstUri)}`);
+    const readResp = await fetch(
+      readResourceUrl(`http://localhost:${devPort}`, firstUri, inspectorRequestToken)
+    );
     if (!readResp.ok) throw new Error(`read-resource returned ${readResp.status}`);
     const resourceHtml = await readResp.text();
     if (!resourceHtml.includes('<div id="root">')) throw new Error('Resource HTML missing #root');
@@ -1344,7 +1366,9 @@ async function validateDevServer(projectDir) {
 
     // ── 9. All distinct resources readable ──
     for (const uri of uniqueUris) {
-      const resp = await fetch(`http://localhost:${devPort}/__sunpeak/read-resource?uri=${encodeURIComponent(uri)}`);
+      const resp = await fetch(
+        readResourceUrl(`http://localhost:${devPort}`, uri, inspectorRequestToken)
+      );
       if (!resp.ok) throw new Error(`read-resource failed for ${uri}: ${resp.status}`);
       const html = await resp.text();
       if (!html.includes('<div id="root">')) throw new Error(`Resource ${uri} missing #root`);
@@ -1377,10 +1401,6 @@ async function validateDevServer(projectDir) {
     // Fixture data (toolInput, toolResult, serverTools, userMessage) from JSON
     // files is merged into the simulations object and serialized into the virtual
     // entry JS module. Fetch the module and check for fixture data.
-    const entryResp = await fetch(`http://localhost:${devPort}/@id/__x00__virtual:sunpeak-inspect-entry`);
-    if (!entryResp.ok) throw new Error(`Virtual entry module returned ${entryResp.status}`);
-    const entryJs = await entryResp.text();
-
     const sampleFixture = JSON.parse(readFileSync(join(simDir, 'show-albums.json'), 'utf-8'));
     if (sampleFixture.toolInput) {
       const fixtureKey = Object.keys(sampleFixture.toolInput)[0]; // e.g., "category"
@@ -1601,24 +1621,23 @@ try {
   }
 
   // ==========================================================================
-  // Phase 5: Parallel — test init + examples
+  // Phase 5: Test init + examples
   // ==========================================================================
-  printSection('PARALLEL: TEST INIT + EXAMPLES');
+  printSection('TEST INIT + EXAMPLES');
 
-  const parallelStart = Date.now();
-  console.log(`Running test init + ${resources.length} examples in parallel...\n`);
+  const exampleStart = Date.now();
+  console.log(`Running test init + ${resources.length} examples...\n`);
 
   for (const resource of resources) {
     const exampleTmpDir = join(REPO_ROOT, `.tmp-validate-${resource}-example`);
     removeDirIfExists(exampleTmpDir);
   }
 
-  const [testInitResult, ...exampleResults] = await Promise.all([
-    new Promise(resolve => resolve(runTestInitSmokeTest())),
-    ...resources.map((resource, index) =>
-      new Promise(resolve => resolve(testExample(resource, index)))
-    ),
-  ]);
+  const testInitResult = runTestInitSmokeTest();
+  const exampleResults = [];
+  for (const [index, resource] of resources.entries()) {
+    exampleResults.push(await testExample(resource, index));
+  }
 
   if (testInitResult.ok) {
     printSuccess('test init smoke test (sunpeak test init)');
@@ -1648,8 +1667,8 @@ try {
     throw new Error(`${failedExamples.length} example(s) failed: ${failedExamples.map(e => e.name).join(', ')}`);
   }
 
-  const parallelDuration = ((Date.now() - parallelStart) / 1000).toFixed(1);
-  printSuccess(`All parallel tasks passed (${parallelDuration}s wall time)`);
+  const exampleDuration = ((Date.now() - exampleStart) / 1000).toFixed(1);
+  printSuccess(`All test init + example tasks passed (${exampleDuration}s)`);
 
   // ==========================================================================
   // Phase 5: Visual regression testing (template)

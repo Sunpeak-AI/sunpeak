@@ -1032,6 +1032,12 @@ function appendInspectorRequestToken(resourceUrl, requestToken) {
   }
 }
 
+function isInspectorRequestTokenValid(req, requestToken) {
+  if (!requestToken) return true;
+  const url = new URL(req.url, 'http://localhost');
+  return url.searchParams.get('__sunpeak_token') === requestToken;
+}
+
 function addInspectorRequestTokenToSimulations(simulations, requestToken) {
   if (!requestToken || !simulations || typeof simulations !== 'object') return simulations;
   return Object.fromEntries(
@@ -2073,12 +2079,7 @@ function sunpeakInspectEndpointsPlugin(getClient, setClient, pluginOpts = {}) {
   }
 
   function requireInspectorRequestToken(req, res) {
-    if (!pluginOpts.requestToken) return true;
-    const fetchSiteHeader = req.headers['sec-fetch-site'];
-    const fetchSite = Array.isArray(fetchSiteHeader) ? fetchSiteHeader[0] : fetchSiteHeader;
-    if (fetchSite !== 'cross-site') return true;
-    const url = new URL(req.url, 'http://localhost');
-    if (url.searchParams.get('__sunpeak_token') === pluginOpts.requestToken) return true;
+    if (isInspectorRequestTokenValid(req, pluginOpts.requestToken)) return true;
     res.writeHead(403, { 'Content-Type': 'text/plain' });
     res.end('Forbidden: missing or invalid inspector request token');
     return false;
@@ -3090,6 +3091,7 @@ export const _securityTestExports = {
   formatSharedAppContextForModel,
   addInspectorRequestTokenToSimulations,
   appendInspectorRequestToken,
+  isInspectorRequestTokenValid,
   normalizeApiKey,
   normalizeModelChatMessages,
   normalizeModelAppContext,

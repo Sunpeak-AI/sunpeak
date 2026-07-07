@@ -67,6 +67,14 @@ async function fetchJson(page, path) {
   return response.json();
 }
 
+async function getInspectorRequestToken(page) {
+  const baseURL = page.context()._options?.baseURL || '';
+  const response = await page.request.get(`${baseURL}/@id/__x00__virtual:sunpeak-inspect-entry`);
+  if (!response.ok()) return null;
+  const source = await response.text();
+  return source.match(/[?&]__sunpeak_token=([^"'&\\]+)/)?.[1] ?? null;
+}
+
 /**
  * Read the tool result from the inspector's <script id="__tool-result"> element.
  */
@@ -199,9 +207,10 @@ const test = base.extend({
 
       async readResource(uri) {
         const baseURL = page.context()._options?.baseURL || '';
-        const response = await page.request.get(
-          `${baseURL}/__sunpeak/read-resource?uri=${encodeURIComponent(uri)}`
-        );
+        const params = new URLSearchParams({ uri });
+        const requestToken = await getInspectorRequestToken(page);
+        if (requestToken) params.set('__sunpeak_token', requestToken);
+        const response = await page.request.get(`${baseURL}/__sunpeak/read-resource?${params}`);
         if (!response.ok()) {
           throw new Error(
             `readResource(${uri}) returned ${response.status()}: ${await response.text()}`

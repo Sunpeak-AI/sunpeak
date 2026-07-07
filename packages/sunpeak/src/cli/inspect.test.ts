@@ -691,6 +691,26 @@ describe('inspect endpoint security helpers', () => {
     });
   });
 
+  it('requires inspector request tokens even when Fetch Metadata is absent', async () => {
+    const { _securityTestExports } = await importInspectCommand();
+
+    expect(
+      _securityTestExports.isInspectorRequestTokenValid(
+        { url: '/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums', headers: {} },
+        'token-123'
+      )
+    ).toBe(false);
+    expect(
+      _securityTestExports.isInspectorRequestTokenValid(
+        {
+          url: '/__sunpeak/read-resource?uri=ui%3A%2F%2Falbums&__sunpeak_token=token-123',
+          headers: {},
+        },
+        'token-123'
+      )
+    ).toBe(true);
+  });
+
   it('rejects unsafe model IDs before provider SDK calls', async () => {
     const { _securityTestExports } = await importInspectCommand();
 
