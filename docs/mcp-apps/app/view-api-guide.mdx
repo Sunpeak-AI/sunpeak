@@ -1,0 +1,207 @@
+---
+title: 'MCP App View API Guide'
+sidebarTitle: 'View API Guide'
+description: 'Choose the right MCP App client API inside an iframe View: callServerTool, readServerResource, updateModelContext, sendMessage, createSamplingMessage, app-side tools, display modes, links, downloads, logs, and teardown.'
+keywords:
+  [
+    'MCP App View API',
+    'MCP App client API',
+    'MCP App iframe API',
+    'callServerTool vs sendMessage',
+    'updateModelContext vs sendMessage',
+    'readServerResource MCP App',
+    'MCP App app-side tools',
+    'MCP App host capabilities',
+    'MCP App View to host',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+An MCP App View runs inside a host iframe. The View does not talk directly to the MCP server or the chat UI. It uses the SDK [`App`](/mcp-apps/app/app-class) instance, and the host decides which requests it supports.
+
+Use this guide when you are choosing which client API to call from the View.
+
+## Quick Choice
+
+| What the View needs to do                      | Use                                                                         | Why                                                                                         |
+| ---------------------------------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Fetch fresh server data or run a server action | [`callServerTool()`](/mcp-apps/app/requests/call-server-tool)               | The host proxies a normal `tools/call` to the originating MCP server.                       |
+| Load static or binary server content           | [`readServerResource()`](/mcp-apps/app/requests/read-server-resource)       | Resources are better for files, templates, media, and named content.                        |
+| Discover server resources                      | [`listServerResources()`](/mcp-apps/app/requests/list-server-resources)     | Use it before showing a picker for server-registered resources.                             |
+| Share UI state with the next model turn        | [`updateModelContext()`](/mcp-apps/app/requests/update-model-context)       | It updates context without adding a chat message or starting a response.                    |
+| Ask the host to continue the conversation now  | [`sendMessage()`](/mcp-apps/app/requests/send-message)                      | It adds a user message and may trigger model work.                                          |
+| Ask for a local model completion from the View | [`createSamplingMessage()`](/mcp-apps/app/requests/create-sampling-message) | Use it for View-local drafting, labeling, or summarization when the host supports sampling. |
+| Let the host call into current UI state        | [App-side tools](/mcp-apps/app/app-tools)                                   | Use this when the answer lives in the DOM, form, canvas, or local View state.               |
+| Open a browser page                            | [`openLink()`](/mcp-apps/app/requests/open-link)                            | Host-mediated link opening works from sandboxed iframes.                                    |
+| Save a generated file                          | [`downloadFile()`](/mcp-apps/app/requests/download-file)                    | Host-mediated download avoids iframe download restrictions.                                 |
+| Change presentation size                       | [`requestDisplayMode()`](/mcp-apps/app/requests/request-display-mode)       | The host can approve inline, fullscreen, or PiP mode based on support.                      |
+| Report diagnostics                             | [`sendLog()`](/mcp-apps/app/requests/send-log)                              | Logs go to the host's developer surface, not the conversation.                              |
+| Ask to close the View                          | [`requestTeardown()`](/mcp-apps/app/requests#requestteardown)               | The host may then send `ui/resource-teardown` before unmounting.                            |
+
+## Check Host Capabilities First
+
+Hosts may implement only part of the MCP Apps API. Read capabilities after [`app.connect()`](/mcp-apps/app/app-class#connect), then hide or disable UI that depends on missing host support.
+
+```ts
+await app.connect();
+
+const caps = app.getHostCapabilities();
+
+const canCallTools = Boolean(caps?.serverTools);
+const canReadResources = Boolean(caps?.serverResources);
+const canSendMessages = Boolean(caps?.message?.text);
+const canShareTextContext = Boolean(caps?.updateModelContext?.text);
+const canUseSampling = Boolean(caps?.sampling);
+const canDownload = Boolean(caps?.downloadFile);
+```
+
+Use modality fields when sending content. For example, `message.text` does not mean the host accepts images in `sendMessage()`, and `updateModelContext.image` does not mean it accepts structured content.
+
+## Server Tool or Server Resource?
+
+Use a server tool when the View needs computation, authorization, mutation, search, filtering, pagination, or fresh data:
+
+```ts
+const result = await app.callServerTool({
+  name: 'search-orders',
+  arguments: { status: 'open', page: 2 },
+});
+
+if (!result.isError) {
+  renderOrders(result.structuredContent);
+}
+```
+
+Use a server resource when the View needs named content that exists apart from an action, such as a PDF, image, transcript, saved report, or static config:
+
+```ts
+const resource = await app.readServerResource({
+  uri: 'reports://quarterly-summary.pdf',
+});
+
+const first = resource.contents[0];
+if (first && 'blob' in first) {
+  const bytes = Uint8Array.from(atob(first.blob), (char) => char.charCodeAt(0));
+  showPdf(new Blob([bytes], { type: first.mimeType }));
+}
+```
+
+If a button mutates server state, make it an app-visible tool and call it with `callServerTool()`. If a menu lists files, call `listServerResources()` and then `readServerResource()`.
+
+## Model Context or Chat Message?
+
+Use `updateModelContext()` when the model should know what the user is viewing next time, but should not respond yet.
+
+```ts
+await app.updateModelContext({
+  content: [
+    {
+      type: 'text',
+      text: `The user selected order ${selectedOrder.id} with status ${selectedOrder.status}.`,
+    },
+  ],
+  structuredContent: { selectedOrderId: selectedOrder.id },
+});
+```
+
+Use `sendMessage()` when a user action should continue the conversation immediately.
+
+```ts
+await app.sendMessage({
+  role: 'user',
+  content: [{ type: 'text', text: 'Draft a reply for the selected order.' }],
+});
+```
+
+For large state, update model context first, then send a short message. This keeps the user-visible chat clean while still giving the model the facts it needs.
+
+## Sampling or Conversation?
+
+Use `createSamplingMessage()` for work that belongs inside the View, such as generating a short label, grouping visible rows, or summarizing a selected passage before the user commits it.
+
+```ts
+if (app.getHostCapabilities()?.sampling) {
+  const result = await app.createSamplingMessage({
+    messages: [
+      {
+        role: 'user',
+        content: { type: 'text', text: 'Write a short label for these selected rows.' },
+      },
+    ],
+    maxTokens: 80,
+  });
+
+  applySuggestedLabel(result.content);
+}
+```
+
+Use `sendMessage()` when the output should become part of the chat transcript or when the model should decide which server tools to call next.
+
+## App-side Tool or Server Tool?
+
+Use an app-side tool when the host needs information that only exists inside the rendered View.
+
+```ts
+app.registerTool(
+  'get-selected-order',
+  {
+    description: 'Return the order currently selected in the View.',
+    inputSchema: z.object({}),
+  },
+  () => ({
+    content: [{ type: 'text', text: JSON.stringify(selectedOrder) }],
+    structuredContent: selectedOrder,
+  })
+);
+```
+
+Use a server tool when the action needs backend data, credentials, audit logging, writes, or any source of truth outside the iframe. App-side tools can read UI state, but they should not become a hidden backend.
+
+## Errors and Fallbacks
+
+Tool execution errors come back as results, so check `isError`. Protocol, transport, and host rejection failures may throw.
+
+```ts
+try {
+  const result = await app.callServerTool({
+    name: 'save-order-note',
+    arguments: { orderId, note },
+  });
+
+  if (result.isError) {
+    showError(result.content);
+    return;
+  }
+
+  showSaved();
+} catch (error) {
+  showError('The host could not reach the server.');
+}
+```
+
+For host-mediated actions such as links, messages, and downloads, also check returned `isError` when the method returns it.
+
+```ts
+const result = await app.openLink({ url: docsUrl });
+if (result.isError) {
+  showError('The host blocked this link.');
+}
+```
+
+## Related Reference
+
+<CardGroup cols={2}>
+  <Card title="Requests" icon="arrows-rotate" href="/mcp-apps/app/requests">
+    Full method signatures for View-to-host requests.
+  </Card>
+  <Card title="Event Handlers" icon="bolt" href="/mcp-apps/app/event-handlers">
+    Incoming notifications and host-to-View requests.
+  </Card>
+  <Card title="App Tools" icon="toolbox" href="/mcp-apps/app/app-tools">
+    Expose View-local tools to the host and model.
+  </Card>
+  <Card title="Core Types" icon="code" href="/mcp-apps/types/core-types">
+    Host capabilities, context, metadata, display modes, and content types.
+  </Card>
+</CardGroup>

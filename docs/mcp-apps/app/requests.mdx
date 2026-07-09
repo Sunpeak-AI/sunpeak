@@ -15,6 +15,13 @@ import { App } from "@modelcontextprotocol/ext-apps";
 
 The `App` class provides methods for the View to make requests to the host. The host proxies server requests to the MCP server and handles UI requests directly. For handling incoming host events, see [Event Handlers](/mcp-apps/app/event-handlers).
 
+<Tip>
+  If you are deciding which method to use from an iframe View, start with the [View
+  API Guide](/mcp-apps/app/view-api-guide). It compares `callServerTool()`,
+  `readServerResource()`, `updateModelContext()`, `sendMessage()`, sampling, app-side
+  tools, downloads, links, display modes, logs, and teardown.
+</Tip>
+
 ## [callServerTool](/mcp-apps/app/requests/call-server-tool)
 
 Call a tool on the originating MCP server (proxied through the host).
