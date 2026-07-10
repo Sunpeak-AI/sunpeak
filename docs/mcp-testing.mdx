@@ -267,10 +267,11 @@ This catches issues that inspector tests can't: real MCP connection behavior, ac
 
 ### One-Time Setup
 
-1. Go to **Settings > Apps > Create** in ChatGPT
-2. **Set the app name to match your `package.json` `name` exactly.** Live tests type `/{appName} ...` to invoke your app, and ChatGPT matches on this name.
-3. Enter your tunnel URL with the `/mcp` path (e.g., `https://abc123.ngrok.io/mcp`)
-4. Save the connection
+1. If Developer mode is not already enabled, click your user menu in the bottom-left corner and select **Settings > Security and login > Developer mode**
+2. Return to the ChatGPT homepage and click **Plugins** in the sidebar
+3. Open your app if it is already there, or select the **+** button to add it
+4. **Make sure the app name matches your `package.json` `name` exactly.** Live tests type `/{appName} ...` to invoke your app, and ChatGPT matches on this name.
+5. If you are adding the app, enter your tunnel URL with the `/mcp` path (e.g., `https://abc123.ngrok.io/mcp`) and save it
 
 This only needs to be done once per tunnel URL pattern.
 
@@ -309,7 +310,7 @@ This only needs to be done once per tunnel URL pattern.
 The test runner:
 1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found.
 2. Starts `sunpeak dev --prod-resources` automatically
-3. Refreshes the MCP server connection in ChatGPT settings (once in globalSetup, before all workers)
+3. Refreshes the MCP server connection from its plugin details (once in globalSetup, before all workers)
 4. Runs `tests/live/*.spec.ts` files fully in parallel — each test gets its own chat window
 
 <Note>
@@ -354,7 +355,7 @@ import { defineLiveConfig } from 'sunpeak/test/live/config';
 export default defineLiveConfig({ hosts: ['chatgpt', 'claude'] });
 ```
 
-All host DOM interaction (selectors, login, settings navigation, iframe access) is maintained by sunpeak — you only write resource assertions. The same test code runs across all hosts.
+sunpeak maintains all host DOM interaction, including selectors, login, app management navigation, and iframe access. You only write resource assertions, and the same test code runs across all hosts.
 
 ### Troubleshooting
 
@@ -372,7 +373,7 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
   </Accordion>
 
   <Accordion title="Tool not called by ChatGPT">
-    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected — check ChatGPT settings.
+    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected. Check the developer-mode app under ChatGPT Plugins.
   </Accordion>
 </AccordionGroup>
 

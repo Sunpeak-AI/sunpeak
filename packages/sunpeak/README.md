@@ -20,6 +20,8 @@ Server-agnostic MCP testing framework and full-stack MCP App framework.
 
 MCP Apps are cross-platform, meaning sunpeak is a ChatGPT App framework, Claude Connector framework, and more.
 
+ChatGPT apps are now submitted and published as plugins. The app remains an MCP-backed app, so sunpeak's architecture and runtime do not change. The plugin is the package used for local installation, review, and public distribution.
+
 ```bash
 npx sunpeak new
 ```
@@ -149,4 +151,5 @@ Toggle between hosts, themes, display modes, and device types from the sidebar. 
 - [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
+- [Build ChatGPT Plugins](https://learn.chatgpt.com/docs/build-plugins) · [Submit ChatGPT Plugins](https://learn.chatgpt.com/docs/submit-plugins)
 - [Troubleshooting](https://sunpeak.ai/docs/app-framework/guides/troubleshooting)

@@ -14,7 +14,7 @@ If you're using ngrok or a similar tunnel to expose your local server:
 
 - Verify the tunnel is running and pointing to the correct port
 - Make sure the tunnel protocol matches: use `ngrok http 8000`, not `ngrok http https://localhost:8000`
-- Check the tunnel URL in your host's MCP server settings matches the active tunnel
+- Check that the tunnel URL in your host's app or connector management page matches the active tunnel
 
 ### 2. Check your dev server is running
 
@@ -54,9 +54,9 @@ This clears any stale connections and re-registers all tools and resources.
 
 ### 4. Refresh or re-add the MCP server in the host
 
-Most issues are resolved by refreshing the MCP server connection. In the host's settings, click refresh on the MCP server entry, or remove and re-add it:
+Most issues are resolved by refreshing the MCP server connection. In ChatGPT, open the developer-mode app under `Plugins` and refresh it from the plugin details. In other hosts, use their app or connector management page. If refresh fails, remove and re-add the MCP server:
 
-**ChatGPT:** Settings > MCP Servers > Refresh (or Remove > Add again with your tunnel URL)
+**ChatGPT:** `Plugins > your developer-mode app > Refresh`. To add it again, first make sure Developer mode is enabled from the bottom-left user menu under `Settings > Security and login > Developer mode`, then use `Plugins > +` with your tunnel URL.
 
 **Claude:** Settings > MCP Servers > Refresh (or Remove > Add again with your tunnel URL)
 

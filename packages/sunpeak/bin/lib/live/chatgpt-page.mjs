@@ -11,7 +11,7 @@ import { HostPage } from './host-page.mjs';
 /**
  * All ChatGPT DOM selectors in one place for easy maintenance.
  *
- * Last verified: 2026-03-24 via live Playwright inspection.
+ * Updated: 2026-07-10 for the documented ChatGPT Plugins flow.
  */
 const SELECTORS = {
   // Chat interface
@@ -23,8 +23,9 @@ const SELECTORS = {
   loggedInIndicator: '[data-testid="accounts-profile-button"]',
   loginPage: 'button:has-text("Log in")',
 
-  // Settings navigation
-  appsTab: '[role="tab"]:has-text("Apps")',
+  // Plugin directory navigation
+  createdByYou:
+    'button:has-text("Created by you"), [role="tab"]:has-text("Created by you"), a:has-text("Created by you")',
   refreshButton: 'button:has-text("Refresh")',
   reconnectButton: 'button:has-text("Reconnect")',
 
@@ -40,40 +41,51 @@ const SELECTORS = {
 
 const URLS = {
   base: 'https://chatgpt.com',
-  settings: 'https://chatgpt.com/#settings/Connectors',
+  plugins: 'https://chatgpt.com/plugins',
 };
+
+const PLUGIN_SETUP_HINT =
+  'Enable Developer mode from the bottom-left user menu under Settings > Security and login > Developer mode, then add the app from Plugins > +.';
 
 export { SELECTORS as CHATGPT_SELECTORS, URLS as CHATGPT_URLS };
 
 export class ChatGPTPage extends HostPage {
-  get hostId() { return 'chatgpt'; }
-  get hostName() { return 'ChatGPT'; }
-  get selectors() { return SELECTORS; }
-  get urls() { return URLS; }
+  get hostId() {
+    return 'chatgpt';
+  }
+  get hostName() {
+    return 'ChatGPT';
+  }
+  get selectors() {
+    return SELECTORS;
+  }
+  get urls() {
+    return URLS;
+  }
 
   /**
-   * Refresh the MCP server connection in ChatGPT settings.
-   * Navigates to Settings > Apps, clicks the app entry, clicks Refresh,
+   * Refresh the MCP server connection from the ChatGPT Plugins directory.
+   * Opens Plugins, finds the developer-mode app, clicks Refresh,
    * and waits for the success/error toast.
    */
   async refreshMcpServer({ tunnelUrl, appName } = {}) {
-    await this.page.goto(URLS.settings, { waitUntil: 'domcontentloaded' });
+    await this.page.goto(URLS.plugins, { waitUntil: 'domcontentloaded' });
     await this.page.waitForTimeout(3_000);
 
     const found = await this._findAndClickRefresh(appName);
 
     if (!found) {
-      const appsTab = this.page.locator(SELECTORS.appsTab);
-      const hasAppsTab = await appsTab.isVisible().catch(() => false);
-      if (hasAppsTab) {
-        await appsTab.click();
+      const createdByYou = this.page.locator(SELECTORS.createdByYou).first();
+      const hasCreatedByYou = await createdByYou.isVisible().catch(() => false);
+      if (hasCreatedByYou) {
+        await createdByYou.click();
         await this.page.waitForTimeout(2_000);
         const retryFound = await this._findAndClickRefresh(appName);
         if (!retryFound) {
-          await this._screenshotAndThrow('refresh-mcp-settings', tunnelUrl);
+          await this._screenshotAndThrow('refresh-mcp-plugin', tunnelUrl, PLUGIN_SETUP_HINT);
         }
       } else {
-        await this._screenshotAndThrow('no-apps-tab', tunnelUrl);
+        await this._screenshotAndThrow('developer-plugin-not-found', tunnelUrl, PLUGIN_SETUP_HINT);
       }
     }
 
@@ -82,7 +94,7 @@ export class ChatGPTPage extends HostPage {
     if (hasError) {
       throw new Error(
         `MCP server refresh failed in ChatGPT:\n${errorText.trim()}\n\n` +
-        `Make sure your MCP dev server is running (pnpm dev) and your tunnel is active.`
+          `Make sure your MCP dev server is running (pnpm dev) and your tunnel is active.`
       );
     }
 
@@ -107,13 +119,18 @@ export class ChatGPTPage extends HostPage {
     }
 
     // Wait for the outer sandbox iframe
-    await this.page.locator(SELECTORS.mcpAppOuterIframe).first().waitFor({ state: 'attached', timeout: 30_000 });
+    await this.page
+      .locator(SELECTORS.mcpAppOuterIframe)
+      .first()
+      .waitFor({ state: 'attached', timeout: 30_000 });
 
     // Wait for the inner frame to appear inside the sandboxed outer iframe.
     // waitForFunction can't cross the sandbox boundary, so use Playwright's frameLocator instead.
     const outerFrame = this.page.frameLocator(SELECTORS.mcpAppOuterIframe).first();
     await outerFrame
-      .locator(`iframe[name="${SELECTORS.mcpAppInnerFrameName}"], iframe#${SELECTORS.mcpAppInnerFrameName}`)
+      .locator(
+        `iframe[name="${SELECTORS.mcpAppInnerFrameName}"], iframe#${SELECTORS.mcpAppInnerFrameName}`
+      )
       .waitFor({ state: 'attached', timeout: 15_000 });
 
     const appFrame = this.getAppIframe();
@@ -182,13 +199,11 @@ export class ChatGPTPage extends HostPage {
       return false;
     };
 
-    if (await tryClickRefresh()) return true;
-
     if (appName) {
       const strategies = [
         () => this.page.getByText(appName, { exact: true }).first(),
-        () => this.page.locator(`text=${appName}`).first(),
-        () => this.page.locator(`a:has-text("${appName}"), [role="button"]:has-text("${appName}")`).first(),
+        () => this.page.getByRole('link', { name: appName, exact: true }).first(),
+        () => this.page.getByRole('button', { name: appName, exact: true }).first(),
       ];
 
       for (const getLocator of strategies) {
@@ -205,6 +220,6 @@ export class ChatGPTPage extends HostPage {
       }
     }
 
-    return false;
+    return appName ? false : tryClickRefresh();
   }
 }

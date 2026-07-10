@@ -43,7 +43,8 @@ This adds a final phase that runs `pnpm test:live` in the generated example proj
 
 - A tunnel running (e.g. `ngrok http 8000`)
 - Being logged into ChatGPT in your browser (session is imported automatically)
-- MCP server pre-configured in ChatGPT settings with the tunnel URL
+- Developer mode enabled from the bottom-left user menu under `Settings > Security and login > Developer mode`
+- Developer-mode app created under ChatGPT `Plugins` with the tunnel URL
 
 Set `SUNPEAK_LIVE_BROWSER` (chrome/arc/brave/edge) to override browser detection.
 
@@ -60,9 +61,11 @@ With the mcp server still running from the previous step, make sure to have a tu
 ngrok http 8000
 ```
 
-You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see the template UI in action: `User > Settings > Apps > Create`
+If Developer mode is not already enabled, click your user menu in the bottom-left corner and select `Settings > Security and login > Developer mode`.
 
-Once the app is connected, send the name of a tool simulation, like `show carousel`, to ChatGPT. Many changes require you to Refresh the app on the same settings modal.
+Then return to the ChatGPT homepage and click `Plugins` in the sidebar. Open the app if it is already there, or select the `+` button and connect the tunnel forwarding URL at the `/mcp` path.
+
+Once the app is connected, send the name of a tool simulation, like `show carousel`, to ChatGPT. Many changes require you to refresh the app from its plugin details.
 
 ## Deployment
 

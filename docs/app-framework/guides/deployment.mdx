@@ -1,7 +1,7 @@
 ---
 title: "Deployment"
-description: "Deploy your MCP App to production."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "deployment", "production", "MCP app framework"]
+description: "Deploy your MCP App to production and submit it to ChatGPT as an MCP-backed plugin."
+keywords: ["MCP Apps", "ChatGPT Apps", "ChatGPT plugins", "submit plugin", "Claude Apps", "deployment", "production", "MCP app framework"]
 ---
 
 ## Build for Production
@@ -384,16 +384,58 @@ For full control over the HTTP server (custom middleware, metrics, etc.), use [`
 
 ## Publish to ChatGPT
 
-Publish your MCP App to ChatGPT via the [OpenAI Platform](https://platform.openai.com/apps-manage).
+ChatGPT apps are now submitted and published as plugins. The app itself remains an MCP-backed app, so your sunpeak server, tools, and UI resources do not change. The plugin is the package used for review and distribution.
+
+Use the [OpenAI Platform plugin submission portal](https://platform.openai.com/plugins) when your production server is ready. OpenAI's [plugin submission guide](https://learn.chatgpt.com/docs/submit-plugins) is the source of truth for the review flow.
 
 ### Prerequisites
 
-- A ChatGPT App created on the OpenAI Platform
-- Your MCP server deployed and accessible via HTTPS
-- Built resources (run `sunpeak build`)
+- Your MCP server is deployed at a public production HTTPS URL.
+- Your resources are built with `sunpeak build`.
+- The submitter has **Apps Management: Write** access for the OpenAI Platform organization. Organization owners already have this access.
+- The publisher has completed individual or business identity verification in the same organization and project used for submission.
+- You can serve the domain verification token at `/.well-known/openai-apps-challenge` on the MCP hostname or an allowed parent hostname.
+- If sign-in is required, reviewer credentials work without MFA, SMS, email confirmation, or private-network access.
+
+<Note>
+For local development, first enable Developer mode from the bottom-left user menu under `Settings > Security and login > Developer mode`. Then create the app from the ChatGPT homepage under `Plugins > +`. Public submission is a separate flow in the OpenAI Platform. If the app already exists in ChatGPT, submit its MCP server from scratch. The portal does not accept an existing ChatGPT app ID.
+</Note>
+
+### Prepare the submission
+
+Collect these materials before opening the portal:
+
+- Plugin name, short and long descriptions, logo, category, website, support URL, privacy policy URL, and terms URL.
+- Production MCP server URL, authentication details, and reviewer credentials when needed.
+- A content security policy listing the exact domains the app fetches from.
+- Clear tool names, descriptions, input schemas, output shapes, and accurate [`readOnlyHint`, `openWorldHint`, and `destructiveHint` annotations](/mcp-apps/server/tool-annotations) for every tool.
+- Starter prompts that show realistic workflows.
+- Exactly five positive test cases and three negative test cases, including expected behavior and any fixture data.
+- Country or region availability and release notes.
+
+Review tool responses before submission. Remove auth secrets, debug payloads, unneeded personal data, internal identifiers, and user-related fields that your privacy policy does not disclose.
+
+### Submit the MCP-backed plugin
+
+1. Open the [plugin submission portal](https://platform.openai.com/plugins) and select **Create plugin**.
+2. Choose **With MCP** for an app-only plugin or an app-plus-skills plugin.
+3. Complete the public listing and publisher identity fields.
+4. Enter the production MCP server URL, configure authentication, and provide demo credentials when required.
+5. Add the app's content security policy.
+6. Complete domain verification if the portal asks for it. The challenge endpoint must return only the exact token as plain text.
+7. Select **Scan Tools**, fix any server or metadata errors, deploy the fixes, and scan again.
+8. Add starter prompts, five positive tests, three negative tests, availability, release notes, and policy attestations.
+9. Select **Submit for Review**.
+
+Submission starts the review. After OpenAI approves the plugin, publish it from the portal when you are ready. Published apps appear with other plugins in the shared Plugins Directory in ChatGPT and Codex. There is no separate Apps Directory.
 
 ### Production Checklist
 
-- Set appropriate [CSP (Content Security Policy)](/mcp-apps/server/resource-meta#csp--content-security-policy) for your resources
-- Configure CORS if serving from a different domain
-- Set up HTTPS for secure communication
+- Set an exact [CSP (Content Security Policy)](/mcp-apps/server/resource-meta#csp--content-security-policy) for your resources.
+- Configure CORS if serving from a different domain.
+- Set up HTTPS for secure communication.
+- Verify that tool annotations match real behavior.
+- Confirm that the domain challenge and reviewer credentials work from the public internet.
+- Check that listing URLs and publisher identity match.
+
+See OpenAI's [build plugins guide](https://learn.chatgpt.com/docs/build-plugins) if you also want to package skills with the app or test the app through a local plugin manifest.

@@ -2,7 +2,7 @@
 title: "MCP Apps FAQ - Common Questions About Building MCP Apps"
 sidebarTitle: "FAQ"
 description: "Answers to common questions about MCP Apps: how they work, which hosts support them, how UIs are delivered and secured, how the iframe talks to the host, display modes, theming, and how to test apps locally."
-keywords: ["MCP Apps", "MCP Apps FAQ", "ChatGPT Apps", "Claude Apps", "MCP app framework", "ui:// resource", "MCP Apps SDK", "how to build an MCP App", "MCP App iframe", "MCP App display modes"]
+keywords: ["MCP Apps", "MCP Apps FAQ", "ChatGPT Apps", "ChatGPT plugins", "Claude Apps", "MCP app framework", "ui:// resource", "MCP Apps SDK", "how to build an MCP App", "MCP App iframe", "MCP App display modes"]
 ---
 
 <Badge color="green">MCP Apps SDK</Badge>
@@ -13,6 +13,14 @@ Common questions about building MCP Apps with the [MCP Apps SDK](/mcp-apps/intro
 
 <Accordion title="What is an MCP App?">
 An MCP App is an interactive UI that an MCP server delivers and an AI chat host renders inside the conversation. MCP Apps is an extension to the [Model Context Protocol](/mcp-apps/mcp/overview) that defines how a server declares UI resources, how a host renders them in a sandboxed iframe, and how the UI and host communicate. A tool returns its data as usual; the host pairs that data with the app's HTML to show a chart, form, map, or any other interface. See the [introduction](/mcp-apps/introduction).
+</Accordion>
+
+<Accordion title="Is a ChatGPT App now a plugin?">
+ChatGPT apps are now submitted and published as plugins. A plugin can contain an MCP-backed app, skills, or both. The app itself still uses MCP Apps or the OpenAI Apps SDK, so its server, tools, UI resources, and runtime behavior do not change. The plugin is the package ChatGPT uses for local installation and public distribution. See [how plugins relate to ChatGPT Apps](/mcp-apps/introduction#how-do-plugins-relate-to-chatgpt-apps).
+</Accordion>
+
+<Accordion title="How do I publish an MCP App to ChatGPT?">
+Deploy the production MCP server, then create a `With MCP` submission in the OpenAI Platform plugin portal. Submit the MCP server URL and review materials directly. Do not submit an existing ChatGPT app ID. After review and approval, publish the plugin to the shared Plugins Directory. See [Publish to ChatGPT](/app-framework/guides/deployment#publish-to-chatgpt) for the required access, identity, domain verification, tool annotations, credentials, and test cases.
 </Accordion>
 
 <Accordion title="How is an MCP App different from a regular MCP tool?">

@@ -5,7 +5,7 @@ description: Use when working with sunpeak, or when the user asks to "build an M
 
 # Create Sunpeak App
 
-Sunpeak is a React framework built on `@modelcontextprotocol/ext-apps` for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). It provides React hooks, a dev inspector, a CLI (`sunpeak dev` / `sunpeak build` / `sunpeak start`), and a structured project convention.
+Sunpeak is a React framework built on `@modelcontextprotocol/ext-apps` for building MCP Apps with interactive UIs that run inside AI chat hosts (ChatGPT, Claude). It provides React hooks, a dev inspector, a CLI (`sunpeak dev` / `sunpeak build` / `sunpeak start`), and a structured project convention. ChatGPT apps are now submitted and published as plugins, but the app portion remains an MCP-backed app, so sunpeak's server, tools, resources, and runtime stay the same.
 
 ## Getting Reference Code
 
@@ -435,6 +435,8 @@ sunpeak upgrade     # Upgrade sunpeak to the latest version
 
 The `sunpeak dev` command starts both the Vite dev server and the MCP server together. The inspector runs at `http://localhost:3000`. Connect ChatGPT to `http://localhost:8000/mcp` (or use ngrok for remote testing).
 
+For real ChatGPT testing, Developer mode must be enabled. If needed, click the bottom-left user menu and select `Settings > Security and login > Developer mode`. Then return to the ChatGPT homepage, click `Plugins` in the sidebar, and open the app if it is already there or select `+` to create it with the tunneled `/mcp` URL.
+
 Use `sunpeak build && sunpeak start` to test production behavior locally with real handlers instead of simulation fixtures.
 
 The `sunpeak dev` command supports two orthogonal flags for testing different combinations:
@@ -475,6 +477,20 @@ dist/
 ```
 
 `sunpeak start` loads everything from `dist/` and starts a production MCP server with real tool handlers, Zod input validation, and optional auth from `src/server.ts`.
+
+## Publishing to ChatGPT
+
+ChatGPT apps are submitted and published as plugins. After deploying the production MCP server:
+
+1. Open the OpenAI Platform plugin submission portal at `https://platform.openai.com/plugins`.
+2. Create a `With MCP` submission for an app-only plugin or app-plus-skills plugin.
+3. Submit the production MCP server URL directly. Do not submit an existing ChatGPT app ID.
+4. Complete publisher identity, listing, authentication, CSP, domain verification, tool metadata, prompts, five positive tests, three negative tests, availability, and release notes.
+5. Submit for review, then publish after approval.
+
+Every MCP tool needs accurate `readOnlyHint`, `openWorldHint`, and `destructiveHint` values. Reviewer credentials must work without MFA, SMS, email confirmation, or private-network access. Published apps appear in the shared Plugins Directory, not a separate Apps Directory.
+
+Use `https://learn.chatgpt.com/docs/build-plugins` for local plugin packaging and optional bundled skills. Use `https://learn.chatgpt.com/docs/submit-plugins` for the current public review requirements.
 
 ## Host Detection
 
@@ -598,7 +614,7 @@ If the app doesn't show up after the tool is called, follow these steps:
 1. **Check your tunnel** — verify ngrok (or equivalent) is running, pointing to the right port, and using `http` not `https` upstream (`ngrok http 8000`).
 2. **Check your dev server** — make sure `sunpeak dev` is running and the MCP server started on the expected port (watch for "port was in use" messages).
 3. **Restart `sunpeak dev`** — stops the dev server (`Ctrl+C`) and starts fresh. This clears stale connections.
-4. **Refresh or re-add the MCP server** — in the host's settings, click refresh on the MCP server entry, or remove and re-add it with the tunnel URL.
+4. **Refresh or re-add the MCP server.** In ChatGPT, open the developer-mode app under `Plugins` and refresh it from the plugin details. In other hosts, use their app or connector management page. If refresh fails, remove and re-add it with the tunnel URL.
 5. **Hard refresh the host page** — `Cmd+Shift+R` / `Ctrl+Shift+R` clears cached MCP connections.
 6. **Open a new chat** — both hosts cache iframe content per-conversation. A new chat forces a fresh connection.
 
@@ -626,3 +642,5 @@ For testing export paths (`sunpeak/test`, `sunpeak/eval`, etc.), see the `test-m
 - [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
+- [Build ChatGPT Plugins](https://learn.chatgpt.com/docs/build-plugins)
+- [Submit ChatGPT Plugins](https://learn.chatgpt.com/docs/submit-plugins)

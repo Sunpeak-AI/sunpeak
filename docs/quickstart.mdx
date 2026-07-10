@@ -1,7 +1,7 @@
 ---
 title: "Quickstart"
 description: "Create your first MCP App or test an existing MCP server with sunpeak."
-keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framework", "create MCP app", "getting started", "MCP testing", "test MCP server"]
+keywords: ["MCP Apps", "ChatGPT Apps", "ChatGPT plugins", "MCP app framework", "ChatGPT app framework", "create MCP app", "getting started", "MCP testing", "test MCP server"]
 ---
 
 <CardGroup cols={2}>
@@ -61,8 +61,11 @@ keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framewo
     ngrok http 8000
     ```
 
-    You can then connect to the tunnel `Forwarding URL` at the `/mcp` path (e.g. `https://your-random-subdomain.ngrok-free.dev/mcp`) from ChatGPT
-    **in developer mode**: `User > Settings > Apps & Connectors > Create`.
+    Adding a custom app requires Developer mode. If it is not already enabled, click your user menu in the bottom-left corner and select `Settings > Security and login > Developer mode`.
+
+    Then return to the ChatGPT homepage and click `Plugins` in the sidebar. Open your app if it is already there, or select the `+` button and add the tunnel `Forwarding URL` at the `/mcp` path (for example, `https://your-random-subdomain.ngrok-free.dev/mcp`).
+
+    ChatGPT creates a developer-mode app backed by your MCP server. It appears under `Plugins`, but its MCP App UI and runtime do not change.
   </Step>
 
   <Step title="Build & start for production">

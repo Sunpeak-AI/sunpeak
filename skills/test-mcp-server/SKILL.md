@@ -255,6 +255,8 @@ E2e tests consume simulation fixtures defined in `tests/simulations/*.json`. For
 
 Live tests validate MCP Apps inside real ChatGPT. They use Playwright to open the user's browser, send messages that trigger tool calls, and assert on the rendered app iframe.
 
+Before the first run, make sure Developer mode is enabled. If needed, click the bottom-left user menu and select `Settings > Security and login > Developer mode`. Then return to the ChatGPT homepage, click `Plugins` in the sidebar, and open the app if it is already there or select `+` to create it with the tunneled `/mcp` URL. Set the app name to the `package.json` `name` because live tests use that name when invoking the app.
+
 ### Live Test Pattern
 
 One spec file per resource. Import `test` and `expect` from `sunpeak/test/live` -- the `live` fixture handles login, MCP refresh, and host-specific message formatting.
@@ -303,7 +305,7 @@ sunpeak validate --live
 
 The browser opens visibly -- headless mode is blocked by chatgpt.com's bot detection.
 
-The live test runner imports your browser session, starts `sunpeak dev --prod-resources`, and refreshes the MCP server connection in ChatGPT once in globalSetup before all workers. Tests run in parallel -- each test gets its own chat window.
+The live test runner imports your browser session, starts `sunpeak dev --prod-resources`, and refreshes the MCP server connection from its ChatGPT plugin details once in globalSetup before all workers. Tests run in parallel -- each test gets its own chat window.
 
 **If auth fails:** If tests report "Not logged into ChatGPT", delete `.auth/` and re-run `pnpm test:live` -- a browser window will open for you to log in again.
 

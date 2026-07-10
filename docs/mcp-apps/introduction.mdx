@@ -2,7 +2,7 @@
 title: "MCP Apps - Build Interactive UIs for AI Chat Hosts"
 sidebarTitle: "Introduction"
 description: "Learn how to build MCP Apps that render interactive UIs inside ChatGPT, Claude, and other AI hosts. Covers the App class, event handlers, styling, React hooks, and the MCP Apps protocol."
-keywords: ["MCP Apps", "ChatGPT Apps", "Claude Apps", "MCP app framework", "ChatGPT app framework", "Claude Connectors", "interactive UI"]
+keywords: ["MCP Apps", "ChatGPT Apps", "ChatGPT plugins", "Claude Apps", "MCP app framework", "ChatGPT app framework", "Claude Connectors", "interactive UI"]
 ---
 
 <Note>This documentation covers MCP Apps SDK v1.7.4 (`@modelcontextprotocol/ext-apps`).</Note>
@@ -19,6 +19,12 @@ MCP allows servers to expose [tools](/mcp-apps/mcp/tools) and [resources](/mcp-a
 - **Real-time displays** — Live logs, progress indicators, streaming content
 
 MCP Apps standardizes this. Servers declare their UIs once; any compliant host can render them.
+
+## How do plugins relate to ChatGPT Apps?
+
+ChatGPT apps are now submitted and published as plugins. A plugin can contain an MCP-backed app, skills, or both. The app portion still uses MCP Apps or the OpenAI Apps SDK, so this is a packaging and distribution change rather than a protocol change.
+
+When you build with sunpeak, you still create an MCP server, tools, and UI resources. For local ChatGPT development, enable Developer mode and add that MCP server from the `Plugins` page. For public release, submit the MCP server as a plugin through the OpenAI Platform. See the [deployment guide](/app-framework/guides/deployment#publish-to-chatgpt) for both flows.
 
 ## How do MCP Apps work?
 

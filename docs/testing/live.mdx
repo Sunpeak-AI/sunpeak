@@ -12,17 +12,18 @@ This catches issues that inspector tests can't: real MCP connection behavior, ac
 
 ## Prerequisites
 
-- **ChatGPT account** — You need a ChatGPT account with MCP/Apps support
+- **ChatGPT account:** You need a ChatGPT account with developer-mode app support
 - **Tunnel tool** — [ngrok](https://ngrok.com/), [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/), or similar
 - **Browser session** — Logged into chatgpt.com in Chrome, Arc, Brave, or Edge
 
 ## One-Time Setup
 
-Add your MCP server in ChatGPT settings:
+Add your MCP server from the ChatGPT Plugins page:
 
-1. Go to **Settings > Apps > Create** in ChatGPT
-2. Enter your tunnel URL with the `/mcp` path (e.g., `https://abc123.ngrok.io/mcp`)
-3. Save the connection
+1. If Developer mode is not already enabled, click your user menu in the bottom-left corner and select **Settings > Security and login > Developer mode**
+2. Return to the ChatGPT homepage and click **Plugins** in the sidebar
+3. Open your app if it is already there, or select the **+** button to add it
+4. If you are adding the app, enter your tunnel URL with the `/mcp` path (e.g., `https://abc123.ngrok.io/mcp`) and save it
 
 This only needs to be done once per tunnel URL pattern.
 
@@ -57,7 +58,7 @@ ngrok http 8000
 The test runner:
 1. Imports your ChatGPT session from your browser (Chrome, Arc, Brave, or Edge). Falls back to a manual login window if no session is found. Sessions typically last a few hours — Cloudflare's HttpOnly `cf_clearance` cookie cannot be persisted, so re-authentication is needed when it expires.
 2. Starts `sunpeak dev --prod-resources` automatically
-3. Refreshes the MCP server connection in ChatGPT settings (once in globalSetup, before all workers)
+3. Refreshes the MCP server connection from its plugin details (once in globalSetup, before all workers)
 4. Runs `tests/live/*.spec.ts` files fully in parallel — each test gets its own chat window
 
 <Note>
@@ -114,7 +115,7 @@ import { defineLiveConfig } from 'sunpeak/test/live/config';
 export default defineLiveConfig({ hosts: ['chatgpt', 'claude'] });
 ```
 
-All host DOM interaction (selectors, login, settings navigation, iframe access) is maintained by sunpeak — you only write resource assertions. The same test code runs across all hosts.
+sunpeak maintains all host DOM interaction, including selectors, login, app management navigation, and iframe access. You only write resource assertions, and the same test code runs across all hosts.
 
 ## Troubleshooting
 
@@ -132,6 +133,6 @@ All host DOM interaction (selectors, login, settings navigation, iframe access) 
   </Accordion>
 
   <Accordion title="Tool not called by ChatGPT">
-    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected — check ChatGPT settings.
+    Live tests use specific prompts like "Use the show-albums tool to..." to reliably trigger tool calls. If a tool isn't called, the test retries once. Persistent failures may indicate the tool isn't properly connected. Check the developer-mode app under ChatGPT Plugins.
   </Accordion>
 </AccordionGroup>

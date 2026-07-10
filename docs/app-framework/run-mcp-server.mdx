@@ -55,18 +55,19 @@ Once your MCP server is running:
   </Step>
 
   <Step title="Connect to ChatGPT">
-    Open ChatGPT **in developer mode** and connect your app:
+    Open ChatGPT and connect your app:
 
-    1. Go to `User > Settings > Apps & Connectors > Create`.
-    2. Enter your tunnel URL with the `/mcp` path: `https://abc123.ngrok.io/mcp`.
-    3. Complete the connection flow.
+    1. If Developer mode is not already enabled, click your user menu in the bottom-left corner and select `Settings > Security and login > Developer mode`.
+    2. Return to the ChatGPT homepage and click `Plugins` in the sidebar.
+    3. Open your app if it is already there, or select the `+` button to add it.
+    4. If you are adding the app, enter your tunnel URL with the `/mcp` path (`https://abc123.ngrok.io/mcp`) and complete the app form.
   </Step>
 
   <Step title="Test your app">
     Send a message that triggers your tool (e.g., "show albums") to see your app in ChatGPT.
 
     <Warning>
-      ChatGPT caches UIs aggressively. The sunpeak MCP server offers HMR and serves resources at unique URIs to cache-bust, but you need to manually **Refresh** your app from the settings modal after certain changes.
+      ChatGPT caches UIs aggressively. The sunpeak MCP server offers HMR and serves resources at unique URIs to cache-bust, but you need to manually **Refresh** your app from its plugin details after certain changes.
     </Warning>
   </Step>
 </Steps>

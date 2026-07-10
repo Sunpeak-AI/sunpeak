@@ -23,8 +23,7 @@
 /**
  * @typedef {Object} HostUrls
  * @property {string} base - Host base URL (e.g., 'https://chatgpt.com')
- * @property {string} settings - MCP settings URL
- * @property {string} loginTestId - Test ID for login detection (if using getByTestId)
+ * @property {string} [plugins] - Host plugin or app management URL
  */
 
 export class HostPage {
@@ -80,7 +79,8 @@ export class HostPage {
     if (warnings.length > 0) {
       console.warn(
         `\n⚠️  ${this.hostName} DOM may have changed — update selectors in ${this.hostId}-page.mjs:\n` +
-        warnings.join('\n') + '\n'
+          warnings.join('\n') +
+          '\n'
       );
     }
 
@@ -135,14 +135,14 @@ export class HostPage {
     // Not logged in. Wait for the user to authenticate in this browser window.
     console.log(
       `\n` +
-      `╔══════════════════════════════════════════════════════════════╗\n` +
-      `║  Not logged into ${this.hostName.padEnd(42)}║\n` +
-      `║                                                            ║\n` +
-      `║  Please log in at: ${this.urls.base.padEnd(39)}║\n` +
-      `║  in the browser window that just opened.                   ║\n` +
-      `║                                                            ║\n` +
-      `║  Waiting up to 3 minutes...                                ║\n` +
-      `╚══════════════════════════════════════════════════════════════╝\n`
+        `╔══════════════════════════════════════════════════════════════╗\n` +
+        `║  Not logged into ${this.hostName.padEnd(42)}║\n` +
+        `║                                                            ║\n` +
+        `║  Please log in at: ${this.urls.base.padEnd(39)}║\n` +
+        `║  in the browser window that just opened.                   ║\n` +
+        `║                                                            ║\n` +
+        `║  Waiting up to 3 minutes...                                ║\n` +
+        `╚══════════════════════════════════════════════════════════════╝\n`
     );
 
     // Poll for login — the user may need to pass Cloudflare + enter credentials
@@ -160,14 +160,14 @@ export class HostPage {
 
     throw new Error(
       `Login to ${this.hostName} timed out after 3 minutes.\n` +
-      `Please log in at ${this.urls.base} in the browser window and try again.\n` +
-      'If the session expired, delete the .auth/ directory and try again.'
+        `Please log in at ${this.urls.base} in the browser window and try again.\n` +
+        'If the session expired, delete the .auth/ directory and try again.'
     );
   }
 
   /**
-   * Refresh the MCP server connection in host settings.
-   * Subclasses must implement this — each host has different settings UI.
+   * Refresh the MCP server connection in the host's app management UI.
+   * Subclasses must implement this because each host has a different flow.
    *
    * @param {Object} [options]
    * @param {string} [options.tunnelUrl] - Tunnel URL for error messages
@@ -228,9 +228,10 @@ export class HostPage {
    * Capture a debug screenshot and throw with helpful message.
    * @param {string} context - Context label for the screenshot filename
    * @param {string} [tunnelUrl] - Tunnel URL for the error message
+   * @param {string} [setupHint] - Host-specific setup steps
    * @protected
    */
-  async _screenshotAndThrow(context, tunnelUrl) {
+  async _screenshotAndThrow(context, tunnelUrl, setupHint) {
     const screenshotPath = `/tmp/sunpeak-live-debug-${this.hostId}-${context}.png`;
     try {
       await this.page.screenshot({ path: screenshotPath, fullPage: true });
@@ -241,29 +242,34 @@ export class HostPage {
 
     try {
       const buttons = await this.page.locator('button').allTextContents();
-      console.error('Visible buttons on page:', buttons.filter(t => t.trim()).join(', '));
+      console.error('Visible buttons on page:', buttons.filter((t) => t.trim()).join(', '));
     } catch {
       // Best effort
     }
 
     throw new Error(
-      `Could not find Refresh/Reconnect button in ${this.hostName} settings.\n` +
-      `Make sure your MCP server is added in ${this.hostName} settings` +
-      (tunnelUrl ? ` with URL: ${tunnelUrl}/mcp` : '') +
-      `\n\nDebug screenshot: ${screenshotPath}`
+      `Could not find Refresh/Reconnect in ${this.hostName} app management.\n` +
+        `Make sure your MCP server is added to ${this.hostName}` +
+        (tunnelUrl ? ` with URL: ${tunnelUrl}/mcp` : '') +
+        (setupHint ? `\n${setupHint}` : '') +
+        `\n\nDebug screenshot: ${screenshotPath}`
     );
   }
 
   /**
    * Wait for a toast/alert banner and check for errors.
-   * Many hosts show success/error toasts after settings actions.
+   * Many hosts show success/error toasts after app management actions.
    * @param {Object} [options]
    * @param {string} [options.alertSelector='[role="alert"]'] - Selector for toast elements
    * @param {number} [options.timeout=30000] - Max time to wait
    * @param {number} [options.minTextLength=5] - Minimum text length to consider as a real toast
    * @protected
    */
-  async _waitForToast({ alertSelector = '[role="alert"]', timeout = 30_000, minTextLength = 5 } = {}) {
+  async _waitForToast({
+    alertSelector = '[role="alert"]',
+    timeout = 30_000,
+    minTextLength = 5,
+  } = {}) {
     try {
       await this.page.waitForFunction(
         ({ selector, minLen }) => {
@@ -275,7 +281,7 @@ export class HostPage {
           return false;
         },
         { selector: alertSelector, minLen: minTextLength },
-        { timeout },
+        { timeout }
       );
     } catch {
       console.warn('No toast detected — assuming success.');

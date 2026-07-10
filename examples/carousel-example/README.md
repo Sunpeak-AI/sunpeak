@@ -76,7 +76,11 @@ pnpm dev
 ngrok http 8000
 ```
 
-You can then connect to the tunnel forwarding URL at the `/mcp` path from ChatGPT **in developer mode** to see your UI in action: `User > Settings > Apps > Create`
+If Developer mode is not already enabled, click your user menu in the bottom-left corner and select `Settings > Security and login > Developer mode`.
+
+Then return to the ChatGPT homepage and click `Plugins` in the sidebar. Open your app if it is already there, or select the `+` button and connect the tunnel forwarding URL at the `/mcp` path.
+
+ChatGPT creates a developer-mode app backed by your MCP server. It appears under `Plugins`, but its MCP App UI and runtime do not change.
 
 Once your app is connected, send the name of the app and a tool, like `/sunpeak show review`, to ChatGPT.
 
@@ -86,8 +90,9 @@ Run automated tests against real ChatGPT with `pnpm test:live`. This opens your 
 
 **One-time setup:**
 
-1. Log into [chatgpt.com](https://chatgpt.com) in your browser (Chrome, Arc, Brave, or Edge)
-2. Add your MCP server in ChatGPT settings: `Settings > Apps > Create` with your tunnel URL at `/mcp`
+1. If Developer mode is not already enabled, click your user menu in the bottom-left corner and select `Settings > Security and login > Developer mode`
+2. Return to the ChatGPT homepage and click `Plugins` in the sidebar
+3. Open your app if it is already there, or select `+` and add your tunnel URL at `/mcp`
 
 **Run live tests:**
 
@@ -133,6 +138,8 @@ pnpm start -- --json-logs              # Structured JSON logging for production
 
 The server includes a `/health` endpoint for load balancer probes and monitoring. See the [Deployment Guide](https://sunpeak.ai/docs/app-framework/guides/deployment) for production operations details (reverse proxy, process management, Docker).
 
+ChatGPT apps are submitted and published as plugins. Deploy this MCP server first, then create a `With MCP` submission in the [OpenAI Platform plugin portal](https://platform.openai.com/plugins). Submit the MCP server URL directly, not an existing ChatGPT app ID. See the [sunpeak publishing guide](https://sunpeak.ai/docs/app-framework/guides/deployment#publish-to-chatgpt) and OpenAI's [plugin submission guide](https://learn.chatgpt.com/docs/submit-plugins).
+
 ## Add a new UI (Resource)
 
 To add a new UI ([MCP Resource](https://sunpeak.ai/docs/mcp-apps/mcp/resources)), create a new directory under `src/resources/` with the following files:
@@ -162,7 +169,7 @@ If your app doesn't render in ChatGPT or Claude:
 
 1. **Check your tunnel** is running and pointing to the correct port
 2. **Restart `pnpm dev`** to clear stale connections
-3. **Refresh or re-add the MCP server** in the host's settings (Settings > MCP Servers)
+3. **Refresh or re-add the MCP server** from the host's app or plugin management page
 4. **Hard refresh** the host page (`Cmd+Shift+R` / `Ctrl+Shift+R`)
 5. **Open a new chat** in the host (cached iframes persist per-conversation)
 
@@ -175,3 +182,4 @@ Full guide: [sunpeak.ai/docs/app-framework/guides/troubleshooting](https://sunpe
 - [MCP Overview](https://sunpeak.ai/docs/mcp-apps/mcp/overview) · [Tools](https://sunpeak.ai/docs/mcp-apps/mcp/tools) · [Resources](https://sunpeak.ai/docs/mcp-apps/mcp/resources)
 - [MCP Apps SDK](https://github.com/modelcontextprotocol/ext-apps)
 - [ChatGPT Apps SDK Design Guidelines](https://developers.openai.com/apps-sdk/concepts/design-guidelines)
+- [Build ChatGPT Plugins](https://learn.chatgpt.com/docs/build-plugins) · [Submit ChatGPT Plugins](https://learn.chatgpt.com/docs/submit-plugins)

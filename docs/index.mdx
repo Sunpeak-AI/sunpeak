@@ -1,7 +1,7 @@
 ---
 title: "Overview"
 description: "Server-agnostic MCP testing framework and full-stack MCP App framework."
-keywords: ["MCP Apps", "ChatGPT Apps", "MCP app framework", "ChatGPT app framework", "Claude Apps", "Claude Connectors", "sunpeak"]
+keywords: ["MCP Apps", "ChatGPT Apps", "ChatGPT plugins", "MCP app framework", "ChatGPT app framework", "Claude Apps", "Claude Connectors", "sunpeak"]
 ---
 
 import ProjectStructure from '/snippets/project-structure.mdx';
@@ -11,6 +11,8 @@ import Examples from '/snippets/examples.mdx';
 **Definitions**: An **MCP App** is an interactive UI embedded in an agent conversation.
 
 A **ChatGPT App** is an **MCP App** with optional ChatGPT-specific features.
+
+ChatGPT apps are now submitted and published as **plugins**. An app can be the MCP-backed part of an app-only plugin or an app-plus-skills plugin. This packaging does not change the MCP Apps protocol or the app you build with sunpeak.
 
 The UI of an MCP App is an **[MCP Resource](/mcp-apps/mcp/resources)**.
 

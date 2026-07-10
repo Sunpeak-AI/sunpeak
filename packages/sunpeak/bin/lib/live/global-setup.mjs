@@ -3,7 +3,7 @@
  *
  * Runs exactly once before all workers. Two responsibilities:
  *  1. Authenticate — launch a browser, verify login, wait for user if needed.
- *  2. Refresh MCP server — navigate to host settings and click Refresh so
+ *  2. Refresh MCP server: open the host's app management UI and click Refresh so
  *     all workers start with pre-loaded resources.
  *
  * Auth approach:
@@ -150,7 +150,7 @@ export default async function globalSetup() {
     // Refresh MCP server in the SAME browser session.
     // This is critical — Cloudflare's cf_clearance cookie is HttpOnly and
     // won't be in the saved storageState. By refreshing here, the cookie
-    // is still valid for navigating to settings.
+    // is still valid for navigating to the plugin directory.
     //
     // This MUST succeed — if the MCP server isn't reachable or the refresh
     // fails, tests will fail with confusing iframe/timeout errors.
