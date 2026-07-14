@@ -11,6 +11,7 @@ import { PassThrough } from 'stream';
 
 const importInspectConfig = () => import('../../bin/lib/inspect/inspect-config.mjs');
 const importTestConfig = () => import('../../bin/lib/test/test-config.mjs');
+const importLiveConfig = () => import('../../bin/lib/live/live-config.mjs');
 
 describe('defineConfig (external server)', () => {
   it('resolves local sunpeak binary when available', async () => {
@@ -20,7 +21,7 @@ describe('defineConfig (external server)', () => {
     });
 
     // Should contain 'sunpeak inspect' — either bare or with a node_modules/.bin prefix
-    expect(config.webServer.command).toContain('sunpeak inspect');
+    expect(config.webServer.command).toContain("'sunpeak' inspect");
   });
 
   it('passes env as --env flags in the inspect command', async () => {
@@ -29,7 +30,7 @@ describe('defineConfig (external server)', () => {
       server: { command: 'python', args: ['server.py'], env: { SECRET: 'abc' } },
     });
 
-    expect(config.webServer.command).toContain('--env SECRET=abc');
+    expect(config.webServer.command).toContain("--env 'SECRET=abc'");
   });
 
   it('quotes env values with spaces', async () => {
@@ -38,7 +39,32 @@ describe('defineConfig (external server)', () => {
       server: { command: 'python', args: ['server.py'], env: { MSG: 'hi there' } },
     });
 
-    expect(config.webServer.command).toContain('--env "MSG=hi there"');
+    expect(config.webServer.command).toContain("--env 'MSG=hi there'");
+  });
+
+  it('shell-quotes generated inspect command values', async () => {
+    const { defineConfig } = await importTestConfig();
+    const config = defineConfig({
+      server: {
+        url: "https://mcp.example.com/mcp'; touch /tmp/pwned #",
+        env: { SECRET: "abc'; touch /tmp/pwned #" },
+        cwd: "./backend'; touch /tmp/pwned #",
+        headers: { Authorization: "Bearer test'; touch /tmp/pwned #" },
+      },
+      simulationsDir: "tests/sims'; touch /tmp/pwned #",
+    });
+
+    expect(config.webServer.command).toContain(
+      "--server 'https://mcp.example.com/mcp'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain("--env 'SECRET=abc'\\''; touch /tmp/pwned #'");
+    expect(config.webServer.command).toContain("--cwd './backend'\\''; touch /tmp/pwned #'");
+    expect(config.webServer.command).toContain(
+      "--header 'Authorization: Bearer test'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain(
+      "--simulations 'tests/sims'\\''; touch /tmp/pwned #'"
+    );
   });
 
   it('passes cwd as --cwd flag', async () => {
@@ -47,7 +73,7 @@ describe('defineConfig (external server)', () => {
       server: { command: 'python', args: ['server.py'], cwd: './backend' },
     });
 
-    expect(config.webServer.command).toContain('--cwd ./backend');
+    expect(config.webServer.command).toContain("--cwd './backend'");
   });
 
   it('passes HTTP headers as --header flags', async () => {
@@ -81,8 +107,8 @@ describe('defineInspectConfig', () => {
     expect(config.testDir).toBe('tests/e2e');
     expect(config.fullyParallel).toBe(true);
     expect(config.webServer).toBeDefined();
-    expect(config.webServer.command).toContain('sunpeak inspect');
-    expect(config.webServer.command).toContain('--server http://localhost:8000/mcp');
+    expect(config.webServer.command).toContain("'sunpeak' inspect");
+    expect(config.webServer.command).toContain("--server 'http://localhost:8000/mcp'");
     expect(config.webServer.url).toContain('/health');
     expect(config.use.baseURL).toContain('http://127.0.0.1:');
     expect(config.use.trace).toBe('on-first-retry');
@@ -116,7 +142,7 @@ describe('defineInspectConfig', () => {
     });
 
     expect(config.testDir).toBe('custom/tests');
-    expect(config.webServer.command).toContain('--simulations custom/sims');
+    expect(config.webServer.command).toContain("--simulations 'custom/sims'");
   });
 
   it('omits --simulations flag when simulationsDir is not provided', async () => {
@@ -130,7 +156,7 @@ describe('defineInspectConfig', () => {
     const { defineInspectConfig } = await importInspectConfig();
     const config = defineInspectConfig({ server: 'python my_server.py' });
 
-    expect(config.webServer.command).toContain('--server "python my_server.py"');
+    expect(config.webServer.command).toContain("--server 'python my_server.py'");
   });
 
   it('includes app name when provided', async () => {
@@ -140,7 +166,7 @@ describe('defineInspectConfig', () => {
       name: 'My MCP App',
     });
 
-    expect(config.webServer.command).toContain('--name "My MCP App"');
+    expect(config.webServer.command).toContain("--name 'My MCP App'");
   });
 
   it('merges custom use options', async () => {
@@ -166,8 +192,8 @@ describe('defineInspectConfig', () => {
       env: { API_KEY: 'test-123', DEBUG: 'true' },
     });
 
-    expect(config.webServer.command).toContain('--env API_KEY=test-123');
-    expect(config.webServer.command).toContain('--env DEBUG=true');
+    expect(config.webServer.command).toContain("--env 'API_KEY=test-123'");
+    expect(config.webServer.command).toContain("--env 'DEBUG=true'");
   });
 
   it('quotes env values that contain spaces', async () => {
@@ -177,7 +203,7 @@ describe('defineInspectConfig', () => {
       env: { GREETING: 'hello world' },
     });
 
-    expect(config.webServer.command).toContain('--env "GREETING=hello world"');
+    expect(config.webServer.command).toContain("--env 'GREETING=hello world'");
   });
 
   it('passes cwd as --cwd flag for stdio servers', async () => {
@@ -187,7 +213,7 @@ describe('defineInspectConfig', () => {
       cwd: './backend',
     });
 
-    expect(config.webServer.command).toContain('--cwd ./backend');
+    expect(config.webServer.command).toContain("--cwd './backend'");
   });
 
   it('passes HTTP headers as --header flags', async () => {
@@ -207,7 +233,32 @@ describe('defineInspectConfig', () => {
       cwd: './my project',
     });
 
-    expect(config.webServer.command).toContain('--cwd "./my project"');
+    expect(config.webServer.command).toContain("--cwd './my project'");
+  });
+
+  it('shell-quotes all generated command values', async () => {
+    const { defineInspectConfig } = await importInspectConfig();
+    const config = defineInspectConfig({
+      server: "python server.py'; touch /tmp/pwned #",
+      env: { SECRET: "abc'; touch /tmp/pwned #" },
+      cwd: "./backend'; touch /tmp/pwned #",
+      headers: { Authorization: "Bearer test'; touch /tmp/pwned #" },
+      simulationsDir: "tests/sims'; touch /tmp/pwned #",
+      name: "Demo'; touch /tmp/pwned #",
+    });
+
+    expect(config.webServer.command).toContain(
+      "--server 'python server.py'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain("--env 'SECRET=abc'\\''; touch /tmp/pwned #'");
+    expect(config.webServer.command).toContain("--cwd './backend'\\''; touch /tmp/pwned #'");
+    expect(config.webServer.command).toContain(
+      "--header 'Authorization: Bearer test'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain(
+      "--simulations 'tests/sims'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain("--name 'Demo'\\''; touch /tmp/pwned #'");
   });
 
   it('uses custom timeout when provided', async () => {
@@ -257,6 +308,41 @@ describe('defineInspectConfig', () => {
     expect(baseUrlPort).toBeGreaterThan(0);
     expect(sandboxPort).toBeGreaterThan(0);
     expect(baseUrlPort).not.toBe(sandboxPort);
+  });
+});
+
+describe('createLiveConfig', () => {
+  it('shell-quotes external server URLs in generated live webServer commands', async () => {
+    const { createLiveConfig } = await importLiveConfig();
+    const config = createLiveConfig(
+      { hostId: 'chatgpt' },
+      {
+        server: { url: "https://mcp.example.com/mcp'; touch /tmp/pwned #" },
+        vitePort: 4567,
+      }
+    );
+
+    expect(config.webServer.command).toContain("'sunpeak' inspect");
+    expect(config.webServer.command).toContain(
+      "--server 'https://mcp.example.com/mcp'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain('--port 4567');
+  });
+
+  it('shell-quotes external stdio commands in generated live webServer commands', async () => {
+    const { createLiveConfig } = await importLiveConfig();
+    const config = createLiveConfig(
+      { hostId: 'chatgpt' },
+      {
+        server: { command: 'python', args: ["server.py'; touch /tmp/pwned #"] },
+        vitePort: 4568,
+      }
+    );
+
+    expect(config.webServer.command).toContain(
+      "--server 'python server.py'\\''; touch /tmp/pwned #'"
+    );
+    expect(config.webServer.command).toContain('--port 4568');
   });
 });
 

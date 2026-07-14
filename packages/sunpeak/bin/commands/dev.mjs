@@ -66,7 +66,12 @@ async function importFromProject(require, moduleName) {
  *
  * When a file changes during a build, the current build is killed and restarted.
  */
-function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBuild = false } = {}) {
+function startBuildWatcher(
+  projectRoot,
+  resourcesDir,
+  mcpHandle,
+  { skipInitialBuild = false } = {}
+) {
   let activeChild = null;
   const sunpeakBin = join(dirname(fileURLToPath(import.meta.url)), '..', 'sunpeak.js');
 
@@ -120,7 +125,9 @@ function startBuildWatcher(projectRoot, resourcesDir, mcpHandle, { skipInitialBu
     });
     console.log('[build] Watching src/resources/ for changes...');
   } catch {
-    console.warn('[build] Could not start file watcher — run "sunpeak build" manually after changes');
+    console.warn(
+      '[build] Could not start file watcher — run "sunpeak build" manually after changes'
+    );
   }
 }
 
@@ -153,7 +160,7 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // inspectServer auto-discovers a free port (and doesn't use strictPort,
   // which would crash instead of falling back when port 3000 is busy).
   let port = undefined;
-  const portArgIndex = args.findIndex(arg => arg === '--port' || arg === '-p');
+  const portArgIndex = args.findIndex((arg) => arg === '--port' || arg === '-p');
   if (portArgIndex !== -1 && args[portArgIndex + 1]) {
     port = parseInt(args[portArgIndex + 1]);
   } else if (process.env.PORT) {
@@ -167,8 +174,10 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   const isProdTools = args.includes('--prod-tools');
   const isProdResources = args.includes('--prod-resources');
 
-  if (isProdTools) console.log('Prod Tools: MCP tool calls will use real handlers instead of simulation mocks');
-  if (isProdResources) console.log('Prod Resources: resources will use production-built HTML from dist/');
+  if (isProdTools)
+    console.log('Prod Tools: MCP tool calls will use real handlers instead of simulation mocks');
+  if (isProdResources)
+    console.log('Prod Resources: resources will use production-built HTML from dist/');
 
   console.log(`Starting dev server${port ? ` on port ${port}` : ''}...`);
 
@@ -195,10 +204,18 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     // Import from installed sunpeak package
     const sunpeakBase = require.resolve('sunpeak').replace(/dist\/index\.(c)?js$/, '');
     sunpeakMcp = await import(pathToFileURL(join(sunpeakBase, 'dist/mcp/index.js')).href);
-    sunpeakDiscovery = await import(pathToFileURL(join(sunpeakBase, 'dist/lib/discovery-cli.js')).href);
+    sunpeakDiscovery = await import(
+      pathToFileURL(join(sunpeakBase, 'dist/lib/discovery-cli.js')).href
+    );
   }
   const { runMCPServer } = sunpeakMcp;
-  const { findResourceDirs, findSimulationFilesFlat, findToolFiles, extractResourceExport, extractToolExport } = sunpeakDiscovery;
+  const {
+    findResourceDirs,
+    findSimulationFilesFlat,
+    findToolFiles,
+    extractResourceExport,
+    extractToolExport,
+  } = sunpeakDiscovery;
 
   const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'));
 
@@ -243,7 +260,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       const { tool } = await extractToolExport(toolPath);
       toolMap.set(toolName, { tool, path: toolPath });
     } catch (err) {
-      console.warn(`Warning: Could not extract metadata from tool "${toolName}" (${toolPath}):\n  ${err.message}\n  Expected: export const tool: AppToolConfig = { ... }`);
+      console.warn(
+        `Warning: Could not extract metadata from tool "${toolName}" (${toolPath}):\n  ${err.message}\n  Expected: export const tool: AppToolConfig = { ... }`
+      );
     }
   }
 
@@ -285,7 +304,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
         });
       }
     } catch (err) {
-      console.warn(`Warning: Could not load handler for tool "${toolName}" (${relativePath}):\n  ${err.message}`);
+      console.warn(
+        `Warning: Could not load handler for tool "${toolName}" (${relativePath}):\n  ${err.message}`
+      );
     }
   }
 
@@ -301,7 +322,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
     const toolEntry = toolMap.get(toolName);
     const tool = toolEntry?.tool;
     if (!tool) {
-      console.warn(`Warning: Tool "${toolName}" not found for simulation "${simName}". Expected file: src/tools/${toolName}.ts`);
+      console.warn(
+        `Warning: Tool "${toolName}" not found for simulation "${simName}". Expected file: src/tools/${toolName}.ts`
+      );
       continue;
     }
 
@@ -312,7 +335,9 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       : undefined;
 
     if (resourceName && !resourceKey) {
-      console.warn(`Warning: No resource found for tool "${toolName}" in simulation "${simName}". Skipping.`);
+      console.warn(
+        `Warning: No resource found for tool "${toolName}" in simulation "${simName}". Skipping.`
+      );
       continue;
     }
 
@@ -326,25 +351,33 @@ export async function dev(projectRoot = process.cwd(), args = []) {
       ...simulation,
       ...(typeof simulation.tool === 'string' ? { tool: { name: toolName, ...tool } } : {}),
       name: simName,
-      ...(resourceKey ? {
-        distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
-        srcPath,
-        resource: resourceMap.get(resourceKey),
-      } : {}),
+      ...(resourceKey
+        ? {
+            distPath: join(projectRoot, `dist/${resourceKey}/${resourceKey}.html`),
+            srcPath,
+            resource: resourceMap.get(resourceKey),
+          }
+        : {}),
       // Attach output schema from the tool module (if present)
-      ...(toolHandlerMap.has(toolName) && toolHandlerMap.get(toolName).outputSchema ? {
-        outputSchema: toolHandlerMap.get(toolName).outputSchema,
-      } : {}),
+      ...(toolHandlerMap.has(toolName) && toolHandlerMap.get(toolName).outputSchema
+        ? {
+            outputSchema: toolHandlerMap.get(toolName).outputSchema,
+          }
+        : {}),
       // Attach real handler so Prod Tools mode works at runtime.
       // The --prod-tools flag only sets the default checkbox state; the handler
       // must always be available for when the user toggles it in the sidebar.
-      ...(toolHandlerMap.has(toolName) ? {
-        handler: toolHandlerMap.get(toolName).handler,
-      } : {}),
+      ...(toolHandlerMap.has(toolName)
+        ? {
+            handler: toolHandlerMap.get(toolName).handler,
+          }
+        : {}),
       // Attach the raw Zod shape so the MCP server registers tools with real schemas.
-      ...(toolHandlerMap.has(toolName) && toolHandlerMap.get(toolName).schema ? {
-        inputSchema: toolHandlerMap.get(toolName).schema,
-      } : {}),
+      ...(toolHandlerMap.has(toolName) && toolHandlerMap.get(toolName).schema
+        ? {
+            inputSchema: toolHandlerMap.get(toolName).schema,
+          }
+        : {}),
     });
   }
 
@@ -354,8 +387,8 @@ export async function dev(projectRoot = process.cwd(), args = []) {
   // callServerTool calls to the MCP server because the tool isn't registered.
   for (const [toolName, { tool }] of toolMap) {
     if (tool.resource) continue; // UI tools need simulations for their resource
-    const alreadyCovered = simulations.some(s =>
-      (s.tool?.name === toolName) || (typeof s.tool === 'string' && s.tool === toolName)
+    const alreadyCovered = simulations.some(
+      (s) => s.tool?.name === toolName || (typeof s.tool === 'string' && s.tool === toolName)
     );
     if (alreadyCovered) continue;
     const handlerInfo = toolHandlerMap.get(toolName);
@@ -405,12 +438,16 @@ export async function dev(projectRoot = process.cwd(), args = []) {
           return 'console.error("Missing src or component param");';
         }
 
+        const safeSrcPath = JSON.stringify(srcPath);
+        const safeComponentName = JSON.stringify(componentName);
+
         return `
-import { createElement } from 'react';
-import { createRoot } from 'react-dom/client';
-import { AppProvider } from 'sunpeak';
-import '/src/styles/globals.css';
-import * as ResourceModule from '${srcPath}';
+	import { createElement } from 'react';
+	import { createRoot } from 'react-dom/client';
+	import { AppProvider } from 'sunpeak';
+	import '/src/styles/globals.css';
+	const ResourceModule = await import(${safeSrcPath});
+	const componentName = ${safeComponentName};
 
 // Reuse React root across HMR updates to preserve the AppProvider host connection.
 // The host renders this HTML inline (not at a fetchable URL), so location.reload()
@@ -418,10 +455,13 @@ import * as ResourceModule from '${srcPath}';
 const root = import.meta.hot?.data?.root ?? createRoot(document.getElementById('root'));
 if (import.meta.hot) import.meta.hot.data.root = root;
 
-const Component = ResourceModule.default || ResourceModule['${componentName}'];
-if (!Component) {
-  document.getElementById('root').innerHTML = '<pre style="color:red;padding:16px">Component not found: ${componentName}\\nExports: ' + Object.keys(ResourceModule).join(', ') + '</pre>';
-} else {
+	const Component = ResourceModule.default || ResourceModule[componentName];
+	if (!Component) {
+	  const error = document.createElement('pre');
+	  error.style.cssText = 'color:red;padding:16px';
+	  error.textContent = 'Component not found: ' + componentName + '\\nExports: ' + Object.keys(ResourceModule).join(', ');
+	  document.getElementById('root').replaceChildren(error);
+	} else {
   const appInfo = { name: ${JSON.stringify(pkg.name || 'sunpeak-app')}, version: ${JSON.stringify(pkg.version || '0.1.0')} };
   root.render(
     createElement(AppProvider, { appInfo }, createElement(Component))
@@ -474,10 +514,7 @@ if (import.meta.hot) {
       // resource load discovers new deps (e.g., mapbox-gl, embla-carousel),
       // triggers re-optimization, and reloads all connections — killing
       // any active ChatGPT/Claude iframe connections with ECONNRESET.
-      entries: [
-        'src/resources/**/*.{ts,tsx}',
-        'src/tools/**/*.ts',
-      ],
+      entries: ['src/resources/**/*.{ts,tsx}', 'src/tools/**/*.ts'],
       include: ['react', 'react-dom/client'],
     },
     appType: 'custom',
@@ -491,8 +528,8 @@ if (import.meta.hot) {
   // Skipped under --prod-resources where mcpViteServer is created but unused.
   if (!isProdResources && (resourceDirs.length > 0 || toolFiles.length > 0)) {
     const warmupTargets = [
-      ...resourceDirs.map(({ key, resourcePath }) =>
-        `/src/resources/${key}/${basename(resourcePath)}`
+      ...resourceDirs.map(
+        ({ key, resourcePath }) => `/src/resources/${key}/${basename(resourcePath)}`
       ),
       ...toolFiles.map(({ name: toolName }) => `/src/tools/${toolName}.ts`),
     ];
@@ -505,7 +542,9 @@ if (import.meta.hot) {
       )
     );
     await mcpViteServer.waitForRequestsIdle();
-    console.log(`Warmed Vite (${warmupTargets.length} ${warmupTargets.length === 1 ? 'entry' : 'entries'}) in ${Date.now() - warmStart}ms`);
+    console.log(
+      `Warmed Vite (${warmupTargets.length} ${warmupTargets.length === 1 ? 'entry' : 'entries'}) in ${Date.now() - warmStart}ms`
+    );
   }
 
   // Load server config from src/server.ts (if present) for server identity
@@ -522,7 +561,7 @@ if (import.meta.hot) {
         // Extract a display icon from the icons array (first non-dark icon, or first icon)
         const icons = serverMod.server.icons;
         if (Array.isArray(icons) && icons.length > 0) {
-          const lightIcon = icons.find(i => !i.theme || i.theme === 'light') ?? icons[0];
+          const lightIcon = icons.find((i) => !i.theme || i.theme === 'light') ?? icons[0];
           serverDisplayIcon = lightIcon?.src;
         }
       }
@@ -598,7 +637,10 @@ if (import.meta.hot) {
         const result = await mod.default(args, {});
         const durationMs = Math.round((performance.now() - startTime) * 10) / 10;
         if (typeof result === 'string') {
-          return { content: [{ type: 'text', text: result }], _meta: { _sunpeak: { requestTimeMs: durationMs } } };
+          return {
+            content: [{ type: 'text', text: result }],
+            _meta: { _sunpeak: { requestTimeMs: durationMs } },
+          };
         }
         const typed = result ?? {};
         return { ...typed, _meta: { ...typed._meta, _sunpeak: { requestTimeMs: durationMs } } };
@@ -617,7 +659,7 @@ if (import.meta.hot) {
 // Allow running directly
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
-  dev(process.cwd(), args).catch(error => {
+  dev(process.cwd(), args).catch((error) => {
     console.error('Error:', error.message);
     process.exit(1);
   });

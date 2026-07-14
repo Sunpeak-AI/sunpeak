@@ -115,18 +115,20 @@ function buildLiveWebServerCommand({ server, vitePort, devOverlay }) {
 
   if (server) {
     // External MCP server — launch sunpeak inspect
-    const bin = resolveSunpeakBin();
+    const bin = shellQuote(resolveSunpeakBin());
     if (server.url) {
-      return `${envPrefix} ${bin} inspect --server ${server.url} --port ${vitePort}`;
+      return `${envPrefix} ${bin} inspect --server ${shellQuote(server.url)} --port ${vitePort}`;
     }
     if (server.command) {
-      const cmd = server.args
-        ? `${server.command} ${server.args.join(' ')}`
-        : server.command;
-      return `${envPrefix} ${bin} inspect --server "${cmd}" --port ${vitePort}`;
+      const cmd = server.args ? `${server.command} ${server.args.join(' ')}` : server.command;
+      return `${envPrefix} ${bin} inspect --server ${shellQuote(cmd)} --port ${vitePort}`;
     }
   }
 
   // sunpeak framework project — use pnpm dev
   return `${envPrefix} pnpm dev -- --prod-resources --port ${vitePort}`;
+}
+
+function shellQuote(value) {
+  return `'${String(value).replace(/'/g, "'\\''")}'`;
 }

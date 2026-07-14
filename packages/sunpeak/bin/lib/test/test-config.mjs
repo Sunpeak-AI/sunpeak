@@ -103,28 +103,25 @@ function detectSunpeakProject() {
 function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
   const parts = [`SUNPEAK_SANDBOX_PORT=${sandboxPort}`];
 
-  parts.push(`${resolveSunpeakBin()} inspect`);
+  parts.push(`${shellQuote(resolveSunpeakBin())} inspect`);
 
   if (server.url) {
-    parts.push(`--server ${server.url}`);
+    parts.push(`--server ${shellQuote(server.url)}`);
   } else if (server.command) {
-    const cmd = server.args
-      ? `${server.command} ${server.args.join(' ')}`
-      : server.command;
-    // Quote the command if it contains spaces
-    parts.push(`--server "${cmd}"`);
+    const cmd = server.args ? `${server.command} ${server.args.join(' ')}` : server.command;
+    parts.push(`--server ${shellQuote(cmd)}`);
   }
 
   // Pass environment variables as --env KEY=VALUE flags (stdio servers only).
   if (server.env) {
     for (const [key, value] of Object.entries(server.env)) {
       const pair = `${key}=${value}`;
-      parts.push(pair.includes(' ') ? `--env "${pair}"` : `--env ${pair}`);
+      parts.push(`--env ${shellQuote(pair)}`);
     }
   }
 
   if (server.cwd) {
-    parts.push(server.cwd.includes(' ') ? `--cwd "${server.cwd}"` : `--cwd ${server.cwd}`);
+    parts.push(`--cwd ${shellQuote(server.cwd)}`);
   }
 
   if (server.headers) {
@@ -134,7 +131,7 @@ function buildInspectCommand({ server, port, sandboxPort, simulationsDir }) {
   }
 
   if (simulationsDir) {
-    parts.push(`--simulations ${simulationsDir}`);
+    parts.push(`--simulations ${shellQuote(simulationsDir)}`);
   }
 
   parts.push(`--port ${port}`);

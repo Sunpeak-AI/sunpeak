@@ -55,24 +55,24 @@ export function defineInspectConfig(options) {
   const { port, sandboxPort } = resolvePorts();
 
   // Build the sunpeak inspect command
-  const serverArg = server.includes(' ') ? `"${server}"` : server;
+  const serverArg = shellQuote(server);
   const command = [
     `SUNPEAK_SANDBOX_PORT=${sandboxPort}`,
-    `${resolveSunpeakBin()} inspect`,
+    `${shellQuote(resolveSunpeakBin())} inspect`,
     `--server ${serverArg}`,
     ...(env
       ? Object.entries(env).map(([k, v]) => {
           const pair = `${k}=${v}`;
-          return pair.includes(' ') ? `--env "${pair}"` : `--env ${pair}`;
+          return `--env ${shellQuote(pair)}`;
         })
       : []),
-    ...(cwd ? [cwd.includes(' ') ? `--cwd "${cwd}"` : `--cwd ${cwd}`] : []),
+    ...(cwd ? [`--cwd ${shellQuote(cwd)}`] : []),
     ...(headers
       ? Object.entries(headers).map(([k, v]) => `--header ${shellQuote(`${k}: ${v}`)}`)
       : []),
-    ...(simulationsDir ? [`--simulations ${simulationsDir}`] : []),
+    ...(simulationsDir ? [`--simulations ${shellQuote(simulationsDir)}`] : []),
     `--port ${port}`,
-    ...(name ? [`--name "${name}"`] : []),
+    ...(name ? [`--name ${shellQuote(name)}`] : []),
   ].join(' ');
 
   return createBaseConfig({

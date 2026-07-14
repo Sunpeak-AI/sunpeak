@@ -48,6 +48,26 @@ describe('CLI Commands', () => {
     });
   });
 
+  describe('dev command security', () => {
+    it('does not splice virtual entry query params into executable strings', async () => {
+      const { readFileSync } = await import('fs');
+      const { join } = await import('path');
+
+      const source = readFileSync(join(process.cwd(), 'bin/commands/dev.mjs'), 'utf-8');
+
+      expect(source).toContain('const safeSrcPath = JSON.stringify(srcPath)');
+      expect(source).toContain('const safeComponentName = JSON.stringify(componentName)');
+      expect(source).toContain('const ResourceModule = await import(${safeSrcPath})');
+      expect(source).toContain(
+        'const Component = ResourceModule.default || ResourceModule[componentName]'
+      );
+      expect(source).toContain('error.textContent =');
+      expect(source).not.toContain("import * as ResourceModule from '${srcPath}'");
+      expect(source).not.toContain("ResourceModule['${componentName}']");
+      expect(source).not.toContain('Component not found: ${componentName}');
+    });
+  });
+
   describe('new command', () => {
     it('should error when no resources are discovered', async () => {
       const { init } = await importNew();
