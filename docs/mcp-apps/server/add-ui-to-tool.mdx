@@ -85,7 +85,7 @@ const SearchTicketsOutputSchema = {
 };
 ```
 
-Use `content` for a short model-readable summary and `structuredContent` for the UI payload:
+Use `content` for a short readable summary and `structuredContent` for model-safe UI data:
 
 ```ts
 return {
@@ -99,7 +99,7 @@ return {
 };
 ```
 
-Do not move all data into `_meta`. Hosts and Views can read `_meta`, but the model cannot rely on it for facts.
+Do not move all data into `_meta`. Hosts and Views can read `_meta`, but the model cannot rely on it for facts. Also do not treat `structuredContent` as private; the model may read it.
 
 ## 3. Register an HTML Resource
 
@@ -271,6 +271,7 @@ Check these items:
 - The resource URI and `_meta.ui.resourceUri` match exactly.
 - The tool returns both `content` and `structuredContent`.
 - The `outputSchema` matches `structuredContent`.
+- `structuredContent` contains only data the model may see.
 - App-only helpers use `visibility: ["app"]`.
 - The iframe can load every external origin declared in `_meta.ui.csp`.
 

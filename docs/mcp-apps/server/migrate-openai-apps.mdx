@@ -27,7 +27,7 @@ Use this page as a migration checklist for existing OpenAI Apps SDK code. For a 
 - Replace `text/html+skybridge` with `RESOURCE_MIME_TYPE`, which is `text/html;profile=mcp-app`.
 - Convert resource CSP keys from snake case to camel case.
 - Register UI tools and resources with `registerAppTool()` and `registerAppResource()`.
-- Keep model-readable `content` in tool results and put View data in `structuredContent`.
+- Keep readable `content` in tool results and put model-safe View data in `structuredContent`.
 - Replace `window.openai` reads and methods with the `App` class or React `useApp()` hook.
 - Register App event handlers before `app.connect()` when using the plain `App` class.
 - Test in a host that supports MCP Apps, then verify text fallback behavior for clients without UI support.
@@ -177,7 +177,7 @@ OpenAI Apps SDK Views usually read a pre-populated `window.openai` object. MCP A
 | OpenAI Apps SDK | MCP Apps SDK | Notes |
 | --------------- | ------------ | ----- |
 | `window.openai.toolInput` | `app.ontoolinput = (params) => params.arguments` | Register the handler before `connect()`. |
-| `window.openai.toolOutput` | `app.ontoolresult = (params) => params.structuredContent` | Use `structuredContent` for UI data. |
+| `window.openai.toolOutput` | `app.ontoolresult = (params) => params.structuredContent` | Use `structuredContent` for UI data the model may also read. |
 | `window.openai.toolResponseMetadata` | `app.ontoolresult = (params) => params._meta` | Use only for host or component-only metadata. |
 | `window.openai.theme` | `app.getHostContext()?.theme` | Also listen for `onhostcontextchanged`. |
 | `window.openai.locale` | `app.getHostContext()?.locale` | BCP 47 locale string. |
@@ -233,7 +233,7 @@ Run these checks before testing in a real host:
 - Search for `window.openai` in View code. Replace common runtime calls with `App` or React hooks.
 - Call `tools/list` and confirm the UI tool includes `_meta.ui.resourceUri`.
 - Call `resources/read` and confirm the resource returns `mimeType: "text/html;profile=mcp-app"`.
-- Call the UI tool and confirm the result includes model-readable `content` and View-readable `structuredContent`.
+- Call the UI tool and confirm the result includes readable `content` and model-safe `structuredContent`.
 - Open the app in the sunpeak inspector and verify the iframe can load every declared external origin.
 
 ```bash
@@ -241,4 +241,3 @@ npx sunpeak inspect --server http://localhost:8000/mcp
 ```
 
 For automated coverage, use [MCP App E2E tests](/testing/e2e) to call the tool, render the View, and assert against the double-iframe app content.
-

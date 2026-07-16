@@ -18,15 +18,15 @@ keywords:
 
 <Badge color="green">MCP Apps SDK</Badge>
 
-MCP App data crosses three boundaries: the model reads the tool result, the View renders the UI, and the host manages the iframe and conversation state. Use the right field for each boundary so text-only MCP clients keep working and the View does not scrape text.
+MCP App data crosses three boundaries: the model reads the tool result, the View renders the UI, and the host manages the iframe and conversation state. Use the right field for each boundary so text-only MCP clients keep working, the View does not scrape text, and private component data does not leak into model context.
 
 ## Field Guide
 
 | Field                | Set by                                 | Read by                              | Use it for                                                                   |
 | -------------------- | -------------------------------------- | ------------------------------------ | ---------------------------------------------------------------------------- |
-| `content`            | Tool handler                           | Model, host, logs, text-only clients | Short human-readable summary and recoverable errors.                         |
-| `structuredContent`  | Tool handler                           | View and compatible clients          | Typed data the UI renders, matching `outputSchema` when one is declared.     |
-| `_meta`              | Tool handler or resource read callback | Host and app runtime                 | Opaque metadata, IDs, hints, CSP, iframe permissions, or host-specific data. |
+| `content`            | Tool handler                           | Model, host, View, text-only clients | Short human-readable summary and recoverable errors.                         |
+| `structuredContent`  | Tool handler                           | Model, View, and compatible clients  | Typed data the model may read and the UI renders, matching `outputSchema`.   |
+| `_meta`              | Tool handler or resource read callback | Host and app runtime                 | Component-only metadata, IDs, hints, CSP, iframe permissions, or host data. |
 | `outputSchema`       | Tool definition                        | Host, clients, SDK validation        | Contract for `structuredContent`.                                            |
 | `updateModelContext` | View                                   | Model on later turns                 | Current UI state the model should know after the app renders.                |
 
@@ -36,14 +36,14 @@ MCP App data crosses three boundaries: the model reads the tool result, the View
 flowchart LR
   Tool["MCP tool handler"] --> Result["CallToolResult"]
   Result --> Content["content: model summary"]
-  Result --> Structured["structuredContent: View data"]
+  Result --> Structured["structuredContent: model-visible View data"]
   Result --> Meta["_meta: host/app metadata"]
   Structured --> View["MCP App View"]
   View --> Context["updateModelContext"]
   Context --> NextTurn["model context on next turn"]
 ```
 
-The first model-called tool should return enough `content` for a non-UI host to answer the user. The View should render `structuredContent`, not parse `content`.
+The first model-called tool should return enough `content` for a non-UI host to answer the user. The View should render `structuredContent`, not parse `content`. Treat `structuredContent` as model-visible, so it should contain only data the model can safely use.
 
 ## Return Both Text and Structured Data
 
@@ -89,7 +89,7 @@ registerAppTool(
 );
 ```
 
-The text block keeps the result useful in normal MCP clients. `structuredContent` gives the View a stable object shape.
+The text block keeps the result useful in normal MCP clients. `structuredContent` gives the model and the View a stable object shape.
 
 ## What Goes in `content`
 
@@ -104,22 +104,22 @@ Avoid full tables, raw files, private UI state, and long logs in `content`. If t
 
 ## What Goes in `structuredContent`
 
-Use `structuredContent` for the UI payload:
+Use `structuredContent` for model-safe UI payloads:
 
 - Rows, chart series, map markers, cards, media metadata, or form defaults.
 - Pagination cursors and IDs the View needs for app-only tool calls.
 - Status objects that drive loading, success, and error UI.
 
-Declare `outputSchema` for model-called UI tools and for app-only tools whose responses the View depends on. The schema documents the contract and helps clients validate the result.
+Declare `outputSchema` for model-called UI tools and for app-only tools whose responses the View depends on. The schema documents the contract and helps clients validate the result. Do not put private or oversized data in `structuredContent`; use `_meta` or an app-only tool instead.
 
 ## What Goes in `_meta`
 
-Use `_meta` only for metadata that should not be part of the model-readable answer:
+Use `_meta` only for data that should not be part of the model-readable answer:
 
 - Internal request IDs, cache keys, trace IDs, or view IDs.
 - Host-specific rendering hints.
 - Resource `_meta.ui` such as CSP, permissions, `domain`, and `prefersBorder`.
-- Data that the View can use but the model should not rely on.
+- Data that the View can use but the model should not see or rely on.
 
 Do not hide user-visible facts in `_meta`. Hosts and clients may treat `_meta` as implementation metadata, and the model should not need it to answer.
 
@@ -157,7 +157,7 @@ Each call overwrites the previous app context. Send the complete current state y
 
 ## App-only Tool Results
 
-App-only tools still return normal MCP tool results. Keep `content` short for logs and debugging, and put the View payload in `structuredContent`.
+App-only tools still return normal MCP tool results. Keep `content` short for logs and debugging, put model-safe data in `structuredContent`, and put component-only data in `_meta`.
 
 ```ts
 registerAppTool(
@@ -190,7 +190,8 @@ The model never sees this tool in its tool list, but the result shape still matt
 - Return `content` on every model-visible tool result.
 - Render `structuredContent` in the View instead of parsing text.
 - Add `outputSchema` for structured UI payloads.
-- Use `_meta` for metadata only, not facts the model must know.
+- Treat `structuredContent` as model-visible.
+- Use `_meta` for component-only data, not facts the model must know.
 - Use app-only tools for pagination, polling, submit buttons, and refresh actions.
 - Call `updateModelContext` after user selections that should affect future model replies.
 - Keep each model context update complete because the previous one is overwritten.
@@ -204,6 +205,13 @@ The model never sees this tool in its tool list, but the result shape still matt
     href="/mcp-apps/server/tool-resource-contract"
   >
     Check the full server-side MCP App contract.
+  </Card>
+  <Card
+    title="content vs structuredContent vs _meta"
+    icon="split"
+    href="/mcp-apps/server/content-structuredcontent-meta"
+  >
+    Choose the correct data channel for each tool result field.
   </Card>
   <Card title="Tool _meta" icon="tag" href="/mcp-apps/server/tool-meta">
     Link tools to Views and control model vs app visibility.

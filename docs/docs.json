@@ -358,6 +358,7 @@
               "mcp-apps/server/add-ui-to-tool",
               "mcp-apps/server/build-server",
               "mcp-apps/server/capability-detection",
+              "mcp-apps/server/content-structuredcontent-meta",
               "mcp-apps/server/csp-cors",
               "mcp-apps/server/migrate-openai-apps",
               "mcp-apps/server/register-app-resource",

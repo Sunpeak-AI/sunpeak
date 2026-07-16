@@ -13,7 +13,7 @@ import { App } from "@modelcontextprotocol/ext-apps";
 
 ## Overview
 
-The `ontoolresult` notification handler is called when the host sends the result of a tool execution. The result includes text content for model context, optional structured data optimized for UI rendering, and an error flag.
+The `ontoolresult` notification handler is called when the host sends the result of a tool execution. The result includes readable text content, optional model-visible structured data for the UI, component-only `_meta`, and an error flag.
 
 Like all notification handlers, `ontoolresult` should be registered before calling `connect()`.
 
@@ -38,7 +38,7 @@ app.ontoolresult = (params) => void;
 </ResponseField>
 
 <ResponseField name="params.structuredContent" type="Record<string, unknown>">
-  Structured data optimized for UI rendering. Use this for displaying rich results in your app.
+  Structured data optimized for programmatic use. The model may read this data too, so keep private fields in `_meta`.
 </ResponseField>
 
 <ResponseField name="params.isError" type="boolean">

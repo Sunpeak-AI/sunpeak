@@ -36,8 +36,8 @@ Before you test in a host, confirm these items:
 - Every UI resource returns `mimeType: RESOURCE_MIME_TYPE`.
 - Each UI tool points at an existing resource with `_meta.ui.resourceUri`.
 - Model-visible tools include MCP `annotations` for read-only, destructive, idempotent, and external-system behavior.
-- Tool results include a short `content` summary for the model.
-- Tool results put UI data in `structuredContent`.
+- Tool results include a short `content` summary for the model and text-only clients.
+- Tool results put model-safe UI data in `structuredContent`.
 - The resource declares every external origin it needs in `_meta.ui.csp`.
 - UI-only actions use `visibility: ["app"]` so they do not appear in the model tool list.
 
@@ -233,8 +233,9 @@ The URI strings must match exactly. If a host cannot read the resource named in 
 
 Use both fields in UI tool results:
 
-- `content` is the model-visible summary. Keep it short and readable.
-- `structuredContent` is the data your View renders.
+- `content` is the readable summary. Keep it short and useful for the model and text-only clients.
+- `structuredContent` is typed data the model may read and your View renders.
+- `_meta` is for component-only data the model should not see.
 
 ```ts
 return {
@@ -247,6 +248,8 @@ return {
 ```
 
 Do not put large UI payloads only in `content`. It makes the model context harder to use and gives the View less predictable data.
+
+For field-by-field guidance, see [content vs structuredContent vs _meta](/mcp-apps/server/content-structuredcontent-meta).
 
 ## Tool Annotations
 

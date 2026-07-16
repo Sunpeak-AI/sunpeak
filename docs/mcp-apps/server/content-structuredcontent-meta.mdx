@@ -1,0 +1,146 @@
+---
+title: 'MCP App content vs structuredContent vs _meta'
+sidebarTitle: 'content vs _meta'
+description: 'Choose the right MCP App tool result field: content for readable summaries, structuredContent for model-visible typed data and UI payloads, and _meta for component-only data.'
+keywords:
+  [
+    'MCP content vs structuredContent',
+    'MCP App _meta',
+    'MCP tool result _meta',
+    'MCP structuredContent',
+    'ChatGPT App structuredContent',
+    'MCP App tool result',
+    'MCP App data visibility',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+MCP App tool results have three data channels. Pick the channel based on who should read the data.
+
+| Field               | Read by                              | Use it for                                                                      |
+| ------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `content`           | Model, host, View, text-only clients | Short readable summaries, errors, and fallback output.                          |
+| `structuredContent` | Model, host, View, typed clients     | JSON the model may reason over and the View can render.                         |
+| `_meta`             | Host and View only                   | IDs, traces, cache hints, large lookup maps, and data the model should not see. |
+
+`structuredContent` is not private. If the model should not see a field, put that field in `_meta` or fetch it later through an app-only tool.
+
+## Recommended Shape
+
+Return `content` and `structuredContent` from model-visible UI tools:
+
+```ts
+return {
+  content: [{ type: 'text', text: 'Found 12 matching orders.' }],
+  structuredContent: {
+    orders: orders.map((order) => ({
+      id: order.id,
+      status: order.status,
+      total: order.total,
+    })),
+    nextCursor,
+  },
+  _meta: {
+    traceId,
+    ordersById: Object.fromEntries(orders.map((order) => [order.id, order])),
+  },
+};
+```
+
+The model can answer from the summary and typed fields. The View can render without parsing text. The full lookup map stays out of model context.
+
+## What Goes Where
+
+### Put summaries in `content`
+
+Use `content` for the shortest useful text answer:
+
+- What happened.
+- Counts, statuses, totals, or selected identifiers.
+- Recoverable error messages.
+- A text fallback for hosts that do not render MCP Apps.
+
+Avoid dumping large tables or raw JSON into `content`. It makes the conversation harder for the model and the user to scan.
+
+### Put model-safe UI data in `structuredContent`
+
+Use `structuredContent` for JSON that the View renders and the model may read:
+
+- Cards, rows, chart series, map markers, media metadata, and form defaults.
+- IDs and cursors the model may refer to later.
+- State that should match an `outputSchema`.
+
+If the data is sensitive, too large, or not useful to the model, do not put it here.
+
+### Put component-only data in `_meta`
+
+Use `_meta` for data that should reach the iframe but not the model:
+
+- Trace IDs, request IDs, cache keys, and feature flags.
+- Large dictionaries that help the View render details on demand.
+- Raw records when `structuredContent` contains a redacted or summarized shape.
+
+Do not put facts the model needs in `_meta`. The model should be able to answer the next user turn from `content`, `structuredContent`, and any later `updateModelContext` calls.
+
+## App-only Helper Tools
+
+App-only tools still return normal MCP tool results. Set `_meta.ui.visibility: ["app"]` on the tool so the model cannot call it directly, then return the data the View needs.
+
+```ts
+registerAppTool(
+  server,
+  'load-order-detail',
+  {
+    description: 'Load private order detail for the current app view.',
+    inputSchema: { orderId: z.string() },
+    _meta: { ui: { visibility: ['app'] } },
+  },
+  async ({ orderId }) => {
+    const detail = await loadOrderDetail(orderId);
+
+    return {
+      content: [{ type: 'text', text: 'Loaded order detail.' }],
+      structuredContent: { orderId, status: detail.status },
+      _meta: { detail },
+    };
+  }
+);
+```
+
+Use this pattern when the View needs extra data after the initial render, but the model does not need that full payload.
+
+## Common Mistakes
+
+| Mistake                                 | Why it breaks                                   | Fix                                                         |
+| --------------------------------------- | ----------------------------------------------- | ----------------------------------------------------------- |
+| Only returning `structuredContent`      | Text-only clients have no readable fallback.    | Add a short `content` text block.                           |
+| Putting all UI data in `content`        | The View has to parse prose or JSON text.       | Put typed data in `structuredContent`.                      |
+| Treating `structuredContent` as private | The model may read it.                          | Move private fields to `_meta`.                             |
+| Hiding answer-critical facts in `_meta` | The model cannot rely on component-only data.   | Put model-needed facts in `content` or `structuredContent`. |
+| Omitting `outputSchema`                 | Clients cannot validate the typed result shape. | Add `outputSchema` for structured UI payloads.              |
+
+## Related
+
+<CardGroup cols={2}>
+  <Card
+    title="Tool Results and Model Context"
+    icon="message-square"
+    href="/mcp-apps/server/tool-results-model-context"
+  >
+    Keep model context in sync after the View changes.
+  </Card>
+  <Card
+    title="Tool and Resource Contract"
+    icon="list-check"
+    href="/mcp-apps/server/tool-resource-contract"
+  >
+    Check the full server-side MCP App contract.
+  </Card>
+  <Card title="Add a UI to an MCP Tool" icon="page" href="/mcp-apps/server/add-ui-to-tool">
+    Convert a normal MCP tool into a UI-rendering app.
+  </Card>
+  <Card title="Tool _meta" icon="tag" href="/mcp-apps/server/tool-meta">
+    Link tools to Views and control tool visibility.
+  </Card>
+</CardGroup>

@@ -44,7 +44,7 @@ Use UI-launching tools for the actions a user can ask the model to perform, such
 | Tool UI metadata    | `tool._meta.ui.resourceUri`               | Points the host at the HTML resource to render after the tool call.                                     |
 | Resource definition | `resources/list` or tool-linked discovery | Declares the `ui://` resource and `text/html;profile=mcp-app` MIME type.                                |
 | Resource contents   | `resources/read`                          | Returns the HTML document and any iframe metadata under `contents[]._meta.ui`.                          |
-| Tool result         | `tools/call` result                       | Returns model-readable `content` and UI-readable `structuredContent`.                                   |
+| Tool result         | `tools/call` result                       | Returns readable `content`, model-visible `structuredContent`, and optional component-only `_meta`.      |
 
 <Note>
   MCP Apps are optional. Servers should check the host's MCP Apps capability before registering UI
@@ -223,9 +223,9 @@ return {
 
 | Field               | Audience                        | Guidance                                                                                                                            |
 | ------------------- | ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `content`           | Model and text-only clients     | Include a short text summary. For structured results, MCP recommends also serializing the JSON into a text block for compatibility. |
-| `structuredContent` | Host, View, and typed clients   | Put the object your UI renders here. If you declare `outputSchema`, this object must match it.                                      |
-| `_meta`             | Host or component-only metadata | Use sparingly. Do not rely on it for model-visible facts.                                                                           |
+| `content`           | Model, host, View, text-only clients | Include a short text summary. For structured results, MCP recommends also serializing the JSON into a text block for compatibility. |
+| `structuredContent` | Model, host, View, and typed clients | Put model-safe data your UI renders here. If you declare `outputSchema`, this object must match it.                                 |
+| `_meta`             | Host or component-only metadata     | Use for data the model should not see. Do not rely on it for model-visible facts.                                                   |
 | `isError`           | Host and model                  | Set `true` for tool execution errors that should still return a tool result. Use JSON-RPC errors for protocol failures.             |
 
 ## App-Only Helper Tools
@@ -272,7 +272,7 @@ Before testing in a real host, verify the server response shape:
 | HTML uses `text/html;profile=mcp-app`      | Distinguishes an MCP App View from a plain MCP resource.                          |
 | CSP lists every external origin            | Fetches, scripts, images, fonts, media, and nested iframes are otherwise blocked. |
 | Tool annotations match behavior            | Lets hosts apply useful review UI and avoid treating writes as reads.             |
-| `outputSchema` matches `structuredContent` | Lets clients validate the typed tool result that the View consumes.               |
+| `outputSchema` matches `structuredContent` | Lets clients validate the typed tool result that the model and View consume.      |
 | `content` includes text fallback           | Keeps text-only MCP clients and older hosts useful.                               |
 | App-only helpers use `visibility`          | Stops the model from calling UI-only actions such as refresh or submit.           |
 
@@ -285,7 +285,7 @@ Before testing in a real host, verify the server response shape:
 | Images, scripts, or fetch calls fail         | Missing CSP metadata                         | Add the origin to `resourceDomains`, `connectDomains`, or `frameDomains`. |
 | The model calls a refresh or pagination tool | Tool is visible to `"model"`                 | Set `visibility: ["app"]`.                                                |
 | The View receives hard-to-parse text         | Tool only returned `content`                 | Add `structuredContent` and an `outputSchema`.                            |
-| A text-only host gets unusable output        | Tool only returned `structuredContent`       | Also return model-readable `content`.                                     |
+| A text-only host gets unusable output        | Tool only returned `structuredContent`       | Also return readable `content`.                                           |
 
 ## Related
 
@@ -303,6 +303,10 @@ Before testing in a real host, verify the server response shape:
 
 <Card horizontal title="Tool Results and Model Context" icon="message-square" href="/mcp-apps/server/tool-results-model-context">
   Decide what belongs in content, structuredContent, _meta, and updateModelContext.
+</Card>
+
+<Card horizontal title="content vs structuredContent vs _meta" icon="split" href="/mcp-apps/server/content-structuredcontent-meta">
+  Choose the right tool result data channel.
 </Card>
 
 <Card horizontal title="Tool Annotations" icon="shield-check" href="/mcp-apps/server/tool-annotations">

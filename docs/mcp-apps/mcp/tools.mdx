@@ -64,11 +64,11 @@ The host calls `tools/call` with the tool name and validated arguments. The serv
 Tool results commonly use these fields:
 
 - **`content`**: An array of content blocks (`text`, `image`, `audio`, resource links, or embedded resources) that text-only clients and models can read.
-- **`structuredContent`**: Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass data to Views (see [Event Handlers](/mcp-apps/app/event-handlers#ontoolresult)).
+- **`structuredContent`**: Optional typed data optimized for programmatic consumption. MCP Apps uses this to pass model-visible data to Views (see [Event Handlers](/mcp-apps/app/event-handlers#ontoolresult)).
 - **`isError`**: Optional flag for tool execution errors returned as a tool result.
 - **`_meta`**: Optional metadata for clients or components. Do not use it for facts the model must see.
 
-When a tool returns `structuredContent`, MCP recommends also returning a serialized text block in `content` for compatibility. MCP Apps can then render `structuredContent` while text-only hosts still have usable output.
+When a tool returns `structuredContent`, MCP recommends also returning a serialized text block in `content` for compatibility. MCP Apps can then render `structuredContent` while text-only hosts still have usable output. Use `_meta` for component-only fields that the model should not see.
 
 ## Annotations
 
