@@ -11,6 +11,12 @@ keywords: ["MCP Apps", "ChatGPT Apps", "protocol reference", "request types", "n
 
 ```ts
 import type {
+  McpUiTheme,
+  McpUiDisplayMode,
+  McpUiStyleVariableKey,
+  McpUiStyles,
+  McpUiHostCss,
+  McpUiHostStyles,
   McpUiInitializeRequest,
   McpUiInitializeResult,
   McpUiOpenLinkRequest,
@@ -32,6 +38,18 @@ import type {
   McpUiInitializedNotification,
   McpUiSizeChangedNotification,
   McpUiRequestTeardownNotification,
+  McpUiSandboxProxyReadyNotification,
+  McpUiSandboxResourceReadyNotification,
+  McpUiSupportedContentBlockModalities,
+  McpUiHostContext,
+  McpUiHostCapabilities,
+  McpUiAppCapabilities,
+  McpUiResourceCsp,
+  McpUiResourcePermissions,
+  McpUiResourceMeta,
+  McpUiToolVisibility,
+  McpUiToolMeta,
+  McpUiClientCapabilities,
   AppRequest,
   AppNotification,
   AppResult,
@@ -95,6 +113,7 @@ The host proxies select MCP requests between the View and the originating MCP se
 | `McpUiToolResultNotification` | `ui/notifications/tool-result` | Tool execution result |
 | `McpUiToolCancelledNotification` | `ui/notifications/tool-cancelled` | Tool execution cancelled |
 | `McpUiHostContextChangedNotification` | `ui/notifications/host-context-changed` | Partial context update |
+| `McpUiSandboxResourceReadyNotification` | `ui/notifications/sandbox-resource-ready` | Resource HTML is ready for a sandbox proxy |
 
 ### View → Host
 
@@ -102,6 +121,7 @@ The host proxies select MCP requests between the View and the originating MCP se
 |------|--------|-------------|
 | `McpUiInitializedNotification` | `ui/notifications/initialized` | Initialization complete |
 | `McpUiSizeChangedNotification` | `ui/notifications/size-changed` | UI size change: `{ width?; height? }` |
+| `McpUiSandboxProxyReadyNotification` | `ui/notifications/sandbox-proxy-ready` | Sandbox proxy is ready to receive resource HTML |
 | `McpUiRequestTeardownNotification` | `ui/notifications/request-teardown` | App requests host to tear it down. Sent by [`requestTeardown`](/mcp-apps/app/requests#requestteardown). |
 | `LoggingMessageNotification` | `notifications/message` | Diagnostic log message. Sent by [`sendLog`](/mcp-apps/app/requests/send-log). |
 | `ToolListChangedNotification` | `notifications/tools/list_changed` | App-side tool list changed. Sent by [`sendToolListChanged`](/mcp-apps/app/requests#sendtoollistchanged) after `registerTool`, `enable`, `disable`, or `remove`. |
@@ -153,6 +173,8 @@ import {
   REQUEST_DISPLAY_MODE_METHOD,
   REQUEST_TEARDOWN_METHOD,
   RESOURCE_TEARDOWN_METHOD,
+  SANDBOX_PROXY_READY_METHOD,
+  SANDBOX_RESOURCE_READY_METHOD,
   SIZE_CHANGED_METHOD,
   TOOL_INPUT_METHOD,
   TOOL_INPUT_PARTIAL_METHOD,
@@ -172,6 +194,8 @@ import {
 | `REQUEST_DISPLAY_MODE_METHOD` | `"ui/request-display-mode"` |
 | `REQUEST_TEARDOWN_METHOD` | `"ui/notifications/request-teardown"` |
 | `RESOURCE_TEARDOWN_METHOD` | `"ui/resource-teardown"` |
+| `SANDBOX_PROXY_READY_METHOD` | `"ui/notifications/sandbox-proxy-ready"` |
+| `SANDBOX_RESOURCE_READY_METHOD` | `"ui/notifications/sandbox-resource-ready"` |
 | `SIZE_CHANGED_METHOD` | `"ui/notifications/size-changed"` |
 | `TOOL_INPUT_METHOD` | `"ui/notifications/tool-input"` |
 | `TOOL_INPUT_PARTIAL_METHOD` | `"ui/notifications/tool-input-partial"` |
@@ -275,6 +299,8 @@ import {
   McpUiToolResultNotificationSchema,
   McpUiToolCancelledNotificationSchema,
   McpUiHostContextChangedNotificationSchema,
+  McpUiSandboxProxyReadyNotificationSchema,
+  McpUiSandboxResourceReadyNotificationSchema,
   McpUiSizeChangedNotificationSchema,
   McpUiRequestTeardownNotificationSchema,
 } from "@modelcontextprotocol/ext-apps";
@@ -287,6 +313,8 @@ import {
 | `McpUiToolResultNotificationSchema` | `McpUiToolResultNotification` — tool result |
 | `McpUiToolCancelledNotificationSchema` | `McpUiToolCancelledNotification` — tool cancelled |
 | `McpUiHostContextChangedNotificationSchema` | `McpUiHostContextChangedNotification` — context update |
+| `McpUiSandboxProxyReadyNotificationSchema` | `McpUiSandboxProxyReadyNotification` — sandbox proxy ready |
+| `McpUiSandboxResourceReadyNotificationSchema` | `McpUiSandboxResourceReadyNotification` — resource HTML ready |
 | `McpUiSizeChangedNotificationSchema` | `McpUiSizeChangedNotification` — size change |
 | `McpUiRequestTeardownNotificationSchema` | `McpUiRequestTeardownNotification` — app-initiated teardown request |
 

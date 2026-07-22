@@ -46,6 +46,8 @@ export {
 export type {
   McpUiAppToolConfig,
   McpUiAppResourceConfig,
+  McpUiReadResourceCallback,
+  McpUiReadResourceResult,
   ToolConfig,
   ToolCallback,
   ReadResourceCallback,

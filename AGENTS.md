@@ -328,8 +328,8 @@ This is the upstream SDK that sunpeak wraps. Upgrades often introduce new `App` 
 ### SDK Export Structure
 
 The SDK's main entry (`app.d.ts`) uses `export * from "./types"` to re-export all types, schemas, and constants. To discover available exports, check:
-- `node_modules/@modelcontextprotocol/ext-apps/dist/types.d.ts` — All type definitions
-- `node_modules/@modelcontextprotocol/ext-apps/dist/app.d.ts` — `App` class methods
+- `node_modules/@modelcontextprotocol/ext-apps/dist/src/types.d.ts` — All type definitions in current package builds
+- `node_modules/@modelcontextprotocol/ext-apps/dist/src/app.d.ts` — `App` class methods in current package builds
 
 ## Global CLI vs Project Resolution
 
