@@ -1,0 +1,272 @@
+---
+title: 'MCP App Requirements Checklist'
+sidebarTitle: 'Requirements Checklist'
+description: 'Pre-ship checklist for MCP App servers and Views: capability detection, ui:// resources, _meta.ui.resourceUri, structuredContent, CSP, app-only tools, annotations, fallback behavior, and host testing.'
+keywords:
+  [
+    'MCP App requirements',
+    'MCP Apps checklist',
+    'build MCP App',
+    'ChatGPT app requirements',
+    'Claude MCP App requirements',
+    'MCP App CSP',
+    'MCP App structuredContent',
+    'MCP App ui resource',
+    'MCP App tool metadata',
+    'MCP App review checklist',
+  ]
+---
+
+<Badge color="green">MCP Apps SDK</Badge>
+
+Use this checklist before testing an MCP App in ChatGPT, Claude, or another MCP Apps host. It covers the parts that make a standard MCP server portable as an MCP App: capability detection, UI resource delivery, tool metadata, result data, security metadata, and fallback behavior.
+
+For the complete server example, see [Build an MCP App Server](/mcp-apps/server/build-server). For field-level reference, see [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).
+
+## 1. Negotiate MCP Apps Support
+
+MCP Apps are a progressive enhancement. Register UI metadata only when the connecting host advertises support for the MCP Apps resource MIME type.
+
+```ts
+import { getUiCapability, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+
+server.server.oninitialized = () => {
+  const clientCapabilities = server.server.getClientCapabilities();
+  const uiCap = getUiCapability(clientCapabilities);
+  const supportsMcpApps = uiCap?.mimeTypes?.includes(RESOURCE_MIME_TYPE);
+
+  if (supportsMcpApps) {
+    registerUiTools();
+  } else {
+    registerTextFallbackTools();
+  }
+};
+```
+
+Check:
+
+- The fallback tool uses the same core name and behavior where possible.
+- Text-only clients receive useful `content`.
+- Your server does not require iframe support for the workflow to succeed.
+
+## 2. Register the UI Resource
+
+Every View is an MCP resource. Use a stable `ui://` URI and the MCP Apps HTML MIME type.
+
+```ts
+import { registerAppResource, RESOURCE_MIME_TYPE } from '@modelcontextprotocol/ext-apps/server';
+
+const resourceUri = 'ui://orders/view.html';
+
+registerAppResource(
+  server,
+  'Orders View',
+  resourceUri,
+  { mimeType: RESOURCE_MIME_TYPE },
+  async () => ({
+    contents: [
+      {
+        uri: resourceUri,
+        mimeType: RESOURCE_MIME_TYPE,
+        text: html,
+        _meta: {
+          ui: {
+            prefersBorder: true,
+            csp: {
+              connectDomains: ['https://api.example.com'],
+              resourceDomains: ['https://cdn.example.com'],
+            },
+          },
+        },
+      },
+    ],
+  })
+);
+```
+
+Check:
+
+- The resource URI starts with `ui://`.
+- `mimeType` is `RESOURCE_MIME_TYPE`, which is `text/html;profile=mcp-app`.
+- The HTML is a complete document with a root node for your app.
+- Listing-level resource metadata and content-item metadata do not conflict.
+- `prefersBorder` is set deliberately because host defaults vary.
+
+## 3. Link the Tool to the Resource
+
+UI-launching tools point to their View with `_meta.ui.resourceUri`.
+
+```ts
+registerAppTool(
+  server,
+  'search-orders',
+  {
+    title: 'Search Orders',
+    description: 'Search orders and display the results.',
+    inputSchema: { query: z.string() },
+    _meta: {
+      ui: {
+        resourceUri,
+        visibility: ['model', 'app'],
+      },
+    },
+  },
+  handler
+);
+```
+
+Check:
+
+- `_meta.ui.resourceUri` matches the resource URI exactly.
+- Tools that launch a View include `"model"` in `visibility` unless they should be app-only.
+- App-only helper tools use `visibility: ["app"]` and are not exposed to the model.
+- Backend-only tools omit MCP Apps UI metadata.
+
+## 4. Return the Right Result Channels
+
+Tool results should work for the model, the View, and clients that do not render UI.
+
+```ts
+return {
+  content: [{ type: 'text', text: 'Found 12 matching orders.' }],
+  structuredContent: {
+    orders,
+    nextCursor,
+  },
+  _meta: {
+    cursorToken,
+  },
+};
+```
+
+Check:
+
+- `content` is short and readable.
+- `structuredContent` contains model-safe data your View renders.
+- `_meta` contains only host or component-only data that the model should not read.
+- `outputSchema`, when present, matches `structuredContent`.
+- Large or sensitive data is fetched through app-only tools or resources instead of being pushed into model context.
+
+See [content vs structuredContent vs _meta](/mcp-apps/server/content-structuredcontent-meta) for the full split.
+
+## 5. Declare Security Metadata
+
+MCP App HTML runs in a sandboxed iframe. Hosts use resource metadata to decide which browser capabilities and origins the iframe can use.
+
+Check:
+
+- Every API origin used by `fetch`, XHR, EventSource, or WebSocket is in `connectDomains`.
+- Every script, stylesheet, image, font, video, and audio origin is in `resourceDomains`.
+- Every nested iframe origin is in `frameDomains`.
+- Browser permissions such as `camera`, `microphone`, `geolocation`, or `clipboardWrite` are requested only when needed.
+- The View still behaves sensibly if a host denies a permission.
+- Any stable `domain` value is host-specific and is not your own MCP server domain.
+
+See [Resource `_meta`](/mcp-apps/server/resource-meta) and [CSP and CORS](/mcp-apps/server/csp-cors).
+
+## 6. Add Tool Annotations
+
+Annotations are standard MCP safety hints. They are separate from MCP Apps UI metadata.
+
+```ts
+annotations: {
+  readOnlyHint: true,
+  openWorldHint: false,
+}
+```
+
+Check:
+
+- Read tools set `readOnlyHint: true`.
+- Write, send, charge, delete, overwrite, or cancel tools set the right destructive and idempotent hints.
+- Tools that reach outside your own backend set `openWorldHint` correctly.
+- Tool descriptions state what the tool does without broad triggering language.
+
+See [Tool Annotations](/mcp-apps/server/tool-annotations).
+
+## 7. Wire the View Runtime
+
+The View connects to the host through the MCP Apps bridge. With the plain SDK, register handlers before `connect()`.
+
+```ts
+import { App } from '@modelcontextprotocol/ext-apps';
+
+const app = new App({ name: 'OrdersView', version: '1.0.0' });
+
+app.ontoolinput = ({ arguments: input }) => {
+  renderInput(input);
+};
+
+app.ontoolresult = (result) => {
+  renderOrders(result.structuredContent);
+};
+
+app.onhostcontextchanged = (context) => {
+  applyTheme(context.theme);
+};
+
+await app.connect();
+```
+
+Check:
+
+- The View listens for tool input and tool result updates.
+- The View adapts to host context such as theme, locale, display mode, and container size.
+- The View uses `callServerTool()` only for tools visible to `"app"`.
+- Model-visible UI selections use `updateModelContext()` or a sunpeak state hook.
+- Host-specific APIs are optional branches, not required for the standard MCP App path.
+
+For React, use [`useApp()`](/mcp-apps/react/use-app) or the sunpeak [AppProvider](/app-framework/components/app-provider).
+
+## 8. Test the Contract
+
+Use protocol checks first, then render the View.
+
+```bash
+npx sunpeak inspect --server http://localhost:8000/mcp
+npx sunpeak test
+```
+
+Check:
+
+- `tools/list` shows UI tools with `_meta.ui.resourceUri`.
+- `resources/read` returns the expected `ui://` resource and MIME type.
+- Calling the UI tool returns readable `content` and valid `structuredContent`.
+- The inspector renders the View in both ChatGPT and Claude host modes.
+- The View works in light and dark themes.
+- App-only tools can be called from the View and stay hidden from the model.
+- Live tests cover any host-specific behavior you rely on.
+
+## Pre-Ship Summary
+
+| Area                 | Required outcome                                                   |
+| -------------------- | ------------------------------------------------------------------ |
+| Capability detection | UI metadata is sent only to hosts that support MCP Apps.           |
+| Tool linkage         | Every UI-launching tool points to a real `ui://` resource.         |
+| Resource delivery    | Every View returns `text/html;profile=mcp-app` HTML.               |
+| Result data          | `content`, `structuredContent`, and `_meta` are split by audience. |
+| Security             | CSP, permissions, and stable domains are declared deliberately.    |
+| Tool safety          | Standard MCP annotations match the tool's behavior.                |
+| Portability          | The app works without ChatGPT-specific or host-specific APIs.      |
+| Testing              | Protocol checks and iframe rendering checks both pass.             |
+
+## Related Pages
+
+<CardGroup cols={2}>
+  <Card title="Build an MCP App Server" icon="server" href="/mcp-apps/server/build-server">
+    Complete server example with capability detection and fallback tools.
+  </Card>
+  <Card
+    title="Tool and Resource Contract"
+    icon="list-check"
+    href="/mcp-apps/server/tool-resource-contract"
+  >
+    Field-by-field contract for tools, resources, and tool results.
+  </Card>
+  <Card title="Add a UI to an MCP Tool" icon="page" href="/mcp-apps/server/add-ui-to-tool">
+    Convert an existing MCP tool into an MCP App.
+  </Card>
+  <Card title="Migrate OpenAI Apps" icon="shuffle" href="/mcp-apps/server/migrate-openai-apps">
+    Map OpenAI Apps SDK metadata and runtime APIs to MCP Apps.
+  </Card>
+</CardGroup>

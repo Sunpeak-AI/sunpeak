@@ -23,7 +23,7 @@ An MCP App server is a normal MCP server with three additions:
 2. It registers `ui://` HTML resources with the `text/html;profile=mcp-app` MIME type.
 3. It links tools to those resources with `_meta.ui.resourceUri`.
 
-This page shows the complete server-side shape. For the matching View code, see [App lifecycle](/mcp-apps/lifecycle) and [App class](/mcp-apps/app/app-class). For a field-by-field checklist of what belongs in the tool, resource, resource metadata, and tool result, see the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).
+This page shows the complete server-side shape. For the matching View code, see [App lifecycle](/mcp-apps/lifecycle) and [App class](/mcp-apps/app/app-class). For a pre-ship checklist, see [MCP App Requirements Checklist](/mcp-apps/server/requirements). For a field-by-field checklist of what belongs in the tool, resource, resource metadata, and tool result, see the [Tool and Resource Contract](/mcp-apps/server/tool-resource-contract).
 
 If you already have a standard MCP tool and want to add a View without changing its external tool name, see [Add a UI to an MCP Tool](/mcp-apps/server/add-ui-to-tool).
 
@@ -321,6 +321,9 @@ The View can call the tool through [`callServerTool()`](/mcp-apps/app/requests/c
   </Card>
   <Card title="Tool and Resource Contract" icon="list-check" href="/mcp-apps/server/tool-resource-contract">
     Check the fields that connect MCP tools, UI resources, and tool results.
+  </Card>
+  <Card title="Requirements Checklist" icon="check-check" href="/mcp-apps/server/requirements">
+    Verify portability, fallback behavior, CSP, annotations, and host testing.
   </Card>
   <Card title="Tool Annotations" icon="shield-check" href="/mcp-apps/server/tool-annotations">
     Add read-only, destructive, idempotent, and external-system hints.

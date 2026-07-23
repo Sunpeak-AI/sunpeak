@@ -363,6 +363,7 @@
               "mcp-apps/server/migrate-openai-apps",
               "mcp-apps/server/register-app-resource",
               "mcp-apps/server/register-app-tool",
+              "mcp-apps/server/requirements",
               "mcp-apps/server/resource-meta",
               "mcp-apps/server/tool-annotations",
               "mcp-apps/server/tool-meta",
